@@ -39,6 +39,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -81,26 +82,64 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 # --- Armazenamento de arquivos (S3-compatível; ADR-0001) --------------------
-if env.str("S3_BUCKET", default=""):
-    STORAGES = {
-        "default": {
+# Fotos e documentos ficam em um bucket privado. O navegador envia e baixa
+# arquivos direto do armazenamento por URLs pré-assinadas de curta duração,
+# geradas com o endereço público (S3_ENDPOINT_URL_PUBLICO), que pode diferir do
+# endereço interno usado pelos contêineres.
+S3_BUCKET = env.str("S3_BUCKET", default="")
+S3_ENDPOINT_URL = env.str("S3_ENDPOINT_URL", default=None)
+S3_ENDPOINT_URL_PUBLICO = env.str("S3_ENDPOINT_URL_PUBLICO", default=S3_ENDPOINT_URL)
+S3_ACCESS_KEY_ID = env.str("S3_ACCESS_KEY_ID", default=None)
+S3_SECRET_ACCESS_KEY = env.str("S3_SECRET_ACCESS_KEY", default=None)
+S3_REGION = env.str("S3_REGION", default="us-east-1")
+
+STORAGES = {
+    "default": (
+        {
             "BACKEND": "storages.backends.s3.S3Storage",
             "OPTIONS": {
-                "bucket_name": env.str("S3_BUCKET"),
-                "endpoint_url": env.str("S3_ENDPOINT_URL", default=None),
-                "access_key": env.str("S3_ACCESS_KEY_ID", default=None),
-                "secret_key": env.str("S3_SECRET_ACCESS_KEY", default=None),
-                "region_name": env.str("S3_REGION", default=None),
+                "bucket_name": S3_BUCKET,
+                "endpoint_url": S3_ENDPOINT_URL,
+                "access_key": S3_ACCESS_KEY_ID,
+                "secret_key": S3_SECRET_ACCESS_KEY,
+                "region_name": S3_REGION,
+                "addressing_style": "path",
+                "signature_version": "s3v4",
                 "default_acl": None,
                 "querystring_auth": True,
                 "querystring_expire": 300,
                 "file_overwrite": False,
             },
-        },
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
-    }
+        }
+        if S3_BUCKET
+        else {"BACKEND": "django.core.files.storage.FileSystemStorage"}
+    ),
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        )
+    },
+}
+
+# --- Segurança em produção ---------------------------------------------------
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+if not DEBUG:
+    # A aplicação roda atrás de um proxy reverso que termina o TLS.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = env.bool("COOKIES_SEGUROS", default=True)
+    CSRF_COOKIE_SECURE = env.bool("COOKIES_SEGUROS", default=True)
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+    # Ative quando todo o tráfego for HTTPS (o proxy de borda pode redirecionar).
+    SECURE_SSL_REDIRECT = env.bool("SSL_REDIRECIONAR", default=False)
+    SECURE_HSTS_SECONDS = env.int("HSTS_SEGUNDOS", default=0)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 
 # --- Autenticação OIDC (Keycloak; RF-ACL-001) -------------------------------
 OIDC_ISSUER = env.str("OIDC_ISSUER", default="http://localhost:8080/realms/itree")
