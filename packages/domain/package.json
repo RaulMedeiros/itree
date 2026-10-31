@@ -1,0 +1,19 @@
+{
+  "name": "@itree/domain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Vocabulários e rótulos de domínio compartilhados entre web e app.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@itree/api-client": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
+}

@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@import "@itree/ui-tokens/tokens.css";
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    @apply bg-fundo text-texto font-sans antialiased;
+    font-size: 14px;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-marca;
+  }
+}
