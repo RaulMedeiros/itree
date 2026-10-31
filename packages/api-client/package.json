@@ -1,0 +1,25 @@
+{
+  "name": "@itree/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cliente da API gerado a partir do contrato OpenAPI do backend (ADR-0001).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "gerar": "orval --config orval.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.105.0",
+    "@types/react": "^19.2.0",
+    "orval": "^8.3.5",
+    "react": "^19.3.1",
+    "typescript": "~5.9.3"
+  }
+}

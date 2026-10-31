@@ -1,0 +1,1061 @@
+openapi: 3.0.3
+info:
+  title: Engine de Inteligência Arbórea — API
+  version: 0.1.0
+  description: API do painel web e do aplicativo de campo.
+paths:
+  /api/v1/admin/auditoria:
+    get:
+      operationId: auditoria_listar
+      description: |-
+        Trilha de auditoria (RF-ADM-003). Somente leitura: eventos não podem ser
+        alterados nem removidos pela aplicação (RNF-SEG-004).
+      parameters:
+      - in: query
+        name: ate
+        schema:
+          type: string
+        description: ISO 8601
+      - in: query
+        name: desde
+        schema:
+          type: string
+        description: ISO 8601
+      - in: query
+        name: entidade
+        schema:
+          type: string
+        description: 'Um de: contas.UsuarioEvent, contas.EscopoUsuarioEvent, contas.EquipeEvent,
+          contas.MembroEquipeEvent, contas.TerritorioEquipeEvent, territorio.TerritorioEvent'
+      - in: query
+        name: objeto
+        schema:
+          type: string
+        description: ID do objeto auditado.
+      - in: query
+        name: origem
+        schema:
+          type: string
+        description: web | app | api
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      - in: query
+        name: usuario
+        schema:
+          type: string
+        description: ID do usuário autor.
+      tags:
+      - auditoria
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventoAuditoriaList'
+          description: ''
+  /api/v1/admin/usuarios:
+    get:
+      operationId: usuarios_listar
+      description: |-
+        Administração de usuários (W-10). Usuários não são excluídos; são
+        desativados, preservando autoria dos registros (RF-ADM-001).
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Nome ou e-mail.
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: papel
+        schema:
+          type: string
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - usuarios
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsuarioAdminList'
+          description: ''
+    post:
+      operationId: usuarios_criar
+      description: |-
+        Administração de usuários (W-10). Usuários não são excluídos; são
+        desativados, preservando autoria dos registros (RF-ADM-001).
+      tags:
+      - usuarios
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioAdminRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UsuarioAdminRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UsuarioAdminRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioAdmin'
+          description: ''
+  /api/v1/admin/usuarios/{id}:
+    get:
+      operationId: usuarios_obter
+      description: |-
+        Administração de usuários (W-10). Usuários não são excluídos; são
+        desativados, preservando autoria dos registros (RF-ADM-001).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este usuario.
+        required: true
+      tags:
+      - usuarios
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioAdmin'
+          description: ''
+    patch:
+      operationId: usuarios_atualizar
+      description: |-
+        Administração de usuários (W-10). Usuários não são excluídos; são
+        desativados, preservando autoria dos registros (RF-ADM-001).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este usuario.
+        required: true
+      tags:
+      - usuarios
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUsuarioAdminRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUsuarioAdminRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUsuarioAdminRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsuarioAdmin'
+          description: ''
+  /api/v1/equipes:
+    get:
+      operationId: equipes_listar
+      description: Equipes e membros (W-10). Equipes são desativadas, não excluídas.
+      parameters:
+      - in: query
+        name: ativa
+        schema:
+          type: boolean
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - equipes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEquipeList'
+          description: ''
+    post:
+      operationId: equipes_criar
+      description: Equipes e membros (W-10). Equipes são desativadas, não excluídas.
+      tags:
+      - equipes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipeRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Equipe'
+          description: ''
+  /api/v1/equipes/{id}:
+    get:
+      operationId: equipes_obter
+      description: Equipes e membros (W-10). Equipes são desativadas, não excluídas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este equipe.
+        required: true
+      tags:
+      - equipes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Equipe'
+          description: ''
+    patch:
+      operationId: equipes_atualizar
+      description: Equipes e membros (W-10). Equipes são desativadas, não excluídas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este equipe.
+        required: true
+      tags:
+      - equipes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEquipeRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Equipe'
+          description: ''
+  /api/v1/eu:
+    get:
+      operationId: eu
+      description: Usuário autenticado, papéis, permissões efetivas e escopo territorial.
+      tags:
+      - eu
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Eu'
+          description: ''
+  /api/v1/saude:
+    get:
+      operationId: saude
+      description: Verificação de saúde para orquestradores e monitoramento.
+      tags:
+      - saude
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Saude'
+          description: ''
+  /api/v1/territorios:
+    get:
+      operationId: territorios_listar
+      description: |-
+        Limites territoriais. São dados públicos de referência: qualquer usuário
+        autenticado pode consultá-los, independentemente do escopo.
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Parte do nome.
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      - in: query
+        name: tipo
+        schema:
+          type: string
+        description: municipio | regional | bairro
+      tags:
+      - territorios
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTerritorioList'
+          description: ''
+  /api/v1/territorios/{id}:
+    get:
+      operationId: territorios_obter
+      description: |-
+        Limites territoriais. São dados públicos de referência: qualquer usuário
+        autenticado pode consultá-los, independentemente do escopo.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este territorio.
+        required: true
+      tags:
+      - territorios
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Territorio'
+          description: ''
+  /api/v1/territorios/geojson:
+    get:
+      operationId: territorios_geojson
+      description: FeatureCollection com fonte e data em cada feição (RN-PROV-003).
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Parte do nome.
+      - in: query
+        name: precisao
+        schema:
+          type: integer
+        description: Casas decimais (padrão 6).
+      - in: query
+        name: tipo
+        schema:
+          type: string
+        description: municipio | regional | bairro
+      tags:
+      - territorios
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+components:
+  schemas:
+    Equipe:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 200
+        descricao:
+          type: string
+        ativa:
+          type: boolean
+        coordenador:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+          nullable: true
+        membros:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+        territorios:
+          type: array
+          items:
+            $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        atualizado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - atualizado_em
+      - coordenador
+      - criado_em
+      - id
+      - membros
+      - nome
+      - territorios
+    EquipeRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 200
+        descricao:
+          type: string
+        ativa:
+          type: boolean
+        coordenador_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        membro_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+            writeOnly: true
+          writeOnly: true
+        territorio_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+            writeOnly: true
+          writeOnly: true
+        motivo:
+          type: string
+          writeOnly: true
+          description: Justificativa registrada na auditoria.
+          maxLength: 500
+      required:
+      - nome
+    Eu:
+      type: object
+      description: |-
+        Usuário autenticado, com permissões efetivas e escopo (usado pela
+        interface para montar navegação; a autorização real é no servidor).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        papeis:
+          type: array
+          items:
+            $ref: '#/components/schemas/PapelEnum'
+        permissoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/PermissaoEnum'
+          readOnly: true
+        territorios:
+          type: array
+          items:
+            $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        ambiente:
+          type: string
+          readOnly: true
+      required:
+      - ambiente
+      - email
+      - id
+      - papeis
+      - permissoes
+      - territorios
+    EventoAuditoria:
+      type: object
+      properties:
+        id:
+          type: string
+        momento:
+          type: string
+          format: date-time
+        entidade:
+          type: string
+          readOnly: true
+        entidade_modelo:
+          type: string
+        objeto_id:
+          type: string
+          nullable: true
+        acao:
+          type: string
+          readOnly: true
+        diferencas:
+          nullable: true
+          readOnly: true
+          description: Campo -> [valor anterior, valor novo] (alterações).
+        dados:
+          readOnly: true
+          description: Estado após o evento.
+        contexto:
+          nullable: true
+          description: Usuário, origem (web/app/api), URL, motivo e outros metadados.
+      required:
+      - acao
+      - contexto
+      - dados
+      - diferencas
+      - entidade
+      - entidade_modelo
+      - id
+      - momento
+      - objeto_id
+    PaginatedEquipeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Equipe'
+    PaginatedEventoAuditoriaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventoAuditoria'
+    PaginatedTerritorioList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Territorio'
+    PaginatedUsuarioAdminList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UsuarioAdmin'
+    PapelEnum:
+      enum:
+      - gestor
+      - coordenador
+      - revisor
+      - analista_ambiental
+      - tecnico
+      - consulta
+      - administrador
+      type: string
+      description: |-
+        * `gestor` - Gestor municipal
+        * `coordenador` - Coordenador de equipe
+        * `revisor` - Técnico revisor
+        * `analista_ambiental` - Analista ambiental
+        * `tecnico` - Técnico de campo
+        * `consulta` - Consulta
+        * `administrador` - Administrador
+    PatchedEquipeRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 200
+        descricao:
+          type: string
+        ativa:
+          type: boolean
+        coordenador_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        membro_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+            writeOnly: true
+          writeOnly: true
+        territorio_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+            writeOnly: true
+          writeOnly: true
+        motivo:
+          type: string
+          writeOnly: true
+          description: Justificativa registrada na auditoria.
+          maxLength: 500
+    PatchedUsuarioAdminRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        papeis:
+          type: array
+          items:
+            $ref: '#/components/schemas/PapelEnum'
+        registro_profissional:
+          type: string
+          description: 'Qualificação técnica (ex.: CREA). Necessária para registrar
+            risco confirmado.'
+          maxLength: 100
+        ativo:
+          type: boolean
+        territorio_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+            writeOnly: true
+          writeOnly: true
+        motivo:
+          type: string
+          writeOnly: true
+          description: Justificativa registrada na auditoria.
+          maxLength: 500
+    PermissaoEnum:
+      enum:
+      - mapa.ler
+      - inventario.ler
+      - inventario.editar
+      - inventario.fundir_excluir
+      - inventario.importar
+      - inspecoes.ler
+      - inspecoes.validar
+      - ocorrencias.ler
+      - ocorrencias.editar
+      - ocorrencias.priorizar
+      - ocorrencias.confirmar_risco
+      - alertas.ler
+      - alertas.triar
+      - tarefas.ler
+      - tarefas.editar
+      - relatorios.ler
+      - relatorios.exportar
+      - admin.usuarios
+      - admin.equipes
+      - admin.auditoria
+      - admin.territorios
+      - admin.configuracao
+      type: string
+      description: |-
+        * `mapa.ler` - Ver mapa
+        * `inventario.ler` - Ver inventário
+        * `inventario.editar` - Cadastrar e editar árvores
+        * `inventario.fundir_excluir` - Fundir ou excluir árvores
+        * `inventario.importar` - Importar inventário em lote
+        * `inspecoes.ler` - Ver inspeções
+        * `inspecoes.validar` - Revisar e validar inspeções
+        * `ocorrencias.ler` - Ver ocorrências
+        * `ocorrencias.editar` - Registrar e editar ocorrências
+        * `ocorrencias.priorizar` - Definir prioridade operacional
+        * `ocorrencias.confirmar_risco` - Registrar risco confirmado
+        * `alertas.ler` - Ver alertas ambientais
+        * `alertas.triar` - Triar alertas ambientais
+        * `tarefas.ler` - Ver equipes e tarefas
+        * `tarefas.editar` - Criar e atribuir tarefas
+        * `relatorios.ler` - Ver análises e relatórios
+        * `relatorios.exportar` - Exportar dados
+        * `admin.usuarios` - Administrar usuários e papéis
+        * `admin.equipes` - Administrar equipes
+        * `admin.auditoria` - Consultar auditoria
+        * `admin.territorios` - Administrar territórios
+        * `admin.configuracao` - Administrar catálogos e integrações
+    Saude:
+      type: object
+      properties:
+        status:
+          type: string
+        banco:
+          type: string
+        ambiente:
+          type: string
+      required:
+      - ambiente
+      - banco
+      - status
+    Territorio:
+      type: object
+      description: Território com proveniência; sem geometria (ver endpoint GeoJSON).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 200
+        tipo:
+          $ref: '#/components/schemas/TipoTerritorioEnum'
+        codigo:
+          type: string
+          description: Código do território na fonte de origem.
+          maxLength: 50
+        pai:
+          allOf:
+          - $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        fonte:
+          type: string
+          maxLength: 200
+        fonte_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        licenca:
+          type: string
+          maxLength: 200
+        data_referencia:
+          type: string
+          format: date
+          nullable: true
+          description: Data do dado na fonte, quando informada.
+        ingerido_em:
+          type: string
+          format: date-time
+          description: Quando o dado foi ingerido no sistema.
+      required:
+      - codigo
+      - fonte
+      - id
+      - ingerido_em
+      - nome
+      - pai
+      - tipo
+    TerritorioResumo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 200
+        tipo:
+          $ref: '#/components/schemas/TipoTerritorioEnum'
+      required:
+      - id
+      - nome
+      - tipo
+    TerritorioResumoRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 200
+        tipo:
+          $ref: '#/components/schemas/TipoTerritorioEnum'
+      required:
+      - nome
+      - tipo
+    TipoTerritorioEnum:
+      enum:
+      - municipio
+      - regional
+      - bairro
+      type: string
+      description: |-
+        * `municipio` - Município
+        * `regional` - Regional
+        * `bairro` - Bairro
+    UsuarioAdmin:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        papeis:
+          type: array
+          items:
+            $ref: '#/components/schemas/PapelEnum'
+        registro_profissional:
+          type: string
+          description: 'Qualificação técnica (ex.: CREA). Necessária para registrar
+            risco confirmado.'
+          maxLength: 100
+        ativo:
+          type: boolean
+        territorios:
+          type: array
+          items:
+            $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        equipes:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        vinculado:
+          type: boolean
+          readOnly: true
+          description: Se o usuário já entrou ao menos uma vez pelo provedor de identidade.
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Data de registro
+        last_login:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Último login
+      required:
+      - date_joined
+      - email
+      - equipes
+      - id
+      - last_login
+      - territorios
+      - vinculado
+    UsuarioAdminRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        papeis:
+          type: array
+          items:
+            $ref: '#/components/schemas/PapelEnum'
+        registro_profissional:
+          type: string
+          description: 'Qualificação técnica (ex.: CREA). Necessária para registrar
+            risco confirmado.'
+          maxLength: 100
+        ativo:
+          type: boolean
+        territorio_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+            writeOnly: true
+          writeOnly: true
+        motivo:
+          type: string
+          writeOnly: true
+          description: Justificativa registrada na auditoria.
+          maxLength: 500
+      required:
+      - email
+    UsuarioResumo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - email
+      - id
+    UsuarioResumoRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          maxLength: 200
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+      required:
+      - email
+  securitySchemes:
+    oidc:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

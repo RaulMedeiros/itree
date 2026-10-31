@@ -194,6 +194,9 @@ itree/
 
 ## 5. Próximas ADRs
 
-- ADR-0002 — Protocolo de sincronização offline (app ↔ API).
-- ADR-0003 — Provedor de mapas base e imagem de satélite (fecha DP-07).
-- ADR-0004 — Hospedagem e implantação (quando a hospedagem for definida).
+- Protocolo de sincronização offline (app ↔ API).
+- Provedor de mapas base e imagem de satélite (fecha DP-07).
+- Hospedagem e implantação (quando a hospedagem for definida).
+
+(Numeração atribuída quando cada ADR for escrita; ADR-0002 tratou de
+identidade e autorização.)

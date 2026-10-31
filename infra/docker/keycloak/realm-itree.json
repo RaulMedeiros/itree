@@ -1,0 +1,83 @@
+{
+  "realm": "itree",
+  "enabled": true,
+  "displayName": "Engine de Inteligência Arbórea",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["pt-BR"],
+  "defaultLocale": "pt-BR",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "clients": [
+    {
+      "clientId": "itree-api",
+      "name": "API",
+      "enabled": true,
+      "bearerOnly": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "itree-web",
+      "name": "Painel web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "audiencia-itree-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "itree-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin@itree.local",
+      "email": "admin@itree.local",
+      "emailVerified": true,
+      "firstName": "Ana",
+      "lastName": "Administradora",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "admin", "temporary": false }]
+    },
+    {
+      "username": "gestor@itree.local",
+      "email": "gestor@itree.local",
+      "emailVerified": true,
+      "firstName": "Gabriel",
+      "lastName": "Gestor",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "gestor", "temporary": false }]
+    },
+    {
+      "username": "novo@itree.local",
+      "email": "novo@itree.local",
+      "emailVerified": true,
+      "firstName": "Nina",
+      "lastName": "Sem Acesso",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "novo", "temporary": false }]
+    }
+  ]
+}
