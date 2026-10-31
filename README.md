@@ -22,11 +22,14 @@ docs/
 │   ├── README.md                         # índice, convenções e status
 │   ├── web/                              # specs do painel web (foco atual)
 │   └── transversal/                      # regras comuns a web e mobile
-└── decisoes/
-    └── pendentes.md                      # decisões em aberto e impacto no web
+├── decisoes/
+│   └── pendentes.md                      # decisões em aberto e impacto no web
+└── adr/                                  # decisões de arquitetura (ADR)
 ```
 
-Comece por [`docs/specs/README.md`](docs/specs/README.md).
+Comece por [`docs/specs/README.md`](docs/specs/README.md). Decisões técnicas
+ficam em [`docs/adr/`](docs/adr/README.md); a stack está em
+[ADR-0001](docs/adr/0001-stack-tecnica.md).
 
 ## Como contribuir com as specs
 

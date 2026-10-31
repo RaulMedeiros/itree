@@ -32,8 +32,8 @@ Legenda: L = ler · E = criar/editar · V = validar/decidir · A = administrar �
 
 ## 3. Requisitos
 
-- **RF-ACL-001** — Autenticação com provedor a definir (preferência por SSO
-  institucional da prefeitura, se disponível).
+- **RF-ACL-001** — Autenticação via OIDC (Keycloak, [ADR-0001](../../adr/0001-stack-tecnica.md)),
+  federando com o SSO institucional da prefeitura, se disponível (DP-19).
 - **RF-ACL-002** — Autorização aplicada no servidor; a interface apenas oculta
   o que não é permitido.
 - **RF-ACL-003** — Dados fora do escopo territorial não aparecem em listas,
