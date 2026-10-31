@@ -75,11 +75,11 @@ e GDAL (`apt install gdal-bin libgdal-dev` ou `brew install gdal`).
 4. Abra http://localhost:5173 e entre com um dos usuários de desenvolvimento do
    Keycloak:
 
-   | E-mail | Senha | Situação inicial |
-   | ------ | ----- | ---------------- |
-   | `admin@itree.local` | `admin` | Administrador (criado no passo 2) |
+   | E-mail               | Senha    | Situação inicial                       |
+   | -------------------- | -------- | -------------------------------------- |
+   | `admin@itree.local`  | `admin`  | Administrador (criado no passo 2)      |
    | `gestor@itree.local` | `gestor` | Sem papéis até o administrador liberar |
-   | `novo@itree.local` | `novo` | Sem papéis até o administrador liberar |
+   | `novo@itree.local`   | `novo`   | Sem papéis até o administrador liberar |
 
    Console do Keycloak: http://localhost:8080 (`admin` / `admin`). Essas senhas
    valem **só** para o ambiente local.
