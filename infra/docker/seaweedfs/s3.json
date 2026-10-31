@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "itree",
+      "credentials": [{ "accessKey": "itree", "secretKey": "itree-armazenamento-dev" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

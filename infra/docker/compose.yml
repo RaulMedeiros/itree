@@ -1,6 +1,39 @@
-# Ambiente de desenvolvimento local. NÃO usar em produção (senhas fixas,
-# Keycloak em modo dev). Uso: veja o README da raiz.
+# Ambiente local completo da Engine de Inteligência Arbórea.
+#
+#   Só infraestrutura (para desenvolver backend/web fora de contêiner):
+#     docker compose -f infra/docker/compose.yml up -d
+#   Solução inteira em contêineres (painel em http://localhost:8088):
+#     docker compose -f infra/docker/compose.yml --profile completo up -d --build
+#
+# NÃO usar em produção: senhas fixas, Keycloak em modo dev, sem TLS.
+
 name: itree
+
+x-backend: &backend
+  build: { context: ../../backend }
+  image: itree/api:dev
+  environment: &backend-env
+    DJANGO_SECRET_KEY: dev-somente-local
+    DJANGO_DEBUG: "false"
+    DJANGO_ALLOWED_HOSTS: "*"
+    COOKIES_SEGUROS: "false"
+    ITREE_AMBIENTE: desenvolvimento
+    DATABASE_URL: postgis://itree:itree@db:5432/itree
+    REDIS_URL: redis://redis:6379/0
+    OIDC_ISSUER: http://localhost:8080/realms/itree
+    OIDC_JWKS_URL: http://keycloak:8080/realms/itree/protocol/openid-connect/certs
+    OIDC_AUDIENCE: itree-api
+    CORS_ALLOWED_ORIGINS: http://localhost:8088,http://localhost:5173
+    CSRF_TRUSTED_ORIGINS: http://localhost:8088
+    S3_BUCKET: itree
+    S3_ENDPOINT_URL: http://armazenamento:8333
+    S3_ENDPOINT_URL_PUBLICO: http://localhost:8333
+    S3_ACCESS_KEY_ID: itree
+    S3_SECRET_ACCESS_KEY: itree-armazenamento-dev
+  depends_on:
+    db: { condition: service_healthy }
+    redis: { condition: service_started }
+  restart: unless-stopped
 
 services:
   db:
@@ -14,11 +47,13 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U itree"]
       interval: 5s
-      retries: 10
+      retries: 20
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
+    restart: unless-stopped
 
   keycloak:
     image: keycloak/keycloak:26.4
@@ -31,26 +66,56 @@ services:
     ports: ["8080:8080"]
     volumes:
       - ./keycloak/realm-itree.json:/opt/keycloak/data/import/realm-itree.json:ro
+    restart: unless-stopped
+
+  # Armazenamento S3-compatível para fotos e documentos (SeaweedFS, Apache 2.0).
+  armazenamento:
+    image: chrislusf/seaweedfs:4.50
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json"]
+    ports: ["8333:8333"]
+    volumes:
+      - armazenamento:/data
+      - ./seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    restart: unless-stopped
 
   api:
-    profiles: ["api"]
-    build: { context: ../../backend }
-    command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py runserver 0.0.0.0:8000"
+    <<: *backend
+    profiles: ["completo"]
+    command: ["api"]
     environment:
-      DJANGO_SECRET_KEY: dev-somente-local
-      DJANGO_DEBUG: "true"
-      DJANGO_ALLOWED_HOSTS: "*"
-      DATABASE_URL: postgis://itree:itree@db:5432/itree
-      REDIS_URL: redis://redis:6379/0
-      OIDC_ISSUER: http://localhost:8080/realms/itree
-      OIDC_JWKS_URL: http://keycloak:8080/realms/itree/protocol/openid-connect/certs
-      OIDC_AUDIENCE: itree-api
+      <<: *backend-env
+      MIGRAR: "1"
     ports: ["8000:8000"]
-    volumes: ["../../backend/itree:/app/itree", "../../backend/config:/app/config"]
     depends_on:
       db: { condition: service_healthy }
+      redis: { condition: service_started }
+      armazenamento: { condition: service_started }
+
+  worker:
+    <<: *backend
+    profiles: ["completo"]
+    command: ["worker"]
+    healthcheck: { disable: true }
+
+  beat:
+    <<: *backend
+    profiles: ["completo"]
+    command: ["beat"]
+    healthcheck: { disable: true }
+
+  web:
+    profiles: ["completo"]
+    build: { context: ../.., dockerfile: apps/web/Dockerfile }
+    image: itree/web:dev
+    environment:
+      ITREE_API_UPSTREAM: api:8000
+      ITREE_OIDC_AUTHORITY: http://localhost:8080/realms/itree
+      ITREE_OIDC_CLIENT_ID: itree-web
+      ITREE_MOSTRAR_MODULOS_FUTUROS: "true"
+    ports: ["8088:80"]
+    depends_on: [api]
+    restart: unless-stopped
 
 volumes:
   db:
+  armazenamento:

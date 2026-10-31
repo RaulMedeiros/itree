@@ -44,3 +44,12 @@ def test_saude(cliente):
     resposta = cliente.get("/api/v1/saude")
     assert resposta.status_code == 200
     assert resposta.json()["banco"] == "ok"
+
+
+@pytest.mark.django_db
+def test_preparar_armazenamento_sem_s3_nao_faz_nada(settings, capsys):
+    from django.core.management import call_command
+
+    settings.S3_BUCKET = ""
+    call_command("preparar_armazenamento")
+    assert "não configurado" in capsys.readouterr().out

@@ -42,12 +42,23 @@ Comece por [`docs/specs/README.md`](docs/specs/README.md). Decisões técnicas
 ficam em [`docs/adr/`](docs/adr/README.md); a stack está em
 [ADR-0001](docs/adr/0001-stack-tecnica.md).
 
-## Rodando localmente
+## Rodando tudo em contêineres
+
+```bash
+docker compose -f infra/docker/compose.yml --profile completo up -d --build
+docker compose -f infra/docker/compose.yml exec api /app/docker/entrypoint.sh \
+  manage criar_administrador --email admin@itree.local --nome "Ana Administradora"
+```
+
+Painel em http://localhost:8088. Detalhes, variáveis de ambiente e checklist de
+produção em [`infra/README.md`](infra/README.md).
+
+## Rodando localmente (desenvolvimento)
 
 Requisitos: Docker, Node 22 + pnpm 10, Python 3.13 + [uv](https://docs.astral.sh/uv/)
 e GDAL (`apt install gdal-bin libgdal-dev` ou `brew install gdal`).
 
-1. Serviços (PostGIS, Redis e Keycloak com o realm `itree` já configurado):
+1. Serviços de apoio (PostGIS, Redis, Keycloak com o realm `itree` e armazenamento S3):
 
    ```bash
    docker compose -f infra/docker/compose.yml up -d
