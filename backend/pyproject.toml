@@ -12,7 +12,9 @@ dependencies = [
     "django-storages[s3]>=1.14.6",
     "djangorestframework>=3.18.3",
     "drf-spectacular>=0.30.0",
+    "fpdf2>=2.9.0",
     "gunicorn>=26.2.0",
+    "openpyxl>=3.1.5",
     "psycopg[binary]>=3.3.6",
     "pyjwt[crypto]>=2.15.1",
     "requests>=2.34.2",
@@ -42,6 +44,9 @@ ignore = ["S101"]
 "tests/*" = ["S105", "S106", "E501", "E731"]
 # SQL dos vector tiles é montado só com constantes do módulo; valores vão como parâmetros.
 "itree/mapa/views.py" = ["S608"]
+# Catálogos de textos (definições de análises e critérios de qualidade).
+"itree/relatorios/views.py" = ["E501"]
+"itree/qualidade/views.py" = ["E501"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"

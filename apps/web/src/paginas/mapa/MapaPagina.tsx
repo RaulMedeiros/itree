@@ -1,4 +1,5 @@
 import {
+  mapaAlertas,
   territoriosGeojson,
   useArvoresObter,
   useMapaCamadas,
@@ -48,6 +49,7 @@ export interface BuscaMapa {
   ocorrencias?: "0";
   bairros?: "0";
   tarefas?: "1";
+  alertas?: "1";
   sem_inspecao_dias?: number;
   especie_estado?: EstadoEspecieEnum;
   localizacao_origem?: OrigemLocalizacaoEnum;
@@ -70,6 +72,7 @@ export function MapaPagina() {
   const navegar = useNavigate({ from: "/mapa" });
   const podeOcorrencias = usePermissao("ocorrencias.ler");
   const podeTarefas = usePermissao("tarefas.ler");
+  const podeAlertas = usePermissao("alertas.ler");
   const camadas = useMapaCamadas();
   const mapa = useRef<MapaMapLibre | null>(null);
   const [pronto, setPronto] = useState(false);
@@ -81,6 +84,7 @@ export function MapaPagina() {
   const mostrarOcorrencias = podeOcorrencias && busca.ocorrencias !== "0";
   const mostrarBairros = busca.bairros !== "0";
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
+  const mostrarAlertas = podeAlertas && busca.alertas === "1";
   const filtrosArvores = {
     especie_estado: busca.especie_estado,
     localizacao_origem: busca.localizacao_origem,
@@ -207,6 +211,41 @@ export function MapaPagina() {
         },
       });
     }
+    if (podeAlertas) {
+      m.addSource("alertas", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      m.addLayer({
+        id: "alertas-area",
+        type: "fill",
+        source: "alertas",
+        filter: ["!=", ["geometry-type"], "Point"],
+        layout: { visibility: "none" },
+        paint: { "fill-color": "#d9480f", "fill-opacity": 0.2 },
+      });
+      m.addLayer({
+        id: "alertas-borda",
+        type: "line",
+        source: "alertas",
+        filter: ["!=", ["geometry-type"], "Point"],
+        layout: { visibility: "none" },
+        paint: { "line-color": "#d9480f", "line-width": 1.5, "line-dasharray": [2, 1] },
+      });
+      m.addLayer({
+        id: "alertas-pontos",
+        type: "circle",
+        source: "alertas",
+        filter: ["==", ["geometry-type"], "Point"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": 6,
+          "circle-color": "#ffffff",
+          "circle-stroke-color": "#d9480f",
+          "circle-stroke-width": 2.5,
+        },
+      });
+    }
     m.addLayer({
       id: "selecao",
       type: "circle",
@@ -267,6 +306,16 @@ export function MapaPagina() {
     setPronto(true);
   };
 
+  // Alertas ambientais em aberto (geometria como recebida da fonte).
+  useEffect(() => {
+    if (!pronto || !mostrarAlertas) return;
+    void mapaAlertas().then(({ data }) => {
+      (mapa.current?.getSource("alertas") as GeoJSONSource | undefined)?.setData(
+        data as Parameters<GeoJSONSource["setData"]>[0],
+      );
+    });
+  }, [pronto, mostrarAlertas]);
+
   // Limites dos bairros (contexto territorial).
   useEffect(() => {
     if (!pronto) return;
@@ -314,11 +363,13 @@ export function MapaPagina() {
       m.setLayoutProperty(id, "visibility", vis(mostrarArvores));
     if (m.getLayer("ocorrencias-pontos"))
       m.setLayoutProperty("ocorrencias-pontos", "visibility", vis(mostrarOcorrencias));
+    for (const id of ["alertas-area", "alertas-borda", "alertas-pontos"])
+      if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", vis(mostrarAlertas));
     if (m.getLayer("tarefas-pontos"))
       m.setLayoutProperty("tarefas-pontos", "visibility", vis(mostrarTarefas));
     for (const id of ["bairros-preenchimento", "bairros-contorno"])
       m.setLayoutProperty(id, "visibility", vis(mostrarBairros));
-  }, [pronto, mostrarArvores, mostrarOcorrencias, mostrarBairros, mostrarTarefas]);
+  }, [pronto, mostrarArvores, mostrarOcorrencias, mostrarBairros, mostrarTarefas, mostrarAlertas]);
 
   useEffect(() => {
     if (!pronto) return;
@@ -435,12 +486,17 @@ export function MapaPagina() {
                 Tarefas em aberto
               </label>
             )}
-            <label
-              className="flex items-center gap-2 text-texto-suave"
-              title="Previsto para a F3 (W-08)"
-            >
-              <input type="checkbox" disabled /> Alertas ambientais (F3)
-            </label>
+            {podeAlertas && (
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="accent-marca"
+                  checked={mostrarAlertas}
+                  onChange={(e) => atualizarBusca({ alertas: e.target.checked ? "1" : undefined })}
+                />
+                Alertas ambientais (sinais externos)
+              </label>
+            )}
           </fieldset>
 
           {mostrarArvores && (
@@ -554,6 +610,12 @@ export function MapaPagina() {
                     style={{ border: "3px solid #7a1a14" }}
                   />{" "}
                   Risco confirmado
+                </li>
+              )}
+              {podeAlertas && (
+                <li className="flex items-center gap-2">
+                  <span className="inline-block size-3" style={{ border: "2px dashed #d9480f" }} />{" "}
+                  Alerta ambiental (não é confirmação de infração)
                 </li>
               )}
               {podeTarefas && (

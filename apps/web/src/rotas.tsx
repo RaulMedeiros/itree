@@ -37,6 +37,11 @@ import { InspecaoDetalhePagina } from "./paginas/inspecoes/InspecaoDetalhePagina
 import { InspecoesPagina } from "./paginas/inspecoes/InspecoesPagina";
 import { TarefasPagina } from "./paginas/tarefas/TarefasPagina";
 import { VisaoGeralPagina } from "./paginas/visao-geral/VisaoGeralPagina";
+import { AlertaDetalhePagina } from "./paginas/alertas/AlertaDetalhePagina";
+import { AlertasPagina } from "./paginas/alertas/AlertasPagina";
+import { AnalisesPagina } from "./paginas/analises/AnalisesPagina";
+import { IntegracoesPagina } from "./paginas/administracao/IntegracoesPagina";
+import { QualidadePagina } from "./paginas/inventario/QualidadePagina";
 import { SemPermissao } from "./ui/estados";
 
 function Exige({ permissao, children }: { permissao: PermissaoEnum; children: ReactNode }) {
@@ -230,6 +235,7 @@ const mapa = createRoute({
     ocorrencias: bandeira("0"),
     bairros: bandeira("0"),
     tarefas: bandeira("1"),
+    alertas: bandeira("1"),
     sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),
     especie_estado: z
       .enum(["confirmada", "sugerida_ia", "informada", "nao_identificada"])
@@ -409,7 +415,66 @@ const tarefas = createRoute({
   ),
 });
 
+// --- F3: alertas, análises, qualidade e integrações ----------------------------
+
+const alertas = createRoute({
+  getParentRoute: () => autenticado,
+  path: "alertas",
+  component: () => (
+    <Exige permissao="alertas.ler">
+      <Outlet />
+    </Exige>
+  ),
+});
+
+const alertasLista = createRoute({
+  getParentRoute: () => alertas,
+  path: "/",
+  validateSearch: z.object({
+    status: textoOpcional,
+    fonte: z.enum(["inpe_focos", "inpe_deter", "mapbiomas"]).optional().catch(undefined),
+    deteccao_desde: dataOpcionalF2,
+    deteccao_ate: dataOpcionalF2,
+    pagina: paginaOpcional,
+  }),
+  component: AlertasPagina,
+});
+
+const alertaDetalhe = createRoute({
+  getParentRoute: () => alertas,
+  path: "$id",
+  component: AlertaDetalhePagina,
+});
+
+const analises = createRoute({
+  getParentRoute: () => autenticado,
+  path: "analises",
+  validateSearch: z.object({ analise: textoOpcional, inicio: dataOpcionalF2, fim: dataOpcionalF2 }),
+  component: () => (
+    <Exige permissao="relatorios.ler">
+      <AnalisesPagina />
+    </Exige>
+  ),
+});
+
+const qualidade = createRoute({
+  getParentRoute: () => inventario,
+  path: "qualidade",
+  component: QualidadePagina,
+});
+
+const integracoes = createRoute({
+  getParentRoute: () => administracao,
+  path: "integracoes",
+  component: () => (
+    <Exige permissao="admin.configuracao">
+      <IntegracoesPagina />
+    </Exige>
+  ),
+});
+
 const ENTREGUES = new Set([
+  "analises",
   "administracao",
   "mapa",
   "inventario",
@@ -438,14 +503,24 @@ const arvore = raiz.addChildren([
       territorios,
       especies,
       tiposOcorrencia,
+      integracoes,
       auditoria,
     ]),
     mapa,
-    inventario.addChildren([inventarioInicio, arvores, arvoreDetalhe, importacoes, duplicidades]),
+    inventario.addChildren([
+      inventarioInicio,
+      arvores,
+      arvoreDetalhe,
+      importacoes,
+      duplicidades,
+      qualidade,
+    ]),
     ocorrencias.addChildren([ocorrenciasLista, ocorrenciaDetalhe]),
     visaoGeral,
     inspecoes.addChildren([inspecoesLista, inspecaoDetalhe]),
     tarefas,
+    alertas.addChildren([alertasLista, alertaDetalhe]),
+    analises,
     ...modulosFuturos,
   ]),
 ]);

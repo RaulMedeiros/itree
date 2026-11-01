@@ -1,6 +1,6 @@
 # W-09 — Análises, relatórios e exportações
 
-**Status:** Rascunho · **Fase:** F3 · **Prioridade:** P1
+**Status:** Implementado (F3; mapa coroplético e relatórios assistidos por IA pendentes) · **Fase:** F3 · **Prioridade:** P1
 
 ## 1. Objetivo
 

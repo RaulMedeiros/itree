@@ -32,6 +32,9 @@ ENTIDADES = {
     "evidencias.EvidenciaEvent": "Evidência",
     "inspecoes.InspecaoEvent": "Inspeção",
     "tarefas.TarefaEvent": "Tarefa",
+    "alertas.AlertaAmbientalEvent": "Alerta ambiental",
+    "relatorios.ExportacaoEvent": "Exportação",
+    "qualidade.InferenciaIAEvent": "Sugestão de IA",
 }
 
 ACOES = {"insert": "criacao", "update": "alteracao", "delete": "exclusao"}

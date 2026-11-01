@@ -13,10 +13,10 @@
  * * `conflito` - conflito
  * * `erro` - erro
  */
-export type StatusEnum = typeof StatusEnum[keyof typeof StatusEnum];
+export type ResultadoSincronizacaoStatusEnum = typeof ResultadoSincronizacaoStatusEnum[keyof typeof ResultadoSincronizacaoStatusEnum];
 
 
-export const StatusEnum = {
+export const ResultadoSincronizacaoStatusEnum = {
   criada: 'criada',
   atualizada: 'atualizada',
   ja_recebida: 'ja_recebida',

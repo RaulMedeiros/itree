@@ -6,11 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ResultadoSincronizacaoErros } from './resultadoSincronizacaoErros';
-import type { StatusEnum } from './statusEnum';
+import type { ResultadoSincronizacaoStatusEnum } from './resultadoSincronizacaoStatusEnum';
 
 export interface ResultadoSincronizacao {
   id: string;
-  status: StatusEnum;
+  status: ResultadoSincronizacaoStatusEnum;
   /** @nullable */
   versao: number | null;
   /** @nullable */

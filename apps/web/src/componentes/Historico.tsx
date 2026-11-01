@@ -43,7 +43,16 @@ const ehReferencia = (campo: string) => campo.endsWith("_id");
 function exibir(v: unknown): string {
   if (v === null || v === undefined || v === "") return "(vazio)";
   if (typeof v === "string" && DATA_HORA_ISO.test(v)) return formatarDataHora(v) ?? v;
-  if (Array.isArray(v)) return v.length ? v.map(String).join(", ") : "(vazio)";
+  if (Array.isArray(v)) {
+    if (!v.length) return "(vazio)";
+    return v
+      .map((item) =>
+        item && typeof item === "object"
+          ? String((item as { nome?: unknown }).nome ?? JSON.stringify(item))
+          : String(item),
+      )
+      .join(", ");
+  }
   if (typeof v === "boolean") return v ? "sim" : "não";
   return typeof v === "object" ? JSON.stringify(v) : String(v);
 }

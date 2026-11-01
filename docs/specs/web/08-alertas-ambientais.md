@@ -1,6 +1,6 @@
 # W-08 — Alertas ambientais
 
-**Status:** Rascunho · **Fase:** F3 · **Prioridade:** P1
+**Status:** Implementado (F3; fontes reais dependem de DP-11 e fluxo institucional de DP-15) · **Fase:** F3 · **Prioridade:** P1
 
 ## 1. Objetivo
 

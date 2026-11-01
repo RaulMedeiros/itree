@@ -346,3 +346,16 @@ def camadas(request: Request):
             "limites_escopo": list(area.extent) if area else None,
         }
     )
+
+
+@extend_schema(
+    operation_id="mapa_alertas", responses={(200, "application/geo+json"): OpenApiTypes.OBJECT}
+)
+@api_view(["GET"])
+def alertas(request: Request):
+    """Alertas ambientais em aberto como GeoJSON (polígonos e pontos), com escopo."""
+    from itree.alertas.views import alertas_geojson
+
+    if not request.user.tem_permissao("alertas.ler"):
+        raise PermissionDenied()
+    return Response(alertas_geojson(request.user, request.query_params))
