@@ -13,3 +13,18 @@
     @apply outline-2 outline-offset-2 outline-marca;
   }
 }
+
+/* Nomes de bairro no mapa (marcadores HTML: o mapa não usa servidor de glifos). */
+.rotulo-bairro {
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #24503a;
+  white-space: nowrap;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff,
+    0 0 6px #fff;
+}

@@ -110,7 +110,7 @@ for a in random.sample(arvores, 90):
         a.especie_estado = "confirmada"
         a.save(update_fields=["especie_estado"])
 for a in random.sample(arvores, 120):
-    a.condicao_aparente = random.choice(["boa", "boa", "regular", "regular", "ruim", "critica"])
+    a.condicao_aparente = random.choice(["boa", "boa", "boa", "regular", "regular", "ruim", "morta"])
     a.condicao_aparente_em = agora - timedelta(days=random.randint(5, 500))
     a.save(update_fields=["condicao_aparente", "condicao_aparente_em"])
 

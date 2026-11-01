@@ -24,17 +24,26 @@ não há base de cálculo, o cartão mostra "Sem dados" em vez de zero.
 
 ## Mapa (W-02)
 
-Vector tiles filtrados pelo escopo do usuário, com legenda de origem da
-localização, links para as listas equivalentes e filtros na URL.
+O mapa base (OpenStreetMap) aparece dessaturado, e os dados ganham o
+destaque. As cores e formas seguem as regras de
+[`docs/melhoria/direcao-visual.md`](../melhoria/direcao-visual.md):
+
+- **Árvores:** a cor indica a condição aparente e o contorno indica a origem
+  da localização.
+- **Ocorrências:** triângulos coloridos pela prioridade.
+- **Agrupamentos:** mostram a contagem.
+- **Bairros:** aparecem com o nome.
+- **Painel e legenda:** flutuam sobre o mapa, e a legenda lista só as camadas
+  ativas.
 
 ![Mapa](02-mapa.png)
 
-Painel contextual de uma árvore selecionada:
+Árvore selecionada, com foto, proveniência e medidas:
 
 ![Mapa com árvore selecionada](03-mapa-selecao.png)
 
-Camadas de tarefas em aberto (contorno azul) e de alertas ambientais
-(polígono tracejado e focos):
+Tarefas em aberto (quadrados; vermelho = atrasada) e alertas ambientais
+(losango e área hachurada em violeta, separados das ocorrências):
 
 ![Mapa com tarefas e alertas](04-mapa-alertas-tarefas.png)
 

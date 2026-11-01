@@ -50,7 +50,7 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
   await tela(
     p,
     "03-mapa-selecao",
-    `/mapa?lon=${ids.lon}&lat=${ids.lat}&zoom=17&selecao=arvore:${ids.arvore}`,
+    `/mapa?lon=${ids.foto_lon}&lat=${ids.foto_lat}&zoom=17&selecao=arvore:${ids.arvore_foto}`,
     { esperar: "Legenda", espera: 5000 },
   );
   await tela(

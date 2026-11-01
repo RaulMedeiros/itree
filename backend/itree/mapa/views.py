@@ -78,6 +78,7 @@ CAMADAS = {
         "filtros": _filtros_arvores,
         "base": """
             SELECT a.id::text AS id, a.numero, a.especie_estado, a.localizacao_origem,
+                   COALESCE(NULLIF(a.condicao_aparente, ''), 'nao_avaliada') AS condicao,
                    COALESCE(a.precisao_m, -1) AS precisao_m,
                    COALESCE(e.nome_cientifico, '') AS especie,
                    ST_Transform(a.geom, 3857) AS g3857
@@ -87,7 +88,9 @@ CAMADAS = {
                AND a.geom && ST_Transform(env.g, 4326)
                AND ST_Intersects(a.geom, ST_GeomFromEWKB(%(area)s))
         """,
-        "propriedades": "id, numero, especie_estado, localizacao_origem, precisao_m, especie",
+        "propriedades": (
+            "id, numero, especie_estado, localizacao_origem, condicao, precisao_m, especie"
+        ),
     },
     "ocorrencias": {
         "permissao": "ocorrencias.ler",
@@ -161,10 +164,16 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
               FROM base, env
         """
     else:
-        parametros["celula"] = CIRCUNFERENCIA_3857 / 2**z / 32
-        selecao = """
+        parametros["celula"] = CIRCUNFERENCIA_3857 / 2**z / 64
+        # Célula com um único registro leva as mesmas propriedades da feição
+        # individual, para a simbologia não depender do zoom.
+        individuais = ",\n                   ".join(
+            f"CASE WHEN count(*) = 1 THEN (array_agg({p}))[1] END AS {p}"
+            for p in (c.strip() for c in definicao["propriedades"].split(","))
+        )
+        selecao = f"""
             SELECT count(*)::int AS quantidade,
-                   CASE WHEN count(*) = 1 THEN min(id) END AS id,
+                   {individuais},
                    ST_AsMVTGeom(ST_Centroid(ST_Collect(g3857)), env.g, 4096, 64, true) AS geom
               FROM base, env
              GROUP BY ST_SnapToGrid(g3857, %(celula)s), env.g

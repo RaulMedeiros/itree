@@ -246,6 +246,11 @@ const mapa = createRoute({
       .optional()
       .catch(undefined),
     estado: z.enum(["abertas", "todas"]).optional().catch(undefined),
+    condicao_aparente: z
+      .enum(["boa", "regular", "ruim", "morta", "sem"])
+      .optional()
+      .catch(undefined),
+    cor: z.enum(["origem"]).optional().catch(undefined),
     selecao: textoOpcional,
   }),
   component: () => (
