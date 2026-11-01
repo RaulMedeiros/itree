@@ -1,7 +1,9 @@
+import logging
 import re
 from datetime import timedelta
 
 import pghistory
+from django.conf import settings
 from django.db import transaction
 from django.db.models import CharField, Count, F, Func, Q, Value
 from django.utils import timezone
@@ -30,7 +32,7 @@ from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
 from itree.ocorrencias.models import ESTADOS_FINAIS
 
-from . import duplicidades, importacao
+from . import duplicidades, importacao, referencias
 from .models import (
     Arvore,
     Especie,
@@ -56,6 +58,8 @@ from .serializers import (
     ParRevisadoSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 P = Permissao
 
 
@@ -69,6 +73,10 @@ def _com_motivo(request):
         parameters=[
             OpenApiParameter("busca", str),
             OpenApiParameter("ativa", bool),
+            OpenApiParameter(
+                "com_arvores", bool, description="Só espécies com árvores no seu escopo."
+            ),
+            OpenApiParameter("ordem", str, description="'arvores' = mais árvores primeiro."),
         ],
     ),
     retrieve=extend_schema(operation_id="especies_obter"),
@@ -94,6 +102,18 @@ class EspecieViewSet(
 
     def get_queryset(self):
         qs = Especie.objects.all()
+        if getattr(self, "swagger_fake_view", False):
+            return qs
+        area = area_do_escopo(self.request.user)
+        # Contagem respeita o escopo territorial (RF-ACL-003).
+        qs = qs.annotate(
+            arvores_no_escopo=Count(
+                "arvore",
+                filter=Q(arvore__situacao=SituacaoArvore.ATIVA, arvore__geom__intersects=area)
+                if area is not None
+                else Q(pk__in=[]),
+            )
+        )
         p = self.request.query_params
         if busca := p.get("busca"):
             nomes = Func(
@@ -106,7 +126,39 @@ class EspecieViewSet(
             )
         if (ativa := p.get("ativa")) in ("true", "false"):
             qs = qs.filter(ativa=ativa == "true")
-        return qs
+        if p.get("com_arvores") == "true":
+            qs = qs.filter(arvores_no_escopo__gt=0)
+        if p.get("ordem") == "arvores":
+            return qs.order_by("-arvores_no_escopo", "nome_cientifico")
+        return qs.order_by("nome_cientifico")
+
+    def perform_create(self, serializer):
+        especie = serializer.save()
+        if settings.REFERENCIAS_AUTOMATICAS:
+            transaction.on_commit(lambda: _enfileirar_referencias(especie.pk))
+
+    @extend_schema(
+        operation_id="especies_atualizar_referencias",
+        request=None,
+        responses=EspecieSerializer,
+    )
+    @action(detail=True, methods=["post"], url_path="atualizar-referencias")
+    def atualizar_referencias(self, request, pk=None):
+        """Consulta agora Wikidata, Wikipedia e Commons para esta espécie."""
+        especie = self.get_object()
+        with pghistory.context(evento="referencias_especie"):
+            referencias.atualizar(especie)
+        return Response(self.get_serializer(self.get_queryset().get(pk=especie.pk)).data)
+
+
+def _enfileirar_referencias(especie_id) -> None:
+    """Melhor esforço: sem fila disponível, a consulta fica para o comando."""
+    from .tasks import atualizar_referencias_especie
+
+    try:
+        atualizar_referencias_especie.delay(str(especie_id))
+    except Exception:  # noqa: BLE001 - broker fora do ar não pode impedir o cadastro
+        logger.warning("Fila indisponível; referências de %s ficam pendentes.", especie_id)
 
 
 FILTROS_ARVORE = [

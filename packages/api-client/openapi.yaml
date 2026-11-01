@@ -948,6 +948,16 @@ paths:
         name: busca
         schema:
           type: string
+      - in: query
+        name: com_arvores
+        schema:
+          type: boolean
+        description: Só espécies com árvores no seu escopo.
+      - in: query
+        name: ordem
+        schema:
+          type: string
+        description: '''arvores'' = mais árvores primeiro.'
       - name: pagina
         required: false
         in: query
@@ -1044,6 +1054,29 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedEspecieRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Especie'
+          description: ''
+  /api/v1/especies/{id}/atualizar-referencias:
+    post:
+      operationId: especies_atualizar_referencias
+      description: Consulta agora Wikidata, Wikipedia e Commons para esta espécie.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este especie.
+        required: true
+      tags:
+      - especies
       security:
       - oidc: []
       responses:
@@ -2873,6 +2906,11 @@ components:
           type: string
           format: date-time
           readOnly: true
+        especie_cartao:
+          allOf:
+          - $ref: '#/components/schemas/EspecieCartao'
+          readOnly: true
+          nullable: true
         identificadores:
           type: array
           items:
@@ -2909,6 +2947,7 @@ components:
       - criado_em
       - criado_por_nome
       - especie
+      - especie_cartao
       - fundida_em
       - id
       - identificadores
@@ -3399,8 +3438,196 @@ components:
         fonte_taxonomica:
           type: string
           maxLength: 200
+        arvores_no_escopo:
+          type: integer
+          readOnly: true
+          description: Árvores ativas desta espécie no seu escopo.
+        referencias_situacao:
+          allOf:
+          - $ref: '#/components/schemas/ReferenciasSituacaoEnum'
+          readOnly: true
+        referencias_mensagem:
+          type: string
+          readOnly: true
+        referencias_consultadas_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        wikidata_id:
+          type: string
+          readOnly: true
+        wikidata_url:
+          type: string
+          readOnly: true
+        wikipedia_idioma:
+          type: string
+          readOnly: true
+        wikipedia_titulo:
+          type: string
+          readOnly: true
+        wikipedia_url:
+          type: string
+          format: uri
+          readOnly: true
+        wikipedia_descricao:
+          type: string
+          readOnly: true
+        wikipedia_resumo:
+          type: string
+          readOnly: true
+        gbif_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        gbif_url:
+          type: string
+          readOnly: true
+        imagem_url:
+          type: string
+          format: uri
+          readOnly: true
+        imagem_pagina_url:
+          type: string
+          format: uri
+          readOnly: true
+        imagem_autor:
+          type: string
+          readOnly: true
+        imagem_licenca:
+          type: string
+          readOnly: true
+        imagem_licenca_url:
+          type: string
+          format: uri
+          readOnly: true
+      required:
+      - arvores_no_escopo
+      - gbif_id
+      - gbif_url
+      - id
+      - imagem_autor
+      - imagem_licenca
+      - imagem_licenca_url
+      - imagem_pagina_url
+      - imagem_url
+      - nome_cientifico
+      - referencias_consultadas_em
+      - referencias_mensagem
+      - referencias_situacao
+      - wikidata_id
+      - wikidata_url
+      - wikipedia_descricao
+      - wikipedia_idioma
+      - wikipedia_resumo
+      - wikipedia_titulo
+      - wikipedia_url
+    EspecieCartao:
+      type: object
+      description: Resumo da espécie com imagem e links, para a ficha da árvore.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome_cientifico:
+          type: string
+          maxLength: 200
+        nomes_comuns:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+        familia:
+          type: string
+          maxLength: 100
+        nativa_brasil:
+          type: boolean
+          nullable: true
+        wikipedia_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        wikipedia_descricao:
+          type: string
+          maxLength: 300
+        imagem_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 1000
+          - type: string
+            maxLength: 0
+        imagem_autor:
+          type: string
+          maxLength: 300
+        imagem_licenca:
+          type: string
+          maxLength: 100
+        imagem_pagina_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 1000
+          - type: string
+            maxLength: 0
       required:
       - id
+      - nome_cientifico
+    EspecieCartaoRequest:
+      type: object
+      description: Resumo da espécie com imagem e links, para a ficha da árvore.
+      properties:
+        nome_cientifico:
+          type: string
+          minLength: 1
+          maxLength: 200
+        nomes_comuns:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        familia:
+          type: string
+          maxLength: 100
+        nativa_brasil:
+          type: boolean
+          nullable: true
+        wikipedia_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        wikipedia_descricao:
+          type: string
+          maxLength: 300
+        imagem_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 1000
+          - type: string
+            maxLength: 0
+        imagem_autor:
+          type: string
+          maxLength: 300
+        imagem_licenca:
+          type: string
+          maxLength: 100
+        imagem_pagina_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 1000
+          - type: string
+            maxLength: 0
+      required:
       - nome_cientifico
     EspecieRequest:
       type: object
@@ -5385,6 +5612,18 @@ components:
           maxLength: 500
       required:
       - prioridade
+    ReferenciasSituacaoEnum:
+      enum:
+      - nao_consultada
+      - encontradas
+      - nao_encontradas
+      - erro
+      type: string
+      description: |-
+        * `nao_consultada` - Ainda não consultadas
+        * `encontradas` - Encontradas
+        * `nao_encontradas` - Não encontradas
+        * `erro` - Erro na consulta
     RemoverEvidenciaRequest:
       type: object
       properties:

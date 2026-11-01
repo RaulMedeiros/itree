@@ -18,6 +18,7 @@ OUTRA_CHAVE = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
 @pytest.fixture(autouse=True)
 def _jwks_falso(monkeypatch, settings):
+    settings.REFERENCIAS_AUTOMATICAS = False  # testes nunca acessam a rede
     settings.OIDC_ISSUER = "https://idp.teste/realms/itree"
     settings.OIDC_AUDIENCE = "itree-api"
     monkeypatch.setattr(autenticacao, "obter_chave_assinatura", lambda token: CHAVE.public_key())

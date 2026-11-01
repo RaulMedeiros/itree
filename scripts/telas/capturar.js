@@ -76,6 +76,10 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     esperar: "Resumo",
     acao: (q) => q.getByRole("tab", { name: /Sugestões de IA/ }).click(),
   });
+  await tela(p, "31-especies", "/inventario/especies", { esperar: "Licania tomentosa" });
+  await tela(p, "32-especie-detalhe", `/inventario/especies/${ids.especie}`, {
+    esperar: "Catálogo municipal",
+  });
   await tela(p, "11-importacoes", "/inventario/importacoes", { esperar: /inventario-sintetico/ });
   await tela(p, "12-importacao-nova", null, {
     acao: async (q) => {

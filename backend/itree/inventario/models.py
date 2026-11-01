@@ -33,6 +33,13 @@ class OrigemRegistro(models.TextChoices):
     IMPORTACAO = "importacao", "Importação"
 
 
+class SituacaoReferencias(models.TextChoices):
+    NAO_CONSULTADA = "nao_consultada", "Ainda não consultadas"
+    ENCONTRADAS = "encontradas", "Encontradas"
+    NAO_ENCONTRADAS = "nao_encontradas", "Não encontradas"
+    ERRO = "erro", "Erro na consulta"
+
+
 @pghistory.track(*eventos())
 class Especie(ModeloBase):
     """Catálogo taxonômico (DP-02 define a taxonomia oficial)."""
@@ -51,11 +58,42 @@ class Especie(ModeloBase):
     )
     fonte_taxonomica = models.CharField(max_length=200, blank=True)
 
+    # Referências externas (M-01). Vêm de consulta automática ao Wikidata,
+    # Wikipedia e Wikimedia Commons; são exibidas com fonte, licença e data e
+    # nunca sobrescrevem os campos taxonômicos acima, mantidos pela administração.
+    referencias_situacao = models.CharField(
+        max_length=20,
+        choices=SituacaoReferencias.choices,
+        default=SituacaoReferencias.NAO_CONSULTADA,
+    )
+    referencias_mensagem = models.CharField(max_length=300, blank=True)
+    referencias_consultadas_em = models.DateTimeField(null=True, blank=True)
+    wikidata_id = models.CharField(max_length=20, blank=True)
+    wikipedia_idioma = models.CharField(max_length=5, blank=True)
+    wikipedia_titulo = models.CharField(max_length=300, blank=True)
+    wikipedia_url = models.URLField(max_length=500, blank=True)
+    wikipedia_descricao = models.CharField(max_length=300, blank=True)
+    wikipedia_resumo = models.TextField(blank=True)
+    gbif_id = models.BigIntegerField(null=True, blank=True)
+    imagem_url = models.URLField(max_length=1000, blank=True)
+    imagem_pagina_url = models.URLField(max_length=1000, blank=True)
+    imagem_autor = models.CharField(max_length=300, blank=True)
+    imagem_licenca = models.CharField(max_length=100, blank=True)
+    imagem_licenca_url = models.URLField(max_length=500, blank=True)
+
     class Meta:
         ordering = ["nome_cientifico"]
 
     def __str__(self) -> str:
         return self.nome_cientifico
+
+    @property
+    def gbif_url(self) -> str:
+        return f"https://www.gbif.org/species/{self.gbif_id}" if self.gbif_id else ""
+
+    @property
+    def wikidata_url(self) -> str:
+        return f"https://www.wikidata.org/wiki/{self.wikidata_id}" if self.wikidata_id else ""
 
 
 class EstadoEspecie(models.TextChoices):

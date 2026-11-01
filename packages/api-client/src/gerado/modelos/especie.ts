@@ -5,6 +5,7 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { ReferenciasSituacaoEnum } from './referenciasSituacaoEnum';
 
 export interface Especie {
   readonly id: string;
@@ -21,4 +22,25 @@ export interface Especie {
   sucessora?: string | null;
   /** @maxLength 200 */
   fonte_taxonomica?: string;
+  /** Árvores ativas desta espécie no seu escopo. */
+  readonly arvores_no_escopo: number;
+  readonly referencias_situacao: ReferenciasSituacaoEnum;
+  readonly referencias_mensagem: string;
+  /** @nullable */
+  readonly referencias_consultadas_em: string | null;
+  readonly wikidata_id: string;
+  readonly wikidata_url: string;
+  readonly wikipedia_idioma: string;
+  readonly wikipedia_titulo: string;
+  readonly wikipedia_url: string;
+  readonly wikipedia_descricao: string;
+  readonly wikipedia_resumo: string;
+  /** @nullable */
+  readonly gbif_id: number | null;
+  readonly gbif_url: string;
+  readonly imagem_url: string;
+  readonly imagem_pagina_url: string;
+  readonly imagem_autor: string;
+  readonly imagem_licenca: string;
+  readonly imagem_licenca_url: string;
 }

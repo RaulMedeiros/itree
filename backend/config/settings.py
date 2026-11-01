@@ -224,6 +224,16 @@ CELERY_TIMEZONE = TIME_ZONE
 # ingestão manual. Verificar licença e limites de cada fonte antes (DP-11).
 ALERTAS_FONTES = env.json("ALERTAS_FONTES", default={})
 ALERTAS_INTERVALO_HORAS = env.int("ALERTAS_INTERVALO_HORAS", default=6)
+
+# --- Referências das espécies (M-01) ------------------------------------------
+# Wikidata, Wikipedia e Wikimedia Commons; a política de uso pede identificação.
+REFERENCIAS_USER_AGENT = env.str(
+    "REFERENCIAS_USER_AGENT",
+    default="itree/0.1 (Engine de Inteligencia Arborea; https://github.com/RaulMedeiros/itree)",
+)
+REFERENCIAS_TIMEOUT = env.int("REFERENCIAS_TIMEOUT", default=15)
+# Ao cadastrar uma espécie, enfileira a consulta (Celery).
+REFERENCIAS_AUTOMATICAS = env.bool("REFERENCIAS_AUTOMATICAS", default=True)
 CELERY_BEAT_SCHEDULE = (
     {
         "ingerir-alertas": {

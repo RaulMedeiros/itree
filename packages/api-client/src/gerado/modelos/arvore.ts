@@ -7,6 +7,7 @@
  */
 import type { ArvoreLocalizacaoOrigem } from './arvoreLocalizacaoOrigem';
 import type { ArvoreLote } from './arvoreLote';
+import type { EspecieCartao } from './especieCartao';
 import type { EspecieResumo } from './especieResumo';
 import type { EstadoEspecieEnum } from './estadoEspecieEnum';
 import type { IdentificadorExterno } from './identificadorExterno';
@@ -53,6 +54,7 @@ export interface Arvore {
   readonly ultima_inspecao_em: string | null;
   readonly criado_em: string;
   readonly atualizado_em: string;
+  readonly especie_cartao: EspecieCartao | null;
   readonly identificadores: readonly IdentificadorExterno[];
   readonly medidas_atuais: readonly Medida[];
   /** @nullable */
