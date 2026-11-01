@@ -42,9 +42,15 @@ jobs:
       - run: uv run pytest
       - name: Contrato OpenAPI atualizado
         run: |
-          uv run python manage.py spectacular --file ../packages/api-client/openapi.yaml --validate --fail-on-warn
-          git diff --exit-code -- ../packages/api-client/openapi.yaml || {
-            echo "::error::openapi.yaml desatualizado. Rode 'manage.py spectacular' e 'pnpm gerar:api'."; exit 1; }
+          if ! uv run python manage.py spectacular --file ../packages/api-client/openapi.yaml \
+               --validate --fail-on-warn 2> /tmp/spectacular.log; then
+            echo "::error title=Geração do contrato::$(tr '\n' ' ' < /tmp/spectacular.log | cut -c1-1500)"
+            exit 1
+          fi
+          if ! git diff --exit-code -- ../packages/api-client/openapi.yaml > /tmp/contrato.diff; then
+            echo "::error title=openapi.yaml desatualizado::$(head -c 1500 /tmp/contrato.diff | tr '\n' ' ')"
+            exit 1
+          fi
 
   web:
     runs-on: ubuntu-24.04
