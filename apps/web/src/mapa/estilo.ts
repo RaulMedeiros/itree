@@ -1,4 +1,4 @@
-import type { ExpressionSpecification, StyleSpecification } from "maplibre-gl";
+import type { StyleSpecification } from "maplibre-gl";
 
 import type { CamadaBase } from "../config";
 
@@ -7,7 +7,24 @@ export type TipoBase = "ruas" | "satelite";
 /** Centro padrão: Fortaleza (CE). */
 export const CENTRO_PADRAO: [number, number] = [-38.5267, -3.7319];
 
-export function estiloBase(base: CamadaBase | null): StyleSpecification {
+/**
+ * Mapa de ruas discreto: o OpenStreetMap padrão é muito colorido (vias
+ * amarelas, áreas rosa, ícones) e compete com os dados. Dessaturar e clarear
+ * mantém a referência urbana e deixa a cor para as camadas da plataforma.
+ * A imagem de satélite não é alterada.
+ */
+export function pinturaBase(tipo: TipoBase) {
+  return tipo === "ruas"
+    ? {
+        "raster-saturation": -0.82,
+        "raster-contrast": -0.12,
+        "raster-brightness-min": 0.14,
+        "raster-brightness-max": 1,
+      }
+    : {};
+}
+
+export function estiloBase(base: CamadaBase | null, tipo: TipoBase = "ruas"): StyleSpecification {
   return {
     version: 8,
     sources: base
@@ -22,33 +39,10 @@ export function estiloBase(base: CamadaBase | null): StyleSpecification {
         }
       : {},
     layers: [
-      { id: "fundo", type: "background", paint: { "background-color": "#eef1ec" } },
-      ...(base ? [{ id: "base", type: "raster" as const, source: "base" }] : []),
+      { id: "fundo", type: "background", paint: { "background-color": "#f1f3ef" } },
+      ...(base
+        ? [{ id: "base", type: "raster" as const, source: "base", paint: pinturaBase(tipo) }]
+        : []),
     ],
   };
 }
-
-/** Cores por origem da localização (RN-MAPA-002). Fundo vazio = importada. */
-export const COR_ARVORE = "#1f6b45";
-
-export const CORES_PRIORIDADE: Record<string, string> = {
-  urgente: "#b3261e",
-  alta: "#d9480f",
-  media: "#c08400",
-  baixa: "#1d5fa8",
-  "": "#56615b",
-};
-
-export const corPorPrioridade: ExpressionSpecification = [
-  "match",
-  ["get", "prioridade"],
-  "urgente",
-  CORES_PRIORIDADE.urgente!,
-  "alta",
-  CORES_PRIORIDADE.alta!,
-  "media",
-  CORES_PRIORIDADE.media!,
-  "baixa",
-  CORES_PRIORIDADE.baixa!,
-  CORES_PRIORIDADE[""]!,
-];

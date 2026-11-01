@@ -3,7 +3,7 @@ import type { Map as MapaMapLibre, Marker } from "maplibre-gl";
 import { useEffect, useRef } from "react";
 
 import { Mapa } from "../mapa/Mapa";
-import { COR_ARVORE } from "../mapa/estilo";
+import { COR_ARVORE } from "../mapa/simbologia";
 import { Campo, Entrada } from "../ui/campos";
 
 export interface Ponto {

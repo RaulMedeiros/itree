@@ -12,15 +12,27 @@ updates:
     directory: /backend
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
+    # Saltos de versão maior do Django são planejados (só versões LTS; ADR-0001).
+    ignore:
+      - dependency-name: django
+        update-types: [version-update:semver-major]
     groups:
       menores:
         update-types: [minor, patch]
+  # Python e Node mudam de versão maior junto com CI e arquivos de versão
+  # (docs/melhoria/backlog.md); aqui só correções dentro da mesma versão.
   - package-ecosystem: docker
     directory: /backend
     schedule: { interval: weekly }
+    ignore:
+      - dependency-name: python
+        update-types: [version-update:semver-major, version-update:semver-minor]
   - package-ecosystem: docker
     directory: /apps/web
     schedule: { interval: weekly }
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }

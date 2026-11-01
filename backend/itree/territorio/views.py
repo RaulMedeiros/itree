@@ -1,6 +1,6 @@
 import json
 
-from django.contrib.gis.db.models.functions import AsGeoJSON
+from django.contrib.gis.db.models.functions import AsGeoJSON, PointOnSurface
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets
@@ -50,7 +50,9 @@ class TerritorioViewSet(viewsets.ReadOnlyModelViewSet):
             precisao = min(max(int(request.query_params.get("precisao", 6)), 1), 8)
         except ValueError:
             precisao = 6
-        qs = self.get_queryset().annotate(geometria=AsGeoJSON("geom", precision=precisao))
+        qs = self.get_queryset().annotate(
+            geometria=AsGeoJSON("geom", precision=precisao), rotulo=PointOnSurface("geom")
+        )
         feicoes = [
             {
                 "type": "Feature",
@@ -64,6 +66,8 @@ class TerritorioViewSet(viewsets.ReadOnlyModelViewSet):
                     "fonte_url": t.fonte_url,
                     "data_referencia": t.data_referencia,
                     "ingerido_em": t.ingerido_em,
+                    # Ponto garantidamente dentro do polígono, para o nome no mapa.
+                    "rotulo": [round(t.rotulo.x, 6), round(t.rotulo.y, 6)],
                 },
             }
             for t in qs

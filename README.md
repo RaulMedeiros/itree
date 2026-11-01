@@ -39,8 +39,10 @@ de sincronização de inspeções que ele vai consumir.
   implantação e fluxos) em [`docs/arquitetura/`](docs/arquitetura/README.md).
 - **Telas:** capturas de todas as telas do painel, com dados sintéticos, em
   [`docs/telas/`](docs/telas/README.md).
+- **Melhoria contínua:** ciclo, backlog priorizado e direção visual em
+  [`docs/melhoria/`](docs/melhoria/README.md).
 
-![Visão geral do painel](docs/telas/01-visao-geral.png)
+![Mapa do painel](docs/telas/02-mapa.png)
 
 ## Estrutura do repositório
 
@@ -59,6 +61,7 @@ scripts/
 docs/
 ├── arquitetura/         # Diagramas C4
 ├── telas/               # Capturas das telas do painel
+├── melhoria/            # Ciclo de melhoria contínua, backlog e direção visual
 ├── referencia/          # Especificação consolidada de origem (não editar)
 ├── specs/               # Specs do web e transversais
 ├── decisoes/            # Decisões pendentes

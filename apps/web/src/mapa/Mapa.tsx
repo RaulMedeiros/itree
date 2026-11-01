@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { gerenciadorUsuario } from "../autenticacao/gerenciador";
 import { config } from "../config";
 import { cn } from "../util/cn";
-import { CENTRO_PADRAO, estiloBase, type TipoBase } from "./estilo";
+import { CENTRO_PADRAO, estiloBase, pinturaBase, type TipoBase } from "./estilo";
 import { urlApi } from "./url";
 
 let tokenAtual: string | undefined;
@@ -43,7 +43,7 @@ export function Mapa({ base, className, centro, zoom, aoCarregar, children, rotu
     const origemApi = urlApi("/api/");
     const instancia = new maplibregl.Map({
       container: elemento.current,
-      style: estiloBase(camadaBase ?? null),
+      style: estiloBase(camadaBase ?? null, base),
       center: centro ?? CENTRO_PADRAO,
       zoom: zoom ?? 11,
       attributionControl: { compact: true },
@@ -85,9 +85,12 @@ export function Mapa({ base, className, centro, zoom, aoCarregar, children, rotu
         maxzoom: 19,
       });
       const primeira = m.getStyle().layers.find((l) => l.id !== "fundo")?.id;
-      m.addLayer({ id: "base", type: "raster", source: "base" }, primeira);
+      m.addLayer(
+        { id: "base", type: "raster", source: "base", paint: pinturaBase(base) },
+        primeira,
+      );
     }
-  }, [camadaBase, pronto]);
+  }, [camadaBase, base, pronto]);
 
   return (
     // O MapLibre redefine atributos de acessibilidade do contêiner interno;
