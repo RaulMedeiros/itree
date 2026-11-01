@@ -34,7 +34,9 @@ describe("parâmetros de URL", () => {
   it("aceita bandeiras digitadas na URL (?tarefas=1, ?atrasadas=true)", async () => {
     const { criarRoteador } = await import("../rotas");
     const { createMemoryHistory } = await import("@tanstack/react-router");
-    const roteador = criarRoteador(createMemoryHistory({ initialEntries: ["/mapa?tarefas=1&arvores=0"] }));
+    const roteador = criarRoteador(
+      createMemoryHistory({ initialEntries: ["/mapa?tarefas=1&arvores=0"] }),
+    );
     await roteador.load().catch(() => undefined);
     const busca = roteador.state.matches[roteador.state.matches.length - 1]?.search;
     expect(busca).toMatchObject({ tarefas: "1", arvores: "0" });
