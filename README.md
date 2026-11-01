@@ -35,6 +35,13 @@ Plataforma municipal para inventariar, inspecionar, monitorar e gerir árvores e
 O aplicativo móvel de campo ainda não foi iniciado; o backend já expõe a API
 de sincronização de inspeções que ele vai consumir.
 
+- **Arquitetura:** diagramas C4 (contexto, contêineres, componentes,
+  implantação e fluxos) em [`docs/arquitetura/`](docs/arquitetura/README.md).
+- **Telas:** capturas de todas as telas do painel, com dados sintéticos, em
+  [`docs/telas/`](docs/telas/README.md).
+
+![Visão geral do painel](docs/telas/01-visao-geral.png)
+
 ## Estrutura do repositório
 
 ```
@@ -47,7 +54,11 @@ packages/
 └── ui-tokens/           # Tokens de design Field Operations
 infra/
 └── docker/              # Ambiente local: PostGIS, Redis, Keycloak
+scripts/
+└── telas/               # Gerador das capturas de tela (dados sintéticos)
 docs/
+├── arquitetura/         # Diagramas C4
+├── telas/               # Capturas das telas do painel
 ├── referencia/          # Especificação consolidada de origem (não editar)
 ├── specs/               # Specs do web e transversais
 ├── decisoes/            # Decisões pendentes

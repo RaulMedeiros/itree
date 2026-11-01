@@ -1,0 +1,53 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "NOME": "Bairro de teste A", "COD": 1 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-38.550000000000004, -3.75],
+            [-38.540000000000006, -3.75],
+            [-38.540000000000006, -3.74],
+            [-38.550000000000004, -3.74],
+            [-38.550000000000004, -3.75]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "NOME": "Bairro de teste B", "COD": 2 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-38.54, -3.75],
+            [-38.53, -3.75],
+            [-38.53, -3.74],
+            [-38.54, -3.74],
+            [-38.54, -3.75]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "NOME": "Bairro de teste C", "COD": 3 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-38.53, -3.75],
+            [-38.52, -3.75],
+            [-38.52, -3.74],
+            [-38.53, -3.74],
+            [-38.53, -3.75]
+          ]
+        ]
+      }
+    }
+  ]
+}
