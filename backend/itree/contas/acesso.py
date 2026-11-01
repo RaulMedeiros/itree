@@ -2,7 +2,7 @@
 
 from django.contrib.gis.db.models import Union
 from django.contrib.gis.geos import MultiPolygon
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from rest_framework.permissions import BasePermission
 
 from itree.territorio.models import Territorio
@@ -38,10 +38,28 @@ def area_do_escopo(usuario: Usuario) -> MultiPolygon | None:
     return area
 
 
-def filtrar_por_escopo(qs: QuerySet, usuario: Usuario, campo_geom: str = "geom") -> QuerySet:
+def tem_escopo_municipal(usuario: Usuario) -> bool:
+    return Territorio.objects.filter(usuarios=usuario, tipo="municipio").exists()
+
+
+def filtrar_por_escopo(
+    qs: QuerySet, usuario: Usuario, campo_geom: str = "geom", incluir_sem_geom: bool = False
+) -> QuerySet:
     """Restringe ``qs`` aos registros cuja geometria intersecta o escopo do
-    usuário. Usuário sem escopo não vê registro algum."""
+    usuário. Usuário sem escopo não vê registro algum.
+
+    Com ``incluir_sem_geom``, registros sem localização ficam visíveis só para
+    quem tem escopo municipal (não há como saber a que área pertencem).
+    """
     area = area_do_escopo(usuario)
     if area is None:
         return qs.none()
-    return qs.filter(**{f"{campo_geom}__intersects": area})
+    condicao = Q(**{f"{campo_geom}__intersects": area})
+    if incluir_sem_geom and tem_escopo_municipal(usuario):
+        condicao |= Q(**{f"{campo_geom}__isnull": True})
+    return qs.filter(condicao)
+
+
+def ponto_no_escopo(usuario: Usuario, ponto) -> bool:
+    area = area_do_escopo(usuario)
+    return area is not None and area.intersects(ponto)

@@ -35,6 +35,10 @@ INSTALLED_APPS = [
     "itree.territorio",
     "itree.contas",
     "itree.auditoria",
+    "itree.inventario",
+    "itree.evidencias",
+    "itree.ocorrencias",
+    "itree.mapa",
 ]
 
 MIDDLEWARE = [
@@ -166,6 +170,18 @@ SPECTACULAR_SETTINGS = {
         "PapelEnum": "itree.contas.permissoes.Papel",
         "PermissaoEnum": "itree.contas.permissoes.Permissao",
         "TipoTerritorioEnum": "itree.territorio.models.TipoTerritorio",
+        "EstadoEspecieEnum": "itree.inventario.models.EstadoEspecie",
+        "OrigemLocalizacaoEnum": "itree.inventario.models.OrigemLocalizacao",
+        "OrigemValorEnum": "itree.inventario.models.OrigemValor",
+        "OrigemRegistroEnum": "itree.inventario.models.OrigemRegistro",
+        "SituacaoArvoreEnum": "itree.inventario.models.SituacaoArvore",
+        "TipoMedidaEnum": "itree.inventario.models.TipoMedida",
+        "MetodoMedidaEnum": "itree.inventario.models.MetodoMedida",
+        "EstadoLoteEnum": "itree.inventario.models.EstadoLote",
+        "EstadoOcorrenciaEnum": "itree.ocorrencias.models.EstadoOcorrencia",
+        "PrioridadeEnum": "itree.ocorrencias.models.Prioridade",
+        "OrigemOcorrenciaEnum": "itree.ocorrencias.models.OrigemOcorrencia",
+        "EstadoEvidenciaEnum": "itree.evidencias.models.EstadoEvidencia",
     },
 }
 

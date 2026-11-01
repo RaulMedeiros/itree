@@ -26,7 +26,10 @@ paths:
         schema:
           type: string
         description: 'Um de: contas.UsuarioEvent, contas.EscopoUsuarioEvent, contas.EquipeEvent,
-          contas.MembroEquipeEvent, contas.TerritorioEquipeEvent, territorio.TerritorioEvent'
+          contas.MembroEquipeEvent, contas.TerritorioEquipeEvent, territorio.TerritorioEvent,
+          inventario.EspecieEvent, inventario.ArvoreEvent, inventario.IdentificadorExternoEvent,
+          inventario.MedidaEvent, inventario.LoteImportacaoEvent, inventario.ParNaoDuplicadoEvent,
+          ocorrencias.TipoOcorrenciaEvent, ocorrencias.OcorrenciaEvent, evidencias.EvidenciaEvent'
       - in: query
         name: objeto
         schema:
@@ -196,6 +199,387 @@ paths:
               schema:
                 $ref: '#/components/schemas/UsuarioAdmin'
           description: ''
+  /api/v1/arvores:
+    get:
+      operationId: arvores_listar
+      description: Inventário arbóreo (W-03). Restrito ao escopo territorial do usuário.
+      parameters:
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Código (ARV-000123), identificador externo ou endereço.
+      - in: query
+        name: especie
+        schema:
+          type: string
+      - in: query
+        name: especie_estado
+        schema:
+          type: string
+      - in: query
+        name: localizacao_origem
+        schema:
+          type: string
+      - in: query
+        name: lote
+        schema:
+          type: string
+      - in: query
+        name: ordenar
+        schema:
+          type: string
+        description: numero, -numero, atualizado_em, -atualizado_em
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: situacao
+        schema:
+          type: string
+        description: 'Padrão: ativa. Use ''todas'' para incluir as demais.'
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      - in: query
+        name: valida
+        schema:
+          type: boolean
+      tags:
+      - arvores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedArvoreResumoList'
+          description: ''
+    post:
+      operationId: arvores_criar
+      description: Inventário arbóreo (W-03). Restrito ao escopo territorial do usuário.
+      tags:
+      - arvores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArvoreRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ArvoreRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ArvoreRequest'
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Arvore'
+          description: ''
+  /api/v1/arvores/{id}:
+    get:
+      operationId: arvores_obter
+      description: Inventário arbóreo (W-03). Restrito ao escopo territorial do usuário.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Arvore'
+          description: ''
+    patch:
+      operationId: arvores_atualizar
+      description: Inventário arbóreo (W-03). Restrito ao escopo territorial do usuário.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedArvoreRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedArvoreRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedArvoreRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Arvore'
+          description: ''
+  /api/v1/arvores/{id}/excluir:
+    post:
+      operationId: arvores_excluir
+      description: Exclusão lógica, auditada e com justificativa (RN-INV-004).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcaoComMotivoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AcaoComMotivoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AcaoComMotivoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Arvore'
+          description: ''
+  /api/v1/arvores/{id}/fundir:
+    post:
+      operationId: arvores_fundir
+      description: Funde outro registro neste (RF-INV-014). Exige justificativa.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FusaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FusaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FusaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Arvore'
+          description: ''
+  /api/v1/arvores/{id}/historico:
+    get:
+      operationId: arvores_historico
+      description: Alterações da árvore e de suas medidas e identificadores (RF-INV-003).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventoAuditoria'
+          description: ''
+  /api/v1/arvores/{id}/medidas:
+    post:
+      operationId: arvores_medidas_criar
+      description: Inventário arbóreo (W-03). Restrito ao escopo territorial do usuário.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MedidaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MedidaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MedidaRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Medida'
+          description: ''
+  /api/v1/arvores/contadores:
+    get:
+      operationId: arvores_contadores
+      description: Total de registros e registros válidos com os mesmos filtros (RF-INV-003).
+      parameters:
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Código (ARV-000123), identificador externo ou endereço.
+      - in: query
+        name: especie
+        schema:
+          type: string
+      - in: query
+        name: especie_estado
+        schema:
+          type: string
+      - in: query
+        name: localizacao_origem
+        schema:
+          type: string
+      - in: query
+        name: lote
+        schema:
+          type: string
+      - in: query
+        name: ordenar
+        schema:
+          type: string
+        description: numero, -numero, atualizado_em, -atualizado_em
+      - in: query
+        name: situacao
+        schema:
+          type: string
+        description: 'Padrão: ativa. Use ''todas'' para incluir as demais.'
+      - in: query
+        name: valida
+        schema:
+          type: boolean
+      tags:
+      - arvores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contadores'
+          description: ''
+  /api/v1/arvores/duplicidades:
+    get:
+      operationId: arvores_duplicidades
+      description: Pares suspeitos para revisão humana (RF-INV-013). Nunca há fusão
+        automática.
+      parameters:
+      - in: query
+        name: raio
+        schema:
+          type: number
+          format: double
+        description: Distância máxima em metros (padrão 3).
+      tags:
+      - arvores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParDuplicidade'
+          description: ''
+  /api/v1/arvores/nao-duplicadas:
+    post:
+      operationId: arvores_nao_duplicadas
+      description: Inventário arbóreo (W-03). Restrito ao escopo territorial do usuário.
+      tags:
+      - arvores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParRevisadoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ParRevisadoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ParRevisadoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/equipes:
     get:
       operationId: equipes_listar
@@ -310,6 +694,124 @@ paths:
               schema:
                 $ref: '#/components/schemas/Equipe'
           description: ''
+  /api/v1/especies:
+    get:
+      operationId: especies_listar
+      description: Catálogo de espécies. Espécies não são excluídas; ficam inativas.
+      parameters:
+      - in: query
+        name: ativa
+        schema:
+          type: boolean
+      - in: query
+        name: busca
+        schema:
+          type: string
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - especies
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEspecieList'
+          description: ''
+    post:
+      operationId: especies_criar
+      description: Catálogo de espécies. Espécies não são excluídas; ficam inativas.
+      tags:
+      - especies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EspecieRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EspecieRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EspecieRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Especie'
+          description: ''
+  /api/v1/especies/{id}:
+    get:
+      operationId: especies_obter
+      description: Catálogo de espécies. Espécies não são excluídas; ficam inativas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este especie.
+        required: true
+      tags:
+      - especies
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Especie'
+          description: ''
+    patch:
+      operationId: especies_atualizar
+      description: Catálogo de espécies. Espécies não são excluídas; ficam inativas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este especie.
+        required: true
+      tags:
+      - especies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEspecieRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEspecieRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEspecieRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Especie'
+          description: ''
   /api/v1/eu:
     get:
       operationId: eu
@@ -324,6 +826,689 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Eu'
+          description: ''
+  /api/v1/evidencias:
+    get:
+      operationId: evidencias_listar
+      description: |-
+        Fotografias e documentos. Envio direto ao armazenamento privado por URL
+        pré-assinada; a API só registra metadados e vínculo.
+      parameters:
+      - in: query
+        name: arvore
+        schema:
+          type: string
+      - in: query
+        name: ocorrencia
+        schema:
+          type: string
+      tags:
+      - evidencias
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Evidencia'
+          description: ''
+    post:
+      operationId: evidencias_iniciar_envio
+      description: Registra a evidência e devolve a URL para enviar o arquivo (PUT).
+      tags:
+      - evidencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovaEvidenciaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NovaEvidenciaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NovaEvidenciaRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvioEvidencia'
+          description: ''
+  /api/v1/evidencias/{id}/confirmar:
+    post:
+      operationId: evidencias_confirmar_envio
+      description: Confere no armazenamento que o arquivo chegou com o tamanho declarado.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - evidencias
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Evidencia'
+          description: ''
+  /api/v1/evidencias/{id}/remover:
+    post:
+      operationId: evidencias_remover
+      description: Oculta a evidência. O arquivo é preservado para rastreabilidade.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - evidencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemoverEvidenciaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RemoverEvidenciaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RemoverEvidenciaRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Evidencia'
+          description: ''
+  /api/v1/importacoes:
+    get:
+      operationId: importacoes_listar
+      description: Importação em lote com pré-visualização, confirmação e desfazer
+        (RF-INV-010 a 012).
+      parameters:
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - importacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLoteImportacaoList'
+          description: ''
+    post:
+      operationId: importacoes_criar
+      description: Interpreta e valida o arquivo. Nada é criado até a confirmação.
+      tags:
+      - importacoes
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NovaImportacaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteImportacaoDetalhe'
+          description: ''
+  /api/v1/importacoes/{id}:
+    get:
+      operationId: importacoes_obter
+      description: Importação em lote com pré-visualização, confirmação e desfazer
+        (RF-INV-010 a 012).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este lote importacao.
+        required: true
+      tags:
+      - importacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteImportacaoDetalhe'
+          description: ''
+  /api/v1/importacoes/{id}/confirmar:
+    post:
+      operationId: importacoes_confirmar
+      description: Importação em lote com pré-visualização, confirmação e desfazer
+        (RF-INV-010 a 012).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este lote importacao.
+        required: true
+      tags:
+      - importacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteImportacao'
+          description: ''
+  /api/v1/importacoes/{id}/descartar:
+    post:
+      operationId: importacoes_descartar
+      description: Importação em lote com pré-visualização, confirmação e desfazer
+        (RF-INV-010 a 012).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este lote importacao.
+        required: true
+      tags:
+      - importacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteImportacao'
+          description: ''
+  /api/v1/importacoes/{id}/desfazer:
+    post:
+      operationId: importacoes_desfazer
+      description: Importação em lote com pré-visualização, confirmação e desfazer
+        (RF-INV-010 a 012).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este lote importacao.
+        required: true
+      tags:
+      - importacoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcaoComMotivoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AcaoComMotivoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AcaoComMotivoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteImportacao'
+          description: ''
+  /api/v1/importacoes/colunas:
+    post:
+      operationId: importacoes_colunas
+      description: Lê o cabeçalho do arquivo para montar o mapeamento de colunas.
+      tags:
+      - importacoes
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ColunasArquivoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColunasArquivo'
+          description: ''
+  /api/v1/mapa/busca:
+    get:
+      operationId: mapa_busca
+      description: Busca global por identificador, endereço, bairro ou coordenada
+        (RF-SHELL-003).
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        required: true
+      tags:
+      - mapa
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResultadoBusca'
+          description: ''
+  /api/v1/mapa/camadas:
+    get:
+      operationId: mapa_camadas
+      description: Fonte, data e disponibilidade de cada camada (RF-MAPA-004/006).
+      tags:
+      - mapa
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camadas'
+          description: ''
+  /api/v1/mapa/tiles/{camada}/{z}/{x}/{y}:
+    get:
+      operationId: mapa_tile
+      description: |-
+        Vector tile (MVT) da camada, restrito ao escopo do usuário.
+
+        Abaixo do zoom 16, os pontos são agrupados em células com a contagem
+        (``quantidade``); a partir dele, cada registro vira uma feição.
+      parameters:
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: path
+        name: camada
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: especie
+        schema:
+          type: string
+      - in: query
+        name: especie_estado
+        schema:
+          type: string
+      - in: query
+        name: estado
+        schema:
+          type: string
+      - in: query
+        name: localizacao_origem
+        schema:
+          type: string
+      - in: query
+        name: prioridade
+        schema:
+          type: string
+      - in: query
+        name: tipo
+        schema:
+          type: string
+      - in: path
+        name: x
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: y
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: z
+        schema:
+          type: integer
+        required: true
+      tags:
+      - mapa
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/vnd.mapbox-vector-tile:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/ocorrencias:
+    get:
+      operationId: ocorrencias_listar
+      description: Ocorrências (W-04). Alertas ambientais não aparecem aqui até serem
+        convertidos.
+      parameters:
+      - in: query
+        name: arvore
+        schema:
+          type: string
+      - in: query
+        name: atrasadas
+        schema:
+          type: boolean
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Código (OCO-000123), descrição ou endereço.
+      - in: query
+        name: equipe
+        schema:
+          type: string
+      - in: query
+        name: estado
+        schema:
+          type: string
+        description: Um ou mais, separados por vírgula. 'abertas' = não finais.
+      - in: query
+        name: origem
+        schema:
+          type: string
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: prioridade
+        schema:
+          type: string
+        description: Use 'sem' para ocorrências sem prioridade.
+      - in: query
+        name: responsavel
+        schema:
+          type: string
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      - in: query
+        name: tipo
+        schema:
+          type: string
+      tags:
+      - ocorrencias
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOcorrenciaList'
+          description: ''
+    post:
+      operationId: ocorrencias_criar
+      description: Ocorrências (W-04). Alertas ambientais não aparecem aqui até serem
+        convertidos.
+      tags:
+      - ocorrencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OcorrenciaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OcorrenciaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OcorrenciaRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ocorrencia'
+          description: ''
+  /api/v1/ocorrencias/{id}:
+    get:
+      operationId: ocorrencias_obter
+      description: Ocorrências (W-04). Alertas ambientais não aparecem aqui até serem
+        convertidos.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este ocorrencia.
+        required: true
+      tags:
+      - ocorrencias
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ocorrencia'
+          description: ''
+    patch:
+      operationId: ocorrencias_atualizar
+      description: Ocorrências (W-04). Alertas ambientais não aparecem aqui até serem
+        convertidos.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este ocorrencia.
+        required: true
+      tags:
+      - ocorrencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOcorrenciaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOcorrenciaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOcorrenciaRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ocorrencia'
+          description: ''
+  /api/v1/ocorrencias/{id}/historico:
+    get:
+      operationId: ocorrencias_historico
+      description: Histórico de encaminhamentos (RF-OCO-005).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este ocorrencia.
+        required: true
+      tags:
+      - ocorrencias
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventoAuditoria'
+          description: ''
+  /api/v1/ocorrencias/{id}/prioridade:
+    post:
+      operationId: ocorrencias_prioridade
+      description: Prioridade operacional, definida pela gestão (W-04 §2).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este ocorrencia.
+        required: true
+      tags:
+      - ocorrencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrioridadeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PrioridadeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PrioridadeRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ocorrencia'
+          description: ''
+  /api/v1/ocorrencias/{id}/risco:
+    post:
+      operationId: ocorrencias_risco
+      description: Registra risco confirmado por responsável técnico habilitado (RF-OCO-006).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este ocorrencia.
+        required: true
+      tags:
+      - ocorrencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiscoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RiscoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RiscoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ocorrencia'
+          description: ''
+  /api/v1/ocorrencias/{id}/transicao:
+    post:
+      operationId: ocorrencias_transicao
+      description: Muda o estado conforme o fluxo (RF-OCO-004). Cancelar exige justificativa.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este ocorrencia.
+        required: true
+      tags:
+      - ocorrencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransicaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TransicaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TransicaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ocorrencia'
           description: ''
   /api/v1/saude:
     get:
@@ -437,8 +1622,402 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/v1/tipos-ocorrencia:
+    get:
+      operationId: tipos_ocorrencia_listar
+      parameters:
+      - in: query
+        name: ativo
+        schema:
+          type: boolean
+      tags:
+      - tipos-ocorrencia
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TipoOcorrencia'
+          description: ''
+    post:
+      operationId: tipos_ocorrencia_criar
+      tags:
+      - tipos-ocorrencia
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TipoOcorrenciaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TipoOcorrenciaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TipoOcorrenciaRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoOcorrencia'
+          description: ''
+  /api/v1/tipos-ocorrencia/{id}:
+    patch:
+      operationId: tipos_ocorrencia_atualizar
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este tipo ocorrencia.
+        required: true
+      tags:
+      - tipos-ocorrencia
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTipoOcorrenciaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTipoOcorrenciaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTipoOcorrenciaRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoOcorrencia'
+          description: ''
 components:
   schemas:
+    AcaoComMotivoRequest:
+      type: object
+      properties:
+        motivo:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - motivo
+    Arvore:
+      type: object
+      description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        especie:
+          allOf:
+          - $ref: '#/components/schemas/EspecieResumo'
+          readOnly: true
+        especie_estado:
+          $ref: '#/components/schemas/EstadoEspecieEnum'
+        especie_texto_original:
+          type: string
+          description: Nome como veio da fonte, quando não casou com o catálogo.
+          maxLength: 200
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/Localizacao'
+          nullable: true
+        localizacao_origem:
+          oneOf:
+          - $ref: '#/components/schemas/OrigemLocalizacaoEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        precisao_m:
+          type: number
+          format: double
+          nullable: true
+          description: Precisão horizontal informada, em metros.
+        endereco:
+          type: string
+          maxLength: 300
+        bairro:
+          allOf:
+          - $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        situacao:
+          allOf:
+          - $ref: '#/components/schemas/SituacaoArvoreEnum'
+          readOnly: true
+        valida:
+          type: boolean
+          readOnly: true
+        origem_registro:
+          allOf:
+          - $ref: '#/components/schemas/OrigemRegistroEnum'
+          readOnly: true
+        ocorrencias_abertas:
+          type: integer
+          readOnly: true
+          default: 0
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        atualizado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        identificadores:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentificadorExterno'
+          readOnly: true
+        medidas_atuais:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+        fundida_em:
+          type: string
+          nullable: true
+          readOnly: true
+        motivo_situacao:
+          type: string
+          readOnly: true
+        lote:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        criado_por_nome:
+          type: string
+          readOnly: true
+        observacoes:
+          type: string
+      required:
+      - atualizado_em
+      - bairro
+      - codigo
+      - criado_em
+      - criado_por_nome
+      - especie
+      - fundida_em
+      - id
+      - identificadores
+      - lote
+      - medidas_atuais
+      - motivo_situacao
+      - ocorrencias_abertas
+      - origem_registro
+      - situacao
+      - valida
+    ArvoreRequest:
+      type: object
+      description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).
+      properties:
+        especie_estado:
+          $ref: '#/components/schemas/EstadoEspecieEnum'
+        especie_texto_original:
+          type: string
+          description: Nome como veio da fonte, quando não casou com o catálogo.
+          maxLength: 200
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/LocalizacaoRequest'
+          nullable: true
+        localizacao_origem:
+          oneOf:
+          - $ref: '#/components/schemas/OrigemLocalizacaoEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        precisao_m:
+          type: number
+          format: double
+          nullable: true
+          description: Precisão horizontal informada, em metros.
+        endereco:
+          type: string
+          maxLength: 300
+        especie_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        observacoes:
+          type: string
+        motivo:
+          type: string
+          writeOnly: true
+          maxLength: 500
+    ArvoreResumo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        especie:
+          allOf:
+          - $ref: '#/components/schemas/EspecieResumo'
+          readOnly: true
+        especie_estado:
+          $ref: '#/components/schemas/EstadoEspecieEnum'
+        especie_texto_original:
+          type: string
+          description: Nome como veio da fonte, quando não casou com o catálogo.
+          maxLength: 200
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/Localizacao'
+          nullable: true
+          readOnly: true
+        localizacao_origem:
+          oneOf:
+          - $ref: '#/components/schemas/OrigemLocalizacaoEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        precisao_m:
+          type: number
+          format: double
+          nullable: true
+          description: Precisão horizontal informada, em metros.
+        endereco:
+          type: string
+          maxLength: 300
+        bairro:
+          allOf:
+          - $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        situacao:
+          $ref: '#/components/schemas/SituacaoArvoreEnum'
+        valida:
+          type: boolean
+          readOnly: true
+        origem_registro:
+          $ref: '#/components/schemas/OrigemRegistroEnum'
+        ocorrencias_abertas:
+          type: integer
+          readOnly: true
+          default: 0
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        atualizado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - atualizado_em
+      - bairro
+      - codigo
+      - criado_em
+      - especie
+      - id
+      - localizacao
+      - ocorrencias_abertas
+      - origem_registro
+      - valida
+    BlankEnum:
+      enum:
+      - ''
+    Camadas:
+      type: object
+      properties:
+        territorios:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        arvores:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        ocorrencias:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        limites_escopo:
+          type: array
+          items:
+            type: number
+            format: double
+          nullable: true
+      required:
+      - arvores
+      - limites_escopo
+      - ocorrencias
+      - territorios
+    ColunasArquivo:
+      type: object
+      properties:
+        formato:
+          type: string
+        colunas:
+          type: array
+          items:
+            type: string
+        total_linhas:
+          type: integer
+        amostra:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        tem_geometria:
+          type: boolean
+      required:
+      - amostra
+      - colunas
+      - formato
+      - tem_geometria
+      - total_linhas
+    ColunasArquivoRequest:
+      type: object
+      properties:
+        arquivo:
+          type: string
+          format: binary
+      required:
+      - arquivo
+    Contadores:
+      type: object
+      properties:
+        total:
+          type: integer
+        validos:
+          type: integer
+      required:
+      - total
+      - validos
+    EnvioEvidencia:
+      type: object
+      properties:
+        evidencia:
+          $ref: '#/components/schemas/Evidencia'
+        url_envio:
+          type: string
+        metodo:
+          type: string
+        cabecalhos:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - cabecalhos
+      - evidencia
+      - metodo
+      - url_envio
     Equipe:
       type: object
       properties:
@@ -521,6 +2100,174 @@ components:
           maxLength: 500
       required:
       - nome
+    EquipeResumo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 200
+      required:
+      - id
+      - nome
+    EquipeResumoRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+      - nome
+    Especie:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome_cientifico:
+          type: string
+          maxLength: 200
+        familia:
+          type: string
+          maxLength: 100
+        nomes_comuns:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+        nativa_brasil:
+          type: boolean
+          nullable: true
+        ativa:
+          type: boolean
+        sucessora:
+          type: string
+          format: uuid
+          nullable: true
+        fonte_taxonomica:
+          type: string
+          maxLength: 200
+      required:
+      - id
+      - nome_cientifico
+    EspecieRequest:
+      type: object
+      properties:
+        nome_cientifico:
+          type: string
+          minLength: 1
+          maxLength: 200
+        familia:
+          type: string
+          maxLength: 100
+        nomes_comuns:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        nativa_brasil:
+          type: boolean
+          nullable: true
+        ativa:
+          type: boolean
+        sucessora:
+          type: string
+          format: uuid
+          nullable: true
+        fonte_taxonomica:
+          type: string
+          maxLength: 200
+      required:
+      - nome_cientifico
+    EspecieResumo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome_cientifico:
+          type: string
+          maxLength: 200
+        nomes_comuns:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+      required:
+      - id
+      - nome_cientifico
+    EspecieResumoRequest:
+      type: object
+      properties:
+        nome_cientifico:
+          type: string
+          minLength: 1
+          maxLength: 200
+        nomes_comuns:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+      required:
+      - nome_cientifico
+    EstadoEspecieEnum:
+      enum:
+      - confirmada
+      - sugerida_ia
+      - informada
+      - nao_identificada
+      type: string
+      description: |-
+        * `confirmada` - Confirmada
+        * `sugerida_ia` - Sugerida (IA)
+        * `informada` - Informada (não validada)
+        * `nao_identificada` - Não identificada
+    EstadoEvidenciaEnum:
+      enum:
+      - aguardando_envio
+      - disponivel
+      - removida
+      type: string
+      description: |-
+        * `aguardando_envio` - Aguardando envio
+        * `disponivel` - Disponível
+        * `removida` - Removida
+    EstadoLoteEnum:
+      enum:
+      - pre_visualizado
+      - confirmado
+      - desfeito
+      - descartado
+      type: string
+      description: |-
+        * `pre_visualizado` - Pré-visualizado
+        * `confirmado` - Confirmado
+        * `desfeito` - Desfeito
+        * `descartado` - Descartado
+    EstadoOcorrenciaEnum:
+      enum:
+      - aberta
+      - em_triagem
+      - encaminhada
+      - em_atendimento
+      - concluida
+      - cancelada
+      type: string
+      description: |-
+        * `aberta` - Aberta
+        * `em_triagem` - Em triagem
+        * `encaminhada` - Encaminhada
+        * `em_atendimento` - Em atendimento
+        * `concluida` - Concluída
+        * `cancelada` - Cancelada
     Eu:
       type: object
       description: |-
@@ -588,11 +2335,17 @@ components:
         dados:
           readOnly: true
           description: Estado após o evento.
+        autor_nome:
+          type: string
+          nullable: true
+          readOnly: true
+          description: Nome de quem fez a alteração, quando feita por um usuário.
         contexto:
           nullable: true
           description: Usuário, origem (web/app/api), URL, motivo e outros metadados.
       required:
       - acao
+      - autor_nome
       - contexto
       - dados
       - diferencas
@@ -601,6 +2354,739 @@ components:
       - id
       - momento
       - objeto_id
+    Evidencia:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome_original:
+          type: string
+          maxLength: 255
+        tipo_conteudo:
+          type: string
+          maxLength: 100
+        tamanho:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        descricao:
+          type: string
+          maxLength: 500
+        capturada_em:
+          type: string
+          format: date-time
+          nullable: true
+          description: Momento da captura, quando conhecido.
+        estado:
+          $ref: '#/components/schemas/EstadoEvidenciaEnum'
+        eh_imagem:
+          type: boolean
+          readOnly: true
+        url:
+          type: string
+          nullable: true
+          readOnly: true
+          description: URL temporária (5 min) para visualizar.
+        enviada_por_nome:
+          type: string
+          readOnly: true
+        arvore:
+          type: string
+          format: uuid
+          nullable: true
+        ocorrencia:
+          type: string
+          format: uuid
+          nullable: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - criado_em
+      - eh_imagem
+      - enviada_por_nome
+      - id
+      - nome_original
+      - tamanho
+      - tipo_conteudo
+      - url
+    FusaoRequest:
+      type: object
+      properties:
+        descartar:
+          type: string
+          format: uuid
+        campos_da_outra:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        motivo:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - descartar
+      - motivo
+    IdentificadorExterno:
+      type: object
+      properties:
+        fonte:
+          type: string
+          maxLength: 100
+        valor:
+          type: string
+          maxLength: 100
+      required:
+      - fonte
+      - valor
+    IdentificadorExternoRequest:
+      type: object
+      properties:
+        fonte:
+          type: string
+          minLength: 1
+          maxLength: 100
+        valor:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+      - fonte
+      - valor
+    LinhaImportacao:
+      type: object
+      properties:
+        indice:
+          type: integer
+        dados:
+          type: object
+          additionalProperties: {}
+        erros:
+          type: array
+          items:
+            type: string
+        avisos:
+          type: array
+          items:
+            type: string
+      required:
+      - avisos
+      - dados
+      - erros
+      - indice
+    Localizacao:
+      type: object
+      properties:
+        longitude:
+          type: number
+          format: double
+          maximum: 180
+          minimum: -180
+        latitude:
+          type: number
+          format: double
+          maximum: 90
+          minimum: -90
+      required:
+      - latitude
+      - longitude
+    LocalizacaoRequest:
+      type: object
+      properties:
+        longitude:
+          type: number
+          format: double
+          maximum: 180
+          minimum: -180
+        latitude:
+          type: number
+          format: double
+          maximum: 90
+          minimum: -90
+      required:
+      - latitude
+      - longitude
+    LoteImportacao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        numero:
+          type: integer
+          readOnly: true
+        arquivo_nome:
+          type: string
+          maxLength: 255
+        formato:
+          type: string
+          maxLength: 10
+        fonte:
+          type: string
+          maxLength: 200
+        fonte_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        data_referencia:
+          type: string
+          format: date
+          nullable: true
+        mapeamento: {}
+        estado:
+          $ref: '#/components/schemas/EstadoLoteEnum'
+        usuario_nome:
+          type: string
+          readOnly: true
+        total_linhas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        linhas_validas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        arvores_criadas:
+          type: integer
+          readOnly: true
+        confirmado_em:
+          type: string
+          format: date-time
+          nullable: true
+        desfeito_em:
+          type: string
+          format: date-time
+          nullable: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        pode_desfazer:
+          type: boolean
+          readOnly: true
+        motivo_nao_desfazer:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - arquivo_nome
+      - arvores_criadas
+      - criado_em
+      - fonte
+      - formato
+      - id
+      - motivo_nao_desfazer
+      - numero
+      - pode_desfazer
+      - usuario_nome
+    LoteImportacaoDetalhe:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        numero:
+          type: integer
+          readOnly: true
+        arquivo_nome:
+          type: string
+          maxLength: 255
+        formato:
+          type: string
+          maxLength: 10
+        fonte:
+          type: string
+          maxLength: 200
+        fonte_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        data_referencia:
+          type: string
+          format: date
+          nullable: true
+        mapeamento: {}
+        estado:
+          $ref: '#/components/schemas/EstadoLoteEnum'
+        usuario_nome:
+          type: string
+          readOnly: true
+        total_linhas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        linhas_validas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        arvores_criadas:
+          type: integer
+          readOnly: true
+        confirmado_em:
+          type: string
+          format: date-time
+          nullable: true
+        desfeito_em:
+          type: string
+          format: date-time
+          nullable: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        pode_desfazer:
+          type: boolean
+          readOnly: true
+        motivo_nao_desfazer:
+          type: string
+          nullable: true
+          readOnly: true
+        linhas:
+          type: array
+          items:
+            $ref: '#/components/schemas/LinhaImportacao'
+          readOnly: true
+      required:
+      - arquivo_nome
+      - arvores_criadas
+      - criado_em
+      - fonte
+      - formato
+      - id
+      - linhas
+      - motivo_nao_desfazer
+      - numero
+      - pode_desfazer
+      - usuario_nome
+    Medida:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tipo:
+          $ref: '#/components/schemas/TipoMedidaEnum'
+        valor:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        unidade:
+          type: string
+          readOnly: true
+        metodo:
+          $ref: '#/components/schemas/MetodoMedidaEnum'
+        origem:
+          $ref: '#/components/schemas/OrigemValorEnum'
+        data_medicao:
+          type: string
+          format: date
+          nullable: true
+        responsavel_nome:
+          type: string
+          readOnly: true
+        observacao:
+          type: string
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - criado_em
+      - id
+      - metodo
+      - origem
+      - responsavel_nome
+      - tipo
+      - unidade
+      - valor
+    MedidaRequest:
+      type: object
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoMedidaEnum'
+        valor:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        metodo:
+          $ref: '#/components/schemas/MetodoMedidaEnum'
+        origem:
+          $ref: '#/components/schemas/OrigemValorEnum'
+        data_medicao:
+          type: string
+          format: date
+          nullable: true
+        observacao:
+          type: string
+      required:
+      - metodo
+      - origem
+      - tipo
+      - valor
+    MetodoMedidaEnum:
+      enum:
+      - fita_diametrica
+      - fita_metrica
+      - trena
+      - hipsometro
+      - clinometro
+      - visual
+      - imagem
+      - desconhecido
+      type: string
+      description: |-
+        * `fita_diametrica` - Fita diamétrica
+        * `fita_metrica` - Fita métrica
+        * `trena` - Trena
+        * `hipsometro` - Hipsômetro
+        * `clinometro` - Clinômetro
+        * `visual` - Estimativa visual
+        * `imagem` - Estimativa por imagem
+        * `desconhecido` - Não informado pela fonte
+    NovaEvidenciaRequest:
+      type: object
+      properties:
+        arvore:
+          type: string
+          format: uuid
+          nullable: true
+        ocorrencia:
+          type: string
+          format: uuid
+          nullable: true
+        nome_original:
+          type: string
+          minLength: 1
+          maxLength: 255
+        tipo_conteudo:
+          $ref: '#/components/schemas/TipoConteudoEnum'
+        tamanho:
+          type: integer
+          maximum: 26214400
+          minimum: 1
+        descricao:
+          type: string
+          maxLength: 500
+        capturada_em:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - nome_original
+      - tamanho
+      - tipo_conteudo
+    NovaImportacaoRequest:
+      type: object
+      properties:
+        arquivo:
+          type: string
+          format: binary
+        fonte:
+          type: string
+          minLength: 1
+          maxLength: 200
+        fonte_url:
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
+        data_referencia:
+          type: string
+          format: date
+          nullable: true
+        srid:
+          type: integer
+          default: 4326
+        campo_latitude:
+          type: string
+        campo_longitude:
+          type: string
+        campo_id_externo:
+          type: string
+        campo_especie:
+          type: string
+        campo_endereco:
+          type: string
+        campo_altura:
+          type: string
+        campo_dap:
+          type: string
+        campo_precisao:
+          type: string
+      required:
+      - arquivo
+      - fonte
+    Ocorrencia:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        tipo:
+          allOf:
+          - $ref: '#/components/schemas/TipoOcorrencia'
+          readOnly: true
+        arvore:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/Localizacao'
+          nullable: true
+        bairro:
+          allOf:
+          - $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        endereco:
+          type: string
+          maxLength: 300
+        descricao:
+          type: string
+        condicao_aparente:
+          type: string
+        prioridade:
+          readOnly: true
+          description: |-
+            Vazio enquanto a gestão não definir a prioridade.
+
+            * `baixa` - Baixa
+            * `media` - Média
+            * `alta` - Alta
+            * `urgente` - Urgente
+          oneOf:
+          - $ref: '#/components/schemas/PrioridadeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        prioridade_definida_por:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+          nullable: true
+        prioridade_definida_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        risco_confirmado:
+          type: boolean
+          readOnly: true
+        risco_descricao:
+          type: string
+          readOnly: true
+        risco_responsavel:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+          nullable: true
+        risco_registrado_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        estado:
+          allOf:
+          - $ref: '#/components/schemas/EstadoOcorrenciaEnum'
+          readOnly: true
+        transicoes_possiveis:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstadoOcorrenciaEnum'
+          readOnly: true
+        responsavel:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+          nullable: true
+        equipe:
+          allOf:
+          - $ref: '#/components/schemas/EquipeResumo'
+          readOnly: true
+          nullable: true
+        prazo:
+          type: string
+          format: date
+          nullable: true
+        atrasada:
+          type: boolean
+          readOnly: true
+        origem:
+          allOf:
+          - $ref: '#/components/schemas/OrigemOcorrenciaEnum'
+          readOnly: true
+        origem_referencia:
+          type: string
+          readOnly: true
+        registrada_por:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        atualizado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        concluida_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - arvore
+      - atrasada
+      - atualizado_em
+      - bairro
+      - codigo
+      - concluida_em
+      - criado_em
+      - descricao
+      - equipe
+      - estado
+      - id
+      - origem
+      - origem_referencia
+      - prioridade
+      - prioridade_definida_em
+      - prioridade_definida_por
+      - registrada_por
+      - responsavel
+      - risco_confirmado
+      - risco_descricao
+      - risco_registrado_em
+      - risco_responsavel
+      - tipo
+      - transicoes_possiveis
+    OcorrenciaRequest:
+      type: object
+      properties:
+        tipo_id:
+          type: string
+          format: uuid
+          writeOnly: true
+        arvore_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/LocalizacaoRequest'
+          nullable: true
+        endereco:
+          type: string
+          maxLength: 300
+        descricao:
+          type: string
+          minLength: 1
+        condicao_aparente:
+          type: string
+        responsavel_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        equipe_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        prazo:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - descricao
+      - tipo_id
+    OrigemLocalizacaoEnum:
+      enum:
+      - gps_campo
+      - importada
+      - estimada_web
+      - geocodificada
+      type: string
+      description: |-
+        * `gps_campo` - GPS de campo
+        * `importada` - Importada
+        * `estimada_web` - Estimada (web)
+        * `geocodificada` - Geocodificada (endereço)
+    OrigemOcorrenciaEnum:
+      enum:
+      - web
+      - app
+      - importacao
+      - alerta
+      type: string
+      description: |-
+        * `web` - Painel web
+        * `app` - Aplicativo
+        * `importacao` - Importação
+        * `alerta` - Conversão de alerta ambiental
+    OrigemRegistroEnum:
+      enum:
+      - web
+      - app
+      - importacao
+      type: string
+      description: |-
+        * `web` - Painel web
+        * `app` - Aplicativo
+        * `importacao` - Importação
+    OrigemValorEnum:
+      enum:
+      - medido
+      - estimado
+      - inferido
+      - importado
+      type: string
+      description: |-
+        * `medido` - Medido
+        * `estimado` - Estimado
+        * `inferido` - Inferido (IA)
+        * `importado` - Importado
+    PaginatedArvoreResumoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArvoreResumo'
     PaginatedEquipeList:
       type: object
       required:
@@ -624,6 +3110,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Equipe'
+    PaginatedEspecieList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Especie'
     PaginatedEventoAuditoriaList:
       type: object
       required:
@@ -647,6 +3156,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EventoAuditoria'
+    PaginatedLoteImportacaoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoteImportacao'
+    PaginatedOcorrenciaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ocorrencia'
     PaginatedTerritorioList:
       type: object
       required:
@@ -711,6 +3266,72 @@ components:
         * `tecnico` - Técnico de campo
         * `consulta` - Consulta
         * `administrador` - Administrador
+    ParDuplicidade:
+      type: object
+      properties:
+        arvore_a:
+          $ref: '#/components/schemas/ArvoreResumo'
+        arvore_b:
+          $ref: '#/components/schemas/ArvoreResumo'
+        distancia_m:
+          type: number
+          format: double
+        criterio:
+          type: string
+      required:
+      - arvore_a
+      - arvore_b
+      - criterio
+      - distancia_m
+    ParRevisadoRequest:
+      type: object
+      properties:
+        arvore_a:
+          type: string
+          format: uuid
+        arvore_b:
+          type: string
+          format: uuid
+      required:
+      - arvore_a
+      - arvore_b
+    PatchedArvoreRequest:
+      type: object
+      description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).
+      properties:
+        especie_estado:
+          $ref: '#/components/schemas/EstadoEspecieEnum'
+        especie_texto_original:
+          type: string
+          description: Nome como veio da fonte, quando não casou com o catálogo.
+          maxLength: 200
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/LocalizacaoRequest'
+          nullable: true
+        localizacao_origem:
+          oneOf:
+          - $ref: '#/components/schemas/OrigemLocalizacaoEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        precisao_m:
+          type: number
+          format: double
+          nullable: true
+          description: Precisão horizontal informada, em metros.
+        endereco:
+          type: string
+          maxLength: 300
+        especie_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        observacoes:
+          type: string
+        motivo:
+          type: string
+          writeOnly: true
+          maxLength: 500
     PatchedEquipeRequest:
       type: object
       properties:
@@ -746,6 +3367,88 @@ components:
           writeOnly: true
           description: Justificativa registrada na auditoria.
           maxLength: 500
+    PatchedEspecieRequest:
+      type: object
+      properties:
+        nome_cientifico:
+          type: string
+          minLength: 1
+          maxLength: 200
+        familia:
+          type: string
+          maxLength: 100
+        nomes_comuns:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        nativa_brasil:
+          type: boolean
+          nullable: true
+        ativa:
+          type: boolean
+        sucessora:
+          type: string
+          format: uuid
+          nullable: true
+        fonte_taxonomica:
+          type: string
+          maxLength: 200
+    PatchedOcorrenciaRequest:
+      type: object
+      properties:
+        tipo_id:
+          type: string
+          format: uuid
+          writeOnly: true
+        arvore_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/LocalizacaoRequest'
+          nullable: true
+        endereco:
+          type: string
+          maxLength: 300
+        descricao:
+          type: string
+          minLength: 1
+        condicao_aparente:
+          type: string
+        responsavel_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        equipe_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        prazo:
+          type: string
+          format: date
+          nullable: true
+    PatchedTipoOcorrenciaRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 100
+        descricao:
+          type: string
+        prazo_padrao_dias:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        ativo:
+          type: boolean
     PatchedUsuarioAdminRequest:
       type: object
       properties:
@@ -828,6 +3531,86 @@ components:
         * `admin.auditoria` - Consultar auditoria
         * `admin.territorios` - Administrar territórios
         * `admin.configuracao` - Administrar catálogos e integrações
+    PrioridadeEnum:
+      enum:
+      - baixa
+      - media
+      - alta
+      - urgente
+      type: string
+      description: |-
+        * `baixa` - Baixa
+        * `media` - Média
+        * `alta` - Alta
+        * `urgente` - Urgente
+    PrioridadeRequest:
+      type: object
+      properties:
+        prioridade:
+          $ref: '#/components/schemas/PrioridadeEnum'
+        motivo:
+          type: string
+          maxLength: 500
+      required:
+      - prioridade
+    RemoverEvidenciaRequest:
+      type: object
+      properties:
+        motivo:
+          type: string
+          minLength: 1
+      required:
+      - motivo
+    ResultadoBusca:
+      type: object
+      properties:
+        tipo:
+          $ref: '#/components/schemas/ResultadoBuscaTipoEnum'
+        id:
+          type: string
+          nullable: true
+        rotulo:
+          type: string
+        descricao:
+          type: string
+        localizacao:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        limites:
+          type: array
+          items:
+            type: number
+            format: double
+          nullable: true
+      required:
+      - descricao
+      - id
+      - limites
+      - localizacao
+      - rotulo
+      - tipo
+    ResultadoBuscaTipoEnum:
+      enum:
+      - arvore
+      - ocorrencia
+      - territorio
+      - coordenada
+      type: string
+      description: |-
+        * `arvore` - arvore
+        * `ocorrencia` - ocorrencia
+        * `territorio` - territorio
+        * `coordenada` - coordenada
+    RiscoRequest:
+      type: object
+      properties:
+        descricao:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - descricao
     Saude:
       type: object
       properties:
@@ -841,6 +3624,16 @@ components:
       - ambiente
       - banco
       - status
+    SituacaoArvoreEnum:
+      enum:
+      - ativa
+      - excluida
+      - fundida
+      type: string
+      description: |-
+        * `ativa` - Ativa
+        * `excluida` - Excluída
+        * `fundida` - Fundida em outro registro
     Territorio:
       type: object
       description: Território com proveniência; sem geometria (ver endpoint GeoJSON).
@@ -920,6 +3713,74 @@ components:
       required:
       - nome
       - tipo
+    TipoConteudoEnum:
+      enum:
+      - application/pdf
+      - image/heic
+      - image/jpeg
+      - image/png
+      - image/webp
+      type: string
+      description: |-
+        * `application/pdf` - application/pdf
+        * `image/heic` - image/heic
+        * `image/jpeg` - image/jpeg
+        * `image/png` - image/png
+        * `image/webp` - image/webp
+    TipoMedidaEnum:
+      enum:
+      - altura
+      - dap
+      - cap
+      - diametro_copa
+      - altura_bifurcacao
+      type: string
+      description: |-
+        * `altura` - Altura total
+        * `dap` - DAP (diâmetro à altura do peito)
+        * `cap` - CAP (circunferência à altura do peito)
+        * `diametro_copa` - Diâmetro da copa
+        * `altura_bifurcacao` - Altura da 1ª bifurcação
+    TipoOcorrencia:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 100
+        descricao:
+          type: string
+        prazo_padrao_dias:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        ativo:
+          type: boolean
+      required:
+      - id
+      - nome
+    TipoOcorrenciaRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 100
+        descricao:
+          type: string
+        prazo_padrao_dias:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          nullable: true
+        ativo:
+          type: boolean
+      required:
+      - nome
     TipoTerritorioEnum:
       enum:
       - municipio
@@ -930,6 +3791,16 @@ components:
         * `municipio` - Município
         * `regional` - Regional
         * `bairro` - Bairro
+    TransicaoRequest:
+      type: object
+      properties:
+        estado:
+          $ref: '#/components/schemas/EstadoOcorrenciaEnum'
+        motivo:
+          type: string
+          maxLength: 500
+      required:
+      - estado
     UsuarioAdmin:
       type: object
       properties:

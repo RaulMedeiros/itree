@@ -1,6 +1,6 @@
 # W-03 — Inventário e detalhe de árvore
 
-**Status:** Rascunho · **Fase:** F1 · **Prioridade:** P0
+**Status:** Implementado (F1) · **Fase:** F1 · **Prioridade:** P0
 
 ## 1. Objetivo
 

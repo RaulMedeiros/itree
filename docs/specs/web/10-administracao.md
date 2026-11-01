@@ -1,6 +1,6 @@
 # W-10 — Administração
 
-**Status:** Em implementação (F0: usuários, equipes, territórios, auditoria) · **Fase:** F0 (usuários, papéis, equipes) → F3 (integrações)
+**Status:** Em implementação (F0/F1: usuários, equipes, territórios, espécies, tipos de ocorrência, auditoria) · **Fase:** F0 (usuários, papéis, equipes) → F3 (integrações)
 
 ## 1. Objetivo
 

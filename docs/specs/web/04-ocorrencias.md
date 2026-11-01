@@ -1,6 +1,6 @@
 # W-04 — Ocorrências
 
-**Status:** Rascunho · **Fase:** F1 · **Prioridade:** P0 (básico)
+**Status:** Implementado (F1) · **Fase:** F1 · **Prioridade:** P0 (básico)
 
 ## 1. Objetivo
 

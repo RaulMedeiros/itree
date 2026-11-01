@@ -95,13 +95,19 @@ export const MODULOS: Modulo[] = [
     caminho: "/administracao",
     icone: Settings,
     fase: "F0",
-    permissoes: ["admin.usuarios", "admin.equipes", "admin.auditoria", "admin.territorios"],
+    permissoes: [
+      "admin.usuarios",
+      "admin.equipes",
+      "admin.auditoria",
+      "admin.territorios",
+      "admin.configuracao",
+    ],
     spec: "W-10",
   },
 ];
 
 /** Fases já entregues. Módulos de fases futuras não aparecem em produção (RF-SHELL-001). */
-export const FASES_ENTREGUES: Fase[] = ["F0"];
+export const FASES_ENTREGUES: Fase[] = ["F0", "F1"];
 
 export function modulosVisiveis(
   permissoes: readonly string[],
@@ -137,6 +143,18 @@ export const SECOES_ADMIN: SecaoAdmin[] = [
     rotulo: "Territórios",
     caminho: "/administracao/territorios",
     permissao: "admin.territorios",
+  },
+  {
+    id: "especies",
+    rotulo: "Espécies",
+    caminho: "/administracao/especies",
+    permissao: "admin.configuracao",
+  },
+  {
+    id: "tipos-ocorrencia",
+    rotulo: "Tipos de ocorrência",
+    caminho: "/administracao/tipos-ocorrencia",
+    permissao: "admin.configuracao",
   },
   {
     id: "auditoria",

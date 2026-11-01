@@ -1,4 +1,4 @@
-import { useAuditoriaListar, type EventoAuditoria } from "@itree/api-client";
+import { useAuditoriaListar } from "@itree/api-client";
 import { ROTULOS_ACAO_AUDITORIA, ROTULOS_ORIGEM } from "@itree/domain";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { ChevronDown, ChevronRight, X } from "lucide-react";
@@ -12,6 +12,7 @@ import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarDataHora } from "../../util/formatos";
+import { DetalhesEvento, autorDoEvento, type ContextoEvento } from "../../componentes/Historico";
 import { useOpcoesUsuario } from "./dados";
 
 const TAMANHO = 50;
@@ -32,14 +33,6 @@ export interface BuscaAuditoria {
   desde?: string;
   ate?: string;
   pagina?: number;
-}
-
-interface Contexto {
-  user?: string | null;
-  origem?: string;
-  motivo?: string | null;
-  url?: string;
-  evento?: string;
 }
 
 /** Converte AAAA-MM-DD (dia local em Fortaleza, UTC−3) em limites ISO. */
@@ -150,7 +143,7 @@ export function AuditoriaPagina() {
             </thead>
             <tbody>
               {consulta.data.data.results.map((ev) => {
-                const ctx = (ev.contexto ?? {}) as Contexto;
+                const ctx = (ev.contexto ?? {}) as ContextoEvento;
                 const aberto = expandido === ev.id;
                 return (
                   <Fragment key={ev.id}>
@@ -184,7 +177,7 @@ export function AuditoriaPagina() {
                           {ROTULOS_ACAO_AUDITORIA[ev.acao] ?? ev.acao}
                         </Selo>
                       </Td>
-                      <Td>{autor(ctx, nomes)}</Td>
+                      <Td>{autorDoEvento(ctx, nomes, ev.autor_nome)}</Td>
                       <Td>{ctx.origem ? (ROTULOS_ORIGEM[ctx.origem] ?? ctx.origem) : "—"}</Td>
                       <Td className="max-w-64">
                         {ctx.motivo || <span className="text-texto-suave">—</span>}
@@ -193,7 +186,7 @@ export function AuditoriaPagina() {
                     {aberto && (
                       <tr>
                         <td colSpan={7} className="border-b border-borda bg-fundo px-4 py-3">
-                          <Detalhes evento={ev} />
+                          <DetalhesEvento evento={ev} />
                         </td>
                       </tr>
                     )}
@@ -213,63 +206,5 @@ export function AuditoriaPagina() {
         </>
       )}
     </>
-  );
-}
-
-function autor(ctx: Contexto, nomes: Map<string, string>): string {
-  if (ctx.user) return nomes.get(ctx.user) ?? `Usuário ${ctx.user.slice(0, 8)}…`;
-  if (ctx.evento === "vinculo_oidc") return "Primeiro acesso (provedor de login)";
-  if (ctx.evento === "importacao_territorios") return "Importação de territórios";
-  if (ctx.evento === "criar_administrador") return "Comando criar_administrador";
-  return "Sistema";
-}
-
-function exibir(v: unknown): string {
-  if (v === null || v === undefined || v === "") return "(vazio)";
-  if (Array.isArray(v)) return v.length ? v.map(String).join(", ") : "(vazio)";
-  if (typeof v === "boolean") return v ? "sim" : "não";
-  return typeof v === "object" ? JSON.stringify(v) : String(v);
-}
-
-function Detalhes({ evento }: { evento: EventoAuditoria }) {
-  const diferencas = evento.diferencas as Record<string, [unknown, unknown]> | null;
-  const dados = (evento.dados ?? {}) as Record<string, unknown>;
-  const ocultos = new Set(["criado_em", "atualizado_em", "geom"]);
-
-  if (evento.acao === "alteracao" && diferencas && Object.keys(diferencas).length > 0) {
-    return (
-      <table className="text-sm">
-        <thead>
-          <tr className="text-left text-xs text-texto-suave">
-            <th className="pr-6 pb-1 font-medium">Campo</th>
-            <th className="pr-6 pb-1 font-medium">Antes</th>
-            <th className="pb-1 font-medium">Depois</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(diferencas)
-            .filter(([campo]) => !ocultos.has(campo))
-            .map(([campo, [antes, depois]]) => (
-              <tr key={campo}>
-                <td className="pr-6 font-mono text-xs">{campo}</td>
-                <td className="pr-6 text-perigo line-through">{exibir(antes)}</td>
-                <td className="text-sucesso">{exibir(depois)}</td>
-              </tr>
-            ))}
-        </tbody>
-      </table>
-    );
-  }
-  return (
-    <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-0.5 text-sm">
-      {Object.entries(dados)
-        .filter(([campo]) => !ocultos.has(campo))
-        .map(([campo, valor]) => (
-          <Fragment key={campo}>
-            <dt className="font-mono text-xs text-texto-suave">{campo}</dt>
-            <dd className="break-all">{exibir(valor)}</dd>
-          </Fragment>
-        ))}
-    </dl>
   );
 }

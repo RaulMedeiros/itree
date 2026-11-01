@@ -8,6 +8,7 @@ import { useUsuario } from "../acesso/ContextoUsuario";
 import { modulosVisiveis } from "../acesso/modulos";
 import { config } from "../config";
 import { Selo } from "../ui/selo";
+import { BuscaGlobal } from "./BuscaGlobal";
 
 export function Shell() {
   const eu = useUsuario();
@@ -83,6 +84,7 @@ function Cabecalho() {
           <Selo tom="atencao">Sem escopo territorial atribuído</Selo>
         )}
       </div>
+      <BuscaGlobal />
       <Menu.Root>
         <Menu.Trigger className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-fundo">
           <span className="flex size-7 items-center justify-center rounded-full bg-marca-clara text-xs font-semibold text-marca-escura">
