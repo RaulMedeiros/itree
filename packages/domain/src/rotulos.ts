@@ -34,6 +34,7 @@ export const ROTULOS_PERMISSAO: Record<PermissaoEnum, string> = {
   "inventario.fundir_excluir": "Fundir ou excluir árvores",
   "inventario.importar": "Importar inventário em lote",
   "inspecoes.ler": "Ver inspeções",
+  "inspecoes.executar": "Executar inspeções (aplicativo)",
   "inspecoes.validar": "Revisar e validar inspeções",
   "ocorrencias.ler": "Ver ocorrências",
   "ocorrencias.editar": "Registrar e editar ocorrências",

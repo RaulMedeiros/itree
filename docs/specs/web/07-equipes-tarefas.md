@@ -1,6 +1,6 @@
 # W-07 — Equipes e tarefas
 
-**Status:** Rascunho · **Fase:** F2 · **Prioridade:** P1
+**Status:** Implementado (F2) · **Fase:** F2 · **Prioridade:** P1
 
 ## 1. Objetivo
 

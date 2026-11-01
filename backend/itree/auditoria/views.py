@@ -30,6 +30,8 @@ ENTIDADES = {
     "ocorrencias.TipoOcorrenciaEvent": "Tipo de ocorrência",
     "ocorrencias.OcorrenciaEvent": "Ocorrência",
     "evidencias.EvidenciaEvent": "Evidência",
+    "inspecoes.InspecaoEvent": "Inspeção",
+    "tarefas.TarefaEvent": "Tarefa",
 }
 
 ACOES = {"insert": "criacao", "update": "alteracao", "delete": "exclusao"}

@@ -107,7 +107,7 @@ export const MODULOS: Modulo[] = [
 ];
 
 /** Fases já entregues. Módulos de fases futuras não aparecem em produção (RF-SHELL-001). */
-export const FASES_ENTREGUES: Fase[] = ["F0", "F1"];
+export const FASES_ENTREGUES: Fase[] = ["F0", "F1", "F2"];
 
 export function modulosVisiveis(
   permissoes: readonly string[],

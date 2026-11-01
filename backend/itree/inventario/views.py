@@ -1,8 +1,10 @@
 import re
+from datetime import timedelta
 
 import pghistory
 from django.db import transaction
 from django.db.models import CharField, Count, F, Func, Q, Value
+from django.utils import timezone
 from drf_spectacular.utils import (
     OpenApiParameter,
     extend_schema,
@@ -114,6 +116,10 @@ FILTROS_ARVORE = [
     ),
     OpenApiParameter("valida", bool),
     OpenApiParameter("lote", str),
+    OpenApiParameter(
+        "sem_inspecao_dias", int, description="Sem inspeção validada há mais de N dias."
+    ),
+    OpenApiParameter("condicao_aparente", str, description="Use 'sem' para sem avaliação."),
     OpenApiParameter("ordenar", str, description="numero, -numero, atualizado_em, -atualizado_em"),
 ]
 
@@ -135,6 +141,14 @@ def filtrar_arvores(qs, params):
             if consulta.endswith("_id"):
                 valor = uuid_do_parametro(valor, campo)
             qs = qs.filter(**{consulta: valor})
+    if dias := params.get("sem_inspecao_dias"):
+        try:
+            limite = timezone.now() - timedelta(days=int(dias))
+        except ValueError as exc:
+            raise ValidationError({"sem_inspecao_dias": ["Informe um número de dias."]}) from exc
+        qs = qs.filter(Q(ultima_inspecao_em__isnull=True) | Q(ultima_inspecao_em__lt=limite))
+    if condicao := params.get("condicao_aparente"):
+        qs = qs.filter(condicao_aparente="" if condicao == "sem" else condicao)
     situacao = params.get("situacao", "ativa")
     if situacao != "todas":
         qs = qs.filter(situacao=situacao)

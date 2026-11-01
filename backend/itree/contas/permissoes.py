@@ -25,6 +25,7 @@ class Permissao(models.TextChoices):
     INVENTARIO_FUNDIR_EXCLUIR = "inventario.fundir_excluir", "Fundir ou excluir árvores"
     INVENTARIO_IMPORTAR = "inventario.importar", "Importar inventário em lote"
     INSPECOES_LER = "inspecoes.ler", "Ver inspeções"
+    INSPECOES_EXECUTAR = "inspecoes.executar", "Executar inspeções (aplicativo)"
     INSPECOES_VALIDAR = "inspecoes.validar", "Revisar e validar inspeções"
     OCORRENCIAS_LER = "ocorrencias.ler", "Ver ocorrências"
     OCORRENCIAS_EDITAR = "ocorrencias.editar", "Registrar e editar ocorrências"
@@ -76,6 +77,7 @@ MATRIZ: dict[str, frozenset[str]] = {
     ),
     Papel.REVISOR: frozenset(
         {
+            P.INSPECOES_EXECUTAR,
             P.MAPA_LER,
             P.INVENTARIO_LER,
             P.INVENTARIO_EDITAR,
@@ -104,6 +106,7 @@ MATRIZ: dict[str, frozenset[str]] = {
     ),
     Papel.TECNICO: frozenset(
         {
+            P.INSPECOES_EXECUTAR,
             P.MAPA_LER,
             P.INVENTARIO_LER,
             P.INVENTARIO_EDITAR,

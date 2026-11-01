@@ -44,7 +44,7 @@ export function Dialogo({
             </div>
             <Radix.Close
               className="rounded-md p-1 text-texto-suave hover:bg-neutro-clara"
-              aria-label="Fechar"
+              aria-label="Fechar diálogo"
             >
               <X className="size-4" />
             </Radix.Close>

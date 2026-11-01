@@ -1,6 +1,6 @@
 # W-05 — Inspeções: consulta, revisão e validação
 
-**Status:** Rascunho · **Fase:** F2 · **Prioridade:** P0 (consulta) / P1 (revisão e validação)
+**Status:** Implementado (F2; registro pelo web pendente de DP-16) · **Fase:** F2 · **Prioridade:** P0 (consulta) / P1 (revisão e validação)
 
 ## 1. Objetivo
 

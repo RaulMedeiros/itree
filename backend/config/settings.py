@@ -39,6 +39,9 @@ INSTALLED_APPS = [
     "itree.evidencias",
     "itree.ocorrencias",
     "itree.mapa",
+    "itree.inspecoes",
+    "itree.tarefas",
+    "itree.indicadores",
 ]
 
 MIDDLEWARE = [
@@ -182,6 +185,12 @@ SPECTACULAR_SETTINGS = {
         "PrioridadeEnum": "itree.ocorrencias.models.Prioridade",
         "OrigemOcorrenciaEnum": "itree.ocorrencias.models.OrigemOcorrencia",
         "EstadoEvidenciaEnum": "itree.evidencias.models.EstadoEvidencia",
+        "EstadoInspecaoEnum": "itree.inspecoes.models.EstadoInspecao",
+        "CondicaoAparenteEnum": "itree.inspecoes.models.CondicaoAparente",
+        "SinalObservadoEnum": "itree.inspecoes.models.SinalObservado",
+        "OrigemInspecaoEnum": "itree.inspecoes.models.OrigemInspecao",
+        "TipoTarefaEnum": "itree.tarefas.models.TipoTarefa",
+        "EstadoTarefaEnum": "itree.tarefas.models.EstadoTarefa",
     },
 }
 

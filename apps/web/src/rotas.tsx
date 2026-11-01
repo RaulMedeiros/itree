@@ -33,6 +33,10 @@ import { LayoutInventario } from "./paginas/inventario/LayoutInventario";
 import { MapaPagina } from "./paginas/mapa/MapaPagina";
 import { OcorrenciaDetalhePagina } from "./paginas/ocorrencias/OcorrenciaDetalhePagina";
 import { OcorrenciasPagina } from "./paginas/ocorrencias/OcorrenciasPagina";
+import { InspecaoDetalhePagina } from "./paginas/inspecoes/InspecaoDetalhePagina";
+import { InspecoesPagina } from "./paginas/inspecoes/InspecoesPagina";
+import { TarefasPagina } from "./paginas/tarefas/TarefasPagina";
+import { VisaoGeralPagina } from "./paginas/visao-geral/VisaoGeralPagina";
 import { SemPermissao } from "./ui/estados";
 
 function Exige({ permissao, children }: { permissao: PermissaoEnum; children: ReactNode }) {
@@ -102,6 +106,16 @@ const administracaoInicio = createRoute({
   path: "/",
   component: InicioAdministracao,
 });
+
+/**
+ * Valor fixo vindo da URL. O roteador converte "1" em número e "true" em
+ * booleano ao ler a URL, então o valor é normalizado para texto antes.
+ */
+const bandeira = <T extends string>(valor: T) =>
+  z
+    .preprocess((v) => (v === undefined ? v : String(v)), z.literal(valor))
+    .optional()
+    .catch(undefined);
 
 const paginaOpcional = z.coerce.number().int().positive().optional().catch(undefined);
 const textoOpcional = z.string().optional().catch(undefined);
@@ -212,9 +226,11 @@ const mapa = createRoute({
     zoom: numeroOpcional,
     base: z.enum(["ruas", "satelite"]).optional().catch(undefined),
     camada: z.enum(["arvores", "ocorrencias"]).optional().catch(undefined),
-    arvores: z.literal("0").optional().catch(undefined),
-    ocorrencias: z.literal("0").optional().catch(undefined),
-    bairros: z.literal("0").optional().catch(undefined),
+    arvores: bandeira("0"),
+    ocorrencias: bandeira("0"),
+    bairros: bandeira("0"),
+    tarefas: bandeira("1"),
+    sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),
     especie_estado: z
       .enum(["confirmada", "sugerida_ia", "informada", "nao_identificada"])
       .optional()
@@ -265,6 +281,8 @@ const arvores = createRoute({
       .optional()
       .catch(undefined),
     situacao: z.enum(["ativa", "excluida", "fundida", "todas"]).optional().catch(undefined),
+    sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),
+    condicao_aparente: textoOpcional,
     pagina: paginaOpcional,
   }),
   component: ArvoresPagina,
@@ -312,7 +330,7 @@ const ocorrenciasLista = createRoute({
     prioridade: z.enum(["baixa", "media", "alta", "urgente", "sem"]).optional().catch(undefined),
     bairro: textoOpcional,
     equipe: textoOpcional,
-    atrasadas: z.literal("true").optional().catch(undefined),
+    atrasadas: bandeira("true"),
     pagina: paginaOpcional,
   }),
   component: OcorrenciasPagina,
@@ -324,7 +342,82 @@ const ocorrenciaDetalhe = createRoute({
   component: OcorrenciaDetalhePagina,
 });
 
-const ENTREGUES = new Set(["administracao", "mapa", "inventario", "ocorrencias"]);
+// --- F2: inspeções, tarefas e visão geral -------------------------------------
+
+const dataOpcionalF2 = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .optional()
+  .catch(undefined);
+
+const visaoGeral = createRoute({
+  getParentRoute: () => autenticado,
+  path: "visao-geral",
+  validateSearch: z.object({
+    inicio: dataOpcionalF2,
+    fim: dataOpcionalF2,
+    bairro: textoOpcional,
+    equipe: textoOpcional,
+  }),
+  component: VisaoGeralPagina,
+});
+
+const inspecoes = createRoute({
+  getParentRoute: () => autenticado,
+  path: "inspecoes",
+  component: () => (
+    <Exige permissao="inspecoes.ler">
+      <Outlet />
+    </Exige>
+  ),
+});
+
+const inspecoesLista = createRoute({
+  getParentRoute: () => inspecoes,
+  path: "/",
+  validateSearch: z.object({
+    estado: textoOpcional,
+    bairro: textoOpcional,
+    desde: dataOpcionalF2,
+    ate: dataOpcionalF2,
+    pagina: paginaOpcional,
+  }),
+  component: InspecoesPagina,
+});
+
+const inspecaoDetalhe = createRoute({
+  getParentRoute: () => inspecoes,
+  path: "$id",
+  component: InspecaoDetalhePagina,
+});
+
+const tarefas = createRoute({
+  getParentRoute: () => autenticado,
+  path: "equipes-tarefas",
+  validateSearch: z.object({
+    responsavel: bandeira("eu"),
+    estado: textoOpcional,
+    tipo: z.enum(["inspecao_arvore", "atendimento_ocorrencia"]).optional().catch(undefined),
+    equipe: textoOpcional,
+    atrasadas: bandeira("true"),
+    pagina: paginaOpcional,
+  }),
+  component: () => (
+    <Exige permissao="tarefas.ler">
+      <TarefasPagina />
+    </Exige>
+  ),
+});
+
+const ENTREGUES = new Set([
+  "administracao",
+  "mapa",
+  "inventario",
+  "ocorrencias",
+  "visao-geral",
+  "inspecoes",
+  "equipes-tarefas",
+]);
 
 const modulosFuturos = MODULOS.filter((m) => !ENTREGUES.has(m.id)).map((m) =>
   createRoute({
@@ -350,6 +443,9 @@ const arvore = raiz.addChildren([
     mapa,
     inventario.addChildren([inventarioInicio, arvores, arvoreDetalhe, importacoes, duplicidades]),
     ocorrencias.addChildren([ocorrenciasLista, ocorrenciaDetalhe]),
+    visaoGeral,
+    inspecoes.addChildren([inspecoesLista, inspecaoDetalhe]),
+    tarefas,
     ...modulosFuturos,
   ]),
 ]);

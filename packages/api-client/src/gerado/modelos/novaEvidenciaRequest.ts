@@ -12,6 +12,8 @@ export interface NovaEvidenciaRequest {
   arvore?: string | null;
   /** @nullable */
   ocorrencia?: string | null;
+  /** @nullable */
+  inspecao?: string | null;
   /**
      * @minLength 1
      * @maxLength 255

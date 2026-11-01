@@ -11,6 +11,7 @@ describe("modulosVisiveis", () => {
   it("oculta módulos de fases não entregues quando desabilitado (produção)", () => {
     const permissoes = ["mapa.ler", "inventario.ler", "admin.auditoria"];
     expect(modulosVisiveis(permissoes, false).map((m) => m.id)).toEqual([
+      "visao-geral",
       "mapa",
       "inventario",
       "administracao",
@@ -26,5 +27,18 @@ describe("modulosVisiveis", () => {
   it("marca módulos entregues", () => {
     const [admin] = modulosVisiveis(["admin.equipes"], false);
     expect(admin?.entregue).toBe(true);
+  });
+});
+
+describe("parâmetros de URL", () => {
+  it("aceita bandeiras digitadas na URL (?tarefas=1, ?atrasadas=true)", async () => {
+    const { criarRoteador } = await import("../rotas");
+    const { createMemoryHistory } = await import("@tanstack/react-router");
+    const roteador = criarRoteador(
+      createMemoryHistory({ initialEntries: ["/mapa?tarefas=1&arvores=0"] }),
+    );
+    await roteador.load().catch(() => undefined);
+    const busca = roteador.state.matches[roteador.state.matches.length - 1]?.search;
+    expect(busca).toMatchObject({ tarefas: "1", arvores: "0" });
   });
 });

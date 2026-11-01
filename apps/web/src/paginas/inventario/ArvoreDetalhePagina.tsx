@@ -11,10 +11,12 @@ import {
   useArvoresMedidasCriar,
   useArvoresObter,
   useEspeciesListar,
+  useInspecoesListar,
   useOcorrenciasListar,
   type Arvore,
 } from "@itree/api-client";
 import {
+  ROTULOS_CONDICAO,
   ROTULOS_ESTADO_ESPECIE,
   ROTULOS_METODO_MEDIDA,
   ROTULOS_ORIGEM_REGISTRO,
@@ -25,7 +27,15 @@ import {
 } from "@itree/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Map as IconeMapa, Pencil, Ruler, Trash2, TriangleAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  ClipboardList,
+  Map as IconeMapa,
+  Pencil,
+  Ruler,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
@@ -34,6 +44,7 @@ import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeletorLocalizacao, type Ponto } from "../../componentes/SeletorLocalizacao";
 import {
   SeloEspecie,
+  SeloEstadoInspecao,
   SeloEstadoOcorrencia,
   SeloLocalizacao,
   SeloOrigemValor,
@@ -49,9 +60,10 @@ import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarData, formatarDataHora } from "../../util/formatos";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
+import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { invalidarCaminhos } from "../../util/cache";
 
-type Aba = "resumo" | "medidas" | "ocorrencias" | "evidencias" | "historico";
+type Aba = "resumo" | "medidas" | "inspecoes" | "ocorrencias" | "evidencias" | "historico";
 
 export function ArvoreDetalhePagina() {
   const { id } = useParams({ from: "/autenticado/inventario/arvores/$id" });
@@ -85,10 +97,14 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
   const podeExcluir = usePermissao("inventario.fundir_excluir") && arvore.situacao === "ativa";
   const podeOcorrencia =
     usePermissao("ocorrencias.editar") && arvore.situacao === "ativa" && !!arvore.localizacao;
+  const podeTarefa =
+    usePermissao("tarefas.editar") && arvore.situacao === "ativa" && !!arvore.localizacao;
+  const [criandoTarefa, setCriandoTarefa] = useState(false);
 
   const abas: { id: Aba; rotulo: string }[] = [
     { id: "resumo", rotulo: "Resumo" },
     { id: "medidas", rotulo: "Medidas" },
+    { id: "inspecoes", rotulo: "Inspeções" },
     {
       id: "ocorrencias",
       rotulo: `Ocorrências${arvore.ocorrencias_abertas ? ` (${arvore.ocorrencias_abertas} abertas)` : ""}`,
@@ -130,6 +146,11 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
             {podeOcorrencia && (
               <Botao variante="secundario" onClick={() => setOcorrencia(true)}>
                 <TriangleAlert /> Registrar ocorrência
+              </Botao>
+            )}
+            {podeTarefa && (
+              <Botao variante="secundario" onClick={() => setCriandoTarefa(true)}>
+                <ClipboardList /> Pedir inspeção
               </Botao>
             )}
             {podeEditar && (
@@ -188,6 +209,7 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
         {aba === "medidas" && (
           <Medidas arvore={arvore} podeMedir={podeEditar} aoMedir={() => setMedindo(true)} />
         )}
+        {aba === "inspecoes" && <InspecoesDaArvore arvoreId={arvore.id} />}
         {aba === "ocorrencias" && <OcorrenciasDaArvore arvoreId={arvore.id} />}
         {aba === "evidencias" && (
           <Evidencias alvo={{ arvore: arvore.id }} podeEnviar={podeEditar} />
@@ -198,6 +220,12 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
       {editando && <EditarDialogo arvore={arvore} aoFechar={() => setEditando(false)} />}
       {medindo && <MedidaDialogo arvore={arvore} aoFechar={() => setMedindo(false)} />}
       {excluindo && <ExcluirDialogo arvore={arvore} aoFechar={() => setExcluindo(false)} />}
+      {criandoTarefa && (
+        <CriarTarefasDialogo
+          alvo={{ tipo: "arvore", id: arvore.id, codigo: arvore.codigo }}
+          aoFechar={() => setCriandoTarefa(false)}
+        />
+      )}
       {ocorrencia && (
         <NovaOcorrenciaDialogo
           arvore={{ id: arvore.id, codigo: arvore.codigo }}
@@ -281,9 +309,22 @@ function Resumo({ arvore }: { arvore: Arvore }) {
           <Item rotulo="Cadastrado em">{formatarDataHora(arvore.criado_em)}</Item>
           <Item rotulo="Última alteração">{formatarDataHora(arvore.atualizado_em)}</Item>
           <Item rotulo="Condição aparente">
-            <span className="text-texto-suave">
-              Sem avaliação registrada (inspeções chegam na F2).
-            </span>
+            {arvore.condicao_aparente ? (
+              <>
+                {ROTULOS_CONDICAO[arvore.condicao_aparente as keyof typeof ROTULOS_CONDICAO]}
+                <span className="text-texto-suave">
+                  {" "}
+                  · validada da inspeção de {formatarData(arvore.condicao_aparente_em)}
+                </span>
+              </>
+            ) : (
+              <span className="text-texto-suave">Sem avaliação registrada.</span>
+            )}
+          </Item>
+          <Item rotulo="Última inspeção validada">
+            {formatarData(arvore.ultima_inspecao_em) ?? (
+              <span className="text-texto-suave">Nenhuma</span>
+            )}
           </Item>
         </dl>
       </section>
@@ -391,6 +432,57 @@ function OcorrenciasDaArvore({ arvoreId }: { arvoreId: string }) {
               <SeloPrioridade prioridade={o.prioridade} />
             </Td>
             <Td>{formatarDataHora(o.criado_em)}</Td>
+          </Linha>
+        ))}
+      </tbody>
+    </Tabela>
+  );
+}
+
+function InspecoesDaArvore({ arvoreId }: { arvoreId: string }) {
+  const podeVer = usePermissao("inspecoes.ler");
+  const consulta = useInspecoesListar(
+    { arvore: arvoreId, estado: "rascunho,em_revisao,devolvida,validada", tamanho: 100 },
+    { query: { enabled: podeVer } },
+  );
+  if (!podeVer) return <Vazio titulo="Você não tem acesso às inspeções" />;
+  if (consulta.isPending) return <Carregando linhas={3} />;
+  if (consulta.isError) return <Erro erro={consulta.error} />;
+  if (consulta.data.data.count === 0)
+    return (
+      <Vazio titulo="Nenhuma inspeção registrada">
+        Inspeções são feitas no aplicativo de campo.
+      </Vazio>
+    );
+  return (
+    <Tabela>
+      <thead>
+        <tr>
+          <Th>Inspeção</Th>
+          <Th>Realizada em</Th>
+          <Th>Técnico</Th>
+          <Th>Condição aparente</Th>
+          <Th>Situação</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {consulta.data.data.results.map((i) => (
+          <Linha key={i.id}>
+            <Td>
+              <Link
+                to="/inspecoes/$id"
+                params={{ id: i.id }}
+                className="font-mono font-medium text-marca-escura hover:underline"
+              >
+                {i.codigo}
+              </Link>
+            </Td>
+            <Td>{formatarDataHora(i.realizada_em)}</Td>
+            <Td>{i.tecnico.nome || i.tecnico.email}</Td>
+            <Td>{ROTULOS_CONDICAO[i.condicao_aparente ?? "nao_avaliada"]}</Td>
+            <Td>
+              <SeloEstadoInspecao estado={i.estado ?? "rascunho"} />
+            </Td>
           </Linha>
         ))}
       </tbody>

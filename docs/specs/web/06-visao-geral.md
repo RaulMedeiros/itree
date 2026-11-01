@@ -1,6 +1,6 @@
 # W-06 — Visão geral (dashboard)
 
-**Status:** Rascunho · **Fase:** F2 · **Prioridade:** P1
+**Status:** Implementado (F2; indicadores oficiais pendentes de DP-14) · **Fase:** F2 · **Prioridade:** P1
 
 ## 1. Objetivo
 

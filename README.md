@@ -22,6 +22,10 @@ Plataforma municipal para inventariar, inspecionar, monitorar e gerir árvores e
     agrupamento), inventário com proveniência, medidas, importação em lote,
     possíveis duplicidades e fusão, evidências (fotos no armazenamento S3),
     ocorrências e busca global.
+  - **F2 — Gestão operacional:** inspeções (API de sincronização idempotente
+    para o aplicativo, fila de revisão, validação seletiva e devolução),
+    equipes e tarefas (criação em lote, andamento, reatribuição) e visão geral
+    com indicadores definidos e rastreáveis.
 
 ## Estrutura do repositório
 
