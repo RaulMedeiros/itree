@@ -15,9 +15,13 @@ Plataforma municipal para inventariar, inspecionar, monitorar e gerir árvores e
 ## Estado atual
 
 - **Especificação:** em `docs/` (ver abaixo).
-- **Implementação:** fase **F0 — Fundação** do painel web: login OIDC, shell
-  de navegação, administração de usuários, papéis, escopo territorial, equipes,
-  territórios e trilha de auditoria.
+- **Implementação do painel web:**
+  - **F0 — Fundação:** login OIDC, navegação por permissão, usuários, papéis,
+    escopo territorial, equipes, territórios e trilha de auditoria.
+  - **F1 — Inventário territorial:** mapa (vector tiles com escopo e
+    agrupamento), inventário com proveniência, medidas, importação em lote,
+    possíveis duplicidades e fusão, evidências (fotos no armazenamento S3),
+    ocorrências e busca global.
 
 ## Estrutura do repositório
 

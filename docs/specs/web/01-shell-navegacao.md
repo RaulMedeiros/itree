@@ -1,6 +1,6 @@
 # W-01 — Shell, navegação e padrões de UI
 
-**Status:** Em implementação (F0) · **Fase:** F0 · **Prioridade:** P0
+**Status:** Implementado (F0/F1) · **Fase:** F0 · **Prioridade:** P0
 
 ## 1. Objetivo
 

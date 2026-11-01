@@ -18,7 +18,12 @@ export default tseslint.config(
   },
   {
     // Arquivos que combinam componentes com hooks/configuração de rotas.
-    files: ["src/rotas.tsx", "src/acesso/ContextoUsuario.tsx"],
+    files: [
+      "src/rotas.tsx",
+      "src/acesso/ContextoUsuario.tsx",
+      "src/componentes/Historico.tsx",
+      "src/componentes/selos.tsx",
+    ],
     rules: { "react-refresh/only-export-components": "off" },
   },
 );

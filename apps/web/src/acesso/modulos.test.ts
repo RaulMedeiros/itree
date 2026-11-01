@@ -10,7 +10,11 @@ describe("modulosVisiveis", () => {
 
   it("oculta módulos de fases não entregues quando desabilitado (produção)", () => {
     const permissoes = ["mapa.ler", "inventario.ler", "admin.auditoria"];
-    expect(modulosVisiveis(permissoes, false).map((m) => m.id)).toEqual(["administracao"]);
+    expect(modulosVisiveis(permissoes, false).map((m) => m.id)).toEqual([
+      "mapa",
+      "inventario",
+      "administracao",
+    ]);
     expect(modulosVisiveis(permissoes, true).map((m) => m.id)).toEqual([
       "visao-geral",
       "mapa",

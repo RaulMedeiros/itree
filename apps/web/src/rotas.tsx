@@ -24,6 +24,15 @@ import { LayoutAdministracao } from "./paginas/administracao/LayoutAdministracao
 import { TerritoriosPagina } from "./paginas/administracao/TerritoriosPagina";
 import { UsuarioDetalhePagina } from "./paginas/administracao/UsuarioDetalhePagina";
 import { UsuariosPagina } from "./paginas/administracao/UsuariosPagina";
+import { EspeciesPagina, TiposOcorrenciaPagina } from "./paginas/administracao/CatalogosPaginas";
+import { ArvoreDetalhePagina } from "./paginas/inventario/ArvoreDetalhePagina";
+import { ArvoresPagina } from "./paginas/inventario/ArvoresPagina";
+import { DuplicidadesPagina } from "./paginas/inventario/DuplicidadesPagina";
+import { ImportacoesPagina } from "./paginas/inventario/ImportacoesPagina";
+import { LayoutInventario } from "./paginas/inventario/LayoutInventario";
+import { MapaPagina } from "./paginas/mapa/MapaPagina";
+import { OcorrenciaDetalhePagina } from "./paginas/ocorrencias/OcorrenciaDetalhePagina";
+import { OcorrenciasPagina } from "./paginas/ocorrencias/OcorrenciasPagina";
 import { SemPermissao } from "./ui/estados";
 
 function Exige({ permissao, children }: { permissao: PermissaoEnum; children: ReactNode }) {
@@ -170,7 +179,154 @@ const auditoria = createRoute({
   ),
 });
 
-const modulosFuturos = MODULOS.filter((m) => m.id !== "administracao").map((m) =>
+const especies = createRoute({
+  getParentRoute: () => administracao,
+  path: "especies",
+  component: () => (
+    <Exige permissao="admin.configuracao">
+      <EspeciesPagina />
+    </Exige>
+  ),
+});
+
+const tiposOcorrencia = createRoute({
+  getParentRoute: () => administracao,
+  path: "tipos-ocorrencia",
+  component: () => (
+    <Exige permissao="admin.configuracao">
+      <TiposOcorrenciaPagina />
+    </Exige>
+  ),
+});
+
+// --- F1: mapa, inventário e ocorrências ---------------------------------------
+
+const numeroOpcional = z.coerce.number().optional().catch(undefined);
+
+const mapa = createRoute({
+  getParentRoute: () => autenticado,
+  path: "mapa",
+  validateSearch: z.object({
+    lon: numeroOpcional,
+    lat: numeroOpcional,
+    zoom: numeroOpcional,
+    base: z.enum(["ruas", "satelite"]).optional().catch(undefined),
+    camada: z.enum(["arvores", "ocorrencias"]).optional().catch(undefined),
+    arvores: z.literal("0").optional().catch(undefined),
+    ocorrencias: z.literal("0").optional().catch(undefined),
+    bairros: z.literal("0").optional().catch(undefined),
+    especie_estado: z
+      .enum(["confirmada", "sugerida_ia", "informada", "nao_identificada"])
+      .optional()
+      .catch(undefined),
+    localizacao_origem: z
+      .enum(["gps_campo", "importada", "estimada_web", "geocodificada"])
+      .optional()
+      .catch(undefined),
+    estado: z.enum(["abertas", "todas"]).optional().catch(undefined),
+    selecao: textoOpcional,
+  }),
+  component: () => (
+    <Exige permissao="mapa.ler">
+      <MapaPagina />
+    </Exige>
+  ),
+});
+
+const inventario = createRoute({
+  getParentRoute: () => autenticado,
+  path: "inventario",
+  component: () => (
+    <Exige permissao="inventario.ler">
+      <LayoutInventario />
+    </Exige>
+  ),
+});
+
+const inventarioInicio = createRoute({
+  getParentRoute: () => inventario,
+  path: "/",
+  component: () => <Navigate to="/inventario/arvores" replace />,
+});
+
+const arvores = createRoute({
+  getParentRoute: () => inventario,
+  path: "arvores",
+  validateSearch: z.object({
+    busca: textoOpcional,
+    especie: textoOpcional,
+    especie_estado: z
+      .enum(["confirmada", "sugerida_ia", "informada", "nao_identificada"])
+      .optional()
+      .catch(undefined),
+    bairro: textoOpcional,
+    localizacao_origem: z
+      .enum(["gps_campo", "importada", "estimada_web", "geocodificada"])
+      .optional()
+      .catch(undefined),
+    situacao: z.enum(["ativa", "excluida", "fundida", "todas"]).optional().catch(undefined),
+    pagina: paginaOpcional,
+  }),
+  component: ArvoresPagina,
+});
+
+const arvoreDetalhe = createRoute({
+  getParentRoute: () => inventario,
+  path: "arvores/$id",
+  component: ArvoreDetalhePagina,
+});
+
+const importacoes = createRoute({
+  getParentRoute: () => inventario,
+  path: "importacoes",
+  component: () => (
+    <Exige permissao="inventario.importar">
+      <ImportacoesPagina />
+    </Exige>
+  ),
+});
+
+const duplicidades = createRoute({
+  getParentRoute: () => inventario,
+  path: "duplicidades",
+  component: DuplicidadesPagina,
+});
+
+const ocorrencias = createRoute({
+  getParentRoute: () => autenticado,
+  path: "ocorrencias",
+  component: () => (
+    <Exige permissao="ocorrencias.ler">
+      <Outlet />
+    </Exige>
+  ),
+});
+
+const ocorrenciasLista = createRoute({
+  getParentRoute: () => ocorrencias,
+  path: "/",
+  validateSearch: z.object({
+    busca: textoOpcional,
+    estado: textoOpcional,
+    tipo: textoOpcional,
+    prioridade: z.enum(["baixa", "media", "alta", "urgente", "sem"]).optional().catch(undefined),
+    bairro: textoOpcional,
+    equipe: textoOpcional,
+    atrasadas: z.literal("true").optional().catch(undefined),
+    pagina: paginaOpcional,
+  }),
+  component: OcorrenciasPagina,
+});
+
+const ocorrenciaDetalhe = createRoute({
+  getParentRoute: () => ocorrencias,
+  path: "$id",
+  component: OcorrenciaDetalhePagina,
+});
+
+const ENTREGUES = new Set(["administracao", "mapa", "inventario", "ocorrencias"]);
+
+const modulosFuturos = MODULOS.filter((m) => !ENTREGUES.has(m.id)).map((m) =>
   createRoute({
     getParentRoute: () => autenticado,
     path: m.caminho.slice(1),
@@ -187,8 +343,13 @@ const arvore = raiz.addChildren([
       usuarioDetalhe,
       equipes,
       territorios,
+      especies,
+      tiposOcorrencia,
       auditoria,
     ]),
+    mapa,
+    inventario.addChildren([inventarioInicio, arvores, arvoreDetalhe, importacoes, duplicidades]),
+    ocorrencias.addChildren([ocorrenciasLista, ocorrenciaDetalhe]),
     ...modulosFuturos,
   ]),
 ]);

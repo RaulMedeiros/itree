@@ -21,6 +21,15 @@ ENTIDADES = {
     "contas.MembroEquipeEvent": "Membro de equipe",
     "contas.TerritorioEquipeEvent": "Território de equipe",
     "territorio.TerritorioEvent": "Território",
+    "inventario.EspecieEvent": "Espécie",
+    "inventario.ArvoreEvent": "Árvore",
+    "inventario.IdentificadorExternoEvent": "Identificador externo",
+    "inventario.MedidaEvent": "Medida",
+    "inventario.LoteImportacaoEvent": "Lote de importação",
+    "inventario.ParNaoDuplicadoEvent": "Par revisado (não duplicado)",
+    "ocorrencias.TipoOcorrenciaEvent": "Tipo de ocorrência",
+    "ocorrencias.OcorrenciaEvent": "Ocorrência",
+    "evidencias.EvidenciaEvent": "Evidência",
 }
 
 ACOES = {"insert": "criacao", "update": "alteracao", "delete": "exclusao"}
@@ -50,6 +59,9 @@ class EventoAuditoriaSerializer(serializers.Serializer):
         help_text="Campo -> [valor anterior, valor novo] (alterações)."
     )
     dados = serializers.SerializerMethodField(help_text="Estado após o evento.")
+    autor_nome = serializers.SerializerMethodField(
+        help_text="Nome de quem fez a alteração, quando feita por um usuário."
+    )
     contexto = serializers.JSONField(
         source="pgh_context",
         allow_null=True,
@@ -63,6 +75,18 @@ class EventoAuditoriaSerializer(serializers.Serializer):
     @extend_schema_field(serializers.JSONField())
     def get_dados(self, obj):
         return _resumir(obj.pgh_data)
+
+    def get_autor_nome(self, obj) -> str | None:
+        usuario_id = (obj.pgh_context or {}).get("user")
+        if not usuario_id:
+            return None
+        nomes = self.context.setdefault("_nomes_autores", {})
+        if usuario_id not in nomes:
+            from itree.contas.models import Usuario
+
+            u = Usuario.objects.filter(pk=usuario_id).only("nome", "email").first()
+            nomes[usuario_id] = (u.nome or u.email) if u else None
+        return nomes[usuario_id]
 
     def get_entidade(self, obj) -> str:
         return ENTIDADES.get(obj.pgh_model, obj.pgh_model)
@@ -114,4 +138,4 @@ class AuditoriaListView(generics.ListAPIView):
             qs = qs.filter(pgh_created_at__gte=desde)
         if ate := _data(p.get("ate"), "ate"):
             qs = qs.filter(pgh_created_at__lte=ate)
-        return qs.order_by("-pgh_created_at", "-pgh_slug")
+        return qs.order_by("-pgh_created_at", "-pgh_id")

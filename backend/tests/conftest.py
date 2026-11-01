@@ -83,3 +83,53 @@ def criar_territorio(nome, tipo="bairro", geom=None, codigo=None) -> Territorio:
         fonte="Teste",
         ingerido_em=timezone.now(),
     )
+
+
+# --- Cenário territorial da F1 -------------------------------------------------
+
+from itree.contas.models import EscopoUsuario  # noqa: E402
+from itree.ocorrencias.models import TipoOcorrencia  # noqa: E402
+
+
+@pytest.fixture
+def territorios(db):
+    """Município de teste com dois bairros lado a lado (A a oeste, B a leste)."""
+    municipio = criar_territorio("Município", tipo="municipio", geom=quadrado(-38.60, -3.80, 0.2))
+    a = criar_territorio("Bairro A", geom=quadrado(-38.56, -3.76, 0.01))
+    b = criar_territorio("Bairro B", geom=quadrado(-38.54, -3.76, 0.01))
+    return {"municipio": municipio, "a": a, "b": b}
+
+
+# Pontos dentro de cada bairro.
+PONTO_A = {"longitude": -38.555, "latitude": -3.755}
+PONTO_B = {"longitude": -38.535, "latitude": -3.755}
+
+
+def com_escopo(usuario, *territorios_):
+    for t in territorios_:
+        EscopoUsuario.objects.create(usuario=usuario, territorio=t)
+    return usuario
+
+
+@pytest.fixture
+def revisor(territorios):
+    return com_escopo(
+        criar_usuario("revisor@itree.teste", ["revisor"], registro_profissional="CREA 123"),
+        territorios["municipio"],
+    )
+
+
+@pytest.fixture
+def tecnico_a(territorios):
+    """Técnico com escopo apenas no Bairro A."""
+    return com_escopo(criar_usuario("tecnico@itree.teste", ["tecnico"]), territorios["a"])
+
+
+@pytest.fixture
+def gestor_municipal(territorios):
+    return com_escopo(criar_usuario("gm@itree.teste", ["gestor"]), territorios["municipio"])
+
+
+@pytest.fixture
+def tipo_queda(db):
+    return TipoOcorrencia.objects.create(nome="Galho caído", prazo_padrao_dias=3)

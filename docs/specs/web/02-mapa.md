@@ -1,6 +1,6 @@
 # W-02 — Mapa geoespacial
 
-**Status:** Rascunho · **Fase:** F1 · **Prioridade:** P0 (básico) / P1 (filtros avançados)
+**Status:** Implementado (F1) · **Fase:** F1 · **Prioridade:** P0 (básico) / P1 (filtros avançados)
 
 ## 1. Objetivo
 

@@ -18,6 +18,11 @@ export interface EventoAuditoria {
   readonly diferencas: unknown;
   /** Estado após o evento. */
   readonly dados: unknown;
+  /**
+     * Nome de quem fez a alteração, quando feita por um usuário.
+     * @nullable
+     */
+  readonly autor_nome: string | null;
   /** Usuário, origem (web/app/api), URL, motivo e outros metadados. */
   contexto: unknown;
 }
