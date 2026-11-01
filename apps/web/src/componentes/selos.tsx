@@ -1,5 +1,6 @@
 import type { ArvoreResumo } from "@itree/api-client";
 import {
+  ROTULOS_STATUS_ALERTA,
   ROTULOS_ESTADO_ESPECIE,
   ROTULOS_ESTADO_INSPECAO,
   ROTULOS_ESTADO_TAREFA,
@@ -111,4 +112,17 @@ export function SeloEstadoTarefa({ estado }: { estado: keyof typeof ROTULOS_ESTA
     cancelada: "neutro",
   };
   return <Selo tom={tom[estado]}>{ROTULOS_ESTADO_TAREFA[estado]}</Selo>;
+}
+
+export function SeloStatusAlerta({ status }: { status: keyof typeof ROTULOS_STATUS_ALERTA }) {
+  const tom: Record<string, Tom> = {
+    detectado: "atencao",
+    em_triagem: "info",
+    requer_verificacao: "atencao",
+    compativel_autorizacao: "info",
+    encaminhado: "marca",
+    confirmado: "perigo",
+    descartado: "neutro",
+  };
+  return <Selo tom={tom[status]}>{ROTULOS_STATUS_ALERTA[status]}</Selo>;
 }

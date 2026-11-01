@@ -11,12 +11,15 @@ import {
   useArvoresMedidasCriar,
   useArvoresObter,
   useEspeciesListar,
+  useInferenciasDecidir,
+  useInferenciasListar,
   useInspecoesListar,
   useOcorrenciasListar,
   type Arvore,
 } from "@itree/api-client";
 import {
   ROTULOS_CONDICAO,
+  ROTULOS_DECISAO_IA,
   ROTULOS_ESTADO_ESPECIE,
   ROTULOS_METODO_MEDIDA,
   ROTULOS_ORIGEM_REGISTRO,
@@ -63,7 +66,7 @@ import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { invalidarCaminhos } from "../../util/cache";
 
-type Aba = "resumo" | "medidas" | "inspecoes" | "ocorrencias" | "evidencias" | "historico";
+type Aba = "resumo" | "medidas" | "inspecoes" | "ocorrencias" | "evidencias" | "ia" | "historico";
 
 export function ArvoreDetalhePagina() {
   const { id } = useParams({ from: "/autenticado/inventario/arvores/$id" });
@@ -110,6 +113,7 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
       rotulo: `Ocorrências${arvore.ocorrencias_abertas ? ` (${arvore.ocorrencias_abertas} abertas)` : ""}`,
     },
     { id: "evidencias", rotulo: "Evidências" },
+    { id: "ia", rotulo: "Sugestões de IA" },
     { id: "historico", rotulo: "Histórico" },
   ];
 
@@ -214,6 +218,7 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
         {aba === "evidencias" && (
           <Evidencias alvo={{ arvore: arvore.id }} podeEnviar={podeEditar} />
         )}
+        {aba === "ia" && <SugestoesIA arvore={arvore} />}
         {aba === "historico" && <Historico arvoreId={arvore.id} />}
       </div>
 
@@ -487,6 +492,126 @@ function InspecoesDaArvore({ arvoreId }: { arvoreId: string }) {
         ))}
       </tbody>
     </Tabela>
+  );
+}
+
+function SugestoesIA({ arvore }: { arvore: Arvore }) {
+  const consulta = useInferenciasListar({ arvore: arvore.id });
+  const podeDecidir = usePermissao("inspecoes.validar");
+  const decidir = useInferenciasDecidir<ErroApi>();
+  const cliente = useQueryClient();
+  const [escolhas, setEscolhas] = useState<Record<string, string>>({});
+  if (consulta.isPending) return <Carregando linhas={2} />;
+  if (consulta.isError) return <Erro erro={consulta.error} />;
+  const itens = consulta.data.data;
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="rounded-md bg-info-clara px-3 py-2 text-sm text-info">
+        Sugestões são inferências de um modelo e não alteram o cadastro sem a decisão de um revisor.
+        Não exibimos percentuais de confiança enquanto a calibração não for validada (DP-13).
+      </p>
+      {itens.length === 0 ? (
+        <Vazio titulo="Nenhuma sugestão registrada">
+          O serviço de identificação por imagem ainda não está configurado neste ambiente.
+        </Vazio>
+      ) : (
+        itens.map((s) => {
+          const alternativas = (s.alternativas ?? []) as { especie_id: string; nome: string }[];
+          const escolhida = escolhas[s.id] ?? alternativas[0]?.especie_id ?? "";
+          return (
+            <section
+              key={s.id}
+              className="rounded-lg border border-borda bg-superficie p-4 text-sm"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">Sugestão de espécie</span>
+                <Selo tom="info">Sugestão de IA</Selo>
+                <Selo
+                  tom={
+                    s.decisao === "aceita"
+                      ? "sucesso"
+                      : s.decisao === "rejeitada"
+                        ? "neutro"
+                        : "atencao"
+                  }
+                >
+                  {ROTULOS_DECISAO_IA[s.decisao ?? "pendente"]}
+                </Selo>
+                <span className="text-texto-suave">
+                  {s.modelo} {s.versao_modelo} · {formatarDataHora(s.criado_em)}
+                </span>
+              </div>
+              {s.qualidade_insuficiente && (
+                <p className="mt-2 text-atencao">
+                  O modelo indicou imagem insuficiente para concluir.
+                </p>
+              )}
+              {s.orientacao && <p className="mt-1 text-texto-suave">Orientação: {s.orientacao}</p>}
+              <p className="mt-2">
+                Alternativas (em ordem):{" "}
+                {alternativas.length ? alternativas.map((a) => a.nome).join(", ") : "nenhuma"}
+              </p>
+              {s.decisao === "aceita" && (
+                <p className="mt-1">
+                  Confirmada: <i>{s.especie_escolhida_nome}</i> por {s.decidida_por_nome}.
+                </p>
+              )}
+              {s.decisao === "rejeitada" && (
+                <p className="mt-1">Rejeitada por {s.decidida_por_nome}.</p>
+              )}
+              {podeDecidir && s.decisao === "pendente" && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Selecao
+                    aria-label="Espécie a confirmar"
+                    value={escolhida}
+                    onChange={(e) => setEscolhas({ ...escolhas, [s.id]: e.target.value })}
+                    className="max-w-72"
+                  >
+                    {alternativas.map((a) => (
+                      <option key={a.especie_id} value={a.especie_id}>
+                        {a.nome}
+                      </option>
+                    ))}
+                  </Selecao>
+                  <Botao
+                    tamanho="pequeno"
+                    disabled={!escolhida || decidir.isPending}
+                    onClick={() =>
+                      decidir.mutate(
+                        { id: s.id, data: { decisao: "aceita", especie: escolhida } },
+                        {
+                          onSuccess: () =>
+                            void invalidarCaminhos(
+                              cliente,
+                              "/api/v1/inferencias",
+                              "/api/v1/arvores",
+                            ),
+                        },
+                      )
+                    }
+                  >
+                    Confirmar espécie
+                  </Botao>
+                  <Botao
+                    tamanho="pequeno"
+                    variante="secundario"
+                    disabled={decidir.isPending}
+                    onClick={() =>
+                      decidir.mutate(
+                        { id: s.id, data: { decisao: "rejeitada" } },
+                        { onSuccess: () => void invalidarCaminhos(cliente, "/api/v1/inferencias") },
+                      )
+                    }
+                  >
+                    Rejeitar
+                  </Botao>
+                </div>
+              )}
+            </section>
+          );
+        })
+      )}
+    </div>
   );
 }
 

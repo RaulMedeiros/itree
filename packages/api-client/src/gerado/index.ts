@@ -1,3 +1,4 @@
+export * from './alertas/alertas';
 export * from './arvores/arvores';
 export * from './auditoria/auditoria';
 export * from './equipes/equipes';
@@ -6,9 +7,12 @@ export * from './eu/eu';
 export * from './evidencias/evidencias';
 export * from './importacoes/importacoes';
 export * from './indicadores/indicadores';
+export * from './inferencias/inferencias';
 export * from './inspecoes/inspecoes';
 export * from './mapa/mapa';
 export * from './ocorrencias/ocorrencias';
+export * from './qualidade/qualidade';
+export * from './relatorios/relatorios';
 export * from './saude/saude';
 export * from './tarefas/tarefas';
 export * from './territorios/territorios';

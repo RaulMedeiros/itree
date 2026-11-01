@@ -38,23 +38,25 @@ Keycloak, armazenamento) para desenvolver backend e web fora de contêiner.
 
 ### API (`api`, `worker`, `beat`)
 
-| Variável                                                                                | Obrigatória   | Descrição                                                           |
-| --------------------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------- |
-| `DJANGO_SECRET_KEY`                                                                     | sim           | Chave secreta, longa e aleatória                                    |
-| `DJANGO_ALLOWED_HOSTS`                                                                  | sim           | Domínios atendidos, separados por vírgula                           |
-| `DATABASE_URL`                                                                          | sim           | `postgis://usuario:senha@host:5432/banco`                           |
-| `REDIS_URL`                                                                             | sim           | Broker do Celery                                                    |
-| `OIDC_ISSUER`                                                                           | sim           | Emissor dos tokens, como o navegador o vê                           |
-| `OIDC_JWKS_URL`                                                                         | não           | Endereço interno das chaves (padrão: derivado do emissor)           |
-| `OIDC_AUDIENCE`                                                                         | não           | Audiência exigida (padrão `itree-api`)                              |
-| `S3_BUCKET`, `S3_ENDPOINT_URL`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION` | para arquivos | Armazenamento S3-compatível privado                                 |
-| `S3_ENDPOINT_URL_PUBLICO`                                                               | para arquivos | Endereço do armazenamento visto pelo navegador (URLs pré-assinadas) |
-| `CORS_ALLOWED_ORIGINS`                                                                  | não           | Origens do painel (também aplicadas ao CORS do bucket)              |
-| `CSRF_TRUSTED_ORIGINS`                                                                  | não           | Origens confiáveis para o admin do Django                           |
-| `ITREE_AMBIENTE`                                                                        | não           | `desenvolvimento`, `homologacao`, `demonstracao` ou `producao`      |
-| `MIGRAR`                                                                                | não           | `1` aplica migrações e prepara o bucket ao subir a API              |
-| `GUNICORN_WORKERS`                                                                      | não           | Padrão 3                                                            |
-| `SSL_REDIRECIONAR`, `HSTS_SEGUNDOS`                                                     | não           | Ative quando todo o tráfego for HTTPS                               |
+| Variável                                                                                | Obrigatória   | Descrição                                                                                                  |
+| --------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------- |
+| `DJANGO_SECRET_KEY`                                                                     | sim           | Chave secreta, longa e aleatória                                                                           |
+| `DJANGO_ALLOWED_HOSTS`                                                                  | sim           | Domínios atendidos, separados por vírgula                                                                  |
+| `DATABASE_URL`                                                                          | sim           | `postgis://usuario:senha@host:5432/banco`                                                                  |
+| `REDIS_URL`                                                                             | sim           | Broker do Celery                                                                                           |
+| `OIDC_ISSUER`                                                                           | sim           | Emissor dos tokens, como o navegador o vê                                                                  |
+| `OIDC_JWKS_URL`                                                                         | não           | Endereço interno das chaves (padrão: derivado do emissor)                                                  |
+| `OIDC_AUDIENCE`                                                                         | não           | Audiência exigida (padrão `itree-api`)                                                                     |
+| `S3_BUCKET`, `S3_ENDPOINT_URL`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION` | para arquivos | Armazenamento S3-compatível privado                                                                        |
+| `S3_ENDPOINT_URL_PUBLICO`                                                               | para arquivos | Endereço do armazenamento visto pelo navegador (URLs pré-assinadas)                                        |
+| `CORS_ALLOWED_ORIGINS`                                                                  | não           | Origens do painel (também aplicadas ao CORS do bucket)                                                     |
+| `CSRF_TRUSTED_ORIGINS`                                                                  | não           | Origens confiáveis para o admin do Django                                                                  |
+| `ITREE_AMBIENTE`                                                                        | não           | `desenvolvimento`, `homologacao`, `demonstracao` ou `producao`                                             |
+| `MIGRAR`                                                                                | não           | `1` aplica migrações e prepara o bucket ao subir a API                                                     |
+| `GUNICORN_WORKERS`                                                                      | não           | Padrão 3                                                                                                   |
+| `SSL_REDIRECIONAR`, `HSTS_SEGUNDOS`                                                     | não           | Ative quando todo o tráfego for HTTPS                                                                      |
+| `ALERTAS_FONTES`                                                                        | não           | JSON `{"inpe_focos": "<url CSV>", "inpe_deter": "<url WFS GeoJSON>"}` para a coleta automática pelo `beat` |
+| `ALERTAS_INTERVALO_HORAS`                                                               | não           | Intervalo da coleta automática, em horas (padrão 6)                                                        |
 
 ### Painel web
 

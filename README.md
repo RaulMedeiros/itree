@@ -26,6 +26,14 @@ Plataforma municipal para inventariar, inspecionar, monitorar e gerir árvores e
     para o aplicativo, fila de revisão, validação seletiva e devolução),
     equipes e tarefas (criação em lote, andamento, reatribuição) e visão geral
     com indicadores definidos e rastreáveis.
+  - **F3 — Inteligência e integrações:** alertas ambientais (ingestão
+    idempotente de INPE/MapBiomas, triagem humana com vocabulário que nunca
+    afirma infração, conversão em ocorrência), análises e exportações
+    (CSV, XLSX, GeoJSON e PDF com metadados e auditoria), qualidade de dados
+    por regras explícitas e registro de sugestões de IA com decisão humana.
+
+O aplicativo móvel de campo ainda não foi iniciado; o backend já expõe a API
+de sincronização de inspeções que ele vai consumir.
 
 ## Estrutura do repositório
 

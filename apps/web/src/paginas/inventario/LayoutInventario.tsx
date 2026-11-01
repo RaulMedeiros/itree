@@ -10,6 +10,7 @@ const SECOES = [
     rotulo: "Possíveis duplicidades",
     permissao: "inventario.ler",
   },
+  { caminho: "/inventario/qualidade", rotulo: "Qualidade de dados", permissao: "inventario.ler" },
 ] as const;
 
 export function LayoutInventario() {

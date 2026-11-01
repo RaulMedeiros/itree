@@ -107,7 +107,7 @@ export const MODULOS: Modulo[] = [
 ];
 
 /** Fases já entregues. Módulos de fases futuras não aparecem em produção (RF-SHELL-001). */
-export const FASES_ENTREGUES: Fase[] = ["F0", "F1", "F2"];
+export const FASES_ENTREGUES: Fase[] = ["F0", "F1", "F2", "F3"];
 
 export function modulosVisiveis(
   permissoes: readonly string[],
@@ -154,6 +154,12 @@ export const SECOES_ADMIN: SecaoAdmin[] = [
     id: "tipos-ocorrencia",
     rotulo: "Tipos de ocorrência",
     caminho: "/administracao/tipos-ocorrencia",
+    permissao: "admin.configuracao",
+  },
+  {
+    id: "integracoes",
+    rotulo: "Integrações",
+    caminho: "/administracao/integracoes",
     permissao: "admin.configuracao",
   },
   {

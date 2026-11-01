@@ -42,6 +42,9 @@ INSTALLED_APPS = [
     "itree.inspecoes",
     "itree.tarefas",
     "itree.indicadores",
+    "itree.alertas",
+    "itree.relatorios",
+    "itree.qualidade",
 ]
 
 MIDDLEWARE = [
@@ -190,6 +193,11 @@ SPECTACULAR_SETTINGS = {
         "SinalObservadoEnum": "itree.inspecoes.models.SinalObservado",
         "OrigemInspecaoEnum": "itree.inspecoes.models.OrigemInspecao",
         "TipoTarefaEnum": "itree.tarefas.models.TipoTarefa",
+        "FonteAlertaEnum": "itree.alertas.models.FonteAlerta",
+        "TipoAlertaEnum": "itree.alertas.models.TipoAlerta",
+        "StatusAlertaEnum": "itree.alertas.models.StatusAlerta",
+        "TarefaIaEnum": "itree.qualidade.models.TarefaIA",
+        "DecisaoIaEnum": "itree.qualidade.models.DecisaoIA",
         "EstadoTarefaEnum": "itree.tarefas.models.EstadoTarefa",
     },
 }
@@ -209,6 +217,22 @@ PGHISTORY_MIDDLEWARE_METHODS = ("POST", "PUT", "PATCH", "DELETE")
 # --- Celery -----------------------------------------------------------------
 CELERY_BROKER_URL = env.str("REDIS_URL", default="redis://localhost:6379/0")
 CELERY_TIMEZONE = TIME_ZONE
+
+# --- Alertas ambientais (W-08, T-05) ------------------------------------------
+# JSON {"inpe_focos": "<url>", "inpe_deter": "<url de WFS em GeoJSON>"}; vazio = só
+# ingestão manual. Verificar licença e limites de cada fonte antes (DP-11).
+ALERTAS_FONTES = env.json("ALERTAS_FONTES", default={})
+ALERTAS_INTERVALO_HORAS = env.int("ALERTAS_INTERVALO_HORAS", default=6)
+CELERY_BEAT_SCHEDULE = (
+    {
+        "ingerir-alertas": {
+            "task": "itree.alertas.tasks.ingerir_fontes_configuradas",
+            "schedule": ALERTAS_INTERVALO_HORAS * 3600,
+        }
+    }
+    if ALERTAS_FONTES
+    else {}
+)
 
 LOGGING = {
     "version": 1,

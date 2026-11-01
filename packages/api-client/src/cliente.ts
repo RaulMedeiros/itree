@@ -83,3 +83,36 @@ export async function requisicao<T>(url: string, opcoes: RequestInit = {}): Prom
   }
   return { data: corpo, status: resposta.status, headers: resposta.headers } as T;
 }
+
+/**
+ * Baixa um arquivo binário da API (exportações, PDF) com a mesma autenticação
+ * do cliente gerado, e entrega ao navegador para salvar.
+ */
+export async function baixarArquivo(
+  caminho: string,
+  parametros: Record<string, string | undefined> = {},
+): Promise<{ nome: string; tamanho: number }> {
+  const token = await configuracao.obterToken();
+  const qs = new URLSearchParams(
+    Object.entries(parametros).filter(([, v]) => v !== undefined && v !== "") as [string, string][],
+  );
+  const cabecalhos = new Headers({ "X-Itree-Origem": configuracao.origem });
+  if (token) cabecalhos.set("Authorization", `Bearer ${token}`);
+  const resposta = await fetch(`${configuracao.urlBase}${caminho}?${qs}`, { headers: cabecalhos });
+  if (!resposta.ok) {
+    const texto = await resposta.text();
+    throw new ErroApi(resposta.status, texto ? JSON.parse(texto) : null);
+  }
+  const blob = await resposta.blob();
+  const nome =
+    /filename="([^"]+)"/.exec(resposta.headers.get("Content-Disposition") ?? "")?.[1] ?? "arquivo";
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nome;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  return { nome, tamanho: blob.size };
+}

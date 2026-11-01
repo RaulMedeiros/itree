@@ -22,6 +22,7 @@ import type {
 
 import type {
   Camadas,
+  MapaAlertas200,
   MapaBuscaParams,
   MapaTileParams,
   ResultadoBusca
@@ -48,6 +49,115 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export type mapaAlertasResponse200 = {
+  data: MapaAlertas200
+  status: 200
+}
+
+export type mapaAlertasResponseSuccess = (mapaAlertasResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mapaAlertasResponse = (mapaAlertasResponseSuccess)
+
+export const getMapaAlertasUrl = () => {
+
+
+
+
+  return `/api/v1/mapa/alertas`
+}
+
+/**
+ * Alertas ambientais em aberto como GeoJSON (polígonos e pontos), com escopo.
+ */
+export const mapaAlertas = async ( options?: Parameters<typeof requisicao>[1]): Promise<mapaAlertasResponse> => {
+
+  return requisicao<mapaAlertasResponse>(getMapaAlertasUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getMapaAlertasQueryKey = () => {
+    return [
+    `/api/v1/mapa/alertas`
+    ] as const;
+    }
+
+
+export const getMapaAlertasQueryOptions = <TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMapaAlertasQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof mapaAlertas>>> = ({ signal }) => mapaAlertas({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type MapaAlertasQueryResult = NonNullable<Awaited<ReturnType<typeof mapaAlertas>>>
+export type MapaAlertasQueryError = unknown
+
+
+export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaAlertas>>,
+          TError,
+          Awaited<ReturnType<typeof mapaAlertas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaAlertas>>,
+          TError,
+          Awaited<ReturnType<typeof mapaAlertas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getMapaAlertasQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
 
 export type mapaBuscaResponse200 = {
   data: ResultadoBusca[]

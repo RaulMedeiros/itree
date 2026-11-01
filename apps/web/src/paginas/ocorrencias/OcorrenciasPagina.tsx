@@ -8,7 +8,7 @@ import {
 } from "@itree/api-client";
 import { ROTULOS_ESTADO_OCORRENCIA, ROTULOS_PRIORIDADE } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { Map as IconeMapa, Plus, Satellite } from "lucide-react";
+import { Map as IconeMapa, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
@@ -20,6 +20,7 @@ import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarData, formatarDataHora } from "../../util/formatos";
+import { AbasOcorrencias } from "../alertas/AlertasPagina";
 import { NovaOcorrenciaDialogo } from "./NovaOcorrenciaDialogo";
 
 const TAMANHO = 50;
@@ -89,28 +90,7 @@ export function OcorrenciasPagina() {
           </>
         }
       />
-      <div
-        className="mb-4 flex gap-1 border-b border-borda"
-        role="tablist"
-        aria-label="Tipo de registro"
-      >
-        <span
-          role="tab"
-          aria-selected
-          className="-mb-px border-b-2 border-marca px-3 py-2 text-sm font-medium"
-        >
-          Ocorrências
-        </span>
-        <span
-          role="tab"
-          aria-selected={false}
-          aria-disabled
-          className="flex items-center gap-1.5 px-3 py-2 text-sm text-texto-suave"
-          title="Previsto para a F3 (W-08)"
-        >
-          <Satellite className="size-4" aria-hidden /> Alertas ambientais <Selo>F3</Selo>
-        </span>
-      </div>
+      <AbasOcorrencias ativa="ocorrencias" />
       <div className="mb-3 flex flex-wrap gap-2">
         <Entrada
           type="search"

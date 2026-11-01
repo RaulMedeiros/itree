@@ -30,7 +30,8 @@ paths:
           inventario.EspecieEvent, inventario.ArvoreEvent, inventario.IdentificadorExternoEvent,
           inventario.MedidaEvent, inventario.LoteImportacaoEvent, inventario.ParNaoDuplicadoEvent,
           ocorrencias.TipoOcorrenciaEvent, ocorrencias.OcorrenciaEvent, evidencias.EvidenciaEvent,
-          inspecoes.InspecaoEvent, tarefas.TarefaEvent'
+          inspecoes.InspecaoEvent, tarefas.TarefaEvent, alertas.AlertaAmbientalEvent,
+          relatorios.ExportacaoEvent, qualidade.InferenciaIAEvent'
       - in: query
         name: objeto
         schema:
@@ -199,6 +200,225 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UsuarioAdmin'
+          description: ''
+  /api/v1/alertas:
+    get:
+      operationId: alertas_listar
+      description: Alertas ambientais para triagem humana (W-08). Separados das ocorrências.
+      parameters:
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: query
+        name: deteccao_ate
+        schema:
+          type: string
+        description: AAAA-MM-DD
+      - in: query
+        name: deteccao_desde
+        schema:
+          type: string
+        description: AAAA-MM-DD
+      - in: query
+        name: fonte
+        schema:
+          type: string
+      - in: query
+        name: ingestao_desde
+        schema:
+          type: string
+        description: AAAA-MM-DD
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: '''abertos'' (não finais, padrão), ''todos'' ou lista.'
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      - in: query
+        name: tipo
+        schema:
+          type: string
+      tags:
+      - alertas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAlertaList'
+          description: ''
+  /api/v1/alertas/{id}:
+    get:
+      operationId: alertas_obter
+      description: Alertas ambientais para triagem humana (W-08). Separados das ocorrências.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este alerta ambiental.
+        required: true
+      tags:
+      - alertas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alerta'
+          description: ''
+  /api/v1/alertas/{id}/converter-ocorrencia:
+    post:
+      operationId: alertas_converter_ocorrencia
+      description: Converte o alerta em ocorrência (RF-ALR-006), mantendo o vínculo.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este alerta ambiental.
+        required: true
+      tags:
+      - alertas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConversaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConversaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConversaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alerta'
+          description: ''
+  /api/v1/alertas/{id}/historico:
+    get:
+      operationId: alertas_historico
+      description: Alertas ambientais para triagem humana (W-08). Separados das ocorrências.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este alerta ambiental.
+        required: true
+      tags:
+      - alertas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventoAuditoria'
+          description: ''
+  /api/v1/alertas/{id}/triagem:
+    post:
+      operationId: alertas_triagem
+      description: |-
+        Muda o status com justificativa. Nenhum status afirma infração antes da
+        confirmação formal da autoridade, que exige referência ao documento.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este alerta ambiental.
+        required: true
+      tags:
+      - alertas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriagemRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TriagemRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TriagemRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alerta'
+          description: ''
+  /api/v1/alertas/ingestoes:
+    get:
+      operationId: alertas_ingestoes
+      description: 'Últimas execuções por fonte: estado das integrações (RF-ADM-006).'
+      tags:
+      - alertas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ingestao'
+          description: ''
+  /api/v1/alertas/ingestoes/arquivo:
+    post:
+      operationId: alertas_enviar_arquivo
+      description: Ingestão manual de um arquivo baixado da fonte (CSV do BDQueimadas
+        ou GeoJSON).
+      tags:
+      - alertas
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NovaIngestaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ingestao'
           description: ''
   /api/v1/arvores:
     get:
@@ -1173,6 +1393,95 @@ paths:
               schema:
                 $ref: '#/components/schemas/PainelIndicadores'
           description: ''
+  /api/v1/inferencias:
+    get:
+      operationId: inferencias_listar
+      description: Sugestões de IA. Não alteram o cadastro sem decisão explícita (RN-INV-003).
+      parameters:
+      - in: query
+        name: arvore
+        schema:
+          type: string
+      - in: query
+        name: decisao
+        schema:
+          type: string
+      tags:
+      - inferencias
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Inferencia'
+          description: ''
+    post:
+      operationId: inferencias_registrar
+      description: Sugestões de IA. Não alteram o cadastro sem decisão explícita (RN-INV-003).
+      tags:
+      - inferencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NovaInferenciaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NovaInferenciaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NovaInferenciaRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inferencia'
+          description: ''
+  /api/v1/inferencias/{id}/decidir:
+    post:
+      operationId: inferencias_decidir
+      description: |-
+        Aceitar confirma a espécie escolhida pelo revisor; rejeitar só registra.
+        O resultado original do modelo é sempre preservado (CA-INV-005).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este inferencia ia.
+        required: true
+      tags:
+      - inferencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DecisaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DecisaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inferencia'
+          description: ''
   /api/v1/inspecoes:
     get:
       operationId: inspecoes_listar
@@ -1383,6 +1692,23 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/ResultadoSincronizacao'
+          description: ''
+  /api/v1/mapa/alertas:
+    get:
+      operationId: mapa_alertas
+      description: Alertas ambientais em aberto como GeoJSON (polígonos e pontos),
+        com escopo.
+      tags:
+      - mapa
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/mapa/busca:
     get:
@@ -1778,6 +2104,122 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ocorrencia'
+          description: ''
+  /api/v1/qualidade/pendencias:
+    get:
+      operationId: qualidade_pendencias
+      tags:
+      - qualidade
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendenciasQualidade'
+          description: ''
+  /api/v1/relatorios/analise:
+    get:
+      operationId: relatorios_analise
+      parameters:
+      - in: query
+        name: analise
+        schema:
+          type: string
+        description: arvores_por_bairro, ocorrencias_por_tipo, ocorrencias_por_estado,
+          tempo_atendimento_por_tipo, inspecoes_por_mes, alertas_por_fonte
+        required: true
+      - in: query
+        name: fim
+        schema:
+          type: string
+      - in: query
+        name: inicio
+        schema:
+          type: string
+      tags:
+      - relatorios
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analise'
+          description: ''
+  /api/v1/relatorios/catalogo:
+    get:
+      operationId: relatorios_catalogo
+      tags:
+      - relatorios
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogoAnalises'
+          description: ''
+  /api/v1/relatorios/exportar:
+    get:
+      operationId: relatorios_exportar
+      parameters:
+      - in: query
+        name: conjunto
+        schema:
+          type: string
+        description: arvores | ocorrencias | alertas
+        required: true
+      - in: query
+        name: formato
+        schema:
+          type: string
+        description: csv | xlsx | geojson
+        required: true
+      tags:
+      - relatorios
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/relatorios/painel.pdf:
+    get:
+      operationId: relatorios_painel_pdf
+      description: Relatório em PDF dos indicadores, com definição, período e fonte
+        (CA-REL-002).
+      parameters:
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: query
+        name: fim
+        schema:
+          type: string
+      - in: query
+        name: inicio
+        schema:
+          type: string
+      tags:
+      - relatorios
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
           description: ''
   /api/v1/saude:
     get:
@@ -2217,6 +2659,129 @@ components:
           maxLength: 500
       required:
       - motivo
+    Alerta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        fonte:
+          $ref: '#/components/schemas/FonteAlertaEnum'
+        id_externo:
+          type: string
+          maxLength: 200
+        tipo:
+          $ref: '#/components/schemas/TipoAlertaEnum'
+        geometria:
+          readOnly: true
+          description: GeoJSON da geometria recebida.
+        tipo_geometria:
+          type: string
+          readOnly: true
+        src_original:
+          type: string
+          maxLength: 100
+        area_ha:
+          type: number
+          format: double
+          nullable: true
+          description: Área do polígono, quando houver.
+        data_deteccao:
+          type: string
+          format: date-time
+          description: Data informada pela fonte.
+        ingerido_em:
+          type: string
+          format: date-time
+          readOnly: true
+        propriedades:
+          description: Atributos originais da fonte.
+        url_origem:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
+        bairros:
+          description: Bairros cadastrados que a geometria intersecta.
+        status:
+          $ref: '#/components/schemas/StatusAlertaEnum'
+        transicoes_possiveis:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusAlertaEnum'
+          readOnly: true
+        justificativa:
+          type: string
+        referencia:
+          type: string
+          description: Protocolo de encaminhamento ou documento da autoridade.
+          maxLength: 200
+        analisado_por:
+          type: string
+          nullable: true
+          readOnly: true
+        ocorrencia:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        atualizado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - analisado_por
+      - atualizado_em
+      - codigo
+      - data_deteccao
+      - fonte
+      - geometria
+      - id
+      - id_externo
+      - ingerido_em
+      - ocorrencia
+      - tipo
+      - tipo_geometria
+      - transicoes_possiveis
+    Analise:
+      type: object
+      properties:
+        id:
+          type: string
+        titulo:
+          type: string
+        definicao:
+          type: string
+        fonte:
+          type: string
+        periodo:
+          type: object
+          additionalProperties: {}
+        calculado_em:
+          type: string
+          format: date-time
+        por_bairro:
+          type: boolean
+        linhas:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - calculado_em
+      - definicao
+      - fonte
+      - id
+      - linhas
+      - periodo
+      - por_bairro
+      - titulo
     AplicarEnum:
       enum:
       - especie
@@ -2562,6 +3127,16 @@ components:
       - limites_escopo
       - ocorrencias
       - territorios
+    CatalogoAnalises:
+      type: object
+      properties:
+        analises:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - analises
     ColunasArquivo:
       type: object
       properties:
@@ -2618,6 +3193,51 @@ components:
       required:
       - total
       - validos
+    ConversaoRequest:
+      type: object
+      properties:
+        tipo_id:
+          type: string
+          format: uuid
+        descricao:
+          type: string
+          minLength: 1
+          maxLength: 4000
+      required:
+      - descricao
+      - tipo_id
+    DecisaoDecisaoEnum:
+      enum:
+      - aceita
+      - rejeitada
+      type: string
+      description: |-
+        * `aceita` - aceita
+        * `rejeitada` - rejeitada
+    DecisaoIaEnum:
+      enum:
+      - pendente
+      - aceita
+      - rejeitada
+      type: string
+      description: |-
+        * `pendente` - Aguardando revisão
+        * `aceita` - Aceita
+        * `rejeitada` - Rejeitada
+    DecisaoRequest:
+      type: object
+      properties:
+        decisao:
+          $ref: '#/components/schemas/DecisaoDecisaoEnum'
+        especie:
+          type: string
+          format: uuid
+          nullable: true
+        motivo:
+          type: string
+          maxLength: 500
+      required:
+      - decisao
     DevolucaoRequest:
       type: object
       properties:
@@ -3066,6 +3686,16 @@ components:
       - tamanho
       - tipo_conteudo
       - url
+    FonteAlertaEnum:
+      enum:
+      - inpe_focos
+      - inpe_deter
+      - mapbiomas
+      type: string
+      description: |-
+        * `inpe_focos` - INPE — BDQueimadas (focos de calor)
+        * `inpe_deter` - INPE — TerraBrasilis/DETER
+        * `mapbiomas` - MapBiomas Alerta
     FusaoRequest:
       type: object
       properties:
@@ -3110,6 +3740,135 @@ components:
       required:
       - fonte
       - valor
+    Inferencia:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tarefa:
+          $ref: '#/components/schemas/TarefaIaEnum'
+        arvore:
+          type: string
+          format: uuid
+        arvore_codigo:
+          type: string
+          readOnly: true
+        inspecao:
+          type: string
+          format: uuid
+          nullable: true
+        modelo:
+          type: string
+          maxLength: 100
+        versao_modelo:
+          type: string
+          maxLength: 50
+        resultado:
+          description: Resultado original do modelo, sem alterações.
+        alternativas:
+          description: Espécies sugeridas [{especie_id, nome}], em ordem, sem percentuais.
+        qualidade_insuficiente:
+          type: boolean
+          description: O modelo indicou imagem inadequada para concluir.
+        orientacao:
+          type: string
+          description: 'Ex.: fotografar folhas e casca.'
+        decisao:
+          allOf:
+          - $ref: '#/components/schemas/DecisaoIaEnum'
+          readOnly: true
+        especie_escolhida:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        especie_escolhida_nome:
+          type: string
+          readOnly: true
+          nullable: true
+        decidida_por_nome:
+          type: string
+          nullable: true
+          readOnly: true
+        decidida_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - arvore
+      - arvore_codigo
+      - criado_em
+      - decidida_em
+      - decidida_por_nome
+      - decisao
+      - especie_escolhida
+      - especie_escolhida_nome
+      - id
+      - modelo
+      - resultado
+      - tarefa
+      - versao_modelo
+    Ingestao:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        fonte:
+          $ref: '#/components/schemas/FonteAlertaEnum'
+        origem:
+          type: string
+          description: URL consultada ou nome do arquivo enviado.
+          maxLength: 500
+        iniciada_em:
+          type: string
+          format: date-time
+          readOnly: true
+        concluida_em:
+          type: string
+          format: date-time
+          nullable: true
+        sucesso:
+          type: boolean
+        recebidos:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        novos:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        ja_existentes:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        fora_do_municipio:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        invalidos:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        erro:
+          type: string
+        usuario:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - fonte
+      - id
+      - iniciada_em
+      - origem
+      - usuario
     Inspecao:
       type: object
       properties:
@@ -3686,6 +4445,55 @@ components:
       required:
       - arquivo
       - fonte
+    NovaInferenciaRequest:
+      type: object
+      description: Registrada pelo serviço de inferência (conta de serviço com permissão).
+      properties:
+        tarefa:
+          $ref: '#/components/schemas/TarefaIaEnum'
+        arvore:
+          type: string
+          format: uuid
+        inspecao:
+          type: string
+          format: uuid
+          nullable: true
+        modelo:
+          type: string
+          minLength: 1
+          maxLength: 100
+        versao_modelo:
+          type: string
+          minLength: 1
+          maxLength: 50
+        resultado: {}
+        especies_sugeridas:
+          type: array
+          items:
+            type: string
+            format: uuid
+        qualidade_insuficiente:
+          type: boolean
+          default: false
+        orientacao:
+          type: string
+      required:
+      - arvore
+      - modelo
+      - resultado
+      - tarefa
+      - versao_modelo
+    NovaIngestaoRequest:
+      type: object
+      properties:
+        fonte:
+          $ref: '#/components/schemas/FonteAlertaEnum'
+        arquivo:
+          type: string
+          format: binary
+      required:
+      - arquivo
+      - fonte
     Ocorrencia:
       type: object
       properties:
@@ -3928,6 +4736,29 @@ components:
         * `estimado` - Estimado
         * `inferido` - Inferido (IA)
         * `importado` - Importado
+    PaginatedAlertaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alerta'
     PaginatedArvoreResumoList:
       type: object
       required:
@@ -4468,6 +5299,20 @@ components:
           writeOnly: true
           description: Justificativa registrada na auditoria.
           maxLength: 500
+    PendenciasQualidade:
+      type: object
+      properties:
+        calculado_em:
+          type: string
+          format: date-time
+        pendencias:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - calculado_em
+      - pendencias
     PermissaoEnum:
       enum:
       - mapa.ler
@@ -4609,7 +5454,7 @@ components:
         id:
           type: string
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/ResultadoSincronizacaoStatusEnum'
         versao:
           type: integer
           nullable: true
@@ -4628,6 +5473,20 @@ components:
       - mensagem
       - status
       - versao
+    ResultadoSincronizacaoStatusEnum:
+      enum:
+      - criada
+      - atualizada
+      - ja_recebida
+      - conflito
+      - erro
+      type: string
+      description: |-
+        * `criada` - criada
+        * `atualizada` - atualizada
+        * `ja_recebida` - ja_recebida
+        * `conflito` - conflito
+        * `erro` - erro
     RiscoRequest:
       type: object
       properties:
@@ -4688,20 +5547,24 @@ components:
         * `ativa` - Ativa
         * `excluida` - Excluída
         * `fundida` - Fundida em outro registro
-    StatusEnum:
+    StatusAlertaEnum:
       enum:
-      - criada
-      - atualizada
-      - ja_recebida
-      - conflito
-      - erro
+      - detectado
+      - em_triagem
+      - requer_verificacao
+      - compativel_autorizacao
+      - encaminhado
+      - confirmado
+      - descartado
       type: string
       description: |-
-        * `criada` - criada
-        * `atualizada` - atualizada
-        * `ja_recebida` - ja_recebida
-        * `conflito` - conflito
-        * `erro` - erro
+        * `detectado` - Alerta detectado
+        * `em_triagem` - Em triagem
+        * `requer_verificacao` - Requer verificação
+        * `compativel_autorizacao` - Compatível com autorização localizada
+        * `encaminhado` - Encaminhado à fiscalização
+        * `confirmado` - Confirmado pela autoridade
+        * `descartado` - Descartado
     Tarefa:
       type: object
       properties:
@@ -4790,6 +5653,14 @@ components:
       - responsavel
       - tipo
       - transicoes_possiveis
+    TarefaIaEnum:
+      enum:
+      - especie
+      - sinais_visuais
+      type: string
+      description: |-
+        * `especie` - Sugestão de espécie por imagem
+        * `sinais_visuais` - Apoio visual à inspeção
     TarefaRequest:
       type: object
       properties:
@@ -4941,6 +5812,14 @@ components:
       required:
       - nome
       - tipo
+    TipoAlertaEnum:
+      enum:
+      - foco_calor
+      - supressao
+      type: string
+      description: |-
+        * `foco_calor` - Foco de calor
+        * `supressao` - Alteração/supressão de vegetação
     TipoConteudoEnum:
       enum:
       - application/pdf
@@ -5047,6 +5926,19 @@ components:
           maxLength: 500
       required:
       - estado
+    TriagemRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusAlertaEnum'
+        justificativa:
+          type: string
+          maxLength: 2000
+        referencia:
+          type: string
+          maxLength: 200
+      required:
+      - status
     UsuarioAdmin:
       type: object
       properties:
