@@ -1,6 +1,6 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentPropsWithRef } from "react";
 
 import { cn } from "../util/cn";
 
@@ -24,7 +24,7 @@ const variantes = cva(
   },
 );
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> &
+type Props = ComponentPropsWithRef<"button"> &
   VariantProps<typeof variantes> & { asChild?: boolean };
 
 export function Botao({ className, variante, tamanho, asChild, type, ...props }: Props) {

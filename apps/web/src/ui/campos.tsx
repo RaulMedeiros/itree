@@ -9,7 +9,7 @@ import {
 import { cn } from "../util/cn";
 
 const base =
-  "w-full rounded-md border border-borda bg-superficie px-3 text-sm text-texto placeholder:text-texto-suave disabled:opacity-60 aria-invalid:border-perigo";
+  "w-full rounded-md border border-borda-campo bg-superficie px-3 text-sm text-texto placeholder:text-texto-suave disabled:opacity-60 aria-invalid:border-perigo";
 
 export function Entrada({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(base, "h-9", className)} {...props} />;

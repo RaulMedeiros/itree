@@ -6,6 +6,7 @@ from rest_framework import serializers
 from itree.territorio.models import Territorio
 from itree.territorio.serializers import TerritorioResumoSerializer
 
+from .acesso import limpar_cache_escopo
 from .models import Equipe, EscopoUsuario, MembroEquipe, TerritorioEquipe, Usuario
 from .permissoes import Papel, Permissao
 
@@ -145,6 +146,7 @@ class UsuarioAdminSerializer(MotivoMixin, serializers.ModelSerializer):
         EscopoUsuario.objects.bulk_create(
             [EscopoUsuario(usuario=usuario, territorio_id=t) for t in novos - existentes]
         )
+        limpar_cache_escopo()
 
 
 class EquipeSerializer(MotivoMixin, serializers.ModelSerializer):

@@ -23,39 +23,55 @@ CAMPOS_FUSIONAVEIS = (
 )
 
 
-def pares_suspeitos(
-    arvores: QuerySet, raio_m: float = RAIO_PADRAO_M, limite: int = 200
-) -> list[dict]:
-    """Pares de árvores ativas a até ``raio_m`` metros, com espécies compatíveis
-    (iguais ou ao menos uma não identificada), excluindo pares já revisados."""
-    ids = list(
-        arvores.filter(situacao=SituacaoArvore.ATIVA, geom__isnull=False).values_list(
-            "id", flat=True
-        )
-    )
-    if len(ids) < 2:
-        return []
+def _sql_pares(arvores: QuerySet, raio_m: float, colunas: str, final: str):
+    """Monta o autojoin espacial restrito às árvores de ``arvores``.
+
+    O conjunto visível entra como subconsulta (não como lista de ids trazida
+    para o Python), para o custo não crescer com o inventário inteiro.
+    """
+    visiveis = arvores.filter(situacao=SituacaoArvore.ATIVA, geom__isnull=False).values("id")
+    sub_sql, sub_params = visiveis.query.get_compiler(connection=connection).as_sql()
     # Pré-filtro por caixa (~1e-5 grau ≈ 1,1 m no equador) e distância exata em geografia.
     grau = raio_m / 100_000
-    sql = """
-        SELECT a.id, b.id,
-               ST_Distance(a.geom::geography, b.geom::geography) AS distancia,
-               (a.especie_id IS NOT NULL AND a.especie_id = b.especie_id) AS mesma_especie
+    sql = f"""
+        SELECT {colunas}
           FROM inventario_arvore a
           JOIN inventario_arvore b
             ON a.id < b.id
            AND b.geom && ST_Expand(a.geom, %s)
            AND ST_DWithin(a.geom::geography, b.geom::geography, %s)
-         WHERE a.id = ANY(%s) AND b.id = ANY(%s)
+         WHERE a.id IN ({sub_sql}) AND b.id IN ({sub_sql})
            AND (a.especie_id IS NULL OR b.especie_id IS NULL OR a.especie_id = b.especie_id)
            AND NOT EXISTS (
                  SELECT 1 FROM inventario_parnaoduplicado p
                   WHERE p.arvore_a_id = a.id AND p.arvore_b_id = b.id)
-         ORDER BY distancia
-         LIMIT %s
-    """
+         {final}
+    """  # noqa: S608 - só a subconsulta gerada pelo ORM é interpolada; valores vão como parâmetros
+    return sql, [grau, raio_m, *sub_params, *sub_params]
+
+
+def contar_pares_suspeitos(arvores: QuerySet, raio_m: float = RAIO_PADRAO_M) -> int:
+    sql, params = _sql_pares(arvores, raio_m, "count(*)", "")
     with connection.cursor() as cursor:
-        cursor.execute(sql, [grau, raio_m, ids, ids, limite])
+        cursor.execute(sql, params)
+        return cursor.fetchone()[0]
+
+
+def pares_suspeitos(
+    arvores: QuerySet, raio_m: float = RAIO_PADRAO_M, limite: int = 200
+) -> list[dict]:
+    """Pares de árvores ativas a até ``raio_m`` metros, com espécies compatíveis
+    (iguais ou ao menos uma não identificada), excluindo pares já revisados."""
+    sql, params = _sql_pares(
+        arvores,
+        raio_m,
+        """a.id, b.id,
+               ST_Distance(a.geom::geography, b.geom::geography) AS distancia,
+               (a.especie_id IS NOT NULL AND a.especie_id = b.especie_id) AS mesma_especie""",
+        "ORDER BY distancia LIMIT %s",
+    )
+    with connection.cursor() as cursor:
+        cursor.execute(sql, [*params, limite])
         linhas = cursor.fetchall()
     pares = []
     for id_a, id_b, distancia, mesma_especie in linhas:

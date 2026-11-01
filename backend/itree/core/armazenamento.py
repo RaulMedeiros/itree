@@ -34,10 +34,17 @@ def cliente_publico():
     return _cliente(settings.S3_ENDPOINT_URL_PUBLICO)
 
 
-def url_upload(chave: str, tipo_conteudo: str, expira: int = 300) -> str:
+def url_upload(chave: str, tipo_conteudo: str, tamanho: int, expira: int = 300) -> str:
+    """URL de PUT que só aceita exatamente ``tamanho`` bytes: o Content-Length
+    entra na assinatura, e o armazenamento recusa corpo de outro tamanho."""
     return cliente_publico().generate_presigned_url(
         "put_object",
-        Params={"Bucket": settings.S3_BUCKET, "Key": chave, "ContentType": tipo_conteudo},
+        Params={
+            "Bucket": settings.S3_BUCKET,
+            "Key": chave,
+            "ContentType": tipo_conteudo,
+            "ContentLength": tamanho,
+        },
         ExpiresIn=expira,
     )
 
@@ -53,3 +60,7 @@ def metadados(chave: str) -> dict | None:
         return cliente_interno().head_object(Bucket=settings.S3_BUCKET, Key=chave)
     except cliente_interno().exceptions.ClientError:
         return None
+
+
+def apagar(chave: str) -> None:
+    cliente_interno().delete_object(Bucket=settings.S3_BUCKET, Key=chave)

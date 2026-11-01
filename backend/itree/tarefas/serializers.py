@@ -102,6 +102,14 @@ class TarefaSerializer(serializers.ModelSerializer):
         return sorted(TRANSICOES_TAREFA.get(obj.estado, set()))
 
     def validate(self, attrs):
+        if self.instance is not None:
+            # Trocar o alvo mudaria a área da tarefa sem passar pela checagem de
+            # escopo da criação; outra tarefa deve ser criada.
+            if {"tipo", "arvore", "ocorrencia"} & attrs.keys():
+                raise serializers.ValidationError(
+                    "O tipo e o alvo da tarefa não podem ser alterados; crie outra tarefa."
+                )
+            return attrs
         if self.instance is None:
             arvore, ocorrencia = attrs.get("arvore"), attrs.get("ocorrencia")
             tipo = attrs.get("tipo")

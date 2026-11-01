@@ -1,6 +1,7 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import maplibregl, { type Map as MapaMapLibre } from "maplibre-gl";
+import { maplibregl } from "./maplibre";
+import type { Map as MapaMapLibre } from "maplibre-gl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { gerenciadorUsuario } from "../autenticacao/gerenciador";

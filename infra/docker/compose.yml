@@ -112,6 +112,7 @@ services:
       ITREE_OIDC_AUTHORITY: http://localhost:8080/realms/itree
       ITREE_OIDC_CLIENT_ID: itree-web
       ITREE_MOSTRAR_MODULOS_FUTUROS: "true"
+      ITREE_CSP_ORIGENS: "http://localhost:8080 http://localhost:8333 https:"
     ports: ["8088:80"]
     depends_on: [api]
     restart: unless-stopped

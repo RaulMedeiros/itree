@@ -20,7 +20,7 @@ from itree.contas.acesso import filtrar_por_escopo, requer
 from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
 from itree.inspecoes.models import EstadoInspecao, Inspecao
-from itree.inventario.duplicidades import pares_suspeitos
+from itree.inventario.duplicidades import contar_pares_suspeitos
 from itree.inventario.models import (
     Arvore,
     Especie,
@@ -135,7 +135,7 @@ def pendencias(request: Request):
             "id": "possiveis_duplicidades",
             "titulo": "Possíveis duplicidades",
             "criterio": "Árvores a até 3 m com espécies compatíveis, ainda não revisadas.",
-            "quantidade": len(pares_suspeitos(filtrar_por_escopo(Arvore.objects.all(), usuario))),
+            "quantidade": contar_pares_suspeitos(filtrar_por_escopo(Arvore.objects.all(), usuario)),
             "gravidade": "media",
             "link": {"pagina": "/inventario/duplicidades", "filtros": {}},
         },

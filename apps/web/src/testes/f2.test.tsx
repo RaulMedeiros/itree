@@ -17,7 +17,7 @@ vi.mock("react-oidc-context", () => ({
   hasAuthParams: () => false,
 }));
 vi.mock("../autenticacao/gerenciador", () => ({ gerenciadorUsuario: {} }));
-vi.mock("maplibre-gl", () => ({ default: {} }));
+vi.mock("maplibre-gl", () => ({ setWorkerUrl: () => undefined }));
 
 const API = "http://api.teste";
 
@@ -89,6 +89,26 @@ const servidor = setupServer(
     validacoes.push(await request.json());
     return HttpResponse.json({ ...INSPECAO, estado: "validada" });
   }),
+  http.get(`${API}/api/v1/mapa/busca`, () =>
+    HttpResponse.json([
+      {
+        tipo: "arvore",
+        id: "a-1",
+        rotulo: "ARV-000010",
+        descricao: "Rua 1",
+        localizacao: null,
+        limites: null,
+      },
+      {
+        tipo: "arvore",
+        id: "a-2",
+        rotulo: "ARV-000011",
+        descricao: "Rua 2",
+        localizacao: null,
+        limites: null,
+      },
+    ]),
+  ),
   http.get(`${API}/api/v1/territorios`, () =>
     HttpResponse.json({ count: 0, next: null, previous: null, results: [] }),
   ),
@@ -176,5 +196,31 @@ describe("visão geral", () => {
     expect(within(cartao).getByText("Sem dados")).toBeInTheDocument();
     const validas = screen.getByText("Árvores com registro válido").closest("div")!.parentElement!;
     expect(within(validas).getByText("0")).toBeInTheDocument();
+  });
+});
+
+describe("acessibilidade", () => {
+  it("título da aba acompanha a tela e a definição do indicador não depende de hover", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/visao-geral");
+    await screen.findByText("Espécie confirmada");
+    expect(document.title).toMatch(/^Visão geral · /);
+    const resumos = screen.getAllByText("Como é calculado");
+    await usuario.click(resumos[0]!.closest("summary")!);
+    expect(resumos[0]!.closest("details")).toHaveAttribute("open");
+    expect(screen.getAllByText("Fonte: Registros da plataforma")[0]).toBeVisible();
+  });
+
+  it("busca global anuncia a opção ativa com aria-activedescendant", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/visao-geral");
+    const busca = await screen.findByRole("combobox", { name: "Busca global" });
+    await usuario.type(busca, "ARV");
+    const lista = await screen.findByRole("listbox");
+    const opcoes = await within(lista).findAllByRole("option");
+    expect(busca).toHaveAttribute("aria-activedescendant", opcoes[0]!.id);
+    await usuario.keyboard("{ArrowDown}");
+    expect(busca).toHaveAttribute("aria-activedescendant", opcoes[1]!.id);
+    expect(opcoes[1]).toHaveAttribute("aria-selected", "true");
   });
 });

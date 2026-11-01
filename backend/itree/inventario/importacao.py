@@ -13,10 +13,12 @@ from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
 from django.apps import apps
-from django.contrib.gis.geos import Point
+from django.contrib.gis.geos import MultiPolygon, Point
 from django.db import transaction
+from django.db.models import ProtectedError
 from django.utils import timezone
 
+from itree.contas.acesso import area_do_escopo
 from itree.territorio.models import Territorio
 
 from .models import (
@@ -119,18 +121,29 @@ def _numero(valor) -> Decimal | None:
         texto = texto.replace(".", "").replace(",", ".")
     else:
         texto = texto.replace(",", ".")
-    return Decimal(texto)
+    numero = Decimal(texto)
+    if not numero.is_finite():  # "Infinity", "NaN"...
+        raise InvalidOperation(texto)
+    return numero
 
 
 def _especies_por_nome() -> dict[str, Especie]:
     return {e.nome_cientifico.lower(): e for e in Especie.objects.filter(ativa=True)}
 
 
-def interpretar(registros: list[dict], mapeamento: dict, srid: int, fonte_ids: str) -> list[Linha]:
+def interpretar(
+    registros: list[dict],
+    mapeamento: dict,
+    srid: int,
+    fonte_ids: str,
+    escopo: MultiPolygon | None = None,
+) -> list[Linha]:
+    """Valida cada linha. Com ``escopo``, pontos fora dele são recusados."""
     if len(registros) > LIMITE_LINHAS:
         raise ErroArquivo(f"O arquivo tem {len(registros)} linhas; o limite é {LIMITE_LINHAS}.")
 
     especies = _especies_por_nome()
+    escopo_preparado = escopo.prepared if escopo is not None else None
     area_municipio = (
         Territorio.objects.filter(tipo="municipio").values_list("geom", flat=True).first()
     )
@@ -167,6 +180,8 @@ def interpretar(registros: list[dict], mapeamento: dict, srid: int, fonte_ids: s
                 linha.erros.append("Coordenadas fora do intervalo válido; verifique o SRC.")
             else:
                 dados["longitude"], dados["latitude"] = round(ponto.x, 7), round(ponto.y, 7)
+                if escopo_preparado is not None and not escopo_preparado.intersects(ponto):
+                    linha.erros.append("Fora do seu escopo territorial.")
                 if area_municipio is not None and not area_municipio.contains(ponto):
                     linha.avisos.append("Fora dos limites do município cadastrado.")
 
@@ -224,6 +239,25 @@ def confirmar(lote: LoteImportacao, usuario) -> int:
         raise ErroArquivo("Este lote não está aguardando confirmação.")
 
     fonte_ids = lote.mapeamento.get("fonte_ids") or lote.fonte
+    validas = [linha["dados"] for linha in lote.linhas if not linha["erros"]]
+
+    # O escopo do usuário e o cadastro podem ter mudado desde a pré-visualização.
+    escopo = area_do_escopo(usuario)
+    if escopo is None:
+        raise ErroArquivo("Você não tem escopo territorial para importar árvores.")
+    preparado = escopo.prepared
+    if any(
+        not preparado.intersects(Point(d["longitude"], d["latitude"], srid=4326)) for d in validas
+    ):
+        raise ErroArquivo(
+            "Há linhas fora do seu escopo territorial atual; refaça a pré-visualização."
+        )
+    ids_do_lote = [d["id_externo"] for d in validas if d.get("id_externo")]
+    if IdentificadorExterno.objects.filter(fonte=fonte_ids, valor__in=ids_do_lote).exists():
+        raise ErroArquivo(
+            "Há identificadores deste lote importados depois da pré-visualização; refaça-a."
+        )
+
     criadas = 0
     for linha in lote.linhas:
         if linha["erros"]:
@@ -281,6 +315,12 @@ def motivo_impede_desfazer(lote: LoteImportacao) -> str | None:
         return "Há ocorrências vinculadas a árvores deste lote."
     if arvores.filter(evidencias__isnull=False).exists():
         return "Há evidências vinculadas a árvores deste lote."
+    if arvores.filter(inspecoes__isnull=False).exists():
+        return "Há inspeções vinculadas a árvores deste lote."
+    if arvores.filter(tarefas__isnull=False).exists():
+        return "Há tarefas vinculadas a árvores deste lote."
+    if arvores.filter(fundidas__isnull=False).exists():
+        return "Há árvores fundidas em árvores deste lote."
     if Medida.objects.filter(
         arvore__lote=lote, origem__in=[OrigemValor.MEDIDO, OrigemValor.ESTIMADO]
     ).exists():
@@ -297,7 +337,11 @@ def desfazer(lote: LoteImportacao) -> int:
     total = arvores.count()
     Medida.objects.filter(arvore__lote=lote).delete()
     IdentificadorExterno.objects.filter(arvore__lote=lote).delete()
-    arvores.delete()
+    try:
+        arvores.delete()
+    except ProtectedError as exc:
+        # Defesa para vínculos novos que motivo_impede_desfazer ainda não conheça.
+        raise ErroArquivo("Há registros vinculados a árvores deste lote.") from exc
     lote.estado = EstadoLote.DESFEITO
     lote.desfeito_em = timezone.now()
     lote.save(update_fields=["estado", "desfeito_em", "atualizado_em"])

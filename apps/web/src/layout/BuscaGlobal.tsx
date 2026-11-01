@@ -75,9 +75,11 @@ export function BuscaGlobal() {
         role="combobox"
         aria-expanded={aberto && resultados.length > 0}
         aria-controls={id}
+        aria-autocomplete="list"
+        aria-activedescendant={aberto && resultados[ativo] ? `${id}-opcao-${ativo}` : undefined}
         aria-label="Busca global"
         placeholder="Buscar árvore, ocorrência, bairro ou coordenada"
-        className="h-9 w-full rounded-md border border-borda bg-fundo pr-3 pl-8 text-sm"
+        className="h-9 w-full rounded-md border border-borda-campo bg-fundo pr-3 pl-8 text-sm"
         value={termo}
         onChange={(e) => setTermo(e.target.value)}
         onFocus={() => resultados.length && setAberto(true)}
@@ -95,11 +97,14 @@ export function BuscaGlobal() {
           className="absolute top-10 z-50 w-full overflow-hidden rounded-md border border-borda bg-superficie shadow-lg"
         >
           {resultados.length === 0 && (
-            <li className="px-3 py-2 text-sm text-texto-suave">Nada encontrado no seu escopo.</li>
+            <li role="presentation" className="px-3 py-2 text-sm text-texto-suave">
+              Nada encontrado no seu escopo.
+            </li>
           )}
           {resultados.map((r, i) => (
             <li
               key={`${r.tipo}-${r.id ?? r.rotulo}`}
+              id={`${id}-opcao-${i}`}
               role="option"
               aria-selected={i === ativo}
               className={`cursor-pointer px-3 py-2 text-sm ${i === ativo ? "bg-marca-clara" : ""}`}

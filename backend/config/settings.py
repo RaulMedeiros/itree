@@ -58,6 +58,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "itree.auditoria.middleware.AuditoriaMiddleware",
+    "itree.contas.acesso.CacheEscopoMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"

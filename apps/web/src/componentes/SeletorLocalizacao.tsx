@@ -1,4 +1,5 @@
-import maplibregl, { type Map as MapaMapLibre, type Marker } from "maplibre-gl";
+import { maplibregl } from "../mapa/maplibre";
+import type { Map as MapaMapLibre, Marker } from "maplibre-gl";
 import { useEffect, useRef } from "react";
 
 import { Mapa } from "../mapa/Mapa";

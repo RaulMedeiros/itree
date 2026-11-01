@@ -18,7 +18,7 @@ vi.mock("react-oidc-context", () => ({
 }));
 vi.mock("../autenticacao/gerenciador", () => ({ gerenciadorUsuario: {} }));
 // O MapLibre precisa de WebGL, ausente no jsdom; as telas testadas aqui não usam o mapa.
-vi.mock("maplibre-gl", () => ({ default: {} }));
+vi.mock("maplibre-gl", () => ({ setWorkerUrl: () => undefined }));
 
 const API = "http://api.teste";
 
