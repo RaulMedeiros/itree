@@ -65,6 +65,7 @@ class EvidenciaSerializer(serializers.ModelSerializer):
 class NovaEvidenciaSerializer(serializers.Serializer):
     arvore = serializers.UUIDField(required=False, allow_null=True)
     ocorrencia = serializers.UUIDField(required=False, allow_null=True)
+    inspecao = serializers.UUIDField(required=False, allow_null=True)
     nome_original = serializers.CharField(max_length=255)
     tipo_conteudo = serializers.ChoiceField(choices=sorted(TIPOS_PERMITIDOS))
     tamanho = serializers.IntegerField(min_value=1, max_value=TAMANHO_MAXIMO)
@@ -72,7 +73,7 @@ class NovaEvidenciaSerializer(serializers.Serializer):
     capturada_em = serializers.DateTimeField(required=False, allow_null=True)
 
     def validate(self, attrs):
-        if bool(attrs.get("arvore")) == bool(attrs.get("ocorrencia")):
+        if sum(bool(attrs.get(c)) for c in ("arvore", "ocorrencia", "inspecao")) != 1:
             raise serializers.ValidationError(
                 "Vincule a evidência a uma árvore ou a uma ocorrência."
             )
@@ -82,7 +83,11 @@ class NovaEvidenciaSerializer(serializers.Serializer):
 @extend_schema_view(
     list=extend_schema(
         operation_id="evidencias_listar",
-        parameters=[OpenApiParameter("arvore", str), OpenApiParameter("ocorrencia", str)],
+        parameters=[
+            OpenApiParameter("arvore", str),
+            OpenApiParameter("ocorrencia", str),
+            OpenApiParameter("inspecao", str),
+        ],
     ),
 )
 class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -94,8 +99,26 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     pagination_class = None
     lookup_value_converter = "uuid"
 
-    def _alvo(self, arvore_id=None, ocorrencia_id=None, editar=False):
+    def _alvo(self, arvore_id=None, ocorrencia_id=None, editar=False, inspecao_id=None):
         usuario = self.request.user
+        if inspecao_id:
+            from itree.inspecoes.models import EstadoInspecao, Inspecao
+
+            permissao = "inspecoes.executar" if editar else "inspecoes.ler"
+            if not usuario.tem_permissao(permissao):
+                raise PermissionDenied()
+            qs = filtrar_por_escopo(Inspecao.objects.all(), usuario, campo_geom="arvore__geom")
+            objeto = qs.filter(pk=inspecao_id).first()
+            if objeto is None:
+                raise ValidationError({"inspecao": "Inspeção não encontrada no seu escopo."})
+            if editar and (
+                objeto.tecnico_id != usuario.pk
+                or objeto.estado not in (EstadoInspecao.RASCUNHO, EstadoInspecao.DEVOLVIDA)
+            ):
+                raise ValidationError(
+                    {"inspecao": "Só o técnico altera evidências de inspeção em rascunho."}
+                )
+            return "inspecao", objeto
         if arvore_id:
             permissao = "inventario.editar" if editar else "inventario.ler"
             qs = filtrar_por_escopo(Arvore.objects.all(), usuario, incluir_sem_geom=True)
@@ -113,12 +136,13 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     def get_queryset(self):
         p = self.request.query_params
-        arvore, ocorrencia = p.get("arvore"), p.get("ocorrencia")
-        if not (arvore or ocorrencia):
-            raise ValidationError("Informe 'arvore' ou 'ocorrencia'.")
+        arvore, ocorrencia, inspecao = p.get("arvore"), p.get("ocorrencia"), p.get("inspecao")
+        if not (arvore or ocorrencia or inspecao):
+            raise ValidationError("Informe 'arvore', 'ocorrencia' ou 'inspecao'.")
         campo, objeto = self._alvo(
             arvore_id=arvore and uuid_do_parametro(arvore, "arvore"),
             ocorrencia_id=ocorrencia and uuid_do_parametro(ocorrencia, "ocorrencia"),
+            inspecao_id=inspecao and uuid_do_parametro(inspecao, "inspecao"),
         )
         return Evidencia.objects.filter(
             **{campo: objeto}, estado=EstadoEvidencia.DISPONIVEL
@@ -146,7 +170,9 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         dados = NovaEvidenciaSerializer(data=request.data)
         dados.is_valid(raise_exception=True)
         v = dados.validated_data
-        campo, objeto = self._alvo(v.get("arvore"), v.get("ocorrencia"), editar=True)
+        campo, objeto = self._alvo(
+            v.get("arvore"), v.get("ocorrencia"), editar=True, inspecao_id=v.get("inspecao")
+        )
         identificador = uuid7()
         hoje = timezone.now()
         chave = f"evidencias/{hoje:%Y/%m}/{identificador}.{TIPOS_PERMITIDOS[v['tipo_conteudo']]}"
@@ -175,7 +201,12 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         evidencia = Evidencia.objects.filter(pk=uuid_do_parametro(pk, "id")).first()
         if evidencia is None:
             raise ValidationError("Evidência não encontrada.")
-        self._alvo(evidencia.arvore_id, evidencia.ocorrencia_id, editar=True)
+        self._alvo(
+            evidencia.arvore_id,
+            evidencia.ocorrencia_id,
+            editar=True,
+            inspecao_id=evidencia.inspecao_id,
+        )
         return evidencia
 
     @extend_schema(

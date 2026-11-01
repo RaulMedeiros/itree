@@ -47,13 +47,18 @@ export interface BuscaMapa {
   arvores?: "0";
   ocorrencias?: "0";
   bairros?: "0";
+  tarefas?: "1";
+  sem_inspecao_dias?: number;
   especie_estado?: EstadoEspecieEnum;
   localizacao_origem?: OrigemLocalizacaoEnum;
   estado?: "abertas" | "todas";
   selecao?: string;
 }
 
-function urlTiles(camada: "arvores" | "ocorrencias", filtros: Record<string, string | undefined>) {
+function urlTiles(
+  camada: "arvores" | "ocorrencias" | "tarefas",
+  filtros: Record<string, string | undefined>,
+) {
   const qs = new URLSearchParams(
     Object.entries(filtros).filter(([, v]) => v) as [string, string][],
   ).toString();
@@ -64,6 +69,7 @@ export function MapaPagina() {
   const busca = useSearch({ from: "/autenticado/mapa" });
   const navegar = useNavigate({ from: "/mapa" });
   const podeOcorrencias = usePermissao("ocorrencias.ler");
+  const podeTarefas = usePermissao("tarefas.ler");
   const camadas = useMapaCamadas();
   const mapa = useRef<MapaMapLibre | null>(null);
   const [pronto, setPronto] = useState(false);
@@ -74,9 +80,11 @@ export function MapaPagina() {
   const mostrarArvores = busca.arvores !== "0";
   const mostrarOcorrencias = podeOcorrencias && busca.ocorrencias !== "0";
   const mostrarBairros = busca.bairros !== "0";
+  const mostrarTarefas = podeTarefas && busca.tarefas === "1";
   const filtrosArvores = {
     especie_estado: busca.especie_estado,
     localizacao_origem: busca.localizacao_origem,
+    sem_inspecao_dias: busca.sem_inspecao_dias ? String(busca.sem_inspecao_dias) : undefined,
   };
   const filtrosOcorrencias = { estado: busca.estado ?? "abertas" };
   const [tipoSelecao, idSelecao] = (busca.selecao ?? "").split(":") as [
@@ -175,6 +183,27 @@ export function MapaPagina() {
             "#ffffff",
           ],
           "circle-stroke-width": ["case", ["==", ["get", "risco_confirmado"], true], 3, 1.5],
+        },
+      });
+    }
+    if (podeTarefas) {
+      m.addSource("tarefas", {
+        type: "vector",
+        tiles: [urlTiles("tarefas", {})],
+        minzoom: 0,
+        maxzoom: 22,
+      });
+      m.addLayer({
+        id: "tarefas-pontos",
+        type: "circle",
+        source: "tarefas",
+        "source-layer": "tarefas",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": 9,
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-stroke-color": ["case", ["==", ["get", "atrasada"], true], "#b3261e", "#1d5fa8"],
+          "circle-stroke-width": 2.5,
         },
       });
     }
@@ -285,9 +314,11 @@ export function MapaPagina() {
       m.setLayoutProperty(id, "visibility", vis(mostrarArvores));
     if (m.getLayer("ocorrencias-pontos"))
       m.setLayoutProperty("ocorrencias-pontos", "visibility", vis(mostrarOcorrencias));
+    if (m.getLayer("tarefas-pontos"))
+      m.setLayoutProperty("tarefas-pontos", "visibility", vis(mostrarTarefas));
     for (const id of ["bairros-preenchimento", "bairros-contorno"])
       m.setLayoutProperty(id, "visibility", vis(mostrarBairros));
-  }, [pronto, mostrarArvores, mostrarOcorrencias, mostrarBairros]);
+  }, [pronto, mostrarArvores, mostrarOcorrencias, mostrarBairros, mostrarTarefas]);
 
   useEffect(() => {
     if (!pronto) return;
@@ -393,6 +424,17 @@ export function MapaPagina() {
               />
               Limites de bairros
             </label>
+            {podeTarefas && (
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="accent-marca"
+                  checked={mostrarTarefas}
+                  onChange={(e) => atualizarBusca({ tarefas: e.target.checked ? "1" : undefined })}
+                />
+                Tarefas em aberto
+              </label>
+            )}
             <label
               className="flex items-center gap-2 text-texto-suave"
               title="Previsto para a F3 (W-08)"
@@ -419,6 +461,19 @@ export function MapaPagina() {
                     {r}
                   </option>
                 ))}
+              </Selecao>
+              <Selecao
+                aria-label="Inspeção"
+                value={busca.sem_inspecao_dias ? String(busca.sem_inspecao_dias) : ""}
+                onChange={(e) =>
+                  atualizarBusca({
+                    sem_inspecao_dias: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+              >
+                <option value="">Qualquer data de inspeção</option>
+                <option value="365">Sem inspeção há 1 ano</option>
+                <option value="730">Sem inspeção há 2 anos</option>
               </Selecao>
               <Selecao
                 aria-label="Origem da localização"
@@ -499,6 +554,15 @@ export function MapaPagina() {
                     style={{ border: "3px solid #7a1a14" }}
                   />{" "}
                   Risco confirmado
+                </li>
+              )}
+              {podeTarefas && (
+                <li className="flex items-center gap-2">
+                  <span
+                    className="inline-block size-3 rounded-full"
+                    style={{ border: "2.5px solid #1d5fa8" }}
+                  />{" "}
+                  Tarefa em aberto (contorno vermelho: atrasada)
                 </li>
               )}
             </ul>

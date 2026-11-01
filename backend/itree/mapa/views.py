@@ -39,6 +39,18 @@ def _filtros_arvores(params) -> tuple[str, dict]:
     if bairro := params.get("bairro"):
         clausulas.append("a.bairro_id = %(bairro)s")
         valores["bairro"] = str(uuid_do_parametro(bairro, "bairro"))
+    if dias := params.get("sem_inspecao_dias"):
+        try:
+            valores["dias"] = int(dias)
+        except ValueError:
+            valores["dias"] = 0
+        clausulas.append(
+            "(a.ultima_inspecao_em IS NULL"
+            " OR a.ultima_inspecao_em < now() - make_interval(days => %(dias)s))"
+        )
+    if condicao := params.get("condicao_aparente"):
+        clausulas.append("a.condicao_aparente = %(condicao)s")
+        valores["condicao"] = "" if condicao == "sem" else condicao
     return "".join(f" AND {c}" for c in clausulas), valores
 
 
@@ -89,6 +101,19 @@ CAMADAS = {
                AND ST_Intersects(o.geom, ST_GeomFromEWKB(%(area)s))
         """,
         "propriedades": "id, numero, estado, prioridade, tipo, risco_confirmado",
+    },
+    "tarefas": {
+        "permissao": "tarefas.ler",
+        "filtros": lambda params: (" AND t.estado NOT IN ('concluida', 'cancelada')", {}),
+        "base": """
+            SELECT t.id::text AS id, t.numero, t.tipo, t.estado,
+                   (t.prazo IS NOT NULL AND t.prazo < current_date) AS atrasada,
+                   ST_Transform(t.geom, 3857) AS g3857
+              FROM tarefas_tarefa t, env
+             WHERE t.geom && ST_Transform(env.g, 4326)
+               AND ST_Intersects(t.geom, ST_GeomFromEWKB(%(area)s))
+        """,
+        "propriedades": "id, numero, tipo, estado, atrasada",
     },
 }
 

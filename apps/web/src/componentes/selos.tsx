@@ -1,6 +1,8 @@
 import type { ArvoreResumo } from "@itree/api-client";
 import {
   ROTULOS_ESTADO_ESPECIE,
+  ROTULOS_ESTADO_INSPECAO,
+  ROTULOS_ESTADO_TAREFA,
   ROTULOS_ESTADO_OCORRENCIA,
   ROTULOS_ORIGEM_LOCALIZACAO,
   ROTULOS_ORIGEM_VALOR,
@@ -88,4 +90,25 @@ export function nomeEspecie(a: Pick<ArvoreResumo, "especie" | "especie_texto_ori
   if (a.especie) return a.especie.nome_cientifico;
   if (a.especie_texto_original) return `“${a.especie_texto_original}” (fora do catálogo)`;
   return "Espécie não identificada";
+}
+
+export function SeloEstadoInspecao({ estado }: { estado: keyof typeof ROTULOS_ESTADO_INSPECAO }) {
+  const tom: Record<string, Tom> = {
+    rascunho: "neutro",
+    em_revisao: "info",
+    devolvida: "atencao",
+    validada: "sucesso",
+  };
+  return <Selo tom={tom[estado]}>{ROTULOS_ESTADO_INSPECAO[estado]}</Selo>;
+}
+
+export function SeloEstadoTarefa({ estado }: { estado: keyof typeof ROTULOS_ESTADO_TAREFA }) {
+  const tom: Record<string, Tom> = {
+    nao_iniciada: "neutro",
+    em_execucao: "info",
+    concluida: "sucesso",
+    bloqueada: "atencao",
+    cancelada: "neutro",
+  };
+  return <Selo tom={tom[estado]}>{ROTULOS_ESTADO_TAREFA[estado]}</Selo>;
 }

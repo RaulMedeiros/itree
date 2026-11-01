@@ -8,9 +8,12 @@ from itree.auditoria.views import AuditoriaListView
 from itree.contas.views import EquipeViewSet, UsuarioAdminViewSet, eu
 from itree.core.views import saude
 from itree.evidencias.views import EvidenciaViewSet
+from itree.indicadores.views import painel
+from itree.inspecoes.views import InspecaoViewSet
 from itree.inventario.views import ArvoreViewSet, EspecieViewSet, ImportacaoViewSet
 from itree.mapa import views as mapa
 from itree.ocorrencias.views import OcorrenciaViewSet, TipoOcorrenciaViewSet
+from itree.tarefas.views import TarefaViewSet
 from itree.territorio.views import TerritorioViewSet
 
 roteador = DefaultRouter(trailing_slash=False)
@@ -24,6 +27,8 @@ roteador.register("importacoes", ImportacaoViewSet, basename="importacao")
 roteador.register("tipos-ocorrencia", TipoOcorrenciaViewSet, basename="tipo-ocorrencia")
 roteador.register("ocorrencias", OcorrenciaViewSet, basename="ocorrencia")
 roteador.register("evidencias", EvidenciaViewSet, basename="evidencia")
+roteador.register("inspecoes", InspecaoViewSet, basename="inspecao")
+roteador.register("tarefas", TarefaViewSet, basename="tarefa")
 
 api_v1 = [
     path("saude", saude, name="saude"),
@@ -31,6 +36,7 @@ api_v1 = [
     path("admin/auditoria", AuditoriaListView.as_view(), name="auditoria"),
     path("mapa/tiles/<str:camada>/<int:z>/<int:x>/<int:y>", mapa.tile, name="mapa-tile"),
     path("mapa/busca", mapa.busca, name="mapa-busca"),
+    path("indicadores/painel", painel, name="indicadores-painel"),
     path("mapa/camadas", mapa.camadas, name="mapa-camadas"),
     path("", include(roteador.urls)),
 ]

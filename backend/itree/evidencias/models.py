@@ -58,11 +58,21 @@ class Evidencia(ModeloBase):
         related_name="evidencias",
     )
 
+    inspecao = models.ForeignKey(
+        "inspecoes.Inspecao",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="evidencias",
+    )
+
     class Meta:
         ordering = ["-criado_em"]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(arvore__isnull=False) | models.Q(ocorrencia__isnull=False),
+                condition=models.Q(arvore__isnull=False)
+                | models.Q(ocorrencia__isnull=False)
+                | models.Q(inspecao__isnull=False),
                 name="evidencia_vinculada",
             )
         ]

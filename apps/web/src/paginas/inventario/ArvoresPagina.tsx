@@ -20,6 +20,7 @@ import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarDataHora } from "../../util/formatos";
+import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { NovaArvoreDialogo } from "./NovaArvoreDialogo";
 
 const TAMANHO = 50;
@@ -31,6 +32,8 @@ export interface BuscaArvores {
   bairro?: string;
   localizacao_origem?: OrigemLocalizacaoEnum;
   situacao?: "ativa" | "excluida" | "fundida" | "todas";
+  sem_inspecao_dias?: number;
+  condicao_aparente?: string;
   pagina?: number;
 }
 
@@ -38,6 +41,8 @@ export function ArvoresPagina() {
   const filtros = useSearch({ from: "/autenticado/inventario/arvores" });
   const navegar = useNavigate({ from: "/inventario/arvores" });
   const podeEditar = usePermissao("inventario.editar");
+  const podeTarefas = usePermissao("tarefas.editar");
+  const [criandoTarefas, setCriandoTarefas] = useState(false);
   const [nova, setNova] = useState(false);
   const [busca, setBusca] = useState(filtros.busca ?? "");
   const especies = useEspeciesListar({ tamanho: 500, ativa: true });
@@ -85,6 +90,15 @@ export function ArvoresPagina() {
                 <IconeMapa /> Ver no mapa
               </Link>
             </Botao>
+            {podeTarefas && (
+              <Botao
+                variante="secundario"
+                disabled={!consulta.data?.data.count}
+                onClick={() => setCriandoTarefas(true)}
+              >
+                Criar tarefas de inspeção
+              </Botao>
+            )}
             {podeEditar && (
               <Botao onClick={() => setNova(true)}>
                 <Plus /> Nova árvore
@@ -162,6 +176,19 @@ export function ArvoresPagina() {
               {r}
             </option>
           ))}
+        </Selecao>
+        <Selecao
+          aria-label="Inspeção"
+          value={filtros.sem_inspecao_dias ? String(filtros.sem_inspecao_dias) : ""}
+          onChange={(e) =>
+            filtrar({ sem_inspecao_dias: e.target.value ? Number(e.target.value) : undefined })
+          }
+          className="max-w-56"
+        >
+          <option value="">Qualquer data de inspeção</option>
+          <option value="180">Sem inspeção há 6 meses</option>
+          <option value="365">Sem inspeção há 1 ano</option>
+          <option value="730">Sem inspeção há 2 anos</option>
         </Selecao>
         <Selecao
           aria-label="Situação do registro"
@@ -248,6 +275,20 @@ export function ArvoresPagina() {
         </>
       )}
       {nova && <NovaArvoreDialogo aoFechar={() => setNova(false)} />}
+      {criandoTarefas && (
+        <CriarTarefasDialogo
+          alvo={{
+            tipo: "lote",
+            filtros: Object.fromEntries(
+              Object.entries(semPagina)
+                .filter(([, v]) => v !== undefined && v !== "")
+                .map(([k, v]) => [k, String(v)]),
+            ),
+            total: consulta.data?.data.count ?? 0,
+          }}
+          aoFechar={() => setCriandoTarefas(false)}
+        />
+      )}
     </>
   );
 }

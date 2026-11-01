@@ -10,6 +10,8 @@ export type ArvoresListarParams = {
   bairro?: string;
   /** Código (ARV-000123), identificador externo ou endereço. */
   busca?: string;
+  /** Use 'sem' para sem avaliação. */
+  condicao_aparente?: string;
   especie?: string;
   especie_estado?: string;
   localizacao_origem?: string;
@@ -18,6 +20,8 @@ export type ArvoresListarParams = {
   ordenar?: string;
   /** Um número de página dentro do conjunto de resultados paginado. */
   pagina?: number;
+  /** Sem inspeção validada há mais de N dias. */
+  sem_inspecao_dias?: number;
   /** Padrão: ativa. Use 'todas' para incluir as demais. */
   situacao?: string;
   /** Número de resultados a serem retornados por página. */

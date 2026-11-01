@@ -107,6 +107,13 @@ class Arvore(ModeloBase):
     )
     motivo_situacao = models.TextField(blank=True)
 
+    # Últimos valores validados vindos de inspeções (aplicados pelo revisor).
+    condicao_aparente = models.CharField(max_length=20, blank=True)
+    condicao_aparente_em = models.DateTimeField(null=True, blank=True)
+    ultima_inspecao_em = models.DateTimeField(
+        null=True, blank=True, help_text="Data da inspeção validada mais recente."
+    )
+
     origem_registro = models.CharField(max_length=20, choices=OrigemRegistro.choices)
     lote = models.ForeignKey(
         "LoteImportacao", null=True, blank=True, on_delete=models.PROTECT, related_name="arvores"
@@ -201,6 +208,17 @@ class Medida(ModeloBase):
     data_medicao = models.DateField(null=True, blank=True)
     responsavel = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    inspecao = models.ForeignKey(
+        "inspecoes.Inspecao",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="medidas",
+    )
+    aplicada = models.BooleanField(
+        default=True,
+        help_text="Medidas de inspeção só entram no cadastro quando o revisor as aplica.",
     )
     responsavel_texto = models.CharField(
         max_length=200, blank=True, help_text="Responsável como informado pela fonte importada."

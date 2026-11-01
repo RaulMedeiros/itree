@@ -29,7 +29,8 @@ paths:
           contas.MembroEquipeEvent, contas.TerritorioEquipeEvent, territorio.TerritorioEvent,
           inventario.EspecieEvent, inventario.ArvoreEvent, inventario.IdentificadorExternoEvent,
           inventario.MedidaEvent, inventario.LoteImportacaoEvent, inventario.ParNaoDuplicadoEvent,
-          ocorrencias.TipoOcorrenciaEvent, ocorrencias.OcorrenciaEvent, evidencias.EvidenciaEvent'
+          ocorrencias.TipoOcorrenciaEvent, ocorrencias.OcorrenciaEvent, evidencias.EvidenciaEvent,
+          inspecoes.InspecaoEvent, tarefas.TarefaEvent'
       - in: query
         name: objeto
         schema:
@@ -214,6 +215,11 @@ paths:
           type: string
         description: Código (ARV-000123), identificador externo ou endereço.
       - in: query
+        name: condicao_aparente
+        schema:
+          type: string
+        description: Use 'sem' para sem avaliação.
+      - in: query
         name: especie
         schema:
           type: string
@@ -240,6 +246,11 @@ paths:
         description: Um número de página dentro do conjunto de resultados paginado.
         schema:
           type: integer
+      - in: query
+        name: sem_inspecao_dias
+        schema:
+          type: integer
+        description: Sem inspeção validada há mais de N dias.
       - in: query
         name: situacao
         schema:
@@ -492,6 +503,11 @@ paths:
           type: string
         description: Código (ARV-000123), identificador externo ou endereço.
       - in: query
+        name: condicao_aparente
+        schema:
+          type: string
+        description: Use 'sem' para sem avaliação.
+      - in: query
         name: especie
         schema:
           type: string
@@ -512,6 +528,11 @@ paths:
         schema:
           type: string
         description: numero, -numero, atualizado_em, -atualizado_em
+      - in: query
+        name: sem_inspecao_dias
+        schema:
+          type: integer
+        description: Sem inspeção validada há mais de N dias.
       - in: query
         name: situacao
         schema:
@@ -839,6 +860,10 @@ paths:
         schema:
           type: string
       - in: query
+        name: inspecao
+        schema:
+          type: string
+      - in: query
         name: ocorrencia
         schema:
           type: string
@@ -1114,6 +1139,250 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ColunasArquivo'
+          description: ''
+  /api/v1/indicadores/painel:
+    get:
+      operationId: indicadores_painel
+      parameters:
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: query
+        name: equipe
+        schema:
+          type: string
+      - in: query
+        name: fim
+        schema:
+          type: string
+        description: 'AAAA-MM-DD (padrão: hoje)'
+      - in: query
+        name: inicio
+        schema:
+          type: string
+        description: 'AAAA-MM-DD (padrão: 30 dias atrás)'
+      tags:
+      - indicadores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PainelIndicadores'
+          description: ''
+  /api/v1/inspecoes:
+    get:
+      operationId: inspecoes_listar
+      description: Consulta, revisão e validação de inspeções (W-05).
+      parameters:
+      - in: query
+        name: arvore
+        schema:
+          type: string
+      - in: query
+        name: ate
+        schema:
+          type: string
+        description: AAAA-MM-DD
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: query
+        name: desde
+        schema:
+          type: string
+        description: AAAA-MM-DD (data da inspeção)
+      - in: query
+        name: estado
+        schema:
+          type: string
+        description: Um ou mais, separados por vírgula.
+      - in: query
+        name: ordenar
+        schema:
+          type: string
+        description: realizada_em ou -realizada_em (padrão)
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: requer_encaminhamento
+        schema:
+          type: boolean
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      - in: query
+        name: tecnico
+        schema:
+          type: string
+      tags:
+      - inspecoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInspecaoResumoList'
+          description: ''
+  /api/v1/inspecoes/{id}:
+    get:
+      operationId: inspecoes_obter
+      description: Consulta, revisão e validação de inspeções (W-05).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este inspecao.
+        required: true
+      tags:
+      - inspecoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspecao'
+          description: ''
+  /api/v1/inspecoes/{id}/devolver:
+    post:
+      operationId: inspecoes_devolver
+      description: Consulta, revisão e validação de inspeções (W-05).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este inspecao.
+        required: true
+      tags:
+      - inspecoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevolucaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DevolucaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DevolucaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspecao'
+          description: ''
+  /api/v1/inspecoes/{id}/historico:
+    get:
+      operationId: inspecoes_historico
+      description: Consulta, revisão e validação de inspeções (W-05).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este inspecao.
+        required: true
+      tags:
+      - inspecoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventoAuditoria'
+          description: ''
+  /api/v1/inspecoes/{id}/validar:
+    post:
+      operationId: inspecoes_validar
+      description: Consulta, revisão e validação de inspeções (W-05).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este inspecao.
+        required: true
+      tags:
+      - inspecoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidacaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ValidacaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ValidacaoRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inspecao'
+          description: ''
+  /api/v1/inspecoes/sincronizar:
+    post:
+      operationId: inspecoes_sincronizar
+      description: Recebe inspeções do aplicativo. Cada item tem resultado próprio;
+        reenvios são idempotentes e conflitos nunca são resolvidos em silêncio.
+      tags:
+      - inspecoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoteSincronizacaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoteSincronizacaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoteSincronizacaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResultadoSincronizacao'
           description: ''
   /api/v1/mapa/busca:
     get:
@@ -1525,6 +1794,242 @@ paths:
               schema:
                 $ref: '#/components/schemas/Saude'
           description: ''
+  /api/v1/tarefas:
+    get:
+      operationId: tarefas_listar
+      description: Tarefas de campo (W-07).
+      parameters:
+      - in: query
+        name: arvore
+        schema:
+          type: string
+      - in: query
+        name: atrasadas
+        schema:
+          type: boolean
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Código (TAR-000123)
+      - in: query
+        name: equipe
+        schema:
+          type: string
+      - in: query
+        name: estado
+        schema:
+          type: string
+        description: '''abertas'' (padrão), ''todas'' ou lista separada por vírgula'
+      - in: query
+        name: ocorrencia
+        schema:
+          type: string
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: responsavel
+        schema:
+          type: string
+        description: ID do usuário ou 'eu'
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      - in: query
+        name: tipo
+        schema:
+          type: string
+      tags:
+      - tarefas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTarefaList'
+          description: ''
+    post:
+      operationId: tarefas_criar
+      description: Tarefas de campo (W-07).
+      tags:
+      - tarefas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TarefaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TarefaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TarefaRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarefa'
+          description: ''
+  /api/v1/tarefas/{id}:
+    get:
+      operationId: tarefas_obter
+      description: Tarefas de campo (W-07).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este tarefa.
+        required: true
+      tags:
+      - tarefas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarefa'
+          description: ''
+    patch:
+      operationId: tarefas_atualizar
+      description: Tarefas de campo (W-07).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este tarefa.
+        required: true
+      tags:
+      - tarefas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTarefaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTarefaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTarefaRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarefa'
+          description: ''
+  /api/v1/tarefas/{id}/historico:
+    get:
+      operationId: tarefas_historico
+      description: Tarefas de campo (W-07).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este tarefa.
+        required: true
+      tags:
+      - tarefas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventoAuditoria'
+          description: ''
+  /api/v1/tarefas/{id}/transicao:
+    post:
+      operationId: tarefas_transicao
+      description: Tarefas de campo (W-07).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este tarefa.
+        required: true
+      tags:
+      - tarefas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransicaoTarefaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TransicaoTarefaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TransicaoTarefaRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tarefa'
+          description: ''
+  /api/v1/tarefas/lote:
+    post:
+      operationId: tarefas_criar_em_lote
+      description: Uma tarefa de inspeção por árvore selecionada (IDs ou filtros do
+        inventário).
+      tags:
+      - tarefas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TarefasEmLoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TarefasEmLoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TarefasEmLoteRequest'
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoLote'
+          description: ''
   /api/v1/territorios:
     get:
       operationId: territorios_listar
@@ -1712,6 +2217,18 @@ components:
           maxLength: 500
       required:
       - motivo
+    AplicarEnum:
+      enum:
+      - especie
+      - condicao_aparente
+      - medidas
+      - localizacao
+      type: string
+      description: |-
+        * `especie` - especie
+        * `condicao_aparente` - condicao_aparente
+        * `medidas` - medidas
+        * `localizacao` - localizacao
     Arvore:
       type: object
       description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).
@@ -1727,6 +2244,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/EspecieResumo'
           readOnly: true
+          nullable: true
         especie_estado:
           $ref: '#/components/schemas/EstadoEspecieEnum'
         especie_texto_original:
@@ -1768,6 +2286,20 @@ components:
           type: integer
           readOnly: true
           default: 0
+        condicao_aparente:
+          type: string
+          readOnly: true
+        condicao_aparente_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        ultima_inspecao_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Data da inspeção validada mais recente.
         criado_em:
           type: string
           format: date-time
@@ -1807,6 +2339,8 @@ components:
       - atualizado_em
       - bairro
       - codigo
+      - condicao_aparente
+      - condicao_aparente_em
       - criado_em
       - criado_por_nome
       - especie
@@ -1819,7 +2353,59 @@ components:
       - ocorrencias_abertas
       - origem_registro
       - situacao
+      - ultima_inspecao_em
       - valida
+    ArvoreDaInspecao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        especie:
+          allOf:
+          - $ref: '#/components/schemas/EspecieResumo'
+          readOnly: true
+          nullable: true
+        especie_estado:
+          $ref: '#/components/schemas/EstadoEspecieEnum'
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/Localizacao'
+          nullable: true
+          readOnly: true
+        localizacao_origem:
+          oneOf:
+          - $ref: '#/components/schemas/OrigemLocalizacaoEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        precisao_m:
+          type: number
+          format: double
+          nullable: true
+          description: Precisão horizontal informada, em metros.
+        endereco:
+          type: string
+          maxLength: 300
+        bairro:
+          type: string
+          readOnly: true
+          nullable: true
+        condicao_aparente:
+          type: string
+          maxLength: 20
+        condicao_aparente_em:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - bairro
+      - codigo
+      - especie
+      - id
+      - localizacao
     ArvoreRequest:
       type: object
       description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).
@@ -1871,6 +2457,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/EspecieResumo'
           readOnly: true
+          nullable: true
         especie_estado:
           $ref: '#/components/schemas/EstadoEspecieEnum'
         especie_texto_original:
@@ -1909,6 +2496,20 @@ components:
           type: integer
           readOnly: true
           default: 0
+        condicao_aparente:
+          type: string
+          readOnly: true
+        condicao_aparente_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        ultima_inspecao_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Data da inspeção validada mais recente.
         criado_em:
           type: string
           format: date-time
@@ -1921,12 +2522,15 @@ components:
       - atualizado_em
       - bairro
       - codigo
+      - condicao_aparente
+      - condicao_aparente_em
       - criado_em
       - especie
       - id
       - localizacao
       - ocorrencias_abertas
       - origem_registro
+      - ultima_inspecao_em
       - valida
     BlankEnum:
       enum:
@@ -1990,6 +2594,20 @@ components:
           format: binary
       required:
       - arquivo
+    CondicaoAparenteEnum:
+      enum:
+      - boa
+      - regular
+      - ruim
+      - morta
+      - nao_avaliada
+      type: string
+      description: |-
+        * `boa` - Boa
+        * `regular` - Regular
+        * `ruim` - Ruim
+        * `morta` - Aparentemente morta
+        * `nao_avaliada` - Não avaliada
     Contadores:
       type: object
       properties:
@@ -2000,6 +2618,15 @@ components:
       required:
       - total
       - validos
+    DevolucaoRequest:
+      type: object
+      properties:
+        motivo:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+      - motivo
     EnvioEvidencia:
       type: object
       properties:
@@ -2240,6 +2867,18 @@ components:
         * `aguardando_envio` - Aguardando envio
         * `disponivel` - Disponível
         * `removida` - Removida
+    EstadoInspecaoEnum:
+      enum:
+      - rascunho
+      - em_revisao
+      - devolvida
+      - validada
+      type: string
+      description: |-
+        * `rascunho` - Rascunho
+        * `em_revisao` - Em revisão
+        * `devolvida` - Devolvida para correção
+        * `validada` - Validada
     EstadoLoteEnum:
       enum:
       - pre_visualizado
@@ -2267,6 +2906,20 @@ components:
         * `encaminhada` - Encaminhada
         * `em_atendimento` - Em atendimento
         * `concluida` - Concluída
+        * `cancelada` - Cancelada
+    EstadoTarefaEnum:
+      enum:
+      - nao_iniciada
+      - em_execucao
+      - concluida
+      - bloqueada
+      - cancelada
+      type: string
+      description: |-
+        * `nao_iniciada` - Não iniciada
+        * `em_execucao` - Em execução
+        * `concluida` - Concluída
+        * `bloqueada` - Bloqueada
         * `cancelada` - Cancelada
     Eu:
       type: object
@@ -2457,6 +3110,189 @@ components:
       required:
       - fonte
       - valor
+    Inspecao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        arvore:
+          allOf:
+          - $ref: '#/components/schemas/ArvoreDaInspecao'
+          readOnly: true
+        tecnico:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+        realizada_em:
+          type: string
+          format: date-time
+          description: Momento da inspeção no dispositivo.
+        recebida_em:
+          type: string
+          format: date-time
+          readOnly: true
+        estado:
+          $ref: '#/components/schemas/EstadoInspecaoEnum'
+        condicao_aparente:
+          $ref: '#/components/schemas/CondicaoAparenteEnum'
+        sinais:
+          type: array
+          items:
+            $ref: '#/components/schemas/SinalObservadoEnum'
+        especie:
+          allOf:
+          - $ref: '#/components/schemas/EspecieResumo'
+          readOnly: true
+          nullable: true
+        especie_texto:
+          type: string
+          maxLength: 200
+        requer_encaminhamento:
+          type: boolean
+        origem:
+          $ref: '#/components/schemas/OrigemInspecaoEnum'
+        revisor:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+          nullable: true
+        validada_em:
+          type: string
+          format: date-time
+          nullable: true
+        versao:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Controle de concorrência na sincronização.
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/Localizacao'
+          nullable: true
+          readOnly: true
+        precisao_m:
+          type: number
+          format: double
+          nullable: true
+        arvore_confirmada:
+          type: boolean
+          description: O técnico confirmou que o registro corresponde à árvore observada.
+        observacoes:
+          type: string
+        motivo_devolucao:
+          type: string
+        aplicado_ao_cadastro:
+          type: array
+          items:
+            type: string
+            maxLength: 30
+          description: Valores que o revisor escolheu aplicar ao cadastro da árvore.
+        dispositivo:
+          type: string
+          maxLength: 100
+        medidas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+        anterior:
+          allOf:
+          - $ref: '#/components/schemas/InspecaoResumo'
+          nullable: true
+          readOnly: true
+          description: Inspeção anterior da mesma árvore, para comparação (RF-INSP-004).
+        tarefa:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+      required:
+      - anterior
+      - arvore
+      - codigo
+      - especie
+      - id
+      - localizacao
+      - medidas
+      - realizada_em
+      - recebida_em
+      - revisor
+      - tarefa
+      - tecnico
+    InspecaoResumo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        arvore:
+          allOf:
+          - $ref: '#/components/schemas/ArvoreDaInspecao'
+          readOnly: true
+        tecnico:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+        realizada_em:
+          type: string
+          format: date-time
+          description: Momento da inspeção no dispositivo.
+        recebida_em:
+          type: string
+          format: date-time
+          readOnly: true
+        estado:
+          $ref: '#/components/schemas/EstadoInspecaoEnum'
+        condicao_aparente:
+          $ref: '#/components/schemas/CondicaoAparenteEnum'
+        sinais:
+          type: array
+          items:
+            $ref: '#/components/schemas/SinalObservadoEnum'
+        especie:
+          allOf:
+          - $ref: '#/components/schemas/EspecieResumo'
+          readOnly: true
+          nullable: true
+        especie_texto:
+          type: string
+          maxLength: 200
+        requer_encaminhamento:
+          type: boolean
+        origem:
+          $ref: '#/components/schemas/OrigemInspecaoEnum'
+        revisor:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+          nullable: true
+        validada_em:
+          type: string
+          format: date-time
+          nullable: true
+        versao:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Controle de concorrência na sincronização.
+      required:
+      - arvore
+      - codigo
+      - especie
+      - id
+      - realizada_em
+      - recebida_em
+      - revisor
+      - tecnico
     LinhaImportacao:
       type: object
       properties:
@@ -2670,6 +3506,22 @@ components:
       - numero
       - pode_desfazer
       - usuario_nome
+    LoteSincronizacaoRequest:
+      type: object
+      properties:
+        dispositivo:
+          type: string
+          minLength: 1
+          maxLength: 100
+        inspecoes:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          maxItems: 200
+      required:
+      - dispositivo
+      - inspecoes
     Medida:
       type: object
       properties:
@@ -2764,6 +3616,10 @@ components:
           format: uuid
           nullable: true
         ocorrencia:
+          type: string
+          format: uuid
+          nullable: true
+        inspecao:
           type: string
           format: uuid
           nullable: true
@@ -3018,6 +3874,14 @@ components:
       required:
       - descricao
       - tipo_id
+    OrigemInspecaoEnum:
+      enum:
+      - app
+      - web
+      type: string
+      description: |-
+        * `app` - Aplicativo de campo
+        * `web` - Painel web (contingência)
     OrigemLocalizacaoEnum:
       enum:
       - gps_campo
@@ -3156,6 +4020,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EventoAuditoria'
+    PaginatedInspecaoResumoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/InspecaoResumo'
     PaginatedLoteImportacaoList:
       type: object
       required:
@@ -3202,6 +4089,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Ocorrencia'
+    PaginatedTarefaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tarefa'
     PaginatedTerritorioList:
       type: object
       required:
@@ -3248,6 +4158,43 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UsuarioAdmin'
+    PainelIndicadores:
+      type: object
+      properties:
+        periodo:
+          type: object
+          additionalProperties: {}
+        filtros:
+          type: object
+          additionalProperties: {}
+        calculado_em:
+          type: string
+          format: date-time
+        indicadores:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        distribuicoes:
+          type: object
+          additionalProperties: {}
+        equipes:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        atividades:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventoAuditoria'
+      required:
+      - atividades
+      - calculado_em
+      - distribuicoes
+      - equipes
+      - filtros
+      - indicadores
+      - periodo
     PapelEnum:
       enum:
       - gestor
@@ -3433,6 +4380,44 @@ components:
           type: string
           format: date
           nullable: true
+    PatchedTarefaRequest:
+      type: object
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoTarefaEnum'
+        arvore_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        ocorrencia_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        descricao:
+          type: string
+        responsavel_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        equipe_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        prazo:
+          type: string
+          format: date
+          nullable: true
+        prioridade:
+          type: string
+          maxLength: 10
+        motivo:
+          type: string
+          writeOnly: true
+          maxLength: 500
     PatchedTipoOcorrenciaRequest:
       type: object
       properties:
@@ -3491,6 +4476,7 @@ components:
       - inventario.fundir_excluir
       - inventario.importar
       - inspecoes.ler
+      - inspecoes.executar
       - inspecoes.validar
       - ocorrencias.ler
       - ocorrencias.editar
@@ -3515,6 +4501,7 @@ components:
         * `inventario.fundir_excluir` - Fundir ou excluir árvores
         * `inventario.importar` - Importar inventário em lote
         * `inspecoes.ler` - Ver inspeções
+        * `inspecoes.executar` - Executar inspeções (aplicativo)
         * `inspecoes.validar` - Revisar e validar inspeções
         * `ocorrencias.ler` - Ver ocorrências
         * `ocorrencias.editar` - Registrar e editar ocorrências
@@ -3602,6 +4589,45 @@ components:
         * `ocorrencia` - ocorrencia
         * `territorio` - territorio
         * `coordenada` - coordenada
+    ResultadoLote:
+      type: object
+      properties:
+        criadas:
+          type: integer
+        ignoradas:
+          type: integer
+          description: Árvores que já tinham tarefa de inspeção aberta.
+        fora_do_escopo_do_responsavel:
+          type: integer
+      required:
+      - criadas
+      - fora_do_escopo_do_responsavel
+      - ignoradas
+    ResultadoSincronizacao:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        versao:
+          type: integer
+          nullable: true
+        estado:
+          type: string
+          nullable: true
+        mensagem:
+          type: string
+        erros:
+          type: object
+          additionalProperties: {}
+      required:
+      - erros
+      - estado
+      - id
+      - mensagem
+      - status
+      - versao
     RiscoRequest:
       type: object
       properties:
@@ -3624,6 +4650,34 @@ components:
       - ambiente
       - banco
       - status
+    SinalObservadoEnum:
+      enum:
+      - folhagem_escassa
+      - descoloracao
+      - ferida
+      - fungos
+      - cavidade
+      - inclinacao
+      - galhos_secos
+      - galhos_quebrados
+      - raiz_exposta
+      - conflito_rede
+      - conflito_calcada
+      - pragas
+      type: string
+      description: |-
+        * `folhagem_escassa` - Folhagem escassa
+        * `descoloracao` - Descoloração da folhagem
+        * `ferida` - Ferida ou dano visível no tronco
+        * `fungos` - Presença aparente de fungos
+        * `cavidade` - Cavidade ou oco aparente
+        * `inclinacao` - Inclinação perceptível
+        * `galhos_secos` - Galhos secos
+        * `galhos_quebrados` - Galhos quebrados ou pendurados
+        * `raiz_exposta` - Raízes expostas ou danificadas
+        * `conflito_rede` - Conflito com rede aérea
+        * `conflito_calcada` - Conflito com calçada ou edificação
+        * `pragas` - Presença aparente de pragas
     SituacaoArvoreEnum:
       enum:
       - ativa
@@ -3634,6 +4688,180 @@ components:
         * `ativa` - Ativa
         * `excluida` - Excluída
         * `fundida` - Fundida em outro registro
+    StatusEnum:
+      enum:
+      - criada
+      - atualizada
+      - ja_recebida
+      - conflito
+      - erro
+      type: string
+      description: |-
+        * `criada` - criada
+        * `atualizada` - atualizada
+        * `ja_recebida` - ja_recebida
+        * `conflito` - conflito
+        * `erro` - erro
+    Tarefa:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        tipo:
+          $ref: '#/components/schemas/TipoTarefaEnum'
+        alvo:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/Localizacao'
+          nullable: true
+          readOnly: true
+        descricao:
+          type: string
+        responsavel:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+          nullable: true
+        equipe:
+          allOf:
+          - $ref: '#/components/schemas/EquipeResumo'
+          readOnly: true
+          nullable: true
+        prazo:
+          type: string
+          format: date
+          nullable: true
+        prioridade:
+          type: string
+          maxLength: 10
+        estado:
+          allOf:
+          - $ref: '#/components/schemas/EstadoTarefaEnum'
+          readOnly: true
+        motivo_estado:
+          type: string
+          readOnly: true
+        transicoes_possiveis:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstadoTarefaEnum'
+          readOnly: true
+        atrasada:
+          type: boolean
+          readOnly: true
+        criada_por:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        atualizado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        concluida_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - alvo
+      - atrasada
+      - atualizado_em
+      - codigo
+      - concluida_em
+      - criada_por
+      - criado_em
+      - equipe
+      - estado
+      - id
+      - localizacao
+      - motivo_estado
+      - responsavel
+      - tipo
+      - transicoes_possiveis
+    TarefaRequest:
+      type: object
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoTarefaEnum'
+        arvore_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        ocorrencia_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        descricao:
+          type: string
+        responsavel_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        equipe_id:
+          type: string
+          format: uuid
+          writeOnly: true
+          nullable: true
+        prazo:
+          type: string
+          format: date
+          nullable: true
+        prioridade:
+          type: string
+          maxLength: 10
+        motivo:
+          type: string
+          writeOnly: true
+          maxLength: 500
+      required:
+      - tipo
+    TarefasEmLoteRequest:
+      type: object
+      description: Cria uma tarefa de inspeção por árvore (RF-EQP-003).
+      properties:
+        arvore_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        filtros_arvores:
+          type: object
+          additionalProperties:
+            type: string
+            minLength: 1
+          description: Mesmos filtros da listagem de árvores; usado quando arvore_ids
+            está vazio.
+        responsavel_id:
+          type: string
+          format: uuid
+          nullable: true
+        equipe_id:
+          type: string
+          format: uuid
+          nullable: true
+        prazo:
+          type: string
+          format: date
+          nullable: true
+        prioridade:
+          type: string
+        descricao:
+          type: string
     Territorio:
       type: object
       description: Território com proveniência; sem geometria (ver endpoint GeoJSON).
@@ -3781,6 +5009,14 @@ components:
           type: boolean
       required:
       - nome
+    TipoTarefaEnum:
+      enum:
+      - inspecao_arvore
+      - atendimento_ocorrencia
+      type: string
+      description: |-
+        * `inspecao_arvore` - Inspeção de árvore
+        * `atendimento_ocorrencia` - Atendimento de ocorrência
     TipoTerritorioEnum:
       enum:
       - municipio
@@ -3796,6 +5032,16 @@ components:
       properties:
         estado:
           $ref: '#/components/schemas/EstadoOcorrenciaEnum'
+        motivo:
+          type: string
+          maxLength: 500
+      required:
+      - estado
+    TransicaoTarefaRequest:
+      type: object
+      properties:
+        estado:
+          $ref: '#/components/schemas/EstadoTarefaEnum'
         motivo:
           type: string
           maxLength: 500
@@ -3925,6 +5171,17 @@ components:
           maxLength: 254
       required:
       - email
+    ValidacaoRequest:
+      type: object
+      properties:
+        aplicar:
+          type: array
+          items:
+            $ref: '#/components/schemas/AplicarEnum'
+          description: Valores da inspeção que atualizam o cadastro da árvore.
+        motivo:
+          type: string
+          maxLength: 500
   securitySchemes:
     oidc:
       type: http

@@ -22,7 +22,7 @@ import type { TerritorioResumo } from './territorioResumo';
 export interface Arvore {
   readonly id: string;
   readonly codigo: string;
-  readonly especie: EspecieResumo;
+  readonly especie: EspecieResumo | null;
   especie_estado?: EstadoEspecieEnum;
   /**
      * Nome como veio da fonte, quando não casou com o catálogo.
@@ -43,6 +43,14 @@ export interface Arvore {
   readonly valida: boolean;
   readonly origem_registro: OrigemRegistroEnum;
   readonly ocorrencias_abertas: number;
+  readonly condicao_aparente: string;
+  /** @nullable */
+  readonly condicao_aparente_em: string | null;
+  /**
+     * Data da inspeção validada mais recente.
+     * @nullable
+     */
+  readonly ultima_inspecao_em: string | null;
   readonly criado_em: string;
   readonly atualizado_em: string;
   readonly identificadores: readonly IdentificadorExterno[];

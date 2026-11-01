@@ -119,7 +119,7 @@ class IdentificadorExternoSerializer(serializers.ModelSerializer):
 
 class ArvoreResumoSerializer(serializers.ModelSerializer):
     codigo = serializers.CharField(read_only=True)
-    especie = EspecieResumoSerializer(read_only=True)
+    especie = EspecieResumoSerializer(read_only=True, allow_null=True)
     localizacao = CampoLocalizacao(source="geom", read_only=True)
     bairro = TerritorioResumoSerializer(read_only=True)
     valida = serializers.BooleanField(read_only=True)
@@ -142,9 +142,13 @@ class ArvoreResumoSerializer(serializers.ModelSerializer):
             "valida",
             "origem_registro",
             "ocorrencias_abertas",
+            "condicao_aparente",
+            "condicao_aparente_em",
+            "ultima_inspecao_em",
             "criado_em",
             "atualizado_em",
         ]
+        read_only_fields = ["condicao_aparente", "condicao_aparente_em", "ultima_inspecao_em"]
 
 
 class ArvoreSerializer(ArvoreResumoSerializer):
@@ -180,13 +184,20 @@ class ArvoreSerializer(ArvoreResumoSerializer):
             "observacoes",
             "motivo",
         ]
-        read_only_fields = ["situacao", "origem_registro", "motivo_situacao"]
+        read_only_fields = [
+            "situacao",
+            "origem_registro",
+            "motivo_situacao",
+            "condicao_aparente",
+            "condicao_aparente_em",
+            "ultima_inspecao_em",
+        ]
 
     @extend_schema_field(MedidaSerializer(many=True))
     def get_medidas_atuais(self, obj):
         """Medida mais recente de cada tipo."""
         atuais = {}
-        for medida in obj.medidas.select_related("responsavel").all():
+        for medida in obj.medidas.filter(aplicada=True).select_related("responsavel"):
             atuais.setdefault(medida.tipo, medida)
         return MedidaSerializer(atuais.values(), many=True).data
 

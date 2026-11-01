@@ -13,6 +13,7 @@
  * * `inventario.fundir_excluir` - Fundir ou excluir árvores
  * * `inventario.importar` - Importar inventário em lote
  * * `inspecoes.ler` - Ver inspeções
+ * * `inspecoes.executar` - Executar inspeções (aplicativo)
  * * `inspecoes.validar` - Revisar e validar inspeções
  * * `ocorrencias.ler` - Ver ocorrências
  * * `ocorrencias.editar` - Registrar e editar ocorrências
@@ -40,6 +41,7 @@ export const PermissaoEnum = {
   inventariofundir_excluir: 'inventario.fundir_excluir',
   inventarioimportar: 'inventario.importar',
   inspecoesler: 'inspecoes.ler',
+  inspecoesexecutar: 'inspecoes.executar',
   inspecoesvalidar: 'inspecoes.validar',
   ocorrenciasler: 'ocorrencias.ler',
   ocorrenciaseditar: 'ocorrencias.editar',

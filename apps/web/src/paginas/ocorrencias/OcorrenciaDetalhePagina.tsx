@@ -26,6 +26,7 @@ import { useState, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
+import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
@@ -104,6 +105,8 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
   const [registrandoRisco, setRegistrandoRisco] = useState(false);
   const [atribuindo, setAtribuindo] = useState(false);
   const historico = useOcorrenciasHistorico(o.id);
+  const podeTarefa = usePermissao("tarefas.editar") && !encerrada;
+  const [criandoTarefa, setCriandoTarefa] = useState(false);
 
   return (
     <>
@@ -121,22 +124,29 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
           </span>
         }
         acoes={
-          o.localizacao && (
-            <Botao variante="secundario" asChild>
-              <Link
-                to="/mapa"
-                search={{
-                  lon: o.localizacao.longitude,
-                  lat: o.localizacao.latitude,
-                  zoom: 18,
-                  camada: "ocorrencias",
-                  selecao: `ocorrencia:${o.id}`,
-                }}
-              >
-                <IconeMapa /> No mapa
-              </Link>
-            </Botao>
-          )
+          <>
+            {podeTarefa && (
+              <Botao variante="secundario" onClick={() => setCriandoTarefa(true)}>
+                Criar tarefa de atendimento
+              </Botao>
+            )}
+            {o.localizacao && (
+              <Botao variante="secundario" asChild>
+                <Link
+                  to="/mapa"
+                  search={{
+                    lon: o.localizacao.longitude,
+                    lat: o.localizacao.latitude,
+                    zoom: 18,
+                    camada: "ocorrencias",
+                    selecao: `ocorrencia:${o.id}`,
+                  }}
+                >
+                  <IconeMapa /> No mapa
+                </Link>
+              </Botao>
+            )}
+          </>
         }
       />
 
@@ -278,6 +288,12 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
         erro={historico.error}
       />
 
+      {criandoTarefa && (
+        <CriarTarefasDialogo
+          alvo={{ tipo: "ocorrencia", id: o.id, codigo: o.codigo }}
+          aoFechar={() => setCriandoTarefa(false)}
+        />
+      )}
       {transicao && (
         <TransicaoDialogo ocorrencia={o} estado={transicao} aoFechar={() => setTransicao(null)} />
       )}

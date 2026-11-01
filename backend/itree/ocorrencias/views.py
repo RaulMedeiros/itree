@@ -34,6 +34,20 @@ from .serializers import (
 P = Permissao
 
 
+def encerrar_tarefas_da_ocorrencia(ocorrencia, estado):
+    """Ao encerrar a ocorrência, as tarefas de atendimento abertas acompanham."""
+    from itree.tarefas.models import ESTADOS_FINAIS_TAREFA, EstadoTarefa
+
+    final = (
+        EstadoTarefa.CONCLUIDA if estado == EstadoOcorrencia.CONCLUIDA else EstadoTarefa.CANCELADA
+    )
+    for tarefa in ocorrencia.tarefas.exclude(estado__in=ESTADOS_FINAIS_TAREFA):
+        tarefa.estado = final
+        tarefa.concluida_em = timezone.now() if final == EstadoTarefa.CONCLUIDA else None
+        tarefa.motivo_estado = f"Encerrada junto com a ocorrência {ocorrencia.codigo}."
+        tarefa.save(update_fields=["estado", "concluida_em", "motivo_estado", "atualizado_em"])
+
+
 @extend_schema_view(
     list=extend_schema(
         operation_id="tipos_ocorrencia_listar", parameters=[OpenApiParameter("ativo", bool)]
@@ -205,6 +219,8 @@ class OcorrenciaViewSet(
             ocorrencia.estado = novo
             ocorrencia.concluida_em = timezone.now() if novo == EstadoOcorrencia.CONCLUIDA else None
             ocorrencia.save(update_fields=["estado", "concluida_em", "atualizado_em"])
+            if novo in ESTADOS_FINAIS:
+                encerrar_tarefas_da_ocorrencia(ocorrencia, novo)
         return self._responder(request)
 
     @extend_schema(

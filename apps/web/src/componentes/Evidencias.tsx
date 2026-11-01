@@ -21,7 +21,7 @@ import { formatarDataHora } from "../util/formatos";
 const TIPOS_ACEITOS = Object.values(TipoConteudoEnum).join(",");
 const TAMANHO_MAXIMO = 25 * 1024 * 1024;
 
-type Alvo = { arvore: string } | { ocorrencia: string };
+type Alvo = { arvore: string } | { ocorrencia: string } | { inspecao: string };
 
 async function enviarArquivo(alvo: Alvo, arquivo: File, descricao: string) {
   if (!(Object.values(TipoConteudoEnum) as string[]).includes(arquivo.type)) {
