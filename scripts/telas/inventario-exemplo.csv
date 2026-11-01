@@ -1,0 +1,7 @@
+codigo;especie;lat;lon;altura_m;dap_cm;endereco
+T1;Licania tomentosa;-3,7455;-38,5455;8,5;32;Rua Sintética A, 10
+T2;Licania tomentosa;-3,74551;-38,54551;8,0;30;Rua Sintética A, 12
+T3;Handroanthus impetiginosus;-3,7462;-38,5338;6,2;21;Rua Sintética B, 40
+T4;Especie inexistente;-3,7448;-38,5251;;;Rua Sintética C, 5
+T5;Licania tomentosa;-3,747;-38,547;9;35;Rua Sintética A, 80
+T6;Licania tomentosa;;;;;Sem coordenada

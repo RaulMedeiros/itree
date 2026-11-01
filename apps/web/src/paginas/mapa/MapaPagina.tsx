@@ -4,6 +4,7 @@ import {
   useArvoresObter,
   useMapaCamadas,
   useOcorrenciasObter,
+  EstadoOcorrenciaEnum,
   type EstadoEspecieEnum,
   type OrigemLocalizacaoEnum,
 } from "@itree/api-client";
@@ -436,7 +437,13 @@ export function MapaPagina() {
             {podeOcorrencias && (
               <Link
                 to="/ocorrencias"
-                search={{ estado: busca.estado ?? "abertas" }}
+                search={{
+                  // A lista usa "abertas" ou os estados separados por vírgula ("Todas").
+                  estado:
+                    busca.estado === "todas"
+                      ? Object.values(EstadoOcorrenciaEnum).join(",")
+                      : "abertas",
+                }}
                 className="text-marca underline"
               >
                 Ver ocorrências em lista

@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "gid": "SINT-DETER-1",
+        "view_date": "2026-10-25",
+        "classname": "DESMATAMENTO_CR"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-38.529, -3.747],
+            [-38.5265, -3.747],
+            [-38.5265, -3.745],
+            [-38.529, -3.745],
+            [-38.529, -3.747]
+          ]
+        ]
+      }
+    }
+  ]
+}
