@@ -4,6 +4,7 @@ import { useUsuario } from "../../acesso/ContextoUsuario";
 
 const SECOES = [
   { caminho: "/inventario/arvores", rotulo: "Árvores", permissao: "inventario.ler" },
+  { caminho: "/inventario/especies", rotulo: "Espécies", permissao: "inventario.ler" },
   { caminho: "/inventario/importacoes", rotulo: "Importações", permissao: "inventario.importar" },
   {
     caminho: "/inventario/duplicidades",

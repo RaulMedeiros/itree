@@ -56,22 +56,25 @@ for t in tecnicos[:2]:
     MembroEquipe.objects.get_or_create(equipe=equipe, usuario=t)
 Equipe.objects.get_or_create(nome="Equipe de Poda Oeste", defaults={"coordenador": gestor})
 
+# Espécies reais comuns na arborização de Fortaleza: família e origem conforme
+# a literatura botânica (catálogo municipal; as referências externas vêm à parte).
 ESPECIES = [
-    ("Licania tomentosa", ["Oiti"]),
-    ("Handroanthus impetiginosus", ["Ipê-roxo"]),
-    ("Azadirachta indica", ["Nim"]),
-    ("Terminalia catappa", ["Castanhola"]),
-    ("Mangifera indica", ["Mangueira"]),
-    ("Cassia fistula", ["Chuva-de-ouro"]),
-    ("Caesalpinia ferrea", ["Pau-ferro", "Jucá"]),
-    ("Anacardium occidentale", ["Cajueiro"]),
+    ("Licania tomentosa", ["Oiti"], "Chrysobalanaceae", True),
+    ("Handroanthus impetiginosus", ["Ipê-roxo"], "Bignoniaceae", True),
+    ("Azadirachta indica", ["Nim"], "Meliaceae", False),
+    ("Terminalia catappa", ["Castanhola"], "Combretaceae", False),
+    ("Mangifera indica", ["Mangueira"], "Anacardiaceae", False),
+    ("Cassia fistula", ["Chuva-de-ouro"], "Fabaceae", False),
+    ("Libidibia ferrea", ["Pau-ferro", "Jucá"], "Fabaceae", True),
+    ("Anacardium occidentale", ["Cajueiro"], "Anacardiaceae", True),
 ]
 especies = []
-for nome, comuns in ESPECIES:
+for nome, comuns, familia, nativa in ESPECIES:
     e, _ = Especie.objects.get_or_create(nome_cientifico=nome)
-    if not e.nomes_comuns:
-        e.nomes_comuns = comuns
-        e.save()
+    e.nomes_comuns = e.nomes_comuns or comuns
+    e.familia = e.familia or familia
+    e.nativa_brasil = nativa if e.nativa_brasil is None else e.nativa_brasil
+    e.save()
     especies.append(e)
 
 # --- Inventário importado (lote) -------------------------------------------

@@ -3,6 +3,7 @@ import {
   getEspeciesListarQueryKey,
   getTiposOcorrenciaListarQueryKey,
   useEspeciesAtualizar,
+  useEspeciesAtualizarReferencias,
   useEspeciesCriar,
   useEspeciesListar,
   useTiposOcorrenciaAtualizar,
@@ -12,7 +13,7 @@ import {
   type TipoOcorrencia,
 } from "@itree/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Botao } from "../../ui/botao";
@@ -61,6 +62,7 @@ export function EspeciesPagina() {
               <Th>Família</Th>
               <Th>Origem</Th>
               <Th>Situação</Th>
+              <Th>Referências externas</Th>
             </tr>
           </thead>
           <tbody>
@@ -87,6 +89,9 @@ export function EspeciesPagina() {
                       : "Não informada"}
                 </Td>
                 <Td>{e.ativa ? <Selo tom="sucesso">Ativa</Selo> : <Selo>Inativa</Selo>}</Td>
+                <Td>
+                  <ReferenciasEspecie especie={e} />
+                </Td>
               </Linha>
             ))}
           </tbody>
@@ -339,5 +344,39 @@ function TipoDialogo({ tipo, aoFechar }: { tipo: TipoOcorrencia | null; aoFechar
         )}
       </form>
     </Dialogo>
+  );
+}
+
+const TONS_REFERENCIA = {
+  encontradas: ["sucesso", "Encontradas"],
+  nao_encontradas: ["atencao", "Não encontradas"],
+  erro: ["perigo", "Erro"],
+  nao_consultada: ["neutro", "Não consultadas"],
+} as const;
+
+/** Situação das referências (Wikidata/Wikipedia/Commons) e consulta sob demanda. */
+function ReferenciasEspecie({ especie }: { especie: Especie }) {
+  const cliente = useQueryClient();
+  const atualizar = useEspeciesAtualizarReferencias({
+    mutation: {
+      onSuccess: () => cliente.invalidateQueries({ queryKey: getEspeciesListarQueryKey() }),
+    },
+  });
+  const [tom, rotulo] = TONS_REFERENCIA[especie.referencias_situacao ?? "nao_consultada"];
+  return (
+    <div className="flex items-center gap-2">
+      <span title={especie.referencias_mensagem || undefined}>
+        <Selo tom={tom}>{rotulo}</Selo>
+      </span>
+      <Botao
+        variante="fantasma"
+        tamanho="pequeno"
+        disabled={atualizar.isPending}
+        aria-label={`Atualizar referências de ${especie.nome_cientifico}`}
+        onClick={() => atualizar.mutate({ id: especie.id })}
+      >
+        <RefreshCw className={atualizar.isPending ? "animate-spin" : ""} />
+      </Botao>
+    </div>
   );
 }

@@ -65,6 +65,14 @@ sugestões de IA, que só alteram o cadastro com decisão de um revisor:
 ![Ficha — evidências](09-arvore-evidencias.png)
 ![Ficha — sugestões de IA](10-arvore-sugestao-ia.png)
 
+Catálogo de espécies: as espécies do escopo, mais frequentes primeiro, e o
+detalhe com referências externas (Wikipedia, Wikimedia Commons, GBIF). As
+referências aparecem como "ainda não consultadas" porque o ambiente de captura
+não tem acesso ao Wikidata. A ficha da árvore mostra o cartão da espécie.
+
+![Catálogo de espécies](31-especies.png)
+![Detalhe da espécie](32-especie-detalhe.png)
+
 Importação em lote, com pré-visualização antes de criar qualquer registro e
 desfazer por lote:
 

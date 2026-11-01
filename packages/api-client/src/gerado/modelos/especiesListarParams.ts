@@ -9,6 +9,10 @@
 export type EspeciesListarParams = {
   ativa?: boolean;
   busca?: string;
+  /** Só espécies com árvores no seu escopo. */
+  com_arvores?: boolean;
+  /** 'arvores' = mais árvores primeiro. */
+  ordem?: string;
   /** Um número de página dentro do conjunto de resultados paginado. */
   pagina?: number;
   /** Número de resultados a serem retornados por página. */

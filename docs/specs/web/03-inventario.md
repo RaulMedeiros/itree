@@ -77,6 +77,24 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
 - **RF-INV-014** — Ações por par: "não são duplicadas", "fundir" (escolhendo o
   valor de cada campo), "adiar". Fusão exige justificativa.
 
+### 3.6 Catálogo de espécies (M-01)
+
+- **RF-INV-020** — Grade de espécies com imagem, nome científico, nomes
+  comuns, origem (nativa do Brasil, exótica ou não informada) e quantidade de
+  árvores no escopo do usuário. Mais frequentes primeiro, com busca.
+- **RF-INV-021** — Detalhe da espécie: resumo da Wikipedia e imagem do
+  Wikimedia Commons, ambos com autoria, licença e data da consulta. Links para
+  Wikipedia, Wikidata e GBIF. Atalho para a lista das árvores da espécie.
+- **RF-INV-022** — Ficha da árvore mostra o cartão da espécie, com link para o
+  catálogo.
+- **RN-INV-020** — Referências externas só são aceitas quando o item do
+  Wikidata tem nome do táxon (P225) idêntico ao nome científico do catálogo.
+  Sem correspondência exata, a espécie fica como "não encontrada". Nada é
+  completado por aproximação.
+- **RN-INV-021** — Imagem sem licença declarada não é usada. Referências
+  externas não alteram família, nomes comuns nem origem, que são mantidos pela
+  administração (DP-02).
+
 ## 4. Regras
 
 - **RN-INV-001** — "Registro válido" = possui ID, localização com origem

@@ -31,6 +31,12 @@ u = Usuario.objects.create(email='gestor@itree.local', username='gestor@itree.lo
 EscopoUsuario.objects.create(usuario=u, territorio=Territorio.objects.get(tipo='municipio'))
 "
 $M shell -c "exec(open('/tmp/telas-dados/semear.py').read())"
+# Referências das espécies (Wikidata/Wikipedia/Commons), quando houver acesso.
+if curl -sf --max-time 10 -o /dev/null "https://www.wikidata.org/w/api.php?action=query&format=json"; then
+  $M atualizar_referencias_especies
+else
+  echo "Sem acesso ao Wikidata: as referências das espécies ficam como não consultadas."
+fi
 $M shell -c "exec(open('/tmp/telas-dados/ids.py').read())" | tail -1 > /tmp/telas-ids.json
 
 node "$AQUI/capturar.js" /tmp/telas-ids.json "$RAIZ/docs/telas"

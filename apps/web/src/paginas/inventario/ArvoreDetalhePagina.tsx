@@ -43,6 +43,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
+import { CartaoEspecie } from "../../componentes/especies";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeletorLocalizacao, type Ponto } from "../../componentes/SeletorLocalizacao";
 import {
@@ -298,41 +299,46 @@ function Resumo({ arvore }: { arvore: Arvore }) {
           <Item rotulo="Observações">{arvore.observacoes || "—"}</Item>
         </dl>
       </section>
-      <section className="rounded-lg border border-borda bg-superficie p-4">
-        <h2 className="mb-3 font-semibold">Proveniência do cadastro</h2>
-        <dl className="flex flex-col gap-3">
-          <Item rotulo="Origem do registro">{ROTULOS_ORIGEM_REGISTRO[arvore.origem_registro]}</Item>
-          {arvore.lote && (
-            <Item rotulo="Lote de importação">
-              <Link to="/inventario/importacoes" className="text-marca-escura hover:underline">
-                Lote nº {String(arvore.lote.numero)}
-              </Link>{" "}
-              — {String(arvore.lote.fonte)}
+      <div className="flex flex-col gap-4">
+        {arvore.especie_cartao && <CartaoEspecie especie={arvore.especie_cartao} />}
+        <section className="rounded-lg border border-borda bg-superficie p-4">
+          <h2 className="mb-3 font-semibold">Proveniência do cadastro</h2>
+          <dl className="flex flex-col gap-3">
+            <Item rotulo="Origem do registro">
+              {ROTULOS_ORIGEM_REGISTRO[arvore.origem_registro]}
             </Item>
-          )}
-          <Item rotulo="Cadastrado por">{arvore.criado_por_nome || "—"}</Item>
-          <Item rotulo="Cadastrado em">{formatarDataHora(arvore.criado_em)}</Item>
-          <Item rotulo="Última alteração">{formatarDataHora(arvore.atualizado_em)}</Item>
-          <Item rotulo="Condição aparente">
-            {arvore.condicao_aparente ? (
-              <>
-                {ROTULOS_CONDICAO[arvore.condicao_aparente as keyof typeof ROTULOS_CONDICAO]}
-                <span className="text-texto-suave">
-                  {" "}
-                  · validada da inspeção de {formatarData(arvore.condicao_aparente_em)}
-                </span>
-              </>
-            ) : (
-              <span className="text-texto-suave">Sem avaliação registrada.</span>
+            {arvore.lote && (
+              <Item rotulo="Lote de importação">
+                <Link to="/inventario/importacoes" className="text-marca-escura hover:underline">
+                  Lote nº {String(arvore.lote.numero)}
+                </Link>{" "}
+                — {String(arvore.lote.fonte)}
+              </Item>
             )}
-          </Item>
-          <Item rotulo="Última inspeção validada">
-            {formatarData(arvore.ultima_inspecao_em) ?? (
-              <span className="text-texto-suave">Nenhuma</span>
-            )}
-          </Item>
-        </dl>
-      </section>
+            <Item rotulo="Cadastrado por">{arvore.criado_por_nome || "—"}</Item>
+            <Item rotulo="Cadastrado em">{formatarDataHora(arvore.criado_em)}</Item>
+            <Item rotulo="Última alteração">{formatarDataHora(arvore.atualizado_em)}</Item>
+            <Item rotulo="Condição aparente">
+              {arvore.condicao_aparente ? (
+                <>
+                  {ROTULOS_CONDICAO[arvore.condicao_aparente as keyof typeof ROTULOS_CONDICAO]}
+                  <span className="text-texto-suave">
+                    {" "}
+                    · validada da inspeção de {formatarData(arvore.condicao_aparente_em)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-texto-suave">Sem avaliação registrada.</span>
+              )}
+            </Item>
+            <Item rotulo="Última inspeção validada">
+              {formatarData(arvore.ultima_inspecao_em) ?? (
+                <span className="text-texto-suave">Nenhuma</span>
+              )}
+            </Item>
+          </dl>
+        </section>
+      </div>
     </div>
   );
 }

@@ -43,6 +43,11 @@ class EspecieSerializer(serializers.ModelSerializer):
     sucessora = serializers.PrimaryKeyRelatedField(
         queryset=Especie.objects.all(), allow_null=True, required=False
     )
+    arvores_no_escopo = serializers.IntegerField(
+        read_only=True, default=None, help_text="Árvores ativas desta espécie no seu escopo."
+    )
+    gbif_url = serializers.CharField(read_only=True)
+    wikidata_url = serializers.CharField(read_only=True)
 
     class Meta:
         model = Especie
@@ -55,6 +60,61 @@ class EspecieSerializer(serializers.ModelSerializer):
             "ativa",
             "sucessora",
             "fonte_taxonomica",
+            "arvores_no_escopo",
+            "referencias_situacao",
+            "referencias_mensagem",
+            "referencias_consultadas_em",
+            "wikidata_id",
+            "wikidata_url",
+            "wikipedia_idioma",
+            "wikipedia_titulo",
+            "wikipedia_url",
+            "wikipedia_descricao",
+            "wikipedia_resumo",
+            "gbif_id",
+            "gbif_url",
+            "imagem_url",
+            "imagem_pagina_url",
+            "imagem_autor",
+            "imagem_licenca",
+            "imagem_licenca_url",
+        ]
+        read_only_fields = [
+            "referencias_situacao",
+            "referencias_mensagem",
+            "referencias_consultadas_em",
+            "wikidata_id",
+            "wikipedia_idioma",
+            "wikipedia_titulo",
+            "wikipedia_url",
+            "wikipedia_descricao",
+            "wikipedia_resumo",
+            "gbif_id",
+            "imagem_url",
+            "imagem_pagina_url",
+            "imagem_autor",
+            "imagem_licenca",
+            "imagem_licenca_url",
+        ]
+
+
+class EspecieCartaoSerializer(serializers.ModelSerializer):
+    """Resumo da espécie com imagem e links, para a ficha da árvore."""
+
+    class Meta:
+        model = Especie
+        fields = [
+            "id",
+            "nome_cientifico",
+            "nomes_comuns",
+            "familia",
+            "nativa_brasil",
+            "wikipedia_url",
+            "wikipedia_descricao",
+            "imagem_url",
+            "imagem_autor",
+            "imagem_licenca",
+            "imagem_pagina_url",
         ]
 
 
@@ -171,9 +231,12 @@ class ArvoreSerializer(ArvoreResumoSerializer):
         write_only=True, required=False, allow_blank=True, max_length=500
     )
 
+    especie_cartao = EspecieCartaoSerializer(source="especie", read_only=True, allow_null=True)
+
     class Meta(ArvoreResumoSerializer.Meta):
         fields = [
             *ArvoreResumoSerializer.Meta.fields,
+            "especie_cartao",
             "especie_id",
             "identificadores",
             "medidas_atuais",

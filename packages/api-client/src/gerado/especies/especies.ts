@@ -472,3 +472,85 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getEspeciesAtualizarMutationOptions(options), queryClient);
     }
+    export type especiesAtualizarReferenciasResponse200 = {
+  data: Especie
+  status: 200
+}
+
+export type especiesAtualizarReferenciasResponseSuccess = (especiesAtualizarReferenciasResponse200) & {
+  headers: Headers;
+};
+;
+
+export type especiesAtualizarReferenciasResponse = (especiesAtualizarReferenciasResponseSuccess)
+
+export const getEspeciesAtualizarReferenciasUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/especies/${id}/atualizar-referencias`
+}
+
+/**
+ * Consulta agora Wikidata, Wikipedia e Commons para esta espécie.
+ */
+export const especiesAtualizarReferencias = async (id: string, options?: Parameters<typeof requisicao>[1]): Promise<especiesAtualizarReferenciasResponse> => {
+
+  return requisicao<especiesAtualizarReferenciasResponse>(getEspeciesAtualizarReferenciasUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getEspeciesAtualizarReferenciasMutationKey = () => ['especiesAtualizarReferencias'] as const;
+
+export const getEspeciesAtualizarReferenciasMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof especiesAtualizarReferencias>>, TError,EspeciesAtualizarReferenciasMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof especiesAtualizarReferencias>>, TError,EspeciesAtualizarReferenciasMutationVariables, TContext> => {
+
+const mutationKey = getEspeciesAtualizarReferenciasMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof especiesAtualizarReferencias>>, EspeciesAtualizarReferenciasMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  especiesAtualizarReferencias(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EspeciesAtualizarReferenciasMutationResult = NonNullable<Awaited<ReturnType<typeof especiesAtualizarReferencias>>>
+
+    export type EspeciesAtualizarReferenciasMutationError = unknown
+    export type EspeciesAtualizarReferenciasMutationVariables = {id: string}
+
+    export const useEspeciesAtualizarReferencias = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof especiesAtualizarReferencias>>, TError,EspeciesAtualizarReferenciasMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof especiesAtualizarReferencias>>,
+        TError,
+        EspeciesAtualizarReferenciasMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEspeciesAtualizarReferenciasMutationOptions(options), queryClient);
+    }
