@@ -67,12 +67,22 @@ Keycloak, armazenamento) para desenvolver backend e web fora de contêiner.
 | `ITREE_OIDC_CLIENT_ID`          | não         | Padrão `itree-web`                        |
 | `ITREE_URL_API`                 | não         | Vazio = mesma origem (recomendado)        |
 | `ITREE_MOSTRAR_MODULOS_FUTUROS` | não         | `true` só fora de produção                |
+| `ITREE_CSP_ORIGENS`             | não         | Origens extras na CSP (padrão `https:`)   |
+
+`ITREE_CSP_ORIGENS` entra em `img-src`, `connect-src` e `frame-src` da
+Content-Security-Policy do painel. Em produção, prefira listar as origens
+exatas do provedor OIDC, do armazenamento S3 e dos mapas base, por exemplo
+`https://sso.prefeitura.gov.br https://arquivos.prefeitura.gov.br https://tile.openstreetmap.org`.
+O nginx envia CSP, `X-Frame-Options`, `nosniff` e `Referrer-Policy` só nas
+respostas do painel; as rotas da API recebem os cabeçalhos do próprio Django.
 
 ## Produção (checklist)
 
 A hospedagem ainda está em aberto (DP-21). Independentemente do provedor:
 
-- Termine o TLS num proxy de borda e envie `X-Forwarded-Proto`.
+- Termine o TLS num proxy de borda e envie `X-Forwarded-Proto`; o nginx do
+  painel repassa esse valor à API (sem ele, usa o esquema da própria conexão).
+  Não exponha o nginx do painel diretamente sem a borda: o cabeçalho viria do cliente.
 - Use PostgreSQL com PostGIS gerenciado ou com backup e restauração testados.
 - Rode o Keycloak em modo `start` (não `start-dev`), com banco próprio e
   redirect URIs do domínio real; ou federe com o SSO da prefeitura (DP-19).

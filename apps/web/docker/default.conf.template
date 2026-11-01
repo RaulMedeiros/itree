@@ -3,20 +3,57 @@ upstream api {
   server ${ITREE_API_UPSTREAM};
 }
 
+# Preserva o esquema informado pelo proxy de borda que termina o TLS; sem
+# borda, usa o da própria conexão.
+map $http_x_forwarded_proto $itree_proto {
+  default $http_x_forwarded_proto;
+  ""      $scheme;
+}
+
+# Cache por caminho. Definido com map + um único add_header no nível server
+# porque qualquer add_header dentro de um location anula a herança dos
+# cabeçalhos de segurança abaixo. Valor vazio = cabeçalho não enviado
+# (a API decide o próprio cache).
+map $uri $itree_cache {
+  ~^/(api|django-admin|static)/ "";
+  ~^/assets/                    "public, max-age=31536000, immutable";
+  /config.js                    "no-store";
+  default                       "no-cache";
+}
+
+# Cabeçalhos de segurança só nas respostas do painel: as rotas servidas pelo
+# Django (API, docs, admin, estáticos) já recebem os do próprio Django, e
+# duplicá-los com valores diferentes deixa o navegador escolher.
+map $uri $itree_painel {
+  ~^/(api|django-admin|static)/ 0;
+  default 1;
+}
+map $itree_painel $itree_nosniff { 1 "nosniff"; default ""; }
+map $itree_painel $itree_referrer { 1 "strict-origin-when-cross-origin"; default ""; }
+map $itree_painel $itree_quadro { 1 "DENY"; default ""; }
+
+map $uri $itree_csp {
+  ~^/(api|django-admin|static)/ "";
+  default "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: ${ITREE_CSP_ORIGENS}; font-src 'self' data:; connect-src 'self' ${ITREE_CSP_ORIGENS}; frame-src ${ITREE_CSP_ORIGENS}; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+}
+
 server {
   listen 80;
   root /usr/share/nginx/html;
   client_max_body_size 25m;
 
-  add_header X-Content-Type-Options nosniff always;
-  add_header Referrer-Policy strict-origin-when-cross-origin always;
-  add_header X-Frame-Options DENY always;
+  # Não declare add_header dentro dos blocos location (ver map acima).
+  add_header X-Content-Type-Options $itree_nosniff always;
+  add_header Referrer-Policy $itree_referrer always;
+  add_header X-Frame-Options $itree_quadro always;
+  add_header Content-Security-Policy $itree_csp always;
+  add_header Cache-Control $itree_cache;
 
   location /api/ {
     proxy_pass http://api;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Proto $itree_proto;
     proxy_read_timeout 120s;
   }
 
@@ -24,25 +61,26 @@ server {
     proxy_pass http://api;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Proto $itree_proto;
   }
 
   location /static/ {
     proxy_pass http://api;
   }
 
-  location = /config.js {
-    add_header Cache-Control "no-store";
+  location /assets/ {
+    try_files $uri =404;
   }
 
-  location /assets/ {
-    expires 1y;
-    add_header Cache-Control "public, immutable";
+  # O mime.types do nginx não conhece .mjs (worker do MapLibre); módulos exigem
+  # tipo JavaScript, ainda mais com nosniff.
+  location ~* \.mjs$ {
+    types { text/javascript mjs; }
+    try_files $uri =404;
   }
 
   # SPA: rotas do cliente caem no index.html.
   location / {
     try_files $uri /index.html;
-    add_header Cache-Control "no-cache";
   }
 }

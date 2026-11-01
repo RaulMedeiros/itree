@@ -18,6 +18,7 @@ from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
 from itree.territorio.models import Territorio
 
+from .acesso import pode_atuar
 from .models import (
     ESTADOS_FINAIS_TAREFA,
     EXIGEM_MOTIVO,
@@ -129,12 +130,7 @@ class TarefaViewSet(
         return qs
 
     def _pode_atuar(self, tarefa) -> bool:
-        u = self.request.user
-        return (
-            u.tem_permissao(P.TAREFAS_EDITAR)
-            or tarefa.responsavel_id == u.pk
-            or (tarefa.equipe_id and tarefa.equipe.membros.filter(pk=u.pk).exists())
-        )
+        return pode_atuar(self.request.user, tarefa)
 
     def perform_create(self, serializer):
         geom = serializer.validated_data["geom"]

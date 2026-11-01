@@ -114,6 +114,7 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
                 target="_blank"
                 rel="noreferrer"
                 className="block aspect-[4/3] bg-fundo"
+                aria-describedby={`ev-nova-aba-${ev.id}`}
               >
                 {ev.eh_imagem && ev.url ? (
                   <img
@@ -124,9 +125,13 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
                 ) : (
                   <span className="flex size-full items-center justify-center text-texto-suave">
                     <FileText className="size-8" aria-hidden />
+                    <span className="sr-only">Abrir {ev.nome_original}</span>
                   </span>
                 )}
               </a>
+              <span id={`ev-nova-aba-${ev.id}`} className="sr-only">
+                Abre em nova aba
+              </span>
               <div className="flex items-start justify-between gap-2 p-2 text-xs">
                 <div className="min-w-0">
                   <p className="truncate font-medium" title={ev.nome_original}>

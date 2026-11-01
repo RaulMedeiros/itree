@@ -271,7 +271,7 @@ def _dados_arvores(usuario, params):
             "origem_registro": a.origem_registro,
         }
 
-    return colunas, [(linha(a), a.geom) for a in qs.order_by("numero")[:50_000]]
+    return colunas, [(linha(a), a.geom) for a in qs.order_by("numero")[: LIMITE_EXPORTACAO + 1]]
 
 
 def _dados_ocorrencias(usuario, params):
@@ -316,7 +316,7 @@ def _dados_ocorrencias(usuario, params):
             "origem": o.origem,
         }
 
-    return colunas, [(linha(o), o.geom) for o in qs.order_by("numero")[:50_000]]
+    return colunas, [(linha(o), o.geom) for o in qs.order_by("numero")[: LIMITE_EXPORTACAO + 1]]
 
 
 def _dados_alertas(usuario, params):
@@ -348,7 +348,7 @@ def _dados_alertas(usuario, params):
             "bairros": ", ".join(b["nome"] for b in a.bairros),
         }
 
-    return colunas, [(linha(a), a.geom) for a in qs.order_by("numero")[:50_000]]
+    return colunas, [(linha(a), a.geom) for a in qs.order_by("numero")[: LIMITE_EXPORTACAO + 1]]
 
 
 CONJUNTOS = {
@@ -365,6 +365,30 @@ FORMATOS = {
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "geojson": "application/geo+json",
 }
+
+
+# Linhas por arquivo. Busca-se uma a mais para saber se houve corte.
+LIMITE_EXPORTACAO = 50_000
+
+# Texto que planilhas interpretariam como fórmula (CWE-1236).
+PREFIXOS_FORMULA = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _texto_seguro_csv(valor):
+    """No CSV, prefixa com apóstrofo o texto que viraria fórmula ao abrir no Excel."""
+    if isinstance(valor, str) and valor.startswith(PREFIXOS_FORMULA):
+        return "'" + valor
+    return valor
+
+
+def _celula(planilha, valor):
+    """No XLSX, grava texto sempre como texto (o openpyxl trata '=...' como fórmula)."""
+    from openpyxl.cell import WriteOnlyCell
+
+    celula = WriteOnlyCell(planilha, value=valor)
+    if isinstance(valor, str):
+        celula.data_type = "s"
+    return celula
 
 
 def _metadados(usuario, titulo: str, params: dict, linhas: int) -> dict:
@@ -408,7 +432,14 @@ def exportar(request: Request):
     ):
         raise PermissionDenied()
     colunas, registros = fonte_dados(request.user, p)
+    truncado = len(registros) > LIMITE_EXPORTACAO
+    registros = registros[:LIMITE_EXPORTACAO]
     meta = _metadados(request.user, titulo, p, len(registros))
+    if truncado:
+        meta["truncado"] = (
+            f"O resultado passou de {LIMITE_EXPORTACAO} registros e foi cortado; "
+            "refine os filtros para exportar o restante."
+        )
     Exportacao.objects.create(
         usuario=request.user, conjunto=conjunto, formato=formato, filtros=p, linhas=len(registros)
     )
@@ -418,28 +449,26 @@ def exportar(request: Request):
         saida = io.StringIO()
         for chave, valor in meta.items():
             if valor not in ("", None, {}):
-                saida.write(
-                    f"# {chave}: {json.dumps(valor, ensure_ascii=False) if isinstance(valor, dict) else valor}\n"
-                )
+                texto = json.dumps(valor, ensure_ascii=False) if isinstance(valor, dict) else valor
+                saida.write(f"# {chave}: {str(texto).replace(chr(10), ' ')}\n")
         escritor = csv.DictWriter(saida, fieldnames=colunas, delimiter=";")
         escritor.writeheader()
         for linha, _ in registros:
-            escritor.writerow(linha)
+            escritor.writerow({c: _texto_seguro_csv(v) for c, v in linha.items()})
         conteudo = ("﻿" + saida.getvalue()).encode("utf-8")
     elif formato == "xlsx":
         from openpyxl import Workbook
 
-        livro = Workbook()
-        planilha = livro.active
-        planilha.title = "Dados"
+        # write_only grava em fluxo, sem um objeto por célula na memória.
+        livro = Workbook(write_only=True)
+        planilha = livro.create_sheet("Dados")
         planilha.append(colunas)
         for linha, _ in registros:
-            planilha.append([linha[c] for c in colunas])
+            planilha.append([_celula(planilha, linha[c]) for c in colunas])
         info = livro.create_sheet("Metadados")
         for chave, valor in meta.items():
-            info.append(
-                [chave, json.dumps(valor, ensure_ascii=False) if isinstance(valor, dict) else valor]
-            )
+            texto = json.dumps(valor, ensure_ascii=False) if isinstance(valor, dict) else valor
+            info.append([chave, _celula(info, texto)])
         buffer = io.BytesIO()
         livro.save(buffer)
         conteudo = buffer.getvalue()

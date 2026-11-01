@@ -35,6 +35,7 @@ case "$1" in
       --bind 0.0.0.0:8000 \
       --workers "${GUNICORN_WORKERS:-3}" \
       --access-logfile - \
+      --access-logformat '%(t)s "%(m)s %(U)s" %(s)s %(b)s %(M)sms' \
       --forwarded-allow-ips "*"
     ;;
   worker)

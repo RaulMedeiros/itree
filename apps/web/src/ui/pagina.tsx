@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { useTituloDocumento } from "../util/titulo";
+
 export function CabecalhoPagina({
   titulo,
   descricao,
@@ -9,6 +11,7 @@ export function CabecalhoPagina({
   descricao?: ReactNode;
   acoes?: ReactNode;
 }) {
+  useTituloDocumento(titulo);
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>

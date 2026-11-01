@@ -54,15 +54,7 @@ function valorFormatado(i: Indicador) {
 function CartaoIndicador({ i }: { i: Indicador }) {
   const conteudo = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-texto-suave">{i.nome}</p>
-        <span
-          title={`${i.definicao}\nFórmula: ${i.formula}\nFonte: ${i.fonte}`}
-          aria-label={`Definição: ${i.definicao}`}
-        >
-          <Info className="size-4 text-texto-suave" />
-        </span>
-      </div>
+      <p className="text-sm font-medium text-texto-suave">{i.nome}</p>
       <p className={`mt-1 text-2xl font-semibold ${i.valor === null ? "text-texto-suave" : ""}`}>
         {valorFormatado(i)}
       </p>
@@ -73,13 +65,26 @@ function CartaoIndicador({ i }: { i: Indicador }) {
       </p>
     </>
   );
-  const classe = "block rounded-lg border border-borda bg-superficie p-4";
-  return i.link ? (
-    <Link to={i.link.pagina} search={i.link.filtros} className={`${classe} hover:border-marca`}>
-      {conteudo}
-    </Link>
-  ) : (
-    <div className={classe}>{conteudo}</div>
+  // A definição fica fora do link (não se aninha controle interativo em <a>) e
+  // num <details>, alcançável por teclado e toque — não só por hover (RNF-A11Y).
+  return (
+    <div className="rounded-lg border border-borda bg-superficie p-4 has-[a:hover]:border-marca">
+      {i.link ? (
+        <Link to={i.link.pagina} search={i.link.filtros} className="block">
+          {conteudo}
+        </Link>
+      ) : (
+        conteudo
+      )}
+      <details className="mt-2 text-xs text-texto-suave">
+        <summary className="inline-flex cursor-pointer items-center gap-1">
+          <Info className="size-3.5" aria-hidden /> Como é calculado
+        </summary>
+        <p className="mt-1">{i.definicao}</p>
+        <p className="mt-1">Fórmula: {i.formula}</p>
+        <p className="mt-1">Fonte: {i.fonte}</p>
+      </details>
+    </div>
   );
 }
 

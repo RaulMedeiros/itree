@@ -19,7 +19,13 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from itree.auditoria.views import EventoAuditoriaSerializer
-from itree.contas.acesso import filtrar_por_escopo, ponto_no_escopo, requer
+from itree.contas.acesso import (
+    area_do_escopo,
+    filtrar_por_escopo,
+    ponto_no_escopo,
+    requer,
+    tem_escopo_municipal,
+)
 from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
 from itree.ocorrencias.models import ESTADOS_FINAIS
@@ -360,7 +366,14 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
     permission_classes = [requer(P.INVENTARIO_IMPORTAR)]
 
     def get_queryset(self):
-        return LoteImportacao.objects.select_related("usuario")
+        if getattr(self, "swagger_fake_view", False):
+            return LoteImportacao.objects.none()
+        qs = LoteImportacao.objects.select_related("usuario")
+        # Lotes alheios expõem coordenadas e endereços de outros territórios:
+        # só quem tem escopo municipal vê todos (RF-ACL-003).
+        if not tem_escopo_municipal(self.request.user):
+            qs = qs.filter(usuario=self.request.user)
+        return qs
 
     def get_serializer_class(self):
         return (
@@ -431,11 +444,16 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
             for nome in importacao.CAMPOS_MAPEAVEIS
             if v.get(f"campo_{nome}")
         }
+        escopo = area_do_escopo(request.user)
+        if escopo is None:
+            raise ValidationError("Você não tem escopo territorial para importar árvores.")
         if formato == "csv" and not (mapeamento.get("latitude") and mapeamento.get("longitude")):
             raise ValidationError({"campo_latitude": "Indique as colunas de latitude e longitude."})
         try:
             _, registros = importacao.ler_registros(arquivo.read(), formato)
-            linhas = importacao.interpretar(registros, mapeamento, v["srid"], fonte_ids=v["fonte"])
+            linhas = importacao.interpretar(
+                registros, mapeamento, v["srid"], fonte_ids=v["fonte"], escopo=escopo
+            )
         except importacao.ErroArquivo as exc:
             raise ValidationError({"arquivo": str(exc)}) from exc
         except Exception as exc:  # noqa: BLE001 - SRC inválido, por exemplo
@@ -493,6 +511,9 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
         lote = self.get_object()
         dados = AcaoComMotivoSerializer(data=request.data)
         dados.is_valid(raise_exception=True)
+        escopo = area_do_escopo(request.user)
+        if escopo is None or lote.arvores.exclude(geom__intersects=escopo).exists():
+            raise ValidationError("O lote tem árvores fora do seu escopo territorial.")
         try:
             with (
                 transaction.atomic(),

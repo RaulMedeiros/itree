@@ -16,6 +16,7 @@ from itree.inventario.models import (
     OrigemLocalizacao,
     SituacaoArvore,
 )
+from itree.tarefas.acesso import pode_atuar
 from itree.tarefas.models import ESTADOS_FINAIS_TAREFA, EstadoTarefa
 
 from .models import EstadoInspecao, Inspecao
@@ -81,10 +82,21 @@ def sincronizar_item(dados: dict, usuario, dispositivo: str) -> Resultado:
     if arvore.geom is None or not ponto_no_escopo(usuario, arvore.geom):
         return Resultado(ident, "erro", mensagem="A árvore está fora do seu escopo territorial.")
 
+    tarefa = dados.get("tarefa")
+    if tarefa is not None:
+        if tarefa.arvore_id != arvore.pk:
+            return Resultado(ident, "erro", mensagem="A tarefa informada não é desta árvore.")
+        if not pode_atuar(usuario, tarefa):
+            return Resultado(
+                ident,
+                "erro",
+                mensagem="Só o responsável, a equipe ou a coordenação podem concluir a tarefa.",
+            )
+
     enviar = dados.get("enviar_para_revisao", False)
     campos = {
         "arvore": arvore,
-        "tarefa": dados.get("tarefa"),
+        "tarefa": tarefa,
         "realizada_em": dados["realizada_em"],
         "geom": dados.get("geom"),
         "precisao_m": dados.get("precisao_m"),

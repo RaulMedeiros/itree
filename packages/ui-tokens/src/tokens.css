@@ -3,6 +3,8 @@
   --color-fundo: #f6f7f5;
   --color-superficie: #ffffff;
   --color-borda: #d9ddd6;
+  /* Limite de controles de formulário: ≥ 3:1 sobre superfície e fundo (WCAG 1.4.11). */
+  --color-borda-campo: #7d8781;
   --color-texto: #1b2420;
   --color-texto-suave: #56615b;
   --color-marca: #1f6b45;

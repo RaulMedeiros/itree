@@ -112,7 +112,7 @@ function Cabecalho() {
             </div>
             <Menu.Separator className="my-1 h-px bg-borda" />
             <Menu.Item
-              className="flex cursor-pointer items-center gap-2 rounded-sm px-2.5 py-2 text-sm outline-none data-highlighted:bg-fundo"
+              className="flex cursor-pointer items-center gap-2 rounded-sm px-2.5 py-2 text-sm outline-none data-highlighted:bg-marca-clara data-highlighted:outline-2 data-highlighted:outline-marca"
               onSelect={() => void auth.signoutRedirect()}
             >
               <LogOut className="size-4" aria-hidden /> Sair

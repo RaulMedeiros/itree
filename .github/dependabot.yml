@@ -1,0 +1,26 @@
+# Atualizações de dependências e alertas de segurança (OpenSSF Scorecard).
+version: 2
+updates:
+  - package-ecosystem: npm # pnpm (raiz do monorepo)
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      menores:
+        update-types: [minor, patch]
+  - package-ecosystem: uv
+    directory: /backend
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      menores:
+        update-types: [minor, patch]
+  - package-ecosystem: docker
+    directory: /backend
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /apps/web
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

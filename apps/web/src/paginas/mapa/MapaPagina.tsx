@@ -36,6 +36,7 @@ import { urlApi } from "../../mapa/url";
 import { COR_ARVORE, CORES_PRIORIDADE, corPorPrioridade, type TipoBase } from "../../mapa/estilo";
 import { Botao } from "../../ui/botao";
 import { Selecao } from "../../ui/campos";
+import { useTituloDocumento } from "../../util/titulo";
 import { Carregando } from "../../ui/estados";
 import { formatarData, formatarDataHora } from "../../util/formatos";
 
@@ -76,7 +77,22 @@ export function MapaPagina() {
   const camadas = useMapaCamadas();
   const mapa = useRef<MapaMapLibre | null>(null);
   const [pronto, setPronto] = useState(false);
+  useTituloDocumento("Mapa");
   const [painel, setPainel] = useState(true);
+  // Ao ocultar/mostrar o painel, o botão que o usuário acionou desaparece:
+  // o foco vai para o botão equivalente, em vez de cair no início da página.
+  const botaoMostrar = useRef<HTMLButtonElement>(null);
+  const botaoOcultar = useRef<HTMLButtonElement>(null);
+  const alternouPainel = useRef(false);
+  useEffect(() => {
+    if (!alternouPainel.current) return;
+    alternouPainel.current = false;
+    (painel ? botaoOcultar : botaoMostrar).current?.focus();
+  }, [painel]);
+  const alternarPainel = (aberto: boolean) => {
+    alternouPainel.current = true;
+    setPainel(aberto);
+  };
   const [dica, setDica] = useState<{ x: number; y: number; texto: string } | null>(null);
 
   const base: TipoBase = busca.base ?? "ruas";
@@ -393,13 +409,40 @@ export function MapaPagina() {
           <div className="flex items-center justify-between">
             <h1 className="font-semibold">Mapa</h1>
             <button
+              ref={botaoOcultar}
               className="rounded p-1 hover:bg-fundo"
               aria-label="Ocultar painel"
-              onClick={() => setPainel(false)}
+              onClick={() => alternarPainel(false)}
             >
-              <X className="size-4" />
+              <X className="size-4" aria-hidden />
             </button>
           </div>
+
+          <nav aria-label="Mesmos dados em lista" className="flex flex-col gap-1 text-sm">
+            <p className="text-xs text-texto-suave">
+              Os pontos do mapa também podem ser consultados em lista, com os filtros abaixo:
+            </p>
+            <Link
+              to="/inventario/arvores"
+              search={{
+                especie_estado: busca.especie_estado,
+                localizacao_origem: busca.localizacao_origem,
+                sem_inspecao_dias: busca.sem_inspecao_dias,
+              }}
+              className="text-marca underline"
+            >
+              Ver árvores em lista
+            </Link>
+            {podeOcorrencias && (
+              <Link
+                to="/ocorrencias"
+                search={{ estado: busca.estado ?? "abertas" }}
+                className="text-marca underline"
+              >
+                Ver ocorrências em lista
+              </Link>
+            )}
+          </nav>
 
           <fieldset>
             <legend className="mb-1.5 font-medium">Mapa base</legend>
@@ -409,6 +452,7 @@ export function MapaPagina() {
                   key={b}
                   tamanho="pequeno"
                   variante={base === b ? "primario" : "secundario"}
+                  aria-pressed={base === b}
                   disabled={b === "satelite" && !satelite}
                   onClick={() => atualizarBusca({ base: b })}
                 >
@@ -668,9 +712,10 @@ export function MapaPagina() {
       >
         {!painel && (
           <Botao
+            ref={botaoMostrar}
             variante="secundario"
             className="absolute top-3 left-3 shadow"
-            onClick={() => setPainel(true)}
+            onClick={() => alternarPainel(true)}
           >
             <Layers /> Camadas
           </Botao>

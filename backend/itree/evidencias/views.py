@@ -190,7 +190,7 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         return Response(
             {
                 "evidencia": EvidenciaSerializer(evidencia).data,
-                "url_envio": armazenamento.url_upload(chave, v["tipo_conteudo"]),
+                "url_envio": armazenamento.url_upload(chave, v["tipo_conteudo"], v["tamanho"]),
                 "metodo": "PUT",
                 "cabecalhos": {"Content-Type": v["tipo_conteudo"]},
             },
@@ -227,7 +227,11 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         if meta is None:
             raise ValidationError("O arquivo ainda não chegou ao armazenamento.")
         if int(meta.get("ContentLength", -1)) != evidencia.tamanho:
-            raise ValidationError("O arquivo recebido tem tamanho diferente do declarado.")
+            # Não deixa no bucket um objeto que nenhum registro aponta.
+            armazenamento.apagar(evidencia.chave)
+            raise ValidationError(
+                "O arquivo recebido tem tamanho diferente do declarado; envie-o novamente."
+            )
         evidencia.estado = EstadoEvidencia.DISPONIVEL
         evidencia.save(update_fields=["estado", "atualizado_em"])
         return Response(EvidenciaSerializer(evidencia).data)

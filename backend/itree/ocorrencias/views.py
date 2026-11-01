@@ -160,13 +160,16 @@ class OcorrenciaViewSet(
             qs = filtrar_ocorrencias(qs, self.request.query_params)
         return qs
 
-    def perform_create(self, serializer):
-        geom = serializer.validated_data["geom"]
+    def _verificar_arvore(self, serializer):
         arvore = serializer.validated_data.get("arvore")
         if arvore is not None and (
             arvore.geom is None or not ponto_no_escopo(self.request.user, arvore.geom)
         ):
             raise ValidationError({"arvore_id": ["A árvore está fora do seu escopo territorial."]})
+
+    def perform_create(self, serializer):
+        geom = serializer.validated_data["geom"]
+        self._verificar_arvore(serializer)
         if not ponto_no_escopo(self.request.user, geom):
             raise ValidationError(
                 {"localizacao": ["A localização está fora do seu escopo territorial."]}
@@ -176,6 +179,7 @@ class OcorrenciaViewSet(
     def perform_update(self, serializer):
         if serializer.instance.estado in ESTADOS_FINAIS:
             raise ValidationError("Ocorrências concluídas ou canceladas não podem ser editadas.")
+        self._verificar_arvore(serializer)
         if "geom" in serializer.validated_data and not ponto_no_escopo(
             self.request.user, serializer.validated_data["geom"]
         ):
