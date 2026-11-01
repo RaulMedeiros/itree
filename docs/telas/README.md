@@ -5,9 +5,9 @@ sintéticos**: bairros, árvores, pessoas e alertas são inventados, e as fotos
 são ilustrações geradas por código. Nada aqui representa a realidade de
 Fortaleza.
 
-- **Mapa base em branco.** O ambiente de captura não tem acesso aos tiles do
-  OpenStreetMap, então aparecem só as camadas da própria plataforma: bairros,
-  árvores, ocorrências, tarefas e alertas.
+- **Mapa base.** O mapa usa os tiles padrão do OpenStreetMap, sobre ruas
+  reais de Fortaleza. Os bairros, árvores e ocorrências desenhados por cima
+  são fictícios.
 - **Autor "Sistema" na auditoria.** Os dados foram semeados por script, fora de
   uma requisição; em uso real, o autor é a pessoa logada.
 - **Como refazer.** Para atualizar as imagens depois de mudar a interface, use

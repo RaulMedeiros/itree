@@ -13,8 +13,6 @@ async function entrar(nav, email, senha) {
     locale: "pt-BR",
     timezoneId: "America/Fortaleza",
   });
-  // Tiles do mapa base não são acessíveis neste ambiente: responde vazio em vez de esperar o timeout.
-  await ctx.route(/tile\.openstreetmap\.org/, (r) => r.fulfill({ status: 204, body: "" }));
   const p = await ctx.newPage();
   await p.goto(BASE + "/visao-geral");
   await p.waitForURL(/localhost:8080/);
