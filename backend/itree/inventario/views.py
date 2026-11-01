@@ -160,6 +160,7 @@ class ArvoreViewSet(
     """Inventário arbóreo (W-03). Restrito ao escopo territorial do usuário."""
 
     http_method_names = ["get", "post", "patch"]
+    lookup_value_converter = "uuid"
 
     def get_permissions(self):
         if self.action in ("list", "retrieve", "historico", "contadores", "duplicidades"):
@@ -172,6 +173,8 @@ class ArvoreViewSet(
         return ArvoreResumoSerializer if self.action == "list" else ArvoreSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):  # geração do contrato OpenAPI
+            return Arvore.objects.none()
         qs = Arvore.objects.select_related("especie", "bairro", "lote", "criado_por").annotate(
             ocorrencias_abertas=Count(
                 "ocorrencias", filter=~Q(ocorrencias__estado__in=ESTADOS_FINAIS), distinct=True

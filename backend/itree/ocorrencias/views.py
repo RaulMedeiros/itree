@@ -116,6 +116,7 @@ class OcorrenciaViewSet(
 
     serializer_class = OcorrenciaSerializer
     http_method_names = ["get", "post", "patch"]
+    lookup_value_converter = "uuid"
 
     def get_permissions(self):
         mapa = {
@@ -128,6 +129,8 @@ class OcorrenciaViewSet(
         return [requer(mapa.get(self.action, P.OCORRENCIAS_EDITAR))()]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):  # geração do contrato OpenAPI
+            return Ocorrencia.objects.none()
         qs = Ocorrencia.objects.select_related(
             "tipo",
             "arvore",
