@@ -27,7 +27,6 @@ export interface EspecieCartaoRequest {
   wikipedia_url?: string;
   /** @maxLength 300 */
   wikipedia_descricao?: string;
-  imagem_url?: string;
   /** @maxLength 300 */
   imagem_autor?: string;
   /** @maxLength 100 */

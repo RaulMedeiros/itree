@@ -66,9 +66,10 @@ sugestões de IA, que só alteram o cadastro com decisão de um revisor:
 ![Ficha — sugestões de IA](10-arvore-sugestao-ia.png)
 
 Catálogo de espécies: as espécies do escopo, mais frequentes primeiro, e o
-detalhe com referências externas (Wikipedia, Wikimedia Commons, GBIF). As
-referências aparecem como "ainda não consultadas" porque o ambiente de captura
-não tem acesso ao Wikidata. A ficha da árvore mostra o cartão da espécie.
+detalhe com referências externas reais (Wikipedia, Wikimedia Commons, GBIF),
+com autoria e licença de cada imagem. A ficha da árvore mostra o cartão da
+espécie. As espécies são reais; as contagens de árvores são da semeadura
+sintética.
 
 ![Catálogo de espécies](31-especies.png)
 ![Detalhe da espécie](32-especie-detalhe.png)

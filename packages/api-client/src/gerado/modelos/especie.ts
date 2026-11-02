@@ -38,6 +38,7 @@ export interface Especie {
   /** @nullable */
   readonly gbif_id: number | null;
   readonly gbif_url: string;
+  /** Cópia local (URL temporária) quando houver; senão, a miniatura da Wikimedia. */
   readonly imagem_url: string;
   readonly imagem_pagina_url: string;
   readonly imagem_autor: string;

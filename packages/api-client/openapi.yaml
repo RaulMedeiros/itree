@@ -3485,8 +3485,9 @@ components:
           readOnly: true
         imagem_url:
           type: string
-          format: uri
           readOnly: true
+          description: Cópia local (URL temporária) quando houver; senão, a miniatura
+            da Wikimedia.
         imagem_pagina_url:
           type: string
           format: uri
@@ -3555,12 +3556,10 @@ components:
           type: string
           maxLength: 300
         imagem_url:
-          oneOf:
-          - type: string
-            format: uri
-            maxLength: 1000
-          - type: string
-            maxLength: 0
+          type: string
+          readOnly: true
+          description: Cópia local (URL temporária) quando houver; senão, a miniatura
+            da Wikimedia.
         imagem_autor:
           type: string
           maxLength: 300
@@ -3576,6 +3575,7 @@ components:
             maxLength: 0
       required:
       - id
+      - imagem_url
       - nome_cientifico
     EspecieCartaoRequest:
       type: object
@@ -3607,13 +3607,6 @@ components:
         wikipedia_descricao:
           type: string
           maxLength: 300
-        imagem_url:
-          oneOf:
-          - type: string
-            format: uri
-            maxLength: 1000
-          - type: string
-            maxLength: 0
         imagem_autor:
           type: string
           maxLength: 300

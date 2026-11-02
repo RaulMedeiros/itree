@@ -11,13 +11,18 @@ usada. Os textos e imagens são exibidos com fonte, licença e data de consulta.
 """
 
 import html
+import io
 import re
+import time
 from dataclasses import dataclass, field
 from urllib.parse import quote
 
 import requests
 from django.conf import settings
 from django.utils import timezone
+from PIL import Image, UnidentifiedImageError
+
+from itree.core import armazenamento
 
 from .models import Especie, SituacaoReferencias
 
@@ -47,16 +52,51 @@ def _sessao() -> requests.Session:
     return s
 
 
+TAMANHO_MAXIMO_ORIGINAL = 30 * 1024 * 1024
+LADO_MAXIMO_COPIA = 960
+TENTATIVAS = 3
+ESPERA_MAXIMA = 30.0
+
+
+def _esperar(segundos: float) -> None:
+    time.sleep(segundos)
+
+
 def _json(sessao: requests.Session, url: str, **params) -> dict:
-    try:
-        r = sessao.get(url, params=params or None, timeout=settings.REFERENCIAS_TIMEOUT)
-    except requests.RequestException as exc:
-        raise ErroConsulta(f"Falha de rede ao consultar {url.split('/')[2]}.") from exc
-    if r.status_code == 404:
-        return {}
-    if r.status_code >= 400:
-        raise ErroConsulta(f"{url.split('/')[2]} respondeu {r.status_code}.")
-    return r.json()
+    """GET com JSON. Respeita o limite de taxa da Wikimedia (429 + Retry-After)."""
+    host = url.split("/")[2]
+    for tentativa in range(1, TENTATIVAS + 1):
+        try:
+            r = sessao.get(url, params=params or None, timeout=settings.REFERENCIAS_TIMEOUT)
+        except requests.RequestException as exc:
+            raise ErroConsulta(f"Falha de rede ao consultar {host}.") from exc
+        if r.status_code == 429 and tentativa < TENTATIVAS:
+            try:
+                espera = float(r.headers.get("Retry-After", 5))
+            except ValueError:
+                espera = 5.0
+            _esperar(min(max(espera, 1.0), ESPERA_MAXIMA))
+            continue
+        if r.status_code == 404:
+            return {}
+        if r.status_code == 429:
+            raise ErroConsulta(f"{host} limitou as consultas (429); tente mais tarde.")
+        if r.status_code >= 400:
+            raise ErroConsulta(f"{host} respondeu {r.status_code}.")
+        try:
+            dados = r.json()
+        except ValueError as exc:
+            raise ErroConsulta(f"{host} devolveu uma resposta que não é JSON.") from exc
+        # A API do MediaWiki sinaliza erros (inclusive limite de taxa) com
+        # status 200 e {"error": ...}: isso não pode virar "nada encontrado".
+        if isinstance(dados, dict) and "error" in dados:
+            codigo = str(dados["error"].get("code", "erro"))
+            if tentativa < TENTATIVAS:
+                _esperar(5.0)
+                continue
+            raise ErroConsulta(f"{host} recusou a consulta ({codigo}).")
+        return dados
+    return {}
 
 
 def _normalizar(nome: str) -> str:
@@ -83,7 +123,8 @@ def localizar_item(sessao: requests.Session, nome_cientifico: str) -> dict | Non
         WIKIDATA_API,
         action="query",
         list="search",
-        srsearch=f'haswbstatement:P225="{nome_cientifico}"',
+        # Sintaxe do CirrusSearch: propriedade e valor juntos entre aspas.
+        srsearch=f'haswbstatement:"P225={nome_cientifico}"',
         srlimit=5,
         format="json",
     )
@@ -145,6 +186,9 @@ def _imagem(sessao: requests.Session, entidade: dict) -> dict:
             # Sem licença declarada a imagem não é usada.
             return {}
         return {
+            # Fontes da cópia local, em ordem: a miniatura em tamanho padrão
+            # (recomendação da Wikimedia) e, se falhar, o original. Não é gravado.
+            "_imagem_fontes": [u for u in (info.get("thumburl"), info.get("url")) if u],
             "imagem_url": (info.get("thumburl") or info.get("url") or "")[:1000],
             "imagem_pagina_url": (info.get("descriptionurl") or "")[:1000],
             "imagem_autor": _texto_simples(meta.get("Artist", {}).get("value", ""))[:300],
@@ -191,6 +235,53 @@ CAMPOS_REFERENCIA = (
 )
 
 
+def _baixar(sessao: requests.Session, url: str) -> bytes | None:
+    for tentativa in range(1, TENTATIVAS + 1):
+        try:
+            r = sessao.get(url, timeout=settings.REFERENCIAS_TIMEOUT * 4)
+        except requests.RequestException:
+            return None
+        if r.status_code == 429 and tentativa < TENTATIVAS:
+            try:
+                espera = float(r.headers.get("Retry-After", 5))
+            except ValueError:
+                espera = 5.0
+            if espera > ESPERA_MAXIMA:
+                return None  # limite longo: tenta a próxima fonte
+            _esperar(max(espera, 1.0))
+            continue
+        if r.status_code != 200 or len(r.content) > TAMANHO_MAXIMO_ORIGINAL:
+            return None
+        return r.content
+    return None
+
+
+def _copiar_imagem(sessao: requests.Session, especie: Especie, fontes: list[str]) -> str:
+    """Baixa a imagem (miniatura padrão, senão o original), reduz para no
+    máximo 960 px e guarda um JPEG no armazenamento da plataforma. Devolve a
+    chave, ou "" se não for possível (o painel então exibe a miniatura da
+    Wikimedia)."""
+    if not fontes or not armazenamento.s3_configurado():
+        return ""
+    for url in fontes:
+        conteudo = _baixar(sessao, url)
+        if conteudo is None:
+            continue
+        try:
+            with Image.open(io.BytesIO(conteudo)) as imagem:
+                imagem.thumbnail((LADO_MAXIMO_COPIA, LADO_MAXIMO_COPIA))
+                saida = io.BytesIO()
+                imagem.convert("RGB").save(saida, "JPEG", quality=85, optimize=True)
+        except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+            continue  # PDF, SVG ou arquivo inválido
+        chave = f"especies/{especie.pk}.jpg"
+        armazenamento.cliente_interno().put_object(
+            Bucket=settings.S3_BUCKET, Key=chave, Body=saida.getvalue(), ContentType="image/jpeg"
+        )
+        return chave
+    return ""
+
+
 def atualizar(especie: Especie) -> Especie:
     """Consulta e grava as referências. Em erro de rede, mantém as anteriores."""
     try:
@@ -217,11 +308,19 @@ def atualizar(especie: Especie) -> Especie:
         if resultado.encontrada
         else SituacaoReferencias.NAO_ENCONTRADAS
     )
+    especie.imagem_chave = _copiar_imagem(
+        _sessao(), especie, resultado.campos.get("_imagem_fontes", [])
+    )
+    if especie.imagem_url and not especie.imagem_chave and armazenamento.s3_configurado():
+        resultado.mensagem = " ".join(
+            filter(None, [resultado.mensagem, "Imagem não copiada; exibida da Wikimedia."])
+        )
     especie.referencias_mensagem = resultado.mensagem[:300]
     especie.referencias_consultadas_em = timezone.now()
     especie.save(
         update_fields=[
             *CAMPOS_REFERENCIA,
+            "imagem_chave",
             "referencias_situacao",
             "referencias_mensagem",
             "referencias_consultadas_em",
