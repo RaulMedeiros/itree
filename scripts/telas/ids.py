@@ -14,4 +14,4 @@ arv = insp.arvore
 foto = ev.arvore if ev else arv
 print(json.dumps({"arvore_foto": str(ev.arvore_id or "") if ev else "", "foto_lon": foto.geom.x, "foto_lat": foto.geom.y, "arvore": str(arv.id), "lon": arv.geom.x, "lat": arv.geom.y,
  "arvore_ia": str(InferenciaIA.objects.first().arvore_id), "inspecao": str(insp.id), "ocorrencia": str(oco.id),
- "alerta": str(Alerta.objects.order_by("numero").first().id), "especie": str(Especie.objects.get(nome_cientifico="Licania tomentosa").id), "usuario": str(Usuario.objects.get(email="clara.campos@itree.local").id)}))
+ "alerta": str(Alerta.objects.order_by("numero").first().id), "especie": str(Especie.objects.get(nome_cientifico="Anacardium occidentale").id), "usuario": str(Usuario.objects.get(email="clara.campos@itree.local").id)}))
