@@ -7,6 +7,7 @@ from itree.inventario import referencias, views
 from itree.inventario.models import Arvore, Especie
 
 from .conftest import PONTO_A, PONTO_B, com_escopo, criar_usuario
+from .test_evidencias_mapa import s3  # noqa: F401 - fixture
 
 pytestmark = pytest.mark.django_db
 
@@ -32,7 +33,8 @@ IMAGEM = {
             "1": {
                 "imageinfo": [
                     {
-                        "thumburl": "https://upload.wikimedia.org/thumb/oiti.jpg",
+                        "url": "https://upload.wikimedia.org/original/oiti.jpg",
+                        "thumburl": "https://thumb.wikimedia.org/thumb/oiti.jpg",
                         "descriptionurl": "https://commons.wikimedia.org/wiki/File:Oiti.jpg",
                         "extmetadata": {
                             "Artist": {"value": '<a href="//x">Fulana de Tal</a>'},
@@ -50,8 +52,9 @@ IMAGEM = {
 
 
 class Resposta:
-    def __init__(self, dados, status=200):
-        self.dados, self.status_code = dados, status
+    def __init__(self, dados, status=200, headers=None, conteudo=b""):
+        self.dados, self.status_code, self.headers = dados, status, headers or {}
+        self.content = conteudo
 
     def json(self):
         return self.dados
@@ -68,6 +71,7 @@ class Sessao:
 
     def get(self, url, params=None, timeout=None):
         self.urls.append(url)
+        self.params = getattr(self, "params", []) + [params or {}]
         if self.falhar:
             raise requests.ConnectionError("sem rede")
         if "w/api.php" in url and "wikidata" in url:
@@ -80,7 +84,29 @@ class Sessao:
             return Resposta(resumo or {}, 200 if resumo else 404)
         if "commons" in url:
             return Resposta(self.imagem)
+        if "thumb.wikimedia.org" in url:
+            if self.miniatura_limitada:
+                return Resposta({}, 429, {"Retry-After": "600"})
+            return Resposta({}, 200, {}, self.original)
+        if "upload.wikimedia.org" in url:
+            return Resposta({}, 200, {}, self.original)
         raise AssertionError(url)
+
+    original = None  # definido abaixo (imagem 2000x1500)
+    miniatura_limitada = False
+
+
+def _png(largura, altura) -> bytes:
+    import io
+
+    from PIL import Image
+
+    saida = io.BytesIO()
+    Image.new("RGB", (largura, altura), (30, 120, 60)).save(saida, "PNG")
+    return saida.getvalue()
+
+
+Sessao.original = _png(2000, 1500)
 
 
 @pytest.fixture
@@ -201,3 +227,100 @@ def test_cadastro_enfileira_consulta(
         )
     assert r.status_code == 201
     assert [str(i) for i in enfileiradas] == [r.json()["id"]]
+
+
+def test_respeita_limite_de_taxa_da_wikimedia(oiti, sessao, monkeypatch):
+    esperas = []
+    monkeypatch.setattr(referencias, "_esperar", esperas.append)
+    original = sessao.get
+    limitadas = {"n": 0}
+
+    def com_limite(url, params=None, timeout=None):
+        if "wikipedia.org" in url and limitadas["n"] < 2:
+            limitadas["n"] += 1
+            return Resposta({}, 429, {"Retry-After": "17"})
+        return original(url, params, timeout)
+
+    sessao.get = com_limite
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert esperas == [17.0, 17.0]
+    assert oiti.referencias_situacao == "encontradas" and oiti.wikipedia_url
+
+
+def test_limite_persistente_vira_erro_explicito(oiti, monkeypatch):
+    monkeypatch.setattr(referencias, "_esperar", lambda s: None)
+
+    class SempreLimitada(Sessao):
+        def get(self, url, params=None, timeout=None):
+            return Resposta({}, 429, {"Retry-After": "999"})
+
+    monkeypatch.setattr(referencias, "_sessao", lambda: SempreLimitada())
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert oiti.referencias_situacao == "erro"
+    assert "429" in oiti.referencias_mensagem
+
+
+def test_busca_no_wikidata_usa_sintaxe_exata_do_haswbstatement(oiti, sessao):
+    referencias.atualizar(oiti)
+    busca = next(p for p in sessao.params if p.get("list") == "search")
+    assert busca["srsearch"] == 'haswbstatement:"P225=Licania tomentosa"'
+
+
+def test_erro_da_api_com_status_200_nao_vira_nao_encontrada(oiti, monkeypatch):
+    """O MediaWiki responde 200 com {"error": ...}; isso é erro, não ausência."""
+    monkeypatch.setattr(referencias, "_esperar", lambda s: None)
+
+    class ApiComErro(Sessao):
+        def get(self, url, params=None, timeout=None):
+            return Resposta({"error": {"code": "ratelimited", "info": "too many"}})
+
+    monkeypatch.setattr(referencias, "_sessao", lambda: ApiComErro())
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert oiti.referencias_situacao == "erro"
+    assert "ratelimited" in oiti.referencias_mensagem
+
+
+def test_imagem_copiada_reduzida_para_o_armazenamento_e_servida_localmente(
+    cliente,
+    revisor,
+    oiti,
+    sessao,
+    s3,  # noqa: F811
+):
+    import io
+
+    from PIL import Image
+
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert oiti.imagem_chave == f"especies/{oiti.pk}.jpg"
+    copia = s3.get_object(Bucket="itree-teste", Key=oiti.imagem_chave)
+    assert copia["ContentType"] == "image/jpeg"
+    with Image.open(io.BytesIO(copia["Body"].read())) as imagem:
+        assert imagem.size == (960, 720)  # reduzida, proporção mantida
+    url = cliente.como(revisor).get(f"/api/v1/especies/{oiti.id}").json()["imagem_url"]
+    assert oiti.imagem_chave in url and "wikimedia.org" not in url
+    assert oiti.imagem_autor == "Fulana de Tal"  # crédito continua vindo da fonte
+
+
+def test_arquivo_que_nao_e_imagem_nao_e_copiado(oiti, sessao, s3):  # noqa: F811
+    sessao.original = b"%PDF-1.4 exsicata"
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert oiti.imagem_chave == ""
+    assert oiti.imagem_url.startswith("https://thumb.wikimedia.org")
+    assert "Imagem não copiada" in oiti.referencias_mensagem
+
+
+def test_miniatura_com_limite_longo_usa_o_original(oiti, sessao, s3, monkeypatch):  # noqa: F811
+    esperas = []
+    monkeypatch.setattr(referencias, "_esperar", esperas.append)
+    sessao.miniatura_limitada = True
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert oiti.imagem_chave == f"especies/{oiti.pk}.jpg"
+    assert esperas == []  # não espera 10 minutos: passa para a próxima fonte
+    assert any("upload.wikimedia.org" in u for u in sessao.urls)

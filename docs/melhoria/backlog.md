@@ -10,7 +10,8 @@ quando houver espaço ou decisão.
 
 | # | Prio | Item | Por quê | Pronto quando |
 | --- | --- | --- | --- | --- |
-| M-01b | P1 | Referências reais no catálogo | O catálogo (M-01) está pronto, mas este ambiente não acessa o Wikidata, a Wikipedia nem o Commons. | Domínios liberados; `manage atualizar_referencias_especies` executado; capturas 31 e 32 com imagens e resumos reais. |
+| M-01b | P1 | Imagens das demais espécies | As referências reais já foram gravadas. Faltam as cópias locais de 6 imagens: o `upload.wikimedia.org` limita downloads de originais (Retry-After de 600 s) para o IP compartilhado deste ambiente, e as miniaturas padrão vêm de `thumb.wikimedia.org`, ainda não liberado. | `thumb.wikimedia.org` liberado; `manage atualizar_referencias_especies --todas`; capturas 31 e 32 com todas as imagens. |
+| M-10 | P2 | Artigo da Wikipedia pelo nome científico quando o item do táxon não tem link | Ex.: o item de *Licania tomentosa* (Q9022290) não tem link para a Wikipedia, embora exista o artigo "Oiti". | Buscar o artigo pelo nome científico e aceitar só se o item do artigo tiver P225 idêntico. Teste com o caso real. |
 | M-02 | P1 | Visão geral no padrão das referências | A tela inicial é plana e sem tendência. | Barra lateral verde-escura, cartões com ícone e variação, gráfico mensal de inspeções e ocorrências, "Alertas e pendências" acionável e mapa resumido do território. Capturas antes e depois. |
 | M-03 | P2 | Mapa: seleção por área (RF-MAPA-022) | Criar tarefas ou exportar a partir de uma região. | Desenhar retângulo ou polígono, listar os itens e enviar para "criar tarefas" ou exportação. |
 | M-04 | P2 | Mapa: círculo de incerteza (RN-MAPA-001) | Não sugerir precisão maior que a real. | Ao aproximar, pontos com precisão pior que o limiar mostram o raio. Depende do limiar (DP-06). |

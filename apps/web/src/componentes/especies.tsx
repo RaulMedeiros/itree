@@ -1,6 +1,7 @@
 import type { EspecieCartao } from "@itree/api-client";
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, Leaf } from "lucide-react";
+import { useState } from "react";
 
 import { cn } from "../util/cn";
 
@@ -39,7 +40,9 @@ export function ImagemEspecie({
   className?: string;
   comCredito?: boolean;
 }) {
-  if (!especie.imagem_url)
+  // Imagem externa pode falhar (limite de taxa, rede): cai no marcador neutro.
+  const [falhou, setFalhou] = useState(false);
+  if (!especie.imagem_url || falhou)
     return (
       <div
         className={cn("flex items-center justify-center bg-marca-clara text-marca/50", className)}
@@ -55,6 +58,7 @@ export function ImagemEspecie({
         alt={`Exemplar de ${especie.nome_cientifico}`}
         loading="lazy"
         className="size-full object-cover"
+        onError={() => setFalhou(true)}
       />
       {comCredito && (
         <figcaption className="absolute inset-x-0 bottom-0 truncate bg-black/55 px-2 py-0.5 text-[10px] text-white">

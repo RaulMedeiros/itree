@@ -22,7 +22,8 @@ export interface EspecieCartao {
   wikipedia_url?: string;
   /** @maxLength 300 */
   wikipedia_descricao?: string;
-  imagem_url?: string;
+  /** Cópia local (URL temporária) quando houver; senão, a miniatura da Wikimedia. */
+  readonly imagem_url: string;
   /** @maxLength 300 */
   imagem_autor?: string;
   /** @maxLength 100 */

@@ -15,6 +15,7 @@ dependencies = [
     "fpdf2>=2.9.0",
     "gunicorn>=26.2.0",
     "openpyxl>=3.1.5",
+    "pillow>=12",
     "psycopg[binary]>=3.3.6",
     "pyjwt[crypto]>=2.15.1",
     "requests>=2.34.2",

@@ -91,7 +91,10 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
   Wikidata tem nome do táxon (P225) idêntico ao nome científico do catálogo.
   Sem correspondência exata, a espécie fica como "não encontrada". Nada é
   completado por aproximação.
-- **RN-INV-021** — Imagem sem licença declarada não é usada. Referências
+- **RN-INV-021** — Imagem sem licença declarada não é usada. A imagem
+  exibida é uma cópia reduzida (até 960 px) guardada no armazenamento da
+  plataforma, com autor e licença da origem; sem cópia, exibe-se a miniatura
+  da Wikimedia. Referências
   externas não alteram família, nomes comuns nem origem, que são mantidos pela
   administração (DP-02).
 

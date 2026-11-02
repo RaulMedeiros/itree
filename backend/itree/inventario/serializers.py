@@ -1,6 +1,7 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from itree.core import armazenamento
 from itree.core.geo import ponto
 from itree.territorio.serializers import TerritorioResumoSerializer
 
@@ -39,7 +40,18 @@ class CampoLocalizacao(serializers.Field):
 extend_schema_field(LocalizacaoSerializer(allow_null=True))(CampoLocalizacao)
 
 
-class EspecieSerializer(serializers.ModelSerializer):
+class ImagemEspecieMixin(serializers.Serializer):
+    imagem_url = serializers.SerializerMethodField(
+        help_text="Cópia local (URL temporária) quando houver; senão, a miniatura da Wikimedia."
+    )
+
+    def get_imagem_url(self, obj) -> str:
+        if obj.imagem_chave and armazenamento.s3_configurado():
+            return armazenamento.url_download(obj.imagem_chave, expira=3600)
+        return obj.imagem_url
+
+
+class EspecieSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
     sucessora = serializers.PrimaryKeyRelatedField(
         queryset=Especie.objects.all(), allow_null=True, required=False
     )
@@ -90,7 +102,6 @@ class EspecieSerializer(serializers.ModelSerializer):
             "wikipedia_descricao",
             "wikipedia_resumo",
             "gbif_id",
-            "imagem_url",
             "imagem_pagina_url",
             "imagem_autor",
             "imagem_licenca",
@@ -98,7 +109,7 @@ class EspecieSerializer(serializers.ModelSerializer):
         ]
 
 
-class EspecieCartaoSerializer(serializers.ModelSerializer):
+class EspecieCartaoSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
     """Resumo da espécie com imagem e links, para a ficha da árvore."""
 
     class Meta:
