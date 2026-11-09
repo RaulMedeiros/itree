@@ -25,28 +25,29 @@ export function Shell() {
         </div>
       )}
       <div className="flex flex-1">
-        <aside className="flex w-60 shrink-0 flex-col border-r border-borda bg-superficie">
-          <Link to="/" className="flex items-center gap-2.5 border-b border-borda px-4 py-3.5">
-            <img src="/icone.svg" alt="" className="size-7" />
+        <aside className="flex w-60 shrink-0 flex-col bg-barra text-barra-texto">
+          <Link to="/" className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
+            <img src="/icone.svg" alt="" className="size-8 rounded-md bg-white p-0.5" />
             <span className="text-sm leading-tight font-semibold">
               Engine de Inteligência
               <br />
               Arbórea
             </span>
           </Link>
-          <nav aria-label="Navegação principal" className="flex flex-col gap-0.5 p-2">
+          <nav aria-label="Navegação principal" className="flex flex-col gap-0.5 p-3">
             {modulos.map((m) => (
               <Link
                 key={m.id}
                 to={m.caminho}
-                className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm text-texto hover:bg-fundo"
+                className="relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-barra-suave hover:bg-white/10 hover:text-barra-texto focus-visible:outline-white"
                 activeProps={{
-                  className: "bg-marca-clara font-medium text-marca-escura hover:bg-marca-clara",
+                  className:
+                    "bg-barra-ativo font-medium text-barra-texto! before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-[#8fd3a8]",
                 }}
               >
                 <m.icone className="size-4 shrink-0" aria-hidden />
                 <span className="flex-1">{m.rotulo}</span>
-                {!m.entregue && <span className="text-[11px] text-texto-suave">{m.fase}</span>}
+                {!m.entregue && <span className="text-[11px] text-barra-suave">{m.fase}</span>}
               </Link>
             ))}
           </nav>

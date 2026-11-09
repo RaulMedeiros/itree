@@ -4,6 +4,7 @@ e fonte. Ausência de dados é ``null``, nunca zero (RN-VG-001)."""
 from datetime import date, timedelta
 
 from django.db.models import Avg, Count, F, Q
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from pghistory.models import Events
@@ -13,6 +14,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from itree.alertas.models import AlertaAmbiental, StatusAlerta
 from itree.auditoria.views import ENTIDADES, EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo
 from itree.contas.models import Equipe
@@ -50,6 +52,8 @@ Painel = inline_serializer(
         "calculado_em": serializers.DateTimeField(),
         "indicadores": serializers.ListField(child=serializers.DictField()),
         "distribuicoes": serializers.DictField(),
+        "series_mensais": serializers.DictField(),
+        "pendencias": serializers.ListField(child=serializers.DictField()),
         "equipes": serializers.ListField(child=serializers.DictField()),
         "atividades": EventoAuditoriaSerializer(many=True),
     },
@@ -103,6 +107,14 @@ def painel(request: Request):
         ocorrencias = ocorrencias.filter(equipe=equipe)
 
     no_periodo = Q(realizada_em__date__gte=inicio, realizada_em__date__lte=fim)
+    # Período anterior de mesma duração, para a variação dos indicadores "no período".
+    duracao = fim - inicio
+    fim_anterior = inicio - timedelta(days=1)
+    inicio_anterior = fim_anterior - duracao
+    no_periodo_anterior = Q(
+        realizada_em__date__gte=inicio_anterior, realizada_em__date__lte=fim_anterior
+    )
+    enviadas = [EstadoInspecao.EM_REVISAO, EstadoInspecao.VALIDADA]
     validas = arvores.filter(situacao=SituacaoArvore.ATIVA, geom__isnull=False).exclude(
         localizacao_origem=""
     )
@@ -124,14 +136,39 @@ def painel(request: Request):
     tempo_medio = concluidas_periodo.aggregate(media=Avg(F("concluida_em") - F("criado_em")))[
         "media"
     ]
+    concluidas_anterior = ocorrencias.filter(
+        estado=EstadoOcorrencia.CONCLUIDA,
+        concluida_em__date__gte=inicio_anterior,
+        concluida_em__date__lte=fim_anterior,
+    )
+    tempo_anterior = concluidas_anterior.aggregate(media=Avg(F("concluida_em") - F("criado_em")))[
+        "media"
+    ]
+
+    def _dias(t):
+        return round(t.total_seconds() / 86400, 1) if t is not None else None
+
     tarefas_inspecao_abertas = tarefas.filter(tipo=TipoTarefa.INSPECAO_ARVORE).exclude(
         estado__in=ESTADOS_FINAIS_TAREFA
     )
 
     def ind(
-        id_, nome, definicao, formula, valor, *, base=None, unidade="", periodo=False, link=None
+        id_,
+        nome,
+        definicao,
+        formula,
+        valor,
+        *,
+        base=None,
+        unidade="",
+        periodo=False,
+        link=None,
+        anterior=None,
     ):
         return {
+            # Valor no período anterior de mesma duração (só para indicadores do
+            # período); null quando não se aplica ou não há base.
+            "anterior": anterior,
             "id": id_,
             "nome": nome,
             "definicao": definicao,
@@ -195,10 +232,9 @@ def painel(request: Request):
             "Inspeções realizadas",
             "Inspeções enviadas para revisão ou validadas, com data no período.",
             "contagem por data da inspeção",
-            inspecoes.filter(
-                no_periodo, estado__in=[EstadoInspecao.EM_REVISAO, EstadoInspecao.VALIDADA]
-            ).count(),
+            inspecoes.filter(no_periodo, estado__in=enviadas).count(),
             periodo=True,
+            anterior=inspecoes.filter(no_periodo_anterior, estado__in=enviadas).count(),
             link={"pagina": "/inspecoes", "filtros": {"desde": str(inicio), "ate": str(fim)}},
         ),
         ind(
@@ -246,11 +282,120 @@ def painel(request: Request):
             "Tempo médio de atendimento",
             "Média entre registro e conclusão das ocorrências concluídas no período.",
             "média(conclusão − registro), em dias",
-            round(tempo_medio.total_seconds() / 86400, 1) if tempo_medio is not None else None,
+            _dias(tempo_medio),
             base=concluidas_periodo.count(),
             unidade="dias",
             periodo=True,
+            anterior=_dias(tempo_anterior),
         ),
+        ind(
+            "ocorrencias_registradas",
+            "Ocorrências registradas",
+            "Ocorrências registradas no período, em qualquer estado.",
+            "contagem por data de registro",
+            ocorrencias.filter(criado_em__date__gte=inicio, criado_em__date__lte=fim).count(),
+            periodo=True,
+            anterior=ocorrencias.filter(
+                criado_em__date__gte=inicio_anterior, criado_em__date__lte=fim_anterior
+            ).count(),
+            link={"pagina": "/ocorrencias", "filtros": {}},
+        ),
+    ]
+
+    # Série mensal (12 meses até o fim do período): mesmas regras dos indicadores.
+    primeiro_mes = date(fim.year - (1 if fim.month < 12 else 0), fim.month % 12 + 1, 1)
+    meses = []
+    ano, mes = primeiro_mes.year, primeiro_mes.month
+    for _ in range(12):
+        meses.append(f"{ano:04d}-{mes:02d}")
+        ano, mes = (ano + 1, 1) if mes == 12 else (ano, mes + 1)
+
+    def _por_mes(qs, campo):
+        contagem = {
+            linha["mes"].strftime("%Y-%m"): linha["n"]
+            for linha in qs.filter(
+                **{f"{campo}__date__gte": primeiro_mes, f"{campo}__date__lte": fim}
+            )
+            .annotate(mes=TruncMonth(campo))
+            .values("mes")
+            .annotate(n=Count("id"))
+            if linha["mes"]
+        }
+        return [contagem.get(m, 0) for m in meses]
+
+    series_mensais = {
+        "meses": meses,
+        "definicao": "Contagens mensais nos 12 meses até o fim do período, no seu escopo e "
+        "com os filtros aplicados.",
+        "series": [
+            {
+                "id": "inspecoes",
+                "rotulo": "Inspeções realizadas",
+                "valores": _por_mes(inspecoes.filter(estado__in=enviadas), "realizada_em"),
+            },
+            {
+                "id": "ocorrencias",
+                "rotulo": "Ocorrências registradas",
+                "valores": _por_mes(ocorrencias, "criado_em"),
+            },
+        ],
+    }
+
+    # Pendências acionáveis: só o que tem quantidade > 0, cada uma com o link da lista.
+    abertas = ocorrencias.exclude(estado__in=ESTADOS_FINAIS)
+    candidatas = [
+        (
+            "risco_confirmado",
+            "Ocorrências com risco confirmado em aberto",
+            "critica",
+            abertas.filter(risco_confirmado=True).count(),
+            {"pagina": "/ocorrencias", "filtros": {}},
+        ),
+        (
+            "ocorrencias_atrasadas",
+            "Ocorrências com prazo vencido",
+            "alta",
+            abertas.filter(prazo__lt=hoje).count(),
+            {"pagina": "/ocorrencias", "filtros": {"atrasadas": "true"}},
+        ),
+        (
+            "tarefas_atrasadas",
+            "Tarefas com prazo vencido",
+            "alta",
+            tarefas.exclude(estado__in=ESTADOS_FINAIS_TAREFA).filter(prazo__lt=hoje).count(),
+            {"pagina": "/equipes-tarefas", "filtros": {"atrasadas": "true"}},
+        ),
+        (
+            "sem_prioridade",
+            "Ocorrências em aberto sem prioridade definida",
+            "media",
+            abertas.filter(prioridade="").count(),
+            {"pagina": "/ocorrencias", "filtros": {"prioridade": "sem"}},
+        ),
+        (
+            "inspecoes_em_revisao",
+            "Inspeções aguardando revisão",
+            "media",
+            inspecoes.filter(estado=EstadoInspecao.EM_REVISAO).count(),
+            {"pagina": "/inspecoes", "filtros": {"estado": "em_revisao"}},
+        ),
+    ]
+    if usuario.tem_permissao("alertas.ler"):
+        candidatas.append(
+            (
+                "alertas_detectados",
+                "Alertas ambientais aguardando triagem",
+                "media",
+                filtrar_por_escopo(
+                    AlertaAmbiental.objects.filter(status=StatusAlerta.DETECTADO), usuario
+                ).count(),
+                {"pagina": "/alertas", "filtros": {}},
+            )
+        )
+    pendencias = [
+        {"id": i, "titulo": t, "gravidade": g, "quantidade": q, "link": link}
+        for i, t, g, q, link in candidatas
+        if q
     ]
 
     rotulo_condicao = dict(CondicaoAparente.choices)
@@ -351,6 +496,8 @@ def painel(request: Request):
             "calculado_em": timezone.now(),
             "indicadores": indicadores,
             "distribuicoes": distribuicoes,
+            "series_mensais": series_mensais,
+            "pendencias": pendencias,
             "equipes": equipes,
             "atividades": EventoAuditoriaSerializer(atividades, many=True).data
             # A trilha não é filtrada por escopo: só quem consulta a auditoria a vê.

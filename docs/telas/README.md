@@ -17,10 +17,17 @@ As especificações de cada tela estão em [`docs/specs/web/`](../specs/web/).
 
 ## Visão geral (W-06)
 
-Indicadores com definição, fórmula e fonte acessíveis em cada cartão. Quando
-não há base de cálculo, o cartão mostra "Sem dados" em vez de zero.
+Cartões em destaque com ícone e variação contra o período anterior (só para
+indicadores do período), mapa resumido do território pela condição aparente,
+alertas e pendências que levam às listas filtradas e gráfico mensal com
+tabela equivalente. Quando não há base de cálculo, o cartão mostra "Sem
+dados" em vez de zero. Cada cartão explica como é calculado.
 
 ![Visão geral](01-visao-geral.png)
+
+Página completa:
+
+![Visão geral — página completa](01b-visao-geral-completa.png)
 
 ## Mapa (W-02)
 

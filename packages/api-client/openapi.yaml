@@ -5229,6 +5229,14 @@ components:
         distribuicoes:
           type: object
           additionalProperties: {}
+        series_mensais:
+          type: object
+          additionalProperties: {}
+        pendencias:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
         equipes:
           type: array
           items:
@@ -5245,7 +5253,9 @@ components:
       - equipes
       - filtros
       - indicadores
+      - pendencias
       - periodo
+      - series_mensais
     PapelEnum:
       enum:
       - gestor

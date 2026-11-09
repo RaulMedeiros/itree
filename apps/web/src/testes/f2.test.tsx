@@ -18,6 +18,8 @@ vi.mock("react-oidc-context", () => ({
 }));
 vi.mock("../autenticacao/gerenciador", () => ({ gerenciadorUsuario: {} }));
 vi.mock("maplibre-gl", () => ({ setWorkerUrl: () => undefined }));
+// O mapa resumido usa WebGL, ausente no jsdom; o mapa tem testes próprios no navegador.
+vi.mock("../paginas/visao-geral/MapaResumo", () => ({ MapaResumo: () => null }));
 
 const API = "http://api.teste";
 
@@ -125,6 +127,7 @@ const servidor = setupServer(
           formula: "f",
           valor: 0,
           base: null,
+          anterior: null,
           unidade: "",
           periodo: "instantâneo",
           fonte: "Registros da plataforma",
@@ -144,6 +147,23 @@ const servidor = setupServer(
         },
       ],
       distribuicoes: {},
+      series_mensais: {
+        meses: ["2025-12", "2026-01"],
+        definicao: "Contagens mensais",
+        series: [
+          { id: "inspecoes", rotulo: "Inspeções realizadas", valores: [3, 5] },
+          { id: "ocorrencias", rotulo: "Ocorrências registradas", valores: [1, 2] },
+        ],
+      },
+      pendencias: [
+        {
+          id: "ocorrencias_atrasadas",
+          titulo: "Ocorrências com prazo vencido",
+          gravidade: "alta",
+          quantidade: 4,
+          link: { pagina: "/ocorrencias", filtros: { atrasadas: "true" } },
+        },
+      ],
       equipes: [],
       atividades: [],
     }),
@@ -192,10 +212,23 @@ describe("revisão de inspeção", () => {
 describe("visão geral", () => {
   it("indicador sem base aparece como “Sem dados”, não como zero", async () => {
     await abrir("/visao-geral");
-    const cartao = (await screen.findByText("Espécie confirmada")).closest("div")!.parentElement!;
-    expect(within(cartao).getByText("Sem dados")).toBeInTheDocument();
-    const validas = screen.getByText("Árvores com registro válido").closest("div")!.parentElement!;
-    expect(within(validas).getByText("0")).toBeInTheDocument();
+    const cartao = (await screen.findByText("Espécie confirmada")).closest(".rounded-xl")!;
+    expect(within(cartao as HTMLElement).getByText("Sem dados")).toBeInTheDocument();
+    const validas = screen.getByText("Árvores com registro válido").closest(".rounded-xl")!;
+    expect(within(validas as HTMLElement).getByText("0")).toBeInTheDocument();
+  });
+
+  it("pendências levam à lista filtrada e o gráfico mensal tem tabela equivalente", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/visao-geral");
+    const pendencia = await screen.findByRole("link", { name: /Ocorrências com prazo vencido/ });
+    const destino = new URL(pendencia.getAttribute("href")!, "http://x");
+    expect(destino.pathname).toBe("/ocorrencias");
+    expect(JSON.parse(destino.searchParams.get("atrasadas")!)).toBe("true");
+    await usuario.click(screen.getByRole("button", { name: "Ver em tabela" }));
+    const tabela = screen.getByRole("table");
+    expect(within(tabela).getByText("dez/25")).toBeInTheDocument();
+    expect(within(tabela).getAllByRole("row")).toHaveLength(3);
   });
 });
 

@@ -11,13 +11,13 @@ quando houver espaço ou decisão.
 | # | Prio | Item | Por quê | Pronto quando |
 | --- | --- | --- | --- | --- |
 | M-10 | P2 | Artigo da Wikipedia pelo nome científico quando o item do táxon não tem link | Ex.: o item de *Licania tomentosa* (Q9022290) não tem link para a Wikipedia, embora exista o artigo "Oiti". | Buscar o artigo pelo nome científico e aceitar só se o item do artigo tiver P225 idêntico. Teste com o caso real. |
-| M-02 | P1 | Visão geral no padrão das referências | A tela inicial é plana e sem tendência. | Barra lateral verde-escura, cartões com ícone e variação, gráfico mensal de inspeções e ocorrências, "Alertas e pendências" acionável e mapa resumido do território. Capturas antes e depois. |
 | M-03 | P2 | Mapa: seleção por área (RF-MAPA-022) | Criar tarefas ou exportar a partir de uma região. | Desenhar retângulo ou polígono, listar os itens e enviar para "criar tarefas" ou exportação. |
 | M-04 | P2 | Mapa: círculo de incerteza (RN-MAPA-001) | Não sugerir precisão maior que a real. | Ao aproximar, pontos com precisão pior que o limiar mostram o raio. Depende do limiar (DP-06). |
 | M-05 | P2 | Mapa: destacar o bairro buscado (RF-MAPA-011) | Hoje só enquadra. | Polígono realçado até a próxima interação. |
 | M-06 | P2 | Mapa base em vector tiles próprios (dados OSM) | O OSM raster é carregado, e o servidor público tem política de uso restrita para produção. | Estilo claro próprio (Protomaps/PMTiles hospedado ou provedor), com glifos para rótulos nativos. Depende da DP-21 (hospedagem). |
 | M-07 | P2 | Agrupamentos com a pior condição | O grupo é neutro e esconde concentrações de problema. | O anel do grupo indica a pior condição contida, com legenda. |
 | M-09 | P3 | Atualização periódica das referências e Flora e Funga do Brasil | Artigos e imagens mudam, e a origem "nativa" tem fonte oficial brasileira. | Tarefa agendada (mensal) e link para a Flora e Funga do Brasil quando houver correspondência exata. |
+| M-11 | P2 | Visão geral: indicadores instantâneos com tendência | Hoje só os indicadores do período comparam com o anterior; os instantâneos (ex.: espécie confirmada) não têm histórico. | Instantâneos registrados periodicamente (tarefa diária) e variação/sparkline a partir deles, com a data de cada registro. |
 | M-08 | P3 | Tema de cores no restante do painel | Coerência com o novo mapa. | Tokens de `ui-tokens` revisados com contraste AA. |
 
 ## Plataforma e dependências

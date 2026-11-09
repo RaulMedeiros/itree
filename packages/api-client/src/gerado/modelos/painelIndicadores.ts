@@ -10,7 +10,9 @@ import type { PainelIndicadoresDistribuicoes } from './painelIndicadoresDistribu
 import type { PainelIndicadoresEquipesItem } from './painelIndicadoresEquipesItem';
 import type { PainelIndicadoresFiltros } from './painelIndicadoresFiltros';
 import type { PainelIndicadoresIndicadoresItem } from './painelIndicadoresIndicadoresItem';
+import type { PainelIndicadoresPendenciasItem } from './painelIndicadoresPendenciasItem';
 import type { PainelIndicadoresPeriodo } from './painelIndicadoresPeriodo';
+import type { PainelIndicadoresSeriesMensais } from './painelIndicadoresSeriesMensais';
 
 export interface PainelIndicadores {
   periodo: PainelIndicadoresPeriodo;
@@ -18,6 +20,8 @@ export interface PainelIndicadores {
   calculado_em: string;
   indicadores: PainelIndicadoresIndicadoresItem[];
   distribuicoes: PainelIndicadoresDistribuicoes;
+  series_mensais: PainelIndicadoresSeriesMensais;
+  pendencias: PainelIndicadoresPendenciasItem[];
   equipes: PainelIndicadoresEquipesItem[];
   atividades: EventoAuditoria[];
 }

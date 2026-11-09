@@ -14,7 +14,10 @@ from django.utils import timezone
 from itree.alertas import fontes
 from itree.contas.models import EscopoUsuario, Equipe, MembroEquipe, Usuario
 from itree.inspecoes.serializers import InspecaoDeCampoSerializer
-from itree.inspecoes.servicos import sincronizar_item
+from django.db import transaction
+
+from itree.inspecoes.models import Inspecao
+from itree.inspecoes.servicos import sincronizar_item, validar
 from itree.inventario import importacao
 from itree.inventario.models import Arvore, Especie, LoteImportacao
 from itree.ocorrencias.models import Ocorrencia, TipoOcorrencia
@@ -180,7 +183,11 @@ DESCRICOES = {
     "Poda solicitada": "Copa encostando na fiação de baixa tensão.",
     "Raiz danificando calçada": "Raízes superficiais levantando o calçamento em cerca de 10 cm.",
 }
-estados = ["aberta"] * 5 + ["em_triagem"] * 3 + ["encaminhada"] * 3 + ["em_atendimento"] * 3 + ["concluida"] * 3 + ["cancelada"]
+# Abertas recentes e um histórico de concluídas ao longo do ano (série mensal).
+estados = (
+    ["aberta"] * 5 + ["em_triagem"] * 3 + ["encaminhada"] * 3 + ["em_atendimento"] * 3
+    + ["concluida"] * 22 + ["cancelada"] * 2
+)
 for i, estado in enumerate(estados):
     a = random.choice(arvores)
     tipo = random.choice(list(DESCRICOES))
@@ -194,7 +201,11 @@ for i, estado in enumerate(estados):
         risco_descricao="Confirmado em vistoria visual." if tipo == "Risco de queda" and estado != "aberta" else "",
     )
     # Registradas ao longo das últimas semanas; conclusão sempre depois do registro.
-    registrada = agora - timedelta(days=random.randint(8, 40), hours=random.randint(0, 10))
+    if estado not in ("concluida", "cancelada"):
+        dias = random.randint(8, 40)
+    else:  # algumas concluídas no período atual (tempo médio de atendimento)
+        dias = random.randint(10, 22) if i % 5 == 0 else random.randint(10, 340)
+    registrada = agora - timedelta(days=dias, hours=random.randint(0, 10))
     if estado == "concluida":
         o.concluida_em = registrada + timedelta(days=random.randint(1, 6), hours=random.randint(1, 20))
     if prioridade:
@@ -217,11 +228,15 @@ for i, a in enumerate(random.sample(arvores, 16)):
 # --- Inspeções enviadas pelo aplicativo (via serviço de sincronização) ----------
 import uuid
 SINAIS = ["galhos_secos", "ferida", "fungos", "cavidade", "inclinacao", "conflito_rede"]
-for i, a in enumerate(random.sample(arvores, 8)):
+# Inspeções do último ano: as mais recentes aguardam revisão; as demais ficam
+# validadas no histórico (série mensal da visão geral).
+for i, a in enumerate(random.sample(arvores, 30)):
     tecnico = tecnicos[i % 3]
     dados = {
         "id": str(uuid.uuid4()), "arvore": str(a.id),
-        "realizada_em": (agora - timedelta(days=i, hours=3)).isoformat(),
+        "realizada_em": (
+            agora - timedelta(days=i if i < 8 else random.randint(15, 340), hours=3)
+        ).isoformat(),
         "localizacao": {"longitude": a.geom.x + 0.00002, "latitude": a.geom.y - 0.00001},
         "precisao_m": round(random.uniform(2.5, 6), 1),
         "especie": str(random.choice(especies).id),
@@ -234,12 +249,15 @@ for i, a in enumerate(random.sample(arvores, 8)):
             {"tipo": "altura", "valor": f"{random.uniform(4, 15):.1f}", "metodo": "hipsometro", "origem": "medido"},
             {"tipo": "dap", "valor": f"{random.uniform(12, 65):.0f}", "metodo": "fita_diametrica", "origem": "medido"},
         ],
-        "enviar_para_revisao": i < 6,
+        "enviar_para_revisao": i < 6 or i >= 8,
     }
     s = InspecaoDeCampoSerializer(data=dados)
     s.is_valid(raise_exception=True)
     with pghistory.context(usuario=str(tecnico.id), origem="app"):
-        print("inspeção", sincronizar_item(s.validated_data, tecnico, "android-sintetico").status)
+        resultado = sincronizar_item(s.validated_data, tecnico, "android-sintetico")
+    if i >= 8:  # histórico: validada pela revisora, aplicando condição e medidas
+        with transaction.atomic(), pghistory.context(usuario=str(revisora.id), origem="web"):
+            validar(Inspecao.objects.get(pk=resultado.id), revisora, ["condicao_aparente", "medidas"])
 
 # --- Alertas ambientais -----------------------------------------------------------
 for fonte, arquivo in [("inpe_focos", f"{DADOS}/focos-sinteticos.csv"), ("inpe_deter", f"{DADOS}/deter-sintetico.geojson")]:

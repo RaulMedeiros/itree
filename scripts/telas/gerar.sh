@@ -32,10 +32,10 @@ EscopoUsuario.objects.create(usuario=u, territorio=Territorio.objects.get(tipo='
 "
 $M shell -c "exec(open('/tmp/telas-dados/semear.py').read())"
 # Referências das espécies (Wikidata/Wikipedia/Commons), quando houver acesso.
-if curl -sf --max-time 10 -o /dev/null "https://www.wikidata.org/w/api.php?action=query&format=json"; then
+if docker compose exec -T api python -c "import urllib.request; urllib.request.urlopen('https://www.wikidata.org/w/api.php?action=query&format=json', timeout=10)" >/dev/null 2>&1; then
   $M atualizar_referencias_especies
 else
-  echo "Sem acesso ao Wikidata: as referências das espécies ficam como não consultadas."
+  echo "Sem acesso ao Wikidata a partir do contêiner: rode atualizar_referencias_especies onde houver acesso."
 fi
 $M shell -c "exec(open('/tmp/telas-dados/ids.py').read())" | tail -1 > /tmp/telas-ids.json
 

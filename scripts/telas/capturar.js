@@ -42,7 +42,12 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
   const nav = await chromium.launch();
   let { ctx, p } = await entrar(nav, "gestor@itree.local", "gestor");
 
-  await tela(p, "01-visao-geral", "/visao-geral", { esperar: "Como é calculado" });
+  await tela(p, "01-visao-geral", "/visao-geral", { esperar: "Como é calculado", espera: 4000 });
+  await tela(p, "01b-visao-geral-completa", "/visao-geral", {
+    esperar: "Como é calculado",
+    espera: 4000,
+    inteira: true,
+  });
   await tela(p, "02-mapa", `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=14.6`, {
     esperar: "Legenda",
     espera: 5000,
