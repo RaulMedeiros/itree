@@ -28,3 +28,4 @@ quando houver espaço ou decisão.
 | D-02 | P2 | Python 3.14+ alinhado | Imagem, CI e `.python-version` precisam usar a mesma versão (#11 fechado). | As três fontes atualizadas juntas, com a suíte verde. |
 | D-03 | P2 | Node 24/26 LTS alinhado | `.nvmrc`, CI e Dockerfile (#9 fechado). | Os três atualizados juntos. |
 | D-04 | P3 | Retenção e eliminação de evidências | "Remover" hoje só oculta (DP-09). | Política decidida; remoção física e retirada de EXIF implementadas. |
+| D-05 | P3 | TypeScript 7 (novo compilador) | O Dependabot propôs a 7.0 e o CI falhou (#28 fechado). | Ajustar código e configuração à 7.x com typecheck, lint e testes verdes. |
