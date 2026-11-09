@@ -46,6 +46,18 @@ Indicadores oficiais e fórmulas dependem de
   filtrada que o compõe (drill-down).
 - **RF-VG-003** — Cartão mostra fonte e data da última atualização; se
   desatualizado além do limite da fonte, mostra aviso.
+- **RF-VG-004** — Indicadores do período mostram a variação em relação ao
+  período anterior de mesma duração, com a direção desejável indicada (ex.:
+  tempo de atendimento cair é bom). Indicadores instantâneos não mostram
+  variação: não há histórico de situação para compará-los.
+- **RF-VG-005** — Série mensal (12 meses até o fim do período) de inspeções
+  realizadas e ocorrências registradas, com legenda, tooltip e tabela
+  equivalente.
+- **RF-VG-006** — "Alertas e pendências": itens acionáveis com quantidade e
+  link para a lista filtrada (risco confirmado, prazos vencidos, sem
+  prioridade, revisão pendente, alertas a triar). Itens com zero não aparecem.
+- **RF-VG-007** — Mapa resumido do escopo, com árvores pela condição aparente
+  validada e atalho para o mapa completo.
 
 ## 5. Regras
 

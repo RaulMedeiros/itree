@@ -1,14 +1,42 @@
-import { useEquipesListar, useIndicadoresPainel, useTerritoriosListar } from "@itree/api-client";
+import {
+  useEquipesListar,
+  useIndicadoresPainel,
+  useTerritoriosListar,
+  type PainelIndicadores,
+} from "@itree/api-client";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { Info } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  CalendarCheck,
+  ChevronRight,
+  CircleAlert,
+  CircleCheck,
+  ClipboardCheck,
+  Info,
+  Leaf,
+  Minus,
+  ShieldAlert,
+  Timer,
+  TreeDeciduous,
+  TriangleAlert,
+  type LucideIcon,
+} from "lucide-react";
+import type { ReactNode } from "react";
+
+import { ROTULOS_CONDICAO } from "@itree/domain";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { Entrada, Selecao } from "../../ui/campos";
+import { CORES_CONDICAO } from "../../mapa/simbologia";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Tabela, Td, Th, Linha } from "../../ui/tabela";
+import { cn } from "../../util/cn";
 import { formatarData, formatarDataHora } from "../../util/formatos";
+import { BarraSegmentada, BarrasHorizontais, GraficoMensal, type Serie } from "./graficos";
+import { MapaResumo } from "./MapaResumo";
 
 export interface BuscaVisaoGeral {
   inicio?: string;
@@ -28,6 +56,21 @@ interface Indicador {
   periodo: string;
   fonte: string;
   link: { pagina: string; filtros: Record<string, string> } | null;
+  anterior?: number | null;
+}
+
+interface Pendencia {
+  id: string;
+  titulo: string;
+  gravidade: string;
+  quantidade: number;
+  link: { pagina: string; filtros: Record<string, string> };
+}
+
+interface SeriesMensais {
+  meses: string[];
+  definicao: string;
+  series: Serie[];
 }
 
 interface Distribuicao {
@@ -45,30 +88,86 @@ interface DesempenhoEquipe {
   inspecoes_periodo: number;
 }
 
+const ICONES: Record<string, LucideIcon> = {
+  arvores_validas: TreeDeciduous,
+  especie_confirmada: Leaf,
+  cobertura_inspecao: ClipboardCheck,
+  inspecoes_realizadas: CalendarCheck,
+  ocorrencias_abertas: TriangleAlert,
+  tempo_atendimento: Timer,
+};
+const DESTAQUE = Object.keys(ICONES);
+/** Direção desejável da variação: inspeções subir é bom; tempo de atendimento cair é bom. */
+const MELHOR_SUBIR: Record<string, boolean | undefined> = {
+  inspecoes_realizadas: true,
+  tempo_atendimento: false,
+};
+
 function valorFormatado(i: Indicador) {
   if (i.valor === null) return "Sem dados";
   const numero = i.valor.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
   return i.unidade === "%" ? `${numero}%` : i.unidade ? `${numero} ${i.unidade}` : numero;
 }
 
-function CartaoIndicador({ i }: { i: Indicador }) {
-  const conteudo = (
-    <>
-      <p className="text-sm font-medium text-texto-suave">{i.nome}</p>
-      <p className={`mt-1 text-2xl font-semibold ${i.valor === null ? "text-texto-suave" : ""}`}>
-        {valorFormatado(i)}
-      </p>
-      <p className="mt-1 text-xs text-texto-suave">
-        {i.periodo === "selecionado" ? "No período" : "Situação atual"}
-        {i.base !== null && i.unidade === "%" ? ` · base: ${i.base.toLocaleString("pt-BR")}` : ""}
-        {i.base !== null && i.unidade === "dias" ? ` · ${i.base} concluídas` : ""}
-      </p>
-    </>
-  );
-  // A definição fica fora do link (não se aninha controle interativo em <a>) e
-  // num <details>, alcançável por teclado e toque — não só por hover (RNF-A11Y).
+function Variacao({ i }: { i: Indicador }) {
+  if (i.periodo !== "selecionado" || i.anterior === null || i.anterior === undefined) return null;
+  if (i.valor === null) return null;
+  const diferenca = i.valor - i.anterior;
+  if (i.anterior === 0) {
+    return <p className="text-xs text-texto-suave">Período anterior: 0</p>;
+  }
+  const pct = Math.round((100 * diferenca) / i.anterior);
+  const subiu = diferenca > 0;
+  const bom = MELHOR_SUBIR[i.id] === undefined ? null : MELHOR_SUBIR[i.id] === subiu;
+  const Icone = diferenca === 0 ? Minus : subiu ? ArrowUpRight : ArrowDownRight;
   return (
-    <div className="rounded-lg border border-borda bg-superficie p-4 has-[a:hover]:border-marca">
+    <p
+      className={cn(
+        "flex items-center gap-1 text-xs font-medium",
+        diferenca === 0 || bom === null ? "text-texto-suave" : bom ? "text-sucesso" : "text-perigo",
+      )}
+    >
+      <Icone className="size-3.5" aria-hidden />
+      {diferenca === 0 ? "Igual" : `${pct > 0 ? "+" : ""}${pct}%`} vs. período anterior
+    </p>
+  );
+}
+
+function Definicao({ i }: { i: Indicador }) {
+  return (
+    <details className="mt-2 text-xs text-texto-suave">
+      <summary className="inline-flex cursor-pointer items-center gap-1">
+        <Info className="size-3.5" aria-hidden /> Como é calculado
+      </summary>
+      <p className="mt-1">{i.definicao}</p>
+      <p className="mt-1">Fórmula: {i.formula}</p>
+      <p className="mt-1">Fonte: {i.fonte}</p>
+    </details>
+  );
+}
+
+function CartaoDestaque({ i, extra }: { i: Indicador; extra?: ReactNode }) {
+  const Icone = ICONES[i.id] ?? Info;
+  const conteudo = (
+    <div className="flex items-start gap-3">
+      <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-marca-clara text-marca">
+        <Icone className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <p
+          className={cn(
+            "text-2xl leading-tight font-semibold",
+            i.valor === null && "text-texto-suave",
+          )}
+        >
+          {valorFormatado(i)}
+        </p>
+        <p className="text-sm text-texto-suave">{i.nome}</p>
+      </div>
+    </div>
+  );
+  return (
+    <div className="rounded-xl border border-borda bg-superficie p-4 shadow-sm has-[a:hover]:border-marca">
       {i.link ? (
         <Link to={i.link.pagina} search={i.link.filtros} className="block">
           {conteudo}
@@ -76,52 +175,124 @@ function CartaoIndicador({ i }: { i: Indicador }) {
       ) : (
         conteudo
       )}
-      <details className="mt-2 text-xs text-texto-suave">
-        <summary className="inline-flex cursor-pointer items-center gap-1">
-          <Info className="size-3.5" aria-hidden /> Como é calculado
-        </summary>
-        <p className="mt-1">{i.definicao}</p>
-        <p className="mt-1">Fórmula: {i.formula}</p>
-        <p className="mt-1">Fonte: {i.fonte}</p>
-      </details>
+      <div className="mt-2 flex flex-col gap-0.5 pl-[3.25rem]">
+        <Variacao i={i} />
+        {extra}
+        {i.periodo !== "selecionado" && i.base !== null && i.unidade === "%" && (
+          <p className="text-xs text-texto-suave">Base: {i.base.toLocaleString("pt-BR")}</p>
+        )}
+      </div>
+      <Definicao i={i} />
     </div>
   );
 }
 
-function Barras({ d }: { d: Distribuicao }) {
-  const maximo = Math.max(1, ...d.itens.map((i) => i.quantidade));
+function CartaoCompacto({ i }: { i: Indicador }) {
   return (
-    <section className="rounded-lg border border-borda bg-superficie p-4">
-      <h2 className="font-semibold">{d.titulo}</h2>
-      <p className="mb-3 text-xs text-texto-suave">{d.definicao}</p>
-      {d.itens.length === 0 ? (
-        <p className="text-sm text-texto-suave">Sem dados no período e filtros.</p>
+    <div className="rounded-lg border border-borda bg-superficie px-3 py-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-sm text-texto-suave">{i.nome}</p>
+        <p className={cn("font-semibold", i.valor === null && "text-texto-suave")}>
+          {i.link ? (
+            <Link to={i.link.pagina} search={i.link.filtros} className="hover:underline">
+              {valorFormatado(i)}
+            </Link>
+          ) : (
+            valorFormatado(i)
+          )}
+        </p>
+      </div>
+      <Variacao i={i} />
+      <Definicao i={i} />
+    </div>
+  );
+}
+
+const GRAVIDADE: Record<string, { classe: string; Icone: LucideIcon; rotulo: string }> = {
+  critica: { classe: "text-perigo bg-perigo-clara", Icone: ShieldAlert, rotulo: "Crítica" },
+  alta: { classe: "text-atencao bg-atencao-clara", Icone: TriangleAlert, rotulo: "Alta" },
+  media: { classe: "text-info bg-info-clara", Icone: CircleAlert, rotulo: "Média" },
+};
+
+function Pendencias({ itens }: { itens: Pendencia[] }) {
+  return (
+    <section className="flex h-full flex-col rounded-xl border border-borda bg-superficie p-4">
+      <h2 className="font-semibold">Alertas e pendências</h2>
+      <p className="mb-3 text-xs text-texto-suave">O que precisa de ação agora, no seu escopo.</p>
+      {itens.length === 0 ? (
+        <p className="flex items-center gap-2 text-sm text-sucesso">
+          <CircleCheck className="size-4" aria-hidden /> Nenhuma pendência no momento.
+        </p>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {d.itens.map((item) => (
-            <li key={item.rotulo} className="text-sm">
-              <div className="flex justify-between gap-2">
-                <span className="truncate">{item.rotulo}</span>
-                <span className="font-medium tabular-nums">
-                  {item.quantidade.toLocaleString("pt-BR")}
-                </span>
-              </div>
-              <div className="mt-0.5 h-2 rounded bg-neutro-clara" aria-hidden>
-                <div
-                  className="h-2 rounded bg-marca"
-                  style={{ width: `${(item.quantidade / maximo) * 100}%` }}
-                />
-              </div>
-            </li>
-          ))}
+        <ul className="flex flex-col divide-y divide-borda">
+          {itens.map((p) => {
+            const g = GRAVIDADE[p.gravidade] ?? GRAVIDADE.media!;
+            return (
+              <li key={p.id}>
+                <Link
+                  to={p.link.pagina}
+                  search={p.link.filtros}
+                  className="group flex items-center gap-3 py-2.5"
+                >
+                  <span
+                    className={cn("grid size-8 shrink-0 place-items-center rounded-lg", g.classe)}
+                  >
+                    <g.Icone className="size-4" aria-hidden />
+                    <span className="sr-only">Gravidade {g.rotulo.toLowerCase()}</span>
+                  </span>
+                  <span className="flex-1 text-sm group-hover:underline">{p.titulo}</span>
+                  <span className="text-lg font-semibold tabular-nums">
+                    {p.quantidade.toLocaleString("pt-BR")}
+                  </span>
+                  <ChevronRight className="size-4 text-texto-suave" aria-hidden />
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
-      {d.nao_confirmadas ? (
-        <p className="mt-3 text-xs text-texto-suave">
-          {d.nao_confirmadas.toLocaleString("pt-BR")} árvores válidas ainda sem espécie confirmada
-          não entram nesta distribuição.
-        </p>
-      ) : null}
+    </section>
+  );
+}
+
+/** Cor da condição pelo rótulo devolvido pela API; texto da barra por luminância. */
+const COR_POR_ROTULO: Record<string, { cor: string; textoClaro: boolean }> = {
+  ...Object.fromEntries(
+    (Object.keys(ROTULOS_CONDICAO) as (keyof typeof ROTULOS_CONDICAO)[]).map((c) => [
+      ROTULOS_CONDICAO[c],
+      { cor: CORES_CONDICAO[c], textoClaro: c === "morta" },
+    ]),
+  ),
+  "Sem avaliação registrada": { cor: CORES_CONDICAO.nao_avaliada, textoClaro: false },
+};
+
+/** Ordem semântica da condição: da melhor para a pior; sem avaliação por último. */
+const ORDEM_CONDICAO = [
+  "Boa",
+  "Regular",
+  "Ruim",
+  "Aparentemente morta",
+  "Sem avaliação registrada",
+];
+const ordemCondicao = (rotulo: string) =>
+  ORDEM_CONDICAO.includes(rotulo) ? ORDEM_CONDICAO.indexOf(rotulo) : ORDEM_CONDICAO.length;
+
+function Painel({
+  titulo,
+  definicao,
+  children,
+  className,
+}: {
+  titulo: string;
+  definicao?: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={cn("rounded-xl border border-borda bg-superficie p-4", className)}>
+      <h2 className="font-semibold">{titulo}</h2>
+      {definicao && <p className="mb-3 text-xs text-texto-suave">{definicao}</p>}
+      {children}
     </section>
   );
 }
@@ -204,59 +375,155 @@ export function VisaoGeralPagina() {
       ) : consulta.isError ? (
         <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />
       ) : (
-        <>
-          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-            {(dados!.indicadores as unknown as Indicador[]).map((i) => (
-              <CartaoIndicador key={i.id} i={i} />
-            ))}
-          </div>
-          <div className="mb-6 grid gap-4 lg:grid-cols-3">
-            {Object.values(dados!.distribuicoes as unknown as Record<string, Distribuicao>).map(
-              (d) => (
-                <Barras key={d.titulo} d={d} />
-              ),
-            )}
-          </div>
-          {dados!.equipes.length > 0 && (
-            <section className="mb-6">
-              <h2 className="mb-2 font-semibold">Desempenho por equipe</h2>
-              <Tabela>
-                <thead>
-                  <tr>
-                    <Th>Equipe</Th>
-                    <Th>Tarefas abertas</Th>
-                    <Th>Atrasadas</Th>
-                    <Th>Concluídas no período</Th>
-                    <Th>Inspeções no período</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(dados!.equipes as unknown as DesempenhoEquipe[]).map((e) => (
-                    <Linha key={e.equipe}>
-                      <Td className="font-medium">{e.equipe}</Td>
-                      <Td>{e.tarefas_abertas}</Td>
-                      <Td className={e.tarefas_atrasadas ? "text-perigo" : ""}>
-                        {e.tarefas_atrasadas}
-                      </Td>
-                      <Td>{e.tarefas_concluidas_periodo}</Td>
-                      <Td>{e.inspecoes_periodo}</Td>
-                    </Linha>
-                  ))}
-                </tbody>
-              </Tabela>
-              <p className="mt-1 text-xs text-texto-suave">
-                Números da equipe, sem ranqueamento individual (RN-EQP-002).
-              </p>
-            </section>
-          )}
-          {dados!.atividades.length > 0 && (
-            <section>
-              <h2 className="mb-3 font-semibold">Atividades recentes</h2>
-              <LinhaDoTempo eventos={dados!.atividades} carregando={false} />
-            </section>
-          )}
-        </>
+        <ConteudoPainel dados={dados!} />
       )}
     </div>
+  );
+}
+
+function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
+  const indicadores = dados.indicadores as unknown as Indicador[];
+  const porId = Object.fromEntries(indicadores.map((i) => [i.id, i]));
+  const distribuicoes = dados.distribuicoes as unknown as Record<string, Distribuicao>;
+  const series = dados.series_mensais as unknown as SeriesMensais;
+  const pendencias = dados.pendencias as unknown as Pendencia[];
+  const atrasadas = porId.ocorrencias_atrasadas?.valor;
+  return (
+    <>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        {DESTAQUE.filter((id) => porId[id]).map((id) => (
+          <CartaoDestaque
+            key={id}
+            i={porId[id]!}
+            extra={
+              id === "ocorrencias_abertas" && atrasadas ? (
+                <p className="text-xs font-medium text-perigo">
+                  {atrasadas.toLocaleString("pt-BR")} com prazo vencido
+                </p>
+              ) : id === "arvores_validas" && porId.arvores_registros?.valor ? (
+                <p className="text-xs text-texto-suave">
+                  de {porId.arvores_registros.valor.toLocaleString("pt-BR")} registros
+                </p>
+              ) : null
+            }
+          />
+        ))}
+      </div>
+
+      <div className="mb-4 grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <MapaResumo />
+        </div>
+        <Pendencias itens={pendencias} />
+      </div>
+
+      <div className="mb-4 grid gap-4 lg:grid-cols-3">
+        <Painel
+          titulo="Inspeções e ocorrências por mês"
+          definicao={series.definicao}
+          className="lg:col-span-2"
+        >
+          <GraficoMensal meses={series.meses} series={series.series} />
+        </Painel>
+        <div className="flex flex-col gap-4">
+          {distribuicoes.condicao_aparente && (
+            <Painel
+              titulo={distribuicoes.condicao_aparente.titulo}
+              definicao={distribuicoes.condicao_aparente.definicao}
+            >
+              <BarraSegmentada
+                partes={[...distribuicoes.condicao_aparente.itens]
+                  .sort((a, b) => ordemCondicao(a.rotulo) - ordemCondicao(b.rotulo))
+                  .map((c) => ({
+                    rotulo: c.rotulo,
+                    quantidade: c.quantidade,
+                    ...(COR_POR_ROTULO[c.rotulo] ?? { cor: "#a3ada7", textoClaro: false }),
+                  }))}
+              />
+            </Painel>
+          )}
+          {distribuicoes.ocorrencias_prioridade && (
+            <Painel
+              titulo={distribuicoes.ocorrencias_prioridade.titulo}
+              definicao={distribuicoes.ocorrencias_prioridade.definicao}
+            >
+              <BarrasHorizontais itens={distribuicoes.ocorrencias_prioridade.itens} cor="#eb6834" />
+            </Painel>
+          )}
+        </div>
+      </div>
+
+      <div className="mb-4 grid gap-4 lg:grid-cols-3">
+        {distribuicoes.especies && (
+          <Painel
+            titulo={distribuicoes.especies.titulo}
+            definicao={distribuicoes.especies.definicao}
+            className="lg:col-span-2"
+          >
+            <BarrasHorizontais
+              itens={distribuicoes.especies.itens.map((e) => ({ ...e, italico: true }))}
+              cor="#2f9e44"
+            />
+            {distribuicoes.especies.nao_confirmadas ? (
+              <p className="mt-3 text-xs text-texto-suave">
+                {distribuicoes.especies.nao_confirmadas.toLocaleString("pt-BR")} árvores válidas
+                ainda sem espécie confirmada não entram nesta distribuição.{" "}
+                <Link to="/inventario/especies" className="text-marca-escura underline">
+                  Ver catálogo
+                </Link>
+              </p>
+            ) : null}
+          </Painel>
+        )}
+        <Painel titulo="Outros indicadores">
+          <div className="flex flex-col gap-2">
+            {indicadores
+              .filter((i) => !DESTAQUE.includes(i.id) && i.id !== "ocorrencias_atrasadas")
+              .map((i) => (
+                <CartaoCompacto key={i.id} i={i} />
+              ))}
+          </div>
+        </Painel>
+      </div>
+
+      {dados.equipes.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-2 font-semibold">Desempenho por equipe</h2>
+          <Tabela>
+            <thead>
+              <tr>
+                <Th>Equipe</Th>
+                <Th>Tarefas abertas</Th>
+                <Th>Atrasadas</Th>
+                <Th>Concluídas no período</Th>
+                <Th>Inspeções no período</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {(dados.equipes as unknown as DesempenhoEquipe[]).map((e) => (
+                <Linha key={e.equipe}>
+                  <Td className="font-medium">{e.equipe}</Td>
+                  <Td>{e.tarefas_abertas}</Td>
+                  <Td className={e.tarefas_atrasadas ? "text-perigo" : ""}>
+                    {e.tarefas_atrasadas}
+                  </Td>
+                  <Td>{e.tarefas_concluidas_periodo}</Td>
+                  <Td>{e.inspecoes_periodo}</Td>
+                </Linha>
+              ))}
+            </tbody>
+          </Tabela>
+          <p className="mt-1 text-xs text-texto-suave">
+            Números da equipe, sem ranqueamento individual (RN-EQP-002).
+          </p>
+        </section>
+      )}
+      {dados.atividades.length > 0 && (
+        <section>
+          <h2 className="mb-3 font-semibold">Atividades recentes</h2>
+          <LinhaDoTempo eventos={dados.atividades} carregando={false} />
+        </section>
+      )}
+    </>
   );
 }
