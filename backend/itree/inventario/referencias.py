@@ -190,16 +190,70 @@ def _buscar_artigo(sessao: requests.Session, idioma: str, nome_cientifico: str) 
             if "disambiguation" in props or not titulo or not re.fullmatch(r"Q\d+", qid):
                 continue
             entidade = _json(sessao, WIKIDATA_ENTIDADE.format(id=qid)).get("entities", {}).get(qid)
-            if not entidade or _normalizar(str(_valor(entidade, "P225") or "")) != _normalizar(
-                nome_cientifico
-            ):
+            if not entidade:
+                continue
+            nome_do_item = str(_valor(entidade, "P225") or "")
+            if _normalizar(nome_do_item) == _normalizar(nome_cientifico):
+                nota = ""
+            elif nome_do_item and _lista_como_sinonimo(sessao, idioma, titulo, nome_cientifico):
+                # O artigo trata do nome aceito e declara o do catálogo como sinônimo.
+                nota = (
+                    f"Artigo da Wikipedia sobre {nome_do_item}, que lista "
+                    f"{nome_cientifico} como sinônimo."
+                )
+            else:
                 continue
             artigo = _resumo_artigo(sessao, idioma, titulo)
             if artigo:
-                return artigo
+                return {**artigo, "nota": nota} if nota else artigo
     except ErroConsulta:
         return {}
     return {}
+
+
+# Campo de sinônimos da caixa taxonômica (pt: Info/Taxonomia; en: Taxobox/Speciesbox).
+_CAMPO_SINONIMOS = re.compile(
+    r"^\s*\|\s*(?:sin[óô]nimos|synonyms)\s*=(.*?)(?=^\s*\||^\s*\}\})",
+    re.IGNORECASE | re.MULTILINE | re.DOTALL,
+)
+
+
+def _sinonimos(wikitext: str) -> list[str]:
+    """Nomes listados no campo de sinônimos, sem marcação nem autoria."""
+    campo = _CAMPO_SINONIMOS.search(wikitext or "")
+    if not campo:
+        return []
+    texto = re.sub(r"<[^>]+>", "\n", campo.group(1))
+    texto = re.sub(r"\[\[(?:[^|\]]*\|)?([^\]]*)\]\]", r"\1", texto)
+    texto = texto.replace("'", "")
+    nomes = []
+    for linha in re.split(r"[\n*;]", texto):
+        palavras = linha.split()
+        # Binômio (ou trinômio com var./subsp.) no início da entrada; o resto é autoria.
+        if len(palavras) >= 2 and palavras[0][:1].isupper() and palavras[1][:1].islower():
+            nome = palavras[:2]
+            if len(palavras) >= 4 and palavras[2] in ("var.", "subsp.", "f."):
+                nome = palavras[:4]
+            nomes.append(" ".join(nome))
+    return nomes
+
+
+def _lista_como_sinonimo(
+    sessao: requests.Session, idioma: str, titulo: str, nome_cientifico: str
+) -> bool:
+    """O artigo declara, na caixa taxonômica, o nome do catálogo como sinônimo?"""
+    pagina = _json(
+        sessao,
+        WIKIPEDIA_API.format(idioma=idioma),
+        action="parse",
+        page=titulo,
+        prop="wikitext",
+        format="json",
+        formatversion="2",
+    )
+    wikitext = pagina.get("parse", {}).get("wikitext", "")
+    alvo = _normalizar(nome_cientifico)
+    return any(_normalizar(n) == alvo for n in _sinonimos(wikitext))
 
 
 def _wikipedia(sessao: requests.Session, entidade: dict, nome_cientifico: str) -> dict:
@@ -261,12 +315,14 @@ def consultar(nome_cientifico: str) -> Referencias:
         **_wikipedia(sessao, entidade, nome_cientifico),
         **_imagem(sessao, entidade),
     }
+    nota = campos.pop("nota", "")
     faltando = [
         nome
         for nome, chave in (("artigo na Wikipedia", "wikipedia_url"), ("imagem", "imagem_url"))
         if not campos.get(chave)
     ]
-    mensagem = f"Sem {' nem '.join(faltando)}." if faltando else ""
+    sem = f"Sem {' nem '.join(faltando)}." if faltando else ""
+    mensagem = " ".join(parte for parte in (nota, sem) if parte)[:300]
     return Referencias(True, mensagem, campos)
 
 

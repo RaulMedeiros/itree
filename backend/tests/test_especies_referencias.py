@@ -366,9 +366,10 @@ BUSCA_PT_REAL = {
 class SessaoBusca(Sessao):
     """Item sem link para a Wikipedia; a busca por nome devolve candidatos."""
 
-    def __init__(self, busca=BUSCA_PT_REAL, itens=None, busca_erro=False, **kw):
+    def __init__(self, busca=BUSCA_PT_REAL, itens=None, busca_erro=False, wikitextos=None, **kw):
         super().__init__(item=ITEM_SEM_LINK, **kw)
         self.busca, self.itens, self.busca_erro = busca, itens or {}, busca_erro
+        self.wikitextos = wikitextos or {}
         self.consultados = []
 
     def get(self, url, params=None, timeout=None):
@@ -377,6 +378,11 @@ class SessaoBusca(Sessao):
             self.params = getattr(self, "params", []) + [params or {}]
             if self.busca_erro:
                 return Resposta({"error": {"code": "internal_api_error", "info": "x"}})
+            if (params or {}).get("action") == "parse":
+                titulo = params["page"]
+                return Resposta(
+                    {"parse": {"title": titulo, "wikitext": self.wikitextos.get(titulo, "")}}
+                )
             if url.startswith("https://pt."):
                 return Resposta(self.busca)
             return Resposta({"batchcomplete": ""})  # en: sem resultados
@@ -388,9 +394,38 @@ class SessaoBusca(Sessao):
         return super().get(url, params, timeout)
 
 
-def test_artigo_encontrado_pela_busca_quando_o_item_nao_tem_link(oiti, monkeypatch):
+# Trecho real da caixa taxonômica do artigo "Oiti" (pt.wikipedia.org, action=parse):
+# o artigo trata de Moquilea tomentosa e lista Licania tomentosa como sinônimo.
+WIKITEXT_OITI_REAL = """{{Info/Taxonomia
+| nome = Oiti
+| imagem = Licania tomentosa.JPG
+| família = [[Chrysobalanaceae]]
+| género = ''[[Moquilea]]''
+| espécie = ''M. tomentosa''
+| binomial = ''Moquilea tomentosa''
+| binomial_autoridade = (Benth.) Fritsch
+| sinónimos = ''Licania tomentosa'' Benth.<br>
+''Pleragina odorata'' Arruda da Gama ex Koster
+<center>
+}}
+O oiti é uma árvore..."""
+
+
+def test_artigo_aceito_pelo_nome_identico_no_item(oiti, monkeypatch):
     itens = {"Q85192266": _item_p225("Q85192266", "Licania tomentosa")}
     s = SessaoBusca(itens=itens)
+    monkeypatch.setattr(referencias, "_sessao", lambda: s)
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert oiti.wikipedia_titulo == "Oiti" and oiti.referencias_mensagem == ""
+    assert not any(p.get("action") == "parse" for p in s.params)  # nome idêntico basta
+
+
+def test_artigo_encontrado_pela_busca_quando_o_item_nao_tem_link(oiti, monkeypatch):
+    """Caso real: o item do artigo "Oiti" (Q85192266) tem P225 "Moquilea tomentosa",
+    e a caixa taxonômica do artigo lista "Licania tomentosa" como sinônimo."""
+    itens = {"Q85192266": _item_p225("Q85192266", "Moquilea tomentosa")}
+    s = SessaoBusca(itens=itens, wikitextos={"Oiti": WIKITEXT_OITI_REAL})
     monkeypatch.setattr(referencias, "_sessao", lambda: s)
     referencias.atualizar(oiti)
     oiti.refresh_from_db()
@@ -403,11 +438,14 @@ def test_artigo_encontrado_pela_busca_quando_o_item_nao_tem_link(oiti, monkeypat
     assert busca["prop"] == "pageprops" and busca["ppprop"] == "wikibase_item|disambiguation"
     # A busca respeita a relevância ("index"): o primeiro candidato é o "Oiti".
     assert s.consultados == ["Q85192266"]
+    assert oiti.referencias_mensagem == (
+        "Artigo da Wikipedia sobre Moquilea tomentosa, que lista Licania tomentosa como sinônimo."
+    )
 
 
 def test_candidato_com_nome_diferente_e_rejeitado(oiti, monkeypatch):
-    """Caso real observado: o item do artigo "Oiti" (Q85192266) tem P225
-    "Moquilea tomentosa" (sinônimo), não o nome do catálogo; não é aceito."""
+    """Nome diferente no item e o artigo não declara o do catálogo como sinônimo
+    (ex.: trata de outro táxon): não é aceito."""
     itens = {
         "Q85192266": _item_p225("Q85192266", "Moquilea tomentosa"),
         "Q614604": _item_p225("Q614604", "Chrysobalanaceae"),
@@ -449,3 +487,10 @@ def test_erro_da_busca_nao_derruba_imagem_e_gbif(oiti, monkeypatch):
     assert oiti.referencias_situacao == "encontradas"
     assert oiti.wikipedia_url == "" and oiti.referencias_mensagem == "Sem artigo na Wikipedia."
     assert oiti.gbif_id == 5583617 and oiti.imagem_licenca == "CC BY-SA 4.0"
+
+
+def test_sinonimos_lidos_da_caixa_taxonomica():
+    assert referencias._sinonimos(WIKITEXT_OITI_REAL) == ["Licania tomentosa", "Pleragina odorata"]
+    en = "{{Speciesbox\n| genus = Moquilea\n| synonyms =\n* ''Licania tomentosa'' (Benth.) Fritsch\n}}"
+    assert referencias._sinonimos(en) == ["Licania tomentosa"]
+    assert referencias._sinonimos("{{Info/Taxonomia\n| nome = X\n}}") == []
