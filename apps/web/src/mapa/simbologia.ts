@@ -192,33 +192,59 @@ export function registrarIcones(m: MapaMapLibre) {
   });
 }
 
+/** Condições na ordem de gravidade usada pelo backend em `pior_condicao`. */
+const CONDICOES_GRUPO = Object.keys(CORES_CONDICAO);
+
 /**
  * Agrupamentos com contagem (RF-MAPA-020). O nome da imagem codifica camada e
- * quantidade (`grupo-arvores-37`); é desenhada sob demanda.
+ * quantidade (`grupo-ocorrencias-37`); para árvores inclui também a pior condição
+ * contida (`grupo-arvores-morta-37`), que colore o anel. Desenhada sob demanda.
  */
 export function aoFaltarImagem(m: MapaMapLibre, id: string) {
-  const r = /^grupo-(arvores|ocorrencias)-(\d+)$/.exec(id);
+  const r = /^grupo-(?:arvores-([a-z_]+)|(ocorrencias))-(\d+)$/.exec(id);
   if (!r) return;
-  const quantidade = Number(r[2]);
+  const quantidade = Number(r[3]);
   const texto = quantidade >= 1000 ? `${Math.round(quantidade / 100) / 10}k` : String(quantidade);
   const tamanho = quantidade < 10 ? 28 : quantidade < 100 ? 34 : quantidade < 1000 ? 40 : 46;
-  const cor = r[1] === "arvores" ? "#1f6b45" : "#b35c00";
+  if (r[2]) {
+    desenharGrupo(m, id, tamanho, texto, "#b35c00", "#b35c00");
+    return;
+  }
+  const condicao = CONDICOES_GRUPO.includes(r[1]!) ? r[1]! : "nao_avaliada";
+  desenharGrupo(
+    m,
+    id,
+    tamanho,
+    texto,
+    CORES_CONDICAO[condicao as keyof typeof CORES_CONDICAO],
+    "#1f2933",
+  );
+}
+
+function desenharGrupo(
+  m: MapaMapLibre,
+  id: string,
+  tamanho: number,
+  texto: string,
+  corAnel: string,
+  corTexto: string,
+) {
   desenhar(m, id, tamanho, (c, t) => {
-    // Neutro: um grupo não tem condição; a cor fica para as árvores individuais.
+    // Halo translúcido, anel de ~3 px na cor da pior condição e miolo neutro.
     c.beginPath();
     c.arc(t / 2, t / 2, t / 2 - ESCALA, 0, Math.PI * 2);
-    c.fillStyle = cor;
+    c.fillStyle = corAnel;
     c.globalAlpha = 0.18;
     c.fill();
     c.globalAlpha = 1;
     c.beginPath();
-    c.arc(t / 2, t / 2, t / 2 - ESCALA * 4, 0, Math.PI * 2);
+    c.arc(t / 2, t / 2, t / 2 - ESCALA * 4.5, 0, Math.PI * 2);
     c.fillStyle = "#ffffff";
     c.fill();
-    c.lineWidth = ESCALA * 2;
-    c.strokeStyle = cor;
+    c.lineWidth = ESCALA * 3;
+    c.strokeStyle = corAnel;
     c.stroke();
-    c.fillStyle = cor;
+    c.fillStyle = corTexto;
     c.font = `700 ${t * (texto.length > 2 ? 0.28 : 0.34)}px Inter, system-ui, sans-serif`;
     c.textAlign = "center";
     c.textBaseline = "middle";
@@ -226,8 +252,13 @@ export function aoFaltarImagem(m: MapaMapLibre, id: string) {
   });
 }
 
-export const iconeGrupo = (camada: "arvores" | "ocorrencias"): ExpressionSpecification => [
-  "concat",
-  `grupo-${camada}-`,
-  ["to-string", ["get", "quantidade"]],
-];
+export const iconeGrupo = (camada: "arvores" | "ocorrencias"): ExpressionSpecification =>
+  camada === "arvores"
+    ? [
+        "concat",
+        "grupo-arvores-",
+        ["coalesce", ["get", "pior_condicao"], "nao_avaliada"],
+        "-",
+        ["to-string", ["get", "quantidade"]],
+      ]
+    : ["concat", "grupo-ocorrencias-", ["to-string", ["get", "quantidade"]]];

@@ -852,6 +852,17 @@ function Bolinha({ cor, vazada, borda }: { cor: string; vazada?: boolean; borda?
   );
 }
 
+/** Amostra do ícone de grupo: miolo neutro e anel na cor da pior condição. */
+function AnelGrupo() {
+  return (
+    <span
+      aria-hidden
+      className="inline-block size-3.5 shrink-0 rounded-full border-[3px] bg-white"
+      style={{ borderColor: CORES_CONDICAO.ruim }}
+    />
+  );
+}
+
 function Triangulo({ cor, risco }: { cor: string; risco?: boolean }) {
   return (
     <svg viewBox="0 0 12 12" className="size-3.5">
@@ -931,6 +942,9 @@ function Legenda({
                       </li>
                     ))}
               </ul>
+              <p className="mt-1.5 flex items-center gap-1.5">
+                <AnelGrupo /> Grupo: o anel mostra a pior condição
+              </p>
               <p className="mt-1.5 mb-1 text-texto-suave">Símbolo — origem da localização</p>
               <ul className="flex flex-wrap gap-x-3 gap-y-1">
                 <li className="flex items-center gap-1.5">
