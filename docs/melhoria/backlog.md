@@ -10,7 +10,6 @@ quando houver espaço ou decisão.
 
 | # | Prio | Item | Por quê | Pronto quando |
 | --- | --- | --- | --- | --- |
-| M-10 | P2 | Artigo da Wikipedia pelo nome científico quando o item do táxon não tem link | Ex.: o item de *Licania tomentosa* (Q9022290) não tem link para a Wikipedia, embora exista o artigo "Oiti". | Buscar o artigo pelo nome científico e aceitar só se o item do artigo tiver P225 idêntico. Teste com o caso real. |
 | M-03 | P2 | Mapa: seleção por área (RF-MAPA-022) | Criar tarefas ou exportar a partir de uma região. | Desenhar retângulo ou polígono, listar os itens e enviar para "criar tarefas" ou exportação. |
 | M-04 | P2 | Mapa: círculo de incerteza (RN-MAPA-001) | Não sugerir precisão maior que a real. | Ao aproximar, pontos com precisão pior que o limiar mostram o raio. Depende do limiar (DP-06). |
 | M-05 | P2 | Mapa: destacar o bairro buscado (RF-MAPA-011) | Hoje só enquadra. | Polígono realçado até a próxima interação. |
