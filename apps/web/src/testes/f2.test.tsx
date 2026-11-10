@@ -232,6 +232,73 @@ describe("visão geral", () => {
   });
 });
 
+describe("tendência dos instantâneos", () => {
+  it("mostra variação desde o registro anterior e sparkline acessível", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/indicadores/painel`, () =>
+        HttpResponse.json({
+          periodo: { inicio: "2026-10-01", fim: "2026-10-31" },
+          filtros: { bairro: null, equipe: null },
+          calculado_em: "2026-10-31T12:00:00Z",
+          indicadores: [
+            {
+              id: "especie_confirmada",
+              nome: "Espécie confirmada",
+              definicao: "d",
+              formula: "f",
+              valor: 40,
+              base: 10,
+              unidade: "%",
+              periodo: "instantâneo",
+              fonte: "Registros da plataforma",
+              link: null,
+              anterior: 32.5,
+              anterior_em: "2026-09-30",
+              serie: [
+                { data: "2026-08-31", valor: 30 },
+                { data: "2026-09-30", valor: 32.5 },
+                { data: "2026-10-30", valor: 40 },
+              ],
+            },
+            {
+              id: "arvores_validas",
+              nome: "Árvores com registro válido",
+              definicao: "d",
+              formula: "f",
+              valor: 5,
+              base: null,
+              unidade: "",
+              periodo: "instantâneo",
+              fonte: "Registros da plataforma",
+              link: null,
+              anterior: null,
+              anterior_em: null,
+              serie: [],
+            },
+          ],
+          distribuicoes: {},
+          series_mensais: { meses: [], definicao: "", series: [] },
+          pendencias: [],
+          equipes: [],
+          atividades: [],
+        }),
+      ),
+    );
+    await abrir("/visao-geral");
+    const cartao = (await screen.findByText("Espécie confirmada")).closest(".rounded-xl")!;
+    expect(within(cartao as HTMLElement).getByText("+7,5 p.p. desde 30/09/26")).toBeInTheDocument();
+    expect(
+      within(cartao as HTMLElement).getByRole("img", {
+        name: "Tendência: 30% em 31/08/26 a 40% em 30/10/26",
+      }),
+    ).toBeInTheDocument();
+    // Sem série, nada muda: sem variação nem sparkline.
+    const outro = screen.getByText("Árvores com registro válido").closest(".rounded-xl")!;
+    expect(within(outro as HTMLElement).queryByRole("img")).toBeNull();
+    expect(within(outro as HTMLElement).queryByText(/desde/)).toBeNull();
+  });
+});
+
 describe("acessibilidade", () => {
   it("título da aba acompanha a tela e a definição do indicador não depende de hover", async () => {
     const usuario = userEvent.setup();

@@ -15,7 +15,6 @@ quando houver espaço ou decisão.
 | M-05 | P2 | Mapa: destacar o bairro buscado (RF-MAPA-011) | Hoje só enquadra. | Polígono realçado até a próxima interação. |
 | M-06 | P2 | Mapa base em vector tiles próprios (dados OSM) | O OSM raster é carregado, e o servidor público tem política de uso restrita para produção. | Estilo claro próprio (Protomaps/PMTiles hospedado ou provedor), com glifos para rótulos nativos. Depende da DP-21 (hospedagem). |
 | M-09 | P3 | Atualização periódica das referências e Flora e Funga do Brasil | Artigos e imagens mudam, e a origem "nativa" tem fonte oficial brasileira. | Tarefa agendada (mensal) e link para a Flora e Funga do Brasil quando houver correspondência exata. |
-| M-11 | P2 | Visão geral: indicadores instantâneos com tendência | Hoje só os indicadores do período comparam com o anterior; os instantâneos (ex.: espécie confirmada) não têm histórico. | Instantâneos registrados periodicamente (tarefa diária) e variação/sparkline a partir deles, com a data de cada registro. |
 | M-08 | P3 | Tema de cores no restante do painel | Coerência com o novo mapa. | Tokens de `ui-tokens` revisados com contraste AA. |
 
 ## Plataforma e dependências

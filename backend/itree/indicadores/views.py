@@ -19,10 +19,11 @@ from itree.auditoria.views import ENTIDADES, EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo
 from itree.contas.models import Equipe
 from itree.core.parametros import uuid_do_parametro
+from itree.indicadores import instantaneos
 from itree.inspecoes.models import CondicaoAparente, EstadoInspecao, Inspecao
-from itree.inventario.models import Arvore, EstadoEspecie, Medida, SituacaoArvore, TipoMedida
+from itree.inventario.models import Arvore, EstadoEspecie
 from itree.ocorrencias.models import ESTADOS_FINAIS, EstadoOcorrencia, Ocorrencia, Prioridade
-from itree.tarefas.models import ESTADOS_FINAIS_TAREFA, Tarefa, TipoTarefa
+from itree.tarefas.models import ESTADOS_FINAIS_TAREFA, Tarefa
 from itree.territorio.models import Territorio
 
 FONTE_INTERNA = "Registros da plataforma"
@@ -87,12 +88,13 @@ def painel(request: Request):
     inspecoes = filtrar_por_escopo(Inspecao.objects.all(), usuario, campo_geom="arvore__geom")
     tarefas = filtrar_por_escopo(Tarefa.objects.all(), usuario)
 
-    bairro_nome = equipe_nome = None
+    bairro_nome = equipe_nome = bairro_obj = None
     if bairro := p.get("bairro"):
         t = Territorio.objects.filter(pk=uuid_do_parametro(bairro, "bairro")).first()
         if t is None:
             raise ValidationError({"bairro": ["Território não encontrado."]})
         bairro_nome = t.nome
+        bairro_obj = t
         arvores = arvores.filter(geom__intersects=t.geom)
         ocorrencias = ocorrencias.filter(geom__intersects=t.geom)
         inspecoes = inspecoes.filter(arvore__geom__intersects=t.geom)
@@ -115,19 +117,12 @@ def painel(request: Request):
         realizada_em__date__gte=inicio_anterior, realizada_em__date__lte=fim_anterior
     )
     enviadas = [EstadoInspecao.EM_REVISAO, EstadoInspecao.VALIDADA]
-    validas = arvores.filter(situacao=SituacaoArvore.ATIVA, geom__isnull=False).exclude(
-        localizacao_origem=""
+    validas = instantaneos.arvores_validas(arvores)
+    inst = instantaneos.calcular(
+        arvores, ocorrencias, inspecoes, tarefas, hoje=hoje, agora=timezone.now()
     )
-    total_validas = validas.count()
-    com_especie = validas.filter(especie_estado=EstadoEspecie.CONFIRMADA).count()
-    com_medidas = validas.filter(
-        pk__in=Medida.objects.filter(
-            aplicada=True, tipo__in=[TipoMedida.ALTURA, TipoMedida.DAP]
-        ).values("arvore_id")
-    ).count()
-    inspecionadas_12m = validas.filter(
-        ultima_inspecao_em__gte=timezone.now() - timedelta(days=365)
-    ).count()
+    total_validas = inst["arvores_validas"][0]
+    com_especie = inst["especie_confirmada"][0]
     concluidas_periodo = ocorrencias.filter(
         estado=EstadoOcorrencia.CONCLUIDA,
         concluida_em__date__gte=inicio,
@@ -148,9 +143,19 @@ def painel(request: Request):
     def _dias(t):
         return round(t.total_seconds() / 86400, 1) if t is not None else None
 
-    tarefas_inspecao_abertas = tarefas.filter(tipo=TipoTarefa.INSPECAO_ARVORE).exclude(
-        estado__in=ESTADOS_FINAIS_TAREFA
-    )
+    # Histórico dos instantâneos (M-11): vem dos registros diários do escopo, sem
+    # filtro de equipe (os registros são por território). Com filtro de bairro,
+    # só os registros daquele território, se estiver no escopo do usuário.
+    percentuais = {k for k, (_, den) in inst.items() if den is not None}
+    historico: dict[str, dict] = {}
+    if not equipe_nome:
+        if bairro_obj is None:
+            territorios = instantaneos.territorios_do_escopo(usuario)
+        elif instantaneos.territorio_no_escopo(usuario, bairro_obj):
+            territorios = [bairro_obj]
+        else:
+            territorios = []
+        historico = instantaneos.historico(territorios, inicio, fim, percentuais)
 
     def ind(
         id_,
@@ -165,10 +170,16 @@ def painel(request: Request):
         link=None,
         anterior=None,
     ):
+        h = {} if periodo else historico.get(id_, {})
         return {
-            # Valor no período anterior de mesma duração (só para indicadores do
-            # período); null quando não se aplica ou não há base.
-            "anterior": anterior,
+            # Indicadores do período: valor no período anterior de mesma duração e
+            # ``anterior_em`` = início desse período. Instantâneos: valor do último
+            # registro diário em ou antes do início do período e a data dele; ``serie``
+            # traz até 12 pontos (último registro de cada mês no último ano).
+            # Tudo null/vazio quando não se aplica ou não há registros.
+            "anterior": h.get("anterior", anterior),
+            "anterior_em": h.get("anterior_em", inicio_anterior if periodo else None),
+            "serie": h.get("serie", []),
             "id": id_,
             "nome": nome,
             "definicao": definicao,
@@ -187,7 +198,7 @@ def painel(request: Request):
             "Árvores cadastradas (registros)",
             "Todos os registros no seu escopo, em qualquer situação.",
             "contagem de registros",
-            arvores.count(),
+            inst["arvores_registros"][0],
             link={"pagina": "/inventario/arvores", "filtros": {"situacao": "todas"}},
         ),
         ind(
@@ -195,7 +206,7 @@ def painel(request: Request):
             "Árvores com registro válido",
             f"Registros {DEFINICAO_VALIDA}.",
             "contagem de registros válidos",
-            total_validas,
+            inst["arvores_validas"][0],
             link={"pagina": "/inventario/arvores", "filtros": {}},
         ),
         ind(
@@ -203,7 +214,7 @@ def painel(request: Request):
             "Espécie confirmada",
             "Percentual de árvores válidas com espécie confirmada por revisor.",
             "confirmadas ÷ válidas × 100",
-            _pct(com_especie, total_validas),
+            _pct(*inst["especie_confirmada"]),
             base=total_validas,
             unidade="%",
             link={"pagina": "/inventario/arvores", "filtros": {"especie_estado": "confirmada"}},
@@ -214,7 +225,7 @@ def painel(request: Request):
             "Percentual de árvores válidas com ao menos uma medida de altura ou DAP "
             "aplicada ao cadastro.",
             "com medida ÷ válidas × 100",
-            _pct(com_medidas, total_validas),
+            _pct(*inst["com_medidas"]),
             base=total_validas,
             unidade="%",
         ),
@@ -223,7 +234,7 @@ def painel(request: Request):
             "Inspecionadas nos últimos 12 meses",
             "Percentual de árvores válidas com inspeção validada nos últimos 365 dias.",
             "inspecionadas ÷ válidas × 100",
-            _pct(inspecionadas_12m, total_validas),
+            _pct(*inst["cobertura_inspecao"]),
             base=total_validas,
             unidade="%",
         ),
@@ -242,7 +253,7 @@ def painel(request: Request):
             "Inspeções aguardando revisão",
             "Inspeções enviadas pelo campo e ainda não validadas ou devolvidas.",
             "contagem",
-            inspecoes.filter(estado=EstadoInspecao.EM_REVISAO).count(),
+            inst["inspecoes_em_revisao"][0],
             link={"pagina": "/inspecoes", "filtros": {"estado": "em_revisao"}},
         ),
         ind(
@@ -250,7 +261,7 @@ def painel(request: Request):
             "Inspeções pendentes (tarefas)",
             "Tarefas de inspeção não concluídas nem canceladas.",
             "contagem",
-            tarefas_inspecao_abertas.count(),
+            inst["tarefas_inspecao_pendentes"][0],
             link={"pagina": "/equipes-tarefas", "filtros": {"tipo": "inspecao_arvore"}},
         ),
         ind(
@@ -258,7 +269,7 @@ def painel(request: Request):
             "Tarefas atrasadas",
             "Tarefas abertas com prazo anterior a hoje.",
             "contagem",
-            tarefas.exclude(estado__in=ESTADOS_FINAIS_TAREFA).filter(prazo__lt=hoje).count(),
+            inst["tarefas_atrasadas"][0],
             link={"pagina": "/equipes-tarefas", "filtros": {"atrasadas": "true"}},
         ),
         ind(
@@ -266,7 +277,7 @@ def painel(request: Request):
             "Ocorrências em aberto",
             "Ocorrências não concluídas nem canceladas. Não inclui alertas ambientais.",
             "contagem",
-            ocorrencias.exclude(estado__in=ESTADOS_FINAIS).count(),
+            inst["ocorrencias_abertas"][0],
             link={"pagina": "/ocorrencias", "filtros": {}},
         ),
         ind(
@@ -274,7 +285,7 @@ def painel(request: Request):
             "Ocorrências atrasadas",
             "Ocorrências em aberto com prazo anterior a hoje.",
             "contagem",
-            ocorrencias.exclude(estado__in=ESTADOS_FINAIS).filter(prazo__lt=hoje).count(),
+            inst["ocorrencias_atrasadas"][0],
             link={"pagina": "/ocorrencias", "filtros": {"atrasadas": "true"}},
         ),
         ind(

@@ -6,6 +6,8 @@
  */
 import { useId, useState } from "react";
 
+import { formatarDataCurta } from "../../util/formatos";
+
 /** Paleta categórica validada (azul, laranja): passa nos testes de daltonismo. */
 const CORES_SERIES = ["#2a78d6", "#eb6834"];
 
@@ -314,5 +316,66 @@ export function BarrasHorizontais({
         </li>
       ))}
     </ul>
+  );
+}
+
+export interface PontoSerie {
+  data: string;
+  valor: number;
+}
+
+function numeroPtBr(v: number) {
+  return v.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+}
+
+/**
+ * Sparkline dos instantâneos registrados (M-11): linha de 2 px, sem eixos,
+ * ponto final marcado. Com menos de 2 pontos não desenha nada.
+ */
+export function Sparkline({ serie, unidade = "" }: { serie: PontoSerie[]; unidade?: string }) {
+  if (serie.length < 2) return null;
+  const largura = 96;
+  const altura = 28;
+  const margem = 4;
+  const valores = serie.map((p) => p.valor);
+  const minimo = Math.min(...valores);
+  const amplitude = Math.max(...valores) - minimo || 1;
+  const pontos = serie.map((p, k) => ({
+    x: margem + (k * (largura - 2 * margem)) / (serie.length - 1),
+    y: altura - margem - ((p.valor - minimo) / amplitude) * (altura - 2 * margem),
+  }));
+  const fim = pontos[pontos.length - 1]!;
+  const primeiro = serie[0]!;
+  const ultimo = serie[serie.length - 1]!;
+  const sufixo = unidade === "%" ? "%" : "";
+  const rotulo =
+    `Tendência: ${numeroPtBr(primeiro.valor)}${sufixo} em ${formatarDataCurta(primeiro.data)} ` +
+    `a ${numeroPtBr(ultimo.valor)}${sufixo} em ${formatarDataCurta(ultimo.data)}`;
+  return (
+    <svg
+      role="img"
+      aria-label={rotulo}
+      viewBox={`0 0 ${largura} ${altura}`}
+      width={largura}
+      height={altura}
+      className="mt-1"
+    >
+      <polyline
+        points={pontos.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}
+        fill="none"
+        stroke={CORES_SERIES[0]}
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx={fim.x}
+        cy={fim.y}
+        r={3}
+        fill={CORES_SERIES[0]}
+        strokeWidth={1.5}
+        className="stroke-superficie"
+      />
+    </svg>
   );
 }

@@ -272,4 +272,31 @@ for a in random.sample([a for a in arvores if a.especie_estado != "confirmada"],
         alternativas=[{"especie_id": str(e.id), "nome": e.nome_cientifico} for e in sugeridas],
         registrada_por=gestor,
     )
+# --- Histórico SINTÉTICO dos indicadores instantâneos (M-11) -------------------
+# Valores inventados só para as capturas de tela: 12 registros mensais (último dia
+# de cada mês) que evoluem de ~60% até o valor de hoje, com pequena oscilação.
+# Em produção, quem grava isso é a tarefa diária `registrar_indicadores`.
+from itree.indicadores import instantaneos
+from itree.indicadores.models import RegistroIndicador
+
+rnd_hist = random.Random(11)
+for territorio in Territorio.objects.all():
+    atuais = instantaneos.calcular_territorio(territorio, hoje=hoje, agora=agora)
+    dia = hoje.replace(day=1)
+    for passo in range(1, 13):
+        dia = dia - timedelta(days=1)  # último dia do mês anterior, andando para trás
+        fator = max(0.0, 1 - 0.4 * passo / 12 + rnd_hist.uniform(-0.03, 0.03))
+        for indicador, (num, den) in atuais.items():
+            denominador = None if den is None else round(den * fator)
+            # Percentuais evoluem em proporção à base; contagens, ao seu próprio valor.
+            numerador = round(num * fator)
+            if denominador is not None:
+                numerador = min(numerador, denominador)
+            RegistroIndicador.objects.update_or_create(
+                data=dia, territorio=territorio, indicador=indicador,
+                defaults={"numerador": numerador, "denominador": denominador},
+            )
+        dia = dia.replace(day=1)
+instantaneos.registrar(hoje)
+
 print("árvores", Arvore.objects.count(), "ocorrências", Ocorrencia.objects.count(), "tarefas", Tarefa.objects.count())
