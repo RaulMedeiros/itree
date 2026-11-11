@@ -8,7 +8,7 @@ import {
 } from "@itree/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { ArrowLeft, RefreshCw, Search, TreeDeciduous } from "lucide-react";
+import { RefreshCw, Search, TreeDeciduous } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
@@ -51,6 +51,7 @@ export function EspeciesCatalogoPagina() {
     <>
       <CabecalhoPagina
         titulo="Espécies"
+        migalhas={[{ rotulo: "Inventário", para: "/inventario" }, { rotulo: "Espécies" }]}
         descricao="Espécies do catálogo, com as árvores do seu escopo e referências externas (Wikipedia, Wikimedia Commons, GBIF, Flora e Funga do Brasil)."
       />
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -162,14 +163,13 @@ export function EspecieDetalhePagina() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link
-        to="/inventario/especies"
-        className="inline-flex w-fit items-center gap-1 text-sm text-texto-suave hover:text-texto"
-      >
-        <ArrowLeft className="size-4" aria-hidden /> Espécies
-      </Link>
       <CabecalhoPagina
         titulo={e.nome_cientifico}
+        migalhas={[
+          { rotulo: "Inventário", para: "/inventario" },
+          { rotulo: "Espécies", para: "/inventario/especies" },
+          { rotulo: e.nome_cientifico },
+        ]}
         descricao={[e.nomes_comuns?.join(", "), e.familia].filter(Boolean).join(" · ") || undefined}
         acoes={
           <>

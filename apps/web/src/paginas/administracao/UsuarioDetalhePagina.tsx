@@ -121,6 +121,11 @@ function FormularioUsuario({ usuario }: { usuario: UsuarioAdmin }) {
     <>
       <CabecalhoPagina
         titulo={usuario.nome || usuario.email}
+        migalhas={[
+          { rotulo: "Administração", para: "/administracao" },
+          { rotulo: "Usuários", para: "/administracao/usuarios" },
+          { rotulo: usuario.nome || usuario.email },
+        ]}
         descricao={
           <span className="flex flex-wrap items-center gap-2">
             {usuario.email}

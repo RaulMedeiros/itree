@@ -63,6 +63,7 @@ export function ImportacoesPagina() {
     <>
       <CabecalhoPagina
         titulo="Importações"
+        migalhas={[{ rotulo: "Inventário", para: "/inventario" }, { rotulo: "Importações" }]}
         descricao="Importe inventários existentes (CSV ou GeoJSON). Nada é criado antes da confirmação, e cada registro guarda a fonte."
         acoes={
           <Botao onClick={() => setAssistente(true)}>

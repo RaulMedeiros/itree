@@ -103,6 +103,7 @@ export function ArvoresPagina() {
     <>
       <CabecalhoPagina
         titulo="Árvores"
+        migalhas={[{ rotulo: "Inventário", para: "/inventario" }, { rotulo: "Árvores" }]}
         descricao={
           contadores.data ? (
             <span>

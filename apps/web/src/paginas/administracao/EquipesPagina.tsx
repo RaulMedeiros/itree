@@ -35,6 +35,7 @@ export function EquipesPagina() {
     <>
       <CabecalhoPagina
         titulo="Equipes"
+        migalhas={[{ rotulo: "Administração", para: "/administracao" }, { rotulo: "Equipes" }]}
         descricao="Agrupamentos operacionais de campo. Equipes são desativadas, não excluídas."
         acoes={
           <Botao onClick={() => setEditando("nova")}>
