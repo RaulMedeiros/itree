@@ -338,7 +338,7 @@ describe("contexto de fontes externas", () => {
           fonte: "IBGE, Censo Demográfico 2022",
           fonte_url: "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/",
           licenca: "Não declarada no FTP do IBGE",
-          data_referencia: "2022-08-01",
+          data_referencia: "2022-07-31",
           ingerido_em: "2026-11-11T10:00:00Z",
           definicao: "Percentual das faces de quadra com ao menos uma árvore.",
           metodo: "Numerador = V05431 + V05432 + V05433.",
@@ -359,7 +359,7 @@ describe("contexto de fontes externas", () => {
     expect(
       within(cartao).getByRole("link", { name: "IBGE, Censo Demográfico 2022" }),
     ).toHaveAttribute("href", "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/");
-    expect(within(cartao).getByText(/referência: 01\/08\/2022/)).toBeInTheDocument();
+    expect(within(cartao).getByText(/referência: 2022/)).toBeInTheDocument();
     await usuario.click(within(cartao).getByText("Como é calculado").closest("summary")!);
     expect(within(cartao).getByText(/ao menos uma árvore/)).toBeVisible();
     expect(within(cartao).getByText(/Método: Numerador/)).toBeVisible();

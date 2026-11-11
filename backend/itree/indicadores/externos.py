@@ -49,8 +49,9 @@ URL_CENSO_FACES = (
 LICENCA_CENSO = (
     "Não declarada no FTP do IBGE; política de dados abertos do órgão a confirmar (DP-11)"
 )
-# Data de referência do Censo Demográfico 2022: 1º de agosto de 2022.
-DATA_REFERENCIA_CENSO = date(2022, 8, 1)
+# Data de referência do Censo Demográfico 2022 (noite de 31/07 para 01/08/2022;
+# a coleta começou em 1º de agosto). A interface mostra só o ano.
+DATA_REFERENCIA_CENSO = date(2022, 7, 31)
 
 NOME_ARBORIZACAO = "Faces de quadra com árvores (Censo 2022)"
 DEFINICAO_ARBORIZACAO = (
