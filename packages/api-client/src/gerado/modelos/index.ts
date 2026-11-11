@@ -87,6 +87,7 @@ export * from './evidenciasListarParams';
 export * from './exportarArvoresRequest';
 export * from './exportarArvoresRequestFiltros';
 export * from './fonteAlertaEnum';
+export * from './fonteEstado';
 export * from './formatoEnum';
 export * from './fusaoRequest';
 export * from './identificadorExterno';

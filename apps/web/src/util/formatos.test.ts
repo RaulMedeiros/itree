@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   contar,
   descreverAreaVerdeProxima,
+  descreverHa,
+  descreverProxima,
   descreverPrazo,
   descreverVariacao,
   diasDesde,
@@ -89,5 +91,19 @@ describe("formatarPontoGeografico", () => {
       "lat \u22123,746602 \u00b7 lon \u221238,540452",
     );
     expect(formatarPontoGeografico(3.5, 38)).toBe("lat 3,500000 \u00b7 lon 38,000000");
+  });
+});
+
+describe("coleta de fontes", () => {
+  it("descreve o tempo desde a última coleta", () => {
+    expect(descreverHa("2026-11-10T14:59:40Z", agora)).toBe("agora há pouco");
+    expect(descreverHa("2026-11-10T14:59:00Z", agora)).toBe("há 1 minuto");
+    expect(descreverHa("2026-11-10T12:10:00Z", agora)).toBe("há 2 horas");
+    expect(descreverHa("2026-11-07T15:00:00Z", agora)).toBe("há 3 dias");
+  });
+
+  it("descreve a próxima coleta e a que passou do horário", () => {
+    expect(descreverProxima("2026-11-10T19:00:30Z", agora)).toBe("em 4 horas");
+    expect(descreverProxima("2026-11-10T14:00:00Z", agora)).toBe("prevista e ainda não executada");
   });
 });

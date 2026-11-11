@@ -87,6 +87,28 @@ const servidor = criarServidor(
   http.get(`${API}/api/v1/territorios`, () =>
     HttpResponse.json(pagina([BAIRRO_B, MUNICIPIO, BAIRRO_A])),
   ),
+  http.get(`${API}/api/v1/alertas/fontes`, () =>
+    HttpResponse.json([
+      {
+        fonte: "inpe_focos",
+        rotulo: "INPE — BDQueimadas (focos de calor)",
+        automatica: true,
+        intervalo_horas: 6,
+        ultima_coleta: new Date(Date.now() - 2 * 3600_000).toISOString(),
+        ultima_coleta_sucesso: true,
+        proxima_coleta: new Date(Date.now() + 4 * 3600_000 + 60_000).toISOString(),
+      },
+      {
+        fonte: "inpe_deter",
+        rotulo: "INPE — TerraBrasilis/DETER",
+        automatica: false,
+        intervalo_horas: null,
+        ultima_coleta: null,
+        ultima_coleta_sucesso: null,
+        proxima_coleta: null,
+      },
+    ]),
+  ),
   http.get(`${API}/api/v1/alertas/ingestoes`, () =>
     HttpResponse.json([
       {
@@ -169,6 +191,19 @@ describe("integrações", () => {
     expect(await screen.findByText("Arquivo sintético")).toBeInTheDocument();
     expect(screen.queryByText(/ALERTAS_FONTES/)).toBeNull();
     expect(screen.getByText("DP-11")).toHaveClass("whitespace-nowrap");
+  });
+
+  it("mostra a última e a próxima coleta de cada fonte", async () => {
+    await abrir("/administracao/integracoes");
+    const fonte = async (nome: RegExp) =>
+      within((await screen.findByRole("cell", { name: nome })).closest("tr")!);
+    const focos = await fonte(/BDQueimadas/);
+    expect(focos.getByText("há 2 horas")).toBeInTheDocument();
+    expect(focos.getByText("em 4 horas")).toBeInTheDocument();
+    expect(focos.getByText("A cada 6 horas")).toBeInTheDocument();
+    const deter = await fonte(/DETER/);
+    expect(deter.getByText("Nunca coletada")).toBeInTheDocument();
+    expect(deter.getByText(/Sem coleta automática/)).toBeInTheDocument();
   });
 
   it("mostra órgão, licença e data de referência da fonte", async () => {

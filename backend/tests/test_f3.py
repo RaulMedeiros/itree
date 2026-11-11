@@ -2,10 +2,12 @@
 
 import io
 import json
+from datetime import timedelta
 
 import pytest
 import responses
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils.dateparse import parse_datetime
 from openpyxl import load_workbook
 
 from itree.alertas import fontes
@@ -473,3 +475,31 @@ def test_lista_ordena_por_arvores_proximas(cliente, analista, alerta_a):
         -1
     ] == "F1"
     assert cliente.get(base + "banana").status_code == 400
+
+
+def test_estado_das_fontes_traz_ultima_e_proxima_coleta(cliente, analista, settings):
+    settings.ALERTAS_FONTES = {"inpe_focos": "https://fonte.teste/focos.csv"}
+    settings.ALERTAS_INTERVALO_HORAS = 6
+    por_fonte = {f["fonte"]: f for f in cliente.como(analista).get("/api/v1/alertas/fontes").json()}
+    assert set(por_fonte) == {"inpe_focos", "inpe_deter", "mapbiomas"}
+    # Configurada, mas ainda não executada: sem última nem próxima.
+    assert por_fonte["inpe_focos"]["automatica"] is True
+    assert por_fonte["inpe_focos"]["intervalo_horas"] == 6
+    assert por_fonte["inpe_focos"]["ultima_coleta"] is None
+    assert por_fonte["inpe_focos"]["proxima_coleta"] is None
+    assert por_fonte["inpe_deter"]["automatica"] is False
+
+    coleta = IngestaoAlertas.objects.create(
+        fonte="inpe_focos", origem="https://fonte.teste", sucesso=True
+    )
+    IngestaoAlertas.objects.create(
+        fonte="inpe_deter", origem="deter.geojson", sucesso=True, usuario=analista
+    )
+    por_fonte = {f["fonte"]: f for f in cliente.get("/api/v1/alertas/fontes").json()}
+    focos = por_fonte["inpe_focos"]
+    assert focos["ultima_coleta_sucesso"] is True
+    assert parse_datetime(focos["ultima_coleta"]) == coleta.iniciada_em
+    assert parse_datetime(focos["proxima_coleta"]) == coleta.iniciada_em + timedelta(hours=6)
+    # Coleta manual aparece como última, mas fonte sem agendamento não tem próxima.
+    assert por_fonte["inpe_deter"]["ultima_coleta"] is not None
+    assert por_fonte["inpe_deter"]["proxima_coleta"] is None

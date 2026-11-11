@@ -59,6 +59,7 @@ let ingestoes: Ingestao[] = [];
 const servidor = criarServidor(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(eu)),
   http.get(`${API}/api/v1/alertas/ingestoes`, () => HttpResponse.json(ingestoes)),
+  http.get(`${API}/api/v1/alertas/fontes`, () => HttpResponse.json([])),
 );
 
 beforeAll(() => {

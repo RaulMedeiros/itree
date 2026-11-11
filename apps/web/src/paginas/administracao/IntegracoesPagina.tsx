@@ -2,6 +2,7 @@ import {
   ErroApi,
   FonteAlertaEnum,
   useAlertasEnviarArquivo,
+  useAlertasFontes,
   useAlertasIngestoes,
 } from "@itree/api-client";
 import { ROTULOS_FONTE_ALERTA } from "@itree/domain";
@@ -17,11 +18,80 @@ import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { invalidarCaminhos } from "../../util/cache";
-import { formatarData, formatarDataHora } from "../../util/formatos";
+import {
+  descreverHa,
+  descreverProxima,
+  formatarData,
+  formatarDataHora,
+  plural,
+} from "../../util/formatos";
 
 /** Origem em forma de nome ("arquivo sintético" vira "Arquivo sintético"); URLs ficam como estão. */
 const rotuloOrigem = (origem: string) =>
   /^https?:/i.test(origem) ? origem : origem.charAt(0).toLocaleUpperCase("pt-BR") + origem.slice(1);
+
+/** Última e próxima coleta de cada fonte, pelo agendamento configurado no servidor. */
+function EstadoDasFontes() {
+  const consulta = useAlertasFontes();
+  if (consulta.isPending) return <Carregando linhas={3} />;
+  if (consulta.isError) return <Erro erro={consulta.error} />;
+  return (
+    <section aria-labelledby="titulo-fontes" className="mb-6">
+      <h2 id="titulo-fontes" className="mb-2 text-base font-semibold">
+        Fontes
+      </h2>
+      <Tabela>
+        <thead>
+          <tr>
+            <Th>Fonte</Th>
+            <Th>Última coleta</Th>
+            <Th>Próxima coleta</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {consulta.data.data.map((f) => (
+            <Linha key={f.fonte}>
+              <Td>{ROTULOS_FONTE_ALERTA[f.fonte]}</Td>
+              <Td>
+                {f.ultima_coleta ? (
+                  <>
+                    <span title={formatarDataHora(f.ultima_coleta) ?? undefined}>
+                      {descreverHa(f.ultima_coleta)}
+                    </span>
+                    {f.ultima_coleta_sucesso === false && (
+                      <>
+                        {" "}
+                        <Selo tom="perigo">Falha</Selo>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-texto-suave">Nunca coletada</span>
+                )}
+              </Td>
+              <Td>
+                {!f.automatica ? (
+                  <span className="text-texto-suave">Sem coleta automática (envio manual)</span>
+                ) : f.proxima_coleta ? (
+                  <>
+                    {descreverProxima(f.proxima_coleta)}
+                    <p className="text-xs text-texto-suave">
+                      A cada {plural(f.intervalo_horas ?? 0, "hora")}
+                    </p>
+                  </>
+                ) : (
+                  <span className="text-texto-suave">
+                    Aguardando a primeira execução do agendador
+                  </span>
+                )}
+              </Td>
+            </Linha>
+          ))}
+        </tbody>
+      </Tabela>
+    </section>
+  );
+}
 
 /** Estado das integrações de alertas (RF-ADM-006) e ingestão manual. */
 export function IntegracoesPagina() {
@@ -45,6 +115,8 @@ export function IntegracoesPagina() {
           </Botao>
         }
       />
+      <EstadoDasFontes />
+      <h2 className="mb-2 text-base font-semibold">Execuções recentes</h2>
       {consulta.isPending ? (
         <Carregando />
       ) : consulta.isError ? (

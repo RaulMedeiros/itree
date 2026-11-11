@@ -436,6 +436,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/Alerta'
           description: ''
+  /api/v1/alertas/fontes:
+    get:
+      operationId: alertas_fontes
+      description: Última coleta e próxima coleta de cada fonte, pelo agendamento
+        configurado.
+      tags:
+      - alertas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FonteEstado'
+          description: ''
   /api/v1/alertas/ingestoes:
     get:
       operationId: alertas_ingestoes
@@ -4541,6 +4559,43 @@ components:
         * `inpe_focos` - INPE — BDQueimadas (focos de calor)
         * `inpe_deter` - INPE — TerraBrasilis/DETER
         * `mapbiomas` - MapBiomas Alerta
+    FonteEstado:
+      type: object
+      description: 'Estado de cada fonte externa de alertas: coleta feita e coleta
+        prevista.'
+      properties:
+        fonte:
+          $ref: '#/components/schemas/FonteAlertaEnum'
+        rotulo:
+          type: string
+        automatica:
+          type: boolean
+          description: A fonte tem URL em ALERTAS_FONTES e é coletada pelo agendador.
+        intervalo_horas:
+          type: integer
+          nullable: true
+        ultima_coleta:
+          type: string
+          format: date-time
+          nullable: true
+          description: Início da última execução, automática ou manual.
+        ultima_coleta_sucesso:
+          type: boolean
+          nullable: true
+        proxima_coleta:
+          type: string
+          format: date-time
+          nullable: true
+          description: Última coleta automática mais o intervalo configurado. Nulo
+            se a fonte não é automática ou se o agendador ainda não a executou.
+      required:
+      - automatica
+      - fonte
+      - intervalo_horas
+      - proxima_coleta
+      - rotulo
+      - ultima_coleta
+      - ultima_coleta_sucesso
     FormatoEnum:
       enum:
       - csv
