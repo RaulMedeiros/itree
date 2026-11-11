@@ -89,7 +89,7 @@ def test_comando_importa_com_proveniencia_e_e_idempotente(bairros_ibge, tmp_path
     assert aldeota.unidade == "%"
     assert aldeota.fonte == "IBGE, Censo Demográfico 2022"
     assert aldeota.fonte_url == externos.URL_CENSO_FACES
-    assert aldeota.data_referencia == date(2022, 8, 1) and aldeota.ingerido_em
+    assert aldeota.data_referencia == date(2022, 7, 31) and aldeota.ingerido_em
     assert "V05431" in aldeota.metodo and "faces de quadra" in aldeota.definicao
     assert aldeota.licenca
     assert "Sem código" in capsys.readouterr().out
@@ -118,7 +118,7 @@ def test_escopo_soma_numeradores_e_denominadores(cliente, bairros_ibge):
     assert item["valor"] == 68.31
     assert item["bairros_com_dado"] == 2 and item["bairros_no_escopo"] == 3
     assert item["fonte"] == "IBGE, Censo Demográfico 2022"
-    assert item["data_referencia"] == date(2022, 8, 1)
+    assert item["data_referencia"] == date(2022, 7, 31)
 
 
 def test_escopo_de_um_bairro_so_ve_o_proprio(bairros_ibge):

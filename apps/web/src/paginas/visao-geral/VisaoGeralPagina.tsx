@@ -361,8 +361,7 @@ function CartaoExterno({ i }: { i: IndicadorExterno }) {
         >
           {i.fonte}
         </a>
-        {ano ? ` (referência: ${ano})` : ""} · ingerido em{" "}
-        {formatarData(i.ingerido_em)}
+        {ano ? ` (referência: ${ano})` : ""} · ingerido em {formatarData(i.ingerido_em)}
       </p>
       <details className="mt-2 text-xs text-texto-suave">
         <summary className="inline-flex cursor-pointer items-center gap-1">
