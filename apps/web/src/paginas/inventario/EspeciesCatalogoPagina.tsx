@@ -54,7 +54,7 @@ export function EspeciesCatalogoPagina() {
         descricao="Espécies do catálogo, com as árvores do seu escopo e referências externas (Wikipedia, Wikimedia Commons, GBIF, Flora e Funga do Brasil)."
       />
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative w-80">
+        <div className="relative w-full sm:w-96">
           <Search
             className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-texto-suave"
             aria-hidden
@@ -62,7 +62,7 @@ export function EspeciesCatalogoPagina() {
           <Entrada
             type="search"
             aria-label="Buscar espécie"
-            placeholder="Nome científico, nome comum ou família"
+            placeholder="Nome, nome comum ou família"
             className="pl-8"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -112,7 +112,11 @@ function CartaoCatalogo({ especie }: { especie: Especie }) {
       params={{ id: especie.id }}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-borda bg-superficie shadow-sm transition hover:border-marca hover:shadow-md"
     >
-      <ImagemEspecie especie={especie} comCredito={false} className="aspect-[4/3] w-full" />
+      <ImagemEspecie
+        especie={especie}
+        comCredito={false}
+        className={especie.imagem_url ? "aspect-[4/3] w-full" : "h-20 w-full"}
+      />
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <p className="font-semibold italic group-hover:text-marca-escura">
           {especie.nome_cientifico}
@@ -120,6 +124,9 @@ function CartaoCatalogo({ especie }: { especie: Especie }) {
         <p className="line-clamp-1 text-sm text-texto-suave">
           {especie.nomes_comuns?.join(", ") || "Nomes comuns não cadastrados"}
         </p>
+        {!especie.imagem_url && especie.referencias_situacao === "nao_consultada" && (
+          <p className="text-xs text-texto-suave">Referências não consultadas</p>
+        )}
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           <SeloOrigem nativa={especie.nativa_brasil} />
           <span className="flex items-center gap-1 text-xs font-medium tabular-nums">
@@ -151,6 +158,7 @@ export function EspecieDetalhePagina() {
     return <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />;
   const e = consulta.data.data;
   const arvores = e.arvores_no_escopo ?? 0;
+  const naoConsultada = !e.referencias_situacao || e.referencias_situacao === "nao_consultada";
 
   return (
     <div className="flex flex-col gap-4">
@@ -177,8 +185,8 @@ export function EspecieDetalhePagina() {
                 disabled={atualizar.isPending}
                 onClick={() => atualizar.mutate({ id: e.id })}
               >
-                <RefreshCw className={atualizar.isPending ? "animate-spin" : ""} /> Atualizar
-                referências
+                <RefreshCw className={atualizar.isPending ? "animate-spin" : ""} />{" "}
+                {naoConsultada ? "Consultar" : "Atualizar"} referências
               </Botao>
             )}
           </>
@@ -186,7 +194,14 @@ export function EspecieDetalhePagina() {
       />
 
       <div className="grid gap-4 lg:grid-cols-5">
-        <ImagemEspecie especie={e} className="aspect-[4/3] rounded-xl lg:col-span-2" />
+        <ImagemEspecie
+          especie={e}
+          className={
+            e.imagem_url
+              ? "aspect-[4/3] rounded-xl lg:col-span-2"
+              : "h-32 rounded-xl lg:col-span-2 lg:h-full lg:min-h-32"
+          }
+        />
 
         <section className="flex flex-col gap-3 rounded-xl border border-borda bg-superficie p-5 text-sm lg:col-span-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -209,8 +224,10 @@ export function EspecieDetalhePagina() {
             </>
           ) : (
             <p className="text-texto-suave">
-              {e.referencias_situacao === "nao_consultada"
-                ? "As referências desta espécie ainda não foram consultadas."
+              {naoConsultada
+                ? podeAdministrar
+                  ? "As referências desta espécie ainda não foram consultadas. Use “Consultar referências” acima."
+                  : "As referências desta espécie ainda não foram consultadas. Peça a quem administra o catálogo para consultá-las."
                 : e.referencias_situacao === "nao_encontradas"
                   ? "Nenhuma referência externa corresponde exatamente a este nome científico."
                   : "Sem resumo disponível."}
