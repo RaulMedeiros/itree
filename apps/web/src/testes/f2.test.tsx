@@ -307,6 +307,72 @@ describe("visão geral: período e comparação (C-06, C-07)", () => {
   });
 });
 
+describe("contexto de fontes externas", () => {
+  const painelComContexto = (contexto: unknown[]) =>
+    http.get(`${API}/api/v1/indicadores/painel`, () =>
+      HttpResponse.json({
+        periodo: { inicio: "2026-10-01", fim: "2026-10-31" },
+        filtros: { bairro: null, equipe: null },
+        calculado_em: "2026-10-31T12:00:00Z",
+        indicadores: [],
+        contexto_externo: contexto,
+        distribuicoes: {},
+        series_mensais: { meses: [], definicao: "", series: [] },
+        pendencias: [],
+        equipes: [],
+        atividades: [],
+      }),
+    );
+
+  it("mostra o cartão do Censo 2022 com fonte, datas e definição, separado da operação", async () => {
+    const usuario = userEvent.setup();
+    servidor.use(
+      painelComContexto([
+        {
+          id: "arborizacao_faces_com_arvore",
+          nome: "Faces de quadra com árvores (Censo 2022)",
+          valor: 50.39,
+          numerador: 45428,
+          base: 90153,
+          unidade: "%",
+          fonte: "IBGE, Censo Demográfico 2022",
+          fonte_url: "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/",
+          licenca: "Não declarada no FTP do IBGE",
+          data_referencia: "2022-07-31",
+          ingerido_em: "2026-11-11T10:00:00Z",
+          definicao: "Percentual das faces de quadra com ao menos uma árvore.",
+          metodo: "Numerador = V05431 + V05432 + V05433.",
+          bairros_com_dado: 121,
+          bairros_no_escopo: 121,
+        },
+      ]),
+    );
+    await abrir("/visao-geral");
+    const secao = (
+      await screen.findByRole("heading", { name: "Contexto (fontes externas)" })
+    ).closest("section")!;
+    const cartao = within(secao).getByRole("article", {
+      name: "Faces de quadra com árvores (Censo 2022)",
+    });
+    expect(within(cartao).getByText("50,4%")).toBeInTheDocument();
+    expect(within(cartao).getByText(/45\.428 de 90\.153 faces de quadra/)).toBeInTheDocument();
+    expect(
+      within(cartao).getByRole("link", { name: "IBGE, Censo Demográfico 2022" }),
+    ).toHaveAttribute("href", "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/");
+    expect(within(cartao).getByText(/referência: 2022/)).toBeInTheDocument();
+    await usuario.click(within(cartao).getByText("Como é calculado").closest("summary")!);
+    expect(within(cartao).getByText(/ao menos uma árvore/)).toBeVisible();
+    expect(within(cartao).getByText(/Método: Numerador/)).toBeVisible();
+  });
+
+  it("sem dado externo a seção não aparece", async () => {
+    servidor.use(painelComContexto([]));
+    await abrir("/visao-geral");
+    await screen.findByRole("heading", { name: "Visão geral" });
+    expect(screen.queryByText("Contexto (fontes externas)")).toBeNull();
+  });
+});
+
 describe("tendência dos instantâneos", () => {
   it("mostra variação desde o registro anterior e sparkline acessível", async () => {
     servidor.use(

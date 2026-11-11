@@ -2234,8 +2234,8 @@ paths:
         name: analise
         schema:
           type: string
-        description: arvores_por_bairro, ocorrencias_por_tipo, ocorrencias_por_estado,
-          tempo_atendimento_por_tipo, inspecoes_por_mes, alertas_por_fonte
+        description: arvores_por_bairro, arborizacao_entorno_por_bairro, ocorrencias_por_tipo,
+          ocorrencias_por_estado, tempo_atendimento_por_tipo, inspecoes_por_mes, alertas_por_fonte
         required: true
       - in: query
         name: fim
@@ -2875,6 +2875,10 @@ components:
           format: date-time
         por_bairro:
           type: boolean
+        unidade:
+          type: string
+        base_rotulo:
+          type: string
         linhas:
           type: array
           items:
@@ -2885,6 +2889,7 @@ components:
           nullable: true
           description: Soma das linhas, só quando são contagens que não se sobrepõem.
       required:
+      - base_rotulo
       - calculado_em
       - definicao
       - fonte
@@ -2894,6 +2899,7 @@ components:
       - por_bairro
       - titulo
       - total
+      - unidade
     AplicarEnum:
       enum:
       - especie
@@ -5399,6 +5405,11 @@ components:
           items:
             type: object
             additionalProperties: {}
+        contexto_externo:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
         distribuicoes:
           type: object
           additionalProperties: {}
@@ -5422,6 +5433,7 @@ components:
       required:
       - atividades
       - calculado_em
+      - contexto_externo
       - distribuicoes
       - equipes
       - filtros

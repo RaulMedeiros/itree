@@ -16,6 +16,8 @@ export interface Analise {
   periodo: AnalisePeriodo;
   calculado_em: string;
   por_bairro: boolean;
+  unidade: string;
+  base_rotulo: string;
   linhas: AnaliseLinhasItem[];
   /**
      * Soma das linhas, só quando são contagens que não se sobrepõem.

@@ -7,7 +7,7 @@
  */
 
 export type RelatoriosAnaliseParams = {
-  /** arvores_por_bairro, ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo, inspecoes_por_mes, alertas_por_fonte */
+  /** arvores_por_bairro, arborizacao_entorno_por_bairro, ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo, inspecoes_por_mes, alertas_por_fonte */
   analise: string;
   fim?: string;
   inicio?: string;
