@@ -52,6 +52,10 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     esperar: "Legenda",
     espera: 5000,
   });
+  await tela(p, "02b-mapa-grupos", `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=12.6`, {
+    esperar: "Legenda",
+    espera: 5000,
+  });
   await tela(
     p,
     "03-mapa-selecao",
@@ -64,6 +68,37 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=14.6&alertas=1&tarefas=1&ocorrencias=0`,
     { esperar: "Legenda", espera: 5000 },
   );
+  await tela(p, "33-mapa-bairro-destaque", "/mapa", {
+    esperar: "Legenda",
+    espera: 4000,
+    acao: async (p) => {
+      await p
+        .getByPlaceholder("Buscar árvore, ocorrência, bairro ou coordenada")
+        .fill("Bairro de teste B");
+      await p
+        .getByRole("option", { name: /Bairro de teste B/ })
+        .first()
+        .click();
+      await p.getByText("Bairro em destaque:").waitFor({ timeout: 15000 });
+    },
+  });
+  await tela(p, "34-mapa-selecao-area", `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=14.6`, {
+    esperar: "Legenda",
+    espera: 3000,
+    acao: async (p) => {
+      await p.waitForTimeout(3000);
+      await p.getByRole("button", { name: "Selecionar área" }).click();
+      await p.mouse.move(760, 330);
+      await p.mouse.down();
+      await p.mouse.move(930, 470, { steps: 8 });
+      await p.mouse.move(1080, 600, { steps: 8 });
+      await p.mouse.up();
+      await p
+        .getByText(/árvores? na área|Árvores/)
+        .first()
+        .waitFor({ timeout: 15000 });
+    },
+  });
   await tela(p, "05-arvores", "/inventario/arvores", { esperar: /ARV-/ });
   await tela(p, "06-arvore-resumo", `/inventario/arvores/${ids.arvore}`, { esperar: "Resumo" });
   await tela(p, "07-arvore-medidas", null, {

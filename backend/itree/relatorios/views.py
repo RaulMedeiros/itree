@@ -238,6 +238,11 @@ def _dados_arvores(usuario, params):
         ),
         params,
     )
+    return tabela_arvores(qs)
+
+
+def tabela_arvores(qs):
+    """Colunas e linhas (com a geometria) do inventário para o queryset já filtrado."""
     colunas = [
         "codigo",
         "especie",
@@ -279,6 +284,11 @@ def _dados_ocorrencias(usuario, params):
         filtrar_por_escopo(Ocorrencia.objects.select_related("tipo", "bairro", "arvore"), usuario),
         params,
     )
+    return tabela_ocorrencias(qs)
+
+
+def tabela_ocorrencias(qs):
+    """Colunas e linhas (com a geometria) das ocorrências para o queryset já filtrado."""
     colunas = [
         "codigo",
         "tipo",
@@ -432,16 +442,24 @@ def exportar(request: Request):
     ):
         raise PermissionDenied()
     colunas, registros = fonte_dados(request.user, p)
+    return resposta_exportacao(request.user, conjunto, titulo, formato, p, colunas, registros)
+
+
+def resposta_exportacao(usuario, conjunto, titulo, formato, p, colunas, registros) -> HttpResponse:
+    """Gera o arquivo (CSV, XLSX ou GeoJSON) com metadados e registra a exportação (RF-REL-004).
+
+    ``registros`` é a lista de ``(linha, geometria)``; uma a mais que o limite indica corte.
+    """
     truncado = len(registros) > LIMITE_EXPORTACAO
     registros = registros[:LIMITE_EXPORTACAO]
-    meta = _metadados(request.user, titulo, p, len(registros))
+    meta = _metadados(usuario, titulo, p, len(registros))
     if truncado:
         meta["truncado"] = (
             f"O resultado passou de {LIMITE_EXPORTACAO} registros e foi cortado; "
             "refine os filtros para exportar o restante."
         )
     Exportacao.objects.create(
-        usuario=request.user, conjunto=conjunto, formato=formato, filtros=p, linhas=len(registros)
+        usuario=usuario, conjunto=conjunto, formato=formato, filtros=p, linhas=len(registros)
     )
     nome = f"itree-{conjunto}-{timezone.localdate():%Y%m%d}.{formato}"
 

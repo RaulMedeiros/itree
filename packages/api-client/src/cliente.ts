@@ -86,11 +86,13 @@ export async function requisicao<T>(url: string, opcoes: RequestInit = {}): Prom
 
 /**
  * Baixa um arquivo binário da API (exportações, PDF) com a mesma autenticação
- * do cliente gerado, e entrega ao navegador para salvar.
+ * do cliente gerado, e entrega ao navegador para salvar. Com `corpo`, a
+ * requisição é um POST com JSON (ex.: exportar a seleção por área).
  */
 export async function baixarArquivo(
   caminho: string,
   parametros: Record<string, string | undefined> = {},
+  opcoes: { corpo?: unknown } = {},
 ): Promise<{ nome: string; tamanho: number }> {
   const token = await configuracao.obterToken();
   const qs = new URLSearchParams(
@@ -98,7 +100,13 @@ export async function baixarArquivo(
   );
   const cabecalhos = new Headers({ "X-Itree-Origem": configuracao.origem });
   if (token) cabecalhos.set("Authorization", `Bearer ${token}`);
-  const resposta = await fetch(`${configuracao.urlBase}${caminho}?${qs}`, { headers: cabecalhos });
+  const comCorpo = opcoes.corpo !== undefined;
+  if (comCorpo) cabecalhos.set("Content-Type", "application/json");
+  const resposta = await fetch(`${configuracao.urlBase}${caminho}${qs.size ? `?${qs}` : ""}`, {
+    method: comCorpo ? "POST" : "GET",
+    headers: cabecalhos,
+    body: comCorpo ? JSON.stringify(opcoes.corpo) : undefined,
+  });
   if (!resposta.ok) {
     const texto = await resposta.text();
     throw new ErroApi(resposta.status, texto ? JSON.parse(texto) : null);

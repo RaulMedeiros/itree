@@ -38,6 +38,20 @@ import {
 import { config } from "../../config";
 import { Mapa } from "../../mapa/Mapa";
 import { maplibregl } from "../../mapa/maplibre";
+import {
+  adicionarRealce,
+  definirRealce,
+  limitesDaGeometria,
+  type FeicaoTerritorio,
+} from "../../mapa/realce";
+import {
+  adicionarCamadasArea,
+  definirArea,
+  iniciarDesenho,
+  poligonoDeLimites,
+  type FormaArea,
+  type PoligonoGeoJson,
+} from "../../mapa/desenho";
 import { urlApi } from "../../mapa/url";
 import type { TipoBase } from "../../mapa/estilo";
 import {
@@ -59,6 +73,7 @@ import { Selecao } from "../../ui/campos";
 import { useTituloDocumento } from "../../util/titulo";
 import { Carregando } from "../../ui/estados";
 import { formatarData, formatarDataHora } from "../../util/formatos";
+import { BarraSelecaoArea, PainelSelecaoArea } from "./SelecaoArea";
 
 export interface BuscaMapa {
   lon?: number;
@@ -78,6 +93,8 @@ export interface BuscaMapa {
   estado?: "abertas" | "todas";
   cor?: "origem";
   selecao?: string;
+  /** Território (bairro) buscado, realçado até a próxima interação. */
+  destaque?: string;
 }
 
 function urlTiles(
@@ -125,6 +142,16 @@ export function MapaPagina() {
     alternouPainel.current = true;
     setPainel(aberto);
   };
+  // Feições dos bairros, para realçar o buscado, e o destaque vigente (lido nos eventos do mapa).
+  const [feicoesBairros, setFeicoesBairros] = useState<FeicaoTerritorio[]>([]);
+  const destaqueAtual = useRef<string | undefined>(undefined);
+  // Seleção por área (RF-MAPA-022): forma em desenho e área concluída (abre o painel).
+  const [formaArea, setFormaArea] = useState<FormaArea | null>(null);
+  const [area, setArea] = useState<PoligonoGeoJson | null>(null);
+  const botaoSelecionarArea = useRef<HTMLButtonElement>(null);
+  const devolverFocoAoBotao = useRef(false);
+  // Cliques nas árvores não abrem o painel contextual enquanto se desenha ou há área.
+  const selecaoPorAreaAtiva = useRef(false);
   const [dica, setDica] = useState<{ x: number; y: number; texto: string } | null>(null);
   const [cursor, setCursor] = useState<{ lon: number; lat: number } | null>(null);
 
@@ -146,6 +173,13 @@ export function MapaPagina() {
     "arvore" | "ocorrencia" | "",
     string,
   ];
+
+  useEffect(() => {
+    destaqueAtual.current = busca.destaque;
+  }, [busca.destaque]);
+  useEffect(() => {
+    selecaoPorAreaAtiva.current = formaArea !== null || area !== null;
+  }, [formaArea, area]);
 
   const atualizarBusca = (parcial: Partial<BuscaMapa>) =>
     void navegar({ search: (s: BuscaMapa) => ({ ...s, ...parcial }), replace: true });
@@ -296,6 +330,10 @@ export function MapaPagina() {
         "circle-stroke-width": 3,
       },
     });
+    // Realce do bairro buscado: acima das árvores, translúcido, abaixo do anel da seleção.
+    adicionarRealce(m, "selecao");
+    // Área da seleção por área e seu rascunho, também abaixo do anel.
+    adicionarCamadasArea(m, "selecao");
 
     const interativas = [
       "arvores-grupos",
@@ -331,11 +369,16 @@ export function MapaPagina() {
           m.easeTo({ center: e.lngLat, zoom: Math.min(m.getZoom() + 2.5, 18) });
           return;
         }
+        if (selecaoPorAreaAtiva.current) return;
         atualizarBusca({
           selecao: `${camada.startsWith("arvores") ? "arvore" : "ocorrencia"}:${p.id}`,
         });
       });
     }
+    // Qualquer clique no mapa encerra o realce do bairro buscado (RF-MAPA-011).
+    m.on("click", () => {
+      if (destaqueAtual.current) atualizarBusca({ destaque: undefined });
+    });
     // Coordenada sob o cursor (RF-MAPA-012).
     m.on("mousemove", (e) => setCursor({ lon: e.lngLat.lng, lat: e.lngLat.lat }));
     m.on("mouseout", () => setCursor(null));
@@ -377,6 +420,7 @@ export function MapaPagina() {
       for (const r of rotulos.current) r.remove();
       const feicoes = (data as { features?: { properties: { nome: string; rotulo?: number[] } }[] })
         .features;
+      setFeicoesBairros((feicoes ?? []) as unknown as FeicaoTerritorio[]);
       rotulos.current = (feicoes ?? [])
         .filter((f) => f.properties.rotulo?.length === 2)
         .map((f) => {
@@ -391,6 +435,68 @@ export function MapaPagina() {
         });
     });
   }, [pronto]);
+
+  // Realça o bairro buscado e o enquadra; sai ao limpar o parâmetro (próxima interação).
+  const destaque = busca.destaque;
+  const feicaoDestaque = destaque
+    ? (feicoesBairros.find((f) => String(f.id) === destaque) ?? null)
+    : null;
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m) return;
+    definirRealce(m, feicaoDestaque);
+    const limites = feicaoDestaque && limitesDaGeometria(feicaoDestaque.geometry);
+    if (limites) m.fitBounds(limites, { padding: 60, maxZoom: 16 });
+  }, [pronto, feicaoDestaque]);
+
+  // Modo de desenho da área: ativo enquanto houver forma escolhida.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m || !formaArea) return;
+    return iniciarDesenho(m, formaArea, {
+      aoConcluir: (concluida) => {
+        setArea(concluida);
+        setFormaArea(null);
+      },
+      aoCancelar: () => setFormaArea(null),
+    });
+  }, [pronto, formaArea]);
+
+  // A área desenhada fica visível, tracejada, enquanto o painel está aberto.
+  useEffect(() => {
+    const m = mapa.current;
+    if (pronto && m) definirArea(m, area);
+  }, [pronto, area]);
+
+  // Ao sair da seleção por área, o foco volta ao botão que a ligou.
+  useEffect(() => {
+    if (formaArea || area || !devolverFocoAoBotao.current) return;
+    devolverFocoAoBotao.current = false;
+    botaoSelecionarArea.current?.focus();
+  }, [formaArea, area]);
+
+  const iniciarSelecaoPorArea = (forma: FormaArea) => {
+    setArea(null);
+    setFormaArea(forma);
+  };
+  const fecharSelecaoPorArea = () => {
+    devolverFocoAoBotao.current = true;
+    setArea(null);
+    setFormaArea(null);
+  };
+  const usarAreaVisivel = () => {
+    const limites = mapa.current?.getBounds();
+    if (!limites) return;
+    setArea(
+      poligonoDeLimites([
+        limites.getWest(),
+        limites.getSouth(),
+        limites.getEast(),
+        limites.getNorth(),
+      ]),
+    );
+    setFormaArea(null);
+  };
 
   // Enquadra o escopo do usuário ao abrir sem posição na URL.
   const limites = camadas.data?.data.limites_escopo;
@@ -759,6 +865,34 @@ export function MapaPagina() {
           />
         </div>
 
+        {/* Ferramentas do mapa, ao lado do painel de camadas. */}
+        <div className="pointer-events-none absolute top-3 left-[21.75rem] z-10 flex max-w-[calc(100%-44rem)] min-w-64 flex-col items-start gap-2">
+          <BarraSelecaoArea
+            forma={formaArea}
+            ativoPainel={area !== null}
+            botao={botaoSelecionarArea}
+            aoAlternar={() =>
+              formaArea || area ? fecharSelecaoPorArea() : iniciarSelecaoPorArea("retangulo")
+            }
+            aoEscolherForma={iniciarSelecaoPorArea}
+            aoUsarAreaVisivel={usarAreaVisivel}
+          />
+          {feicaoDestaque && (
+            <div
+              role="status"
+              className="pointer-events-auto flex items-center gap-2 rounded-full border border-marca bg-superficie px-3 py-1 text-sm shadow"
+            >
+              Bairro em destaque: <strong>{feicaoDestaque.properties.nome}</strong>
+              <button
+                className="rounded-full p-0.5 hover:bg-fundo"
+                aria-label="Limpar destaque do bairro"
+                onClick={() => atualizarBusca({ destaque: undefined })}
+              >
+                <X className="size-3.5" aria-hidden />
+              </button>
+            </div>
+          )}
+        </div>
         {cursor && (
           <div
             className="pointer-events-none absolute right-14 bottom-2 z-10 rounded bg-superficie/90 px-2 py-0.5 font-mono text-[11px] text-texto-suave shadow-sm"
@@ -775,7 +909,24 @@ export function MapaPagina() {
             {dica.texto}
           </div>
         )}
-        {tipoSelecao && idSelecao && (
+        {area && (
+          <PainelSelecaoArea
+            area={area}
+            filtros={{
+              ...(Object.fromEntries(Object.entries(filtrosArvores).filter(([, v]) => v)) as Record<
+                string,
+                string
+              >),
+              estado: filtrosOcorrencias.estado,
+            }}
+            camadas={[
+              ...(mostrarArvores ? (["arvores"] as const) : []),
+              ...(mostrarOcorrencias ? (["ocorrencias"] as const) : []),
+            ]}
+            aoFechar={fecharSelecaoPorArea}
+          />
+        )}
+        {tipoSelecao && idSelecao && !area && (
           <PainelContextual
             tipo={tipoSelecao}
             id={idSelecao}

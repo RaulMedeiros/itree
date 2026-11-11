@@ -1782,6 +1782,69 @@ paths:
               schema:
                 $ref: '#/components/schemas/Camadas'
           description: ''
+  /api/v1/mapa/selecao:
+    post:
+      operationId: mapa_selecao
+      description: |-
+        Árvores e ocorrências dentro de uma área desenhada (RF-MAPA-022).
+
+        Respeita o escopo territorial e as permissões do usuário, e aplica os mesmos
+        filtros do mapa. A lista traz até 2000 itens por camada (``truncado`` avisa
+        quando há mais); o total e a contagem por condição cobrem a seleção inteira.
+        Camada sem permissão volta como ``null``.
+      tags:
+      - mapa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelecaoEntradaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SelecaoEntradaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SelecaoEntradaRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelecaoSaida'
+          description: ''
+  /api/v1/mapa/selecao/exportar:
+    post:
+      operationId: mapa_selecao_exportar
+      description: |-
+        Exporta a seleção por área no mesmo formato das exportações do inventário e das
+        ocorrências (CSV, XLSX ou GeoJSON), com metadados e a área desenhada como filtro.
+      tags:
+      - mapa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelecaoExportarRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SelecaoExportarRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SelecaoExportarRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/v1/mapa/tiles/{camada}/{z}/{x}/{y}:
     get:
       operationId: mapa_tile
@@ -3139,6 +3202,14 @@ components:
     BlankEnum:
       enum:
       - ''
+    CamadaSelecaoEnum:
+      enum:
+      - arvores
+      - ocorrencias
+      type: string
+      description: |-
+        * `arvores` - Árvores
+        * `ocorrencias` - Ocorrências
     Camadas:
       type: object
       properties:
@@ -3928,6 +3999,16 @@ components:
         * `inpe_focos` - INPE — BDQueimadas (focos de calor)
         * `inpe_deter` - INPE — TerraBrasilis/DETER
         * `mapbiomas` - MapBiomas Alerta
+    FormatoEnum:
+      enum:
+      - csv
+      - xlsx
+      - geojson
+      type: string
+      description: |-
+        * `csv` - csv
+        * `xlsx` - xlsx
+        * `geojson` - geojson
     FusaoRequest:
       type: object
       properties:
@@ -4284,6 +4365,49 @@ components:
       - recebida_em
       - revisor
       - tecnico
+    ItemArvore:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        especie:
+          type: string
+        condicao:
+          type: string
+        endereco:
+          type: string
+      required:
+      - codigo
+      - condicao
+      - endereco
+      - especie
+      - id
+    ItemOcorrencia:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        tipo:
+          type: string
+        estado:
+          type: string
+        prioridade:
+          type: string
+        risco_confirmado:
+          type: boolean
+      required:
+      - codigo
+      - estado
+      - id
+      - prioridade
+      - risco_confirmado
+      - tipo
     LinhaImportacao:
       type: object
       properties:
@@ -5763,6 +5887,109 @@ components:
       - ambiente
       - banco
       - status
+    SelecaoArvores:
+      type: object
+      properties:
+        total:
+          type: integer
+        por_condicao:
+          type: object
+          additionalProperties:
+            type: integer
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemArvore'
+        truncado:
+          type: boolean
+      required:
+      - itens
+      - por_condicao
+      - total
+      - truncado
+    SelecaoEntradaRequest:
+      type: object
+      properties:
+        geometria:
+          description: Polígono GeoJSON (EPSG:4326) da área desenhada.
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+          description: 'Mesmos filtros dos vector tiles: especie, especie_estado,
+            localizacao_origem, bairro, sem_inspecao_dias, condicao_aparente (árvores);
+            estado, prioridade, tipo (ocorrências).'
+        camadas:
+          type: array
+          items:
+            $ref: '#/components/schemas/CamadaSelecaoEnum'
+          description: 'Camadas consultadas (padrão: árvores e ocorrências).'
+      required:
+      - geometria
+    SelecaoExportarRequest:
+      type: object
+      properties:
+        geometria:
+          description: Polígono GeoJSON (EPSG:4326) da área desenhada.
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+          description: 'Mesmos filtros dos vector tiles: especie, especie_estado,
+            localizacao_origem, bairro, sem_inspecao_dias, condicao_aparente (árvores);
+            estado, prioridade, tipo (ocorrências).'
+        camadas:
+          type: array
+          items:
+            $ref: '#/components/schemas/CamadaSelecaoEnum'
+          description: 'Camadas consultadas (padrão: árvores e ocorrências).'
+        conjunto:
+          $ref: '#/components/schemas/CamadaSelecaoEnum'
+        formato:
+          $ref: '#/components/schemas/FormatoEnum'
+      required:
+      - conjunto
+      - formato
+      - geometria
+    SelecaoOcorrencias:
+      type: object
+      properties:
+        total:
+          type: integer
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemOcorrencia'
+        truncado:
+          type: boolean
+      required:
+      - itens
+      - total
+      - truncado
+    SelecaoSaida:
+      type: object
+      properties:
+        area_km2:
+          type: number
+          format: double
+        limite_itens:
+          type: integer
+        limite_tarefas_em_lote:
+          type: integer
+        arvores:
+          allOf:
+          - $ref: '#/components/schemas/SelecaoArvores'
+          nullable: true
+        ocorrencias:
+          allOf:
+          - $ref: '#/components/schemas/SelecaoOcorrencias'
+          nullable: true
+      required:
+      - area_km2
+      - arvores
+      - limite_itens
+      - limite_tarefas_em_lote
+      - ocorrencias
     SinalObservadoEnum:
       enum:
       - folhagem_escassa
