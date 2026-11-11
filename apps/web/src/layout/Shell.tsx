@@ -9,6 +9,7 @@ import { modulosVisiveis } from "../acesso/modulos";
 import { config } from "../config";
 import { Selo } from "../ui/selo";
 import { BuscaGlobal } from "./BuscaGlobal";
+import { FontesIndicador } from "./FontesIndicador";
 
 export function Shell() {
   const eu = useUsuario();
@@ -86,41 +87,44 @@ function Cabecalho() {
         )}
       </div>
       <BuscaGlobal />
-      <Menu.Root>
-        <Menu.Trigger className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-fundo">
-          <span className="flex size-7 items-center justify-center rounded-full bg-marca-clara text-xs font-semibold text-marca-escura">
-            {(eu.nome || eu.email).slice(0, 1).toUpperCase()}
-          </span>
-          <span className="max-w-48 truncate">{eu.nome || eu.email}</span>
-          <ChevronDown className="size-4 text-texto-suave" aria-hidden />
-        </Menu.Trigger>
-        <Menu.Portal>
-          <Menu.Content
-            align="end"
-            sideOffset={6}
-            className="z-50 w-64 rounded-md border border-borda bg-superficie p-1 shadow-lg"
-          >
-            <div className="px-2.5 py-2">
-              <p className="truncate text-sm font-medium">{eu.nome || eu.email}</p>
-              <p className="truncate text-xs text-texto-suave">{eu.email}</p>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {eu.papeis.map((p) => (
-                  <Selo key={p} tom="marca">
-                    {ROTULOS_PAPEL[p]}
-                  </Selo>
-                ))}
-              </div>
-            </div>
-            <Menu.Separator className="my-1 h-px bg-borda" />
-            <Menu.Item
-              className="flex cursor-pointer items-center gap-2 rounded-sm px-2.5 py-2 text-sm outline-none data-highlighted:bg-marca-clara data-highlighted:outline-2 data-highlighted:outline-marca"
-              onSelect={() => void auth.signoutRedirect()}
+      <div className="flex items-center gap-2">
+        <FontesIndicador />
+        <Menu.Root>
+          <Menu.Trigger className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-fundo">
+            <span className="flex size-7 items-center justify-center rounded-full bg-marca-clara text-xs font-semibold text-marca-escura">
+              {(eu.nome || eu.email).slice(0, 1).toUpperCase()}
+            </span>
+            <span className="max-w-48 truncate">{eu.nome || eu.email}</span>
+            <ChevronDown className="size-4 text-texto-suave" aria-hidden />
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Content
+              align="end"
+              sideOffset={6}
+              className="z-50 w-64 rounded-md border border-borda bg-superficie p-1 shadow-lg"
             >
-              <LogOut className="size-4" aria-hidden /> Sair
-            </Menu.Item>
-          </Menu.Content>
-        </Menu.Portal>
-      </Menu.Root>
+              <div className="px-2.5 py-2">
+                <p className="truncate text-sm font-medium">{eu.nome || eu.email}</p>
+                <p className="truncate text-xs text-texto-suave">{eu.email}</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {eu.papeis.map((p) => (
+                    <Selo key={p} tom="marca">
+                      {ROTULOS_PAPEL[p]}
+                    </Selo>
+                  ))}
+                </div>
+              </div>
+              <Menu.Separator className="my-1 h-px bg-borda" />
+              <Menu.Item
+                className="flex cursor-pointer items-center gap-2 rounded-sm px-2.5 py-2 text-sm outline-none data-highlighted:bg-marca-clara data-highlighted:outline-2 data-highlighted:outline-marca"
+                onSelect={() => void auth.signoutRedirect()}
+              >
+                <LogOut className="size-4" aria-hidden /> Sair
+              </Menu.Item>
+            </Menu.Content>
+          </Menu.Portal>
+        </Menu.Root>
+      </div>
     </header>
   );
 }

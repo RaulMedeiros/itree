@@ -19,6 +19,20 @@ export function BuscaGlobal() {
   const navegar = useNavigate();
   const id = useId();
   const raiz = useRef<HTMLDivElement>(null);
+  const campo = useRef<HTMLInputElement>(null);
+
+  // Atalho "/" foca a busca, exceto quando a pessoa já está digitando em outro campo.
+  useEffect(() => {
+    const atalho = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+      const alvo = e.target as HTMLElement | null;
+      if (alvo?.closest("input, textarea, select, [contenteditable='true']")) return;
+      e.preventDefault();
+      campo.current?.focus();
+    };
+    document.addEventListener("keydown", atalho);
+    return () => document.removeEventListener("keydown", atalho);
+  }, []);
 
   useEffect(() => {
     // Com menos de 2 caracteres a lista nem é exibida (ver renderização).
@@ -77,6 +91,7 @@ export function BuscaGlobal() {
         aria-hidden
       />
       <input
+        ref={campo}
         type="search"
         role="combobox"
         aria-expanded={aberto && resultados.length > 0}
@@ -84,8 +99,9 @@ export function BuscaGlobal() {
         aria-autocomplete="list"
         aria-activedescendant={aberto && resultados[ativo] ? `${id}-opcao-${ativo}` : undefined}
         aria-label="Busca global"
+        aria-keyshortcuts="/"
         placeholder="Buscar árvore, ocorrência, bairro ou coordenada"
-        className="h-9 w-full rounded-md border border-borda-campo bg-fundo pr-3 pl-8 text-sm"
+        className="h-9 w-full rounded-md border border-borda-campo bg-fundo pr-8 pl-8 text-sm"
         value={termo}
         onChange={(e) => setTermo(e.target.value)}
         onFocus={() => resultados.length && setAberto(true)}
@@ -96,6 +112,14 @@ export function BuscaGlobal() {
           else if (e.key === "Escape") setAberto(false);
         }}
       />
+      {!termo && (
+        <kbd
+          aria-hidden
+          className="pointer-events-none absolute top-2 right-2.5 rounded border border-borda px-1.5 text-xs text-texto-suave"
+        >
+          /
+        </kbd>
+      )}
       {aberto && termo.trim().length >= 2 && (
         <ul
           id={id}

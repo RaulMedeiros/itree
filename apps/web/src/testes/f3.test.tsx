@@ -68,6 +68,7 @@ const triagens: unknown[] = [];
 
 const servidor = setupServer(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(ANALISTA)),
+  http.get(`${API}/api/v1/alertas/ingestoes`, () => HttpResponse.json([])),
   http.get(`${API}/api/v1/alertas/al-1`, () => HttpResponse.json(ALERTA)),
   http.get(`${API}/api/v1/alertas/al-1/historico`, () => HttpResponse.json([])),
   http.post(`${API}/api/v1/alertas/al-1/triagem`, async ({ request }) => {
