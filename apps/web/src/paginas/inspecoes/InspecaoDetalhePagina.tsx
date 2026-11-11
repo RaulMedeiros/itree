@@ -31,7 +31,7 @@ import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { cn } from "../../util/cn";
 import { invalidarCaminhos } from "../../util/cache";
-import { formatarDataHora } from "../../util/formatos";
+import { formatarDataHora, plural } from "../../util/formatos";
 
 const ROTULOS_APLICAVEL: Record<string, string> = {
   especie: "espécie",
@@ -321,7 +321,7 @@ function ValidarDialogo({ inspecao: i, aoFechar }: { inspecao: Inspecao; aoFecha
     {
       valor: "medidas",
       rotulo: "Medidas",
-      descricao: `${i.medidas.length} medida(s) passam a valer no cadastro.`,
+      descricao: `${plural(i.medidas.length, "medida")} ${i.medidas.length === 1 ? "passa" : "passam"} a valer no cadastro.`,
       disponivel: i.medidas.length > 0,
     },
     {

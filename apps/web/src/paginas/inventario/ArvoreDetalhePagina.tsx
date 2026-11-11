@@ -56,7 +56,7 @@ import {
   nomeEspecie,
 } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
-import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
+import { AreaTexto, Campo, Entrada, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -887,9 +887,7 @@ function MedidaDialogo({ arvore, aoFechar }: { arvore: Arvore; aoFechar: () => v
           )}
         </Campo>
         <Campo rotulo="Data da medição" erros={erros.data_medicao}>
-          {(p) => (
-            <Entrada {...p} type="date" value={data} onChange={(e) => setData(e.target.value)} />
-          )}
+          {(p) => <EntradaData {...p} value={data} onChange={(v) => setData(v)} />}
         </Campo>
         <div className="col-span-2">
           <Campo rotulo="Observação">

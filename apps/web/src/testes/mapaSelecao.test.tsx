@@ -324,14 +324,14 @@ describe("seleção por área no mapa (RF-MAPA-022)", () => {
       await within(painel).findByRole("button", { name: "Criar tarefas (2 árvores)" }),
     );
     const dialogo = await screen.findByRole("dialog");
-    expect(within(dialogo).getByText(/para 2 árvore\(s\)/)).toBeInTheDocument();
+    expect(within(dialogo).getByText(/para 2 árvores/)).toBeInTheDocument();
     await usuario.click(within(dialogo).getByRole("button", { name: "Criar" }));
     await vi.waitFor(() =>
       expect(pedidosLote).toEqual([
         expect.objectContaining({ arvore_ids: ["a-1", "a-2"], equipe_id: null }),
       ]),
     );
-    expect(await within(dialogo).findByText(/tarefa\(s\) criada\(s\)/)).toBeInTheDocument();
+    expect(await within(dialogo).findByText(/tarefas criadas/)).toBeInTheDocument();
   });
 
   it("não deixa criar tarefas acima do limite do lote", async () => {

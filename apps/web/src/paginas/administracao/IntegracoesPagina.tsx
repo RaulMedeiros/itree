@@ -10,7 +10,7 @@ import { Upload } from "lucide-react";
 import { useState } from "react";
 
 import { Botao } from "../../ui/botao";
-import { Campo, Entrada, Selecao } from "../../ui/campos";
+import { Campo, EntradaArquivo, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -142,15 +142,7 @@ function EnvioDialogo({ aoFechar }: { aoFechar: () => void }) {
           )}
         </Campo>
         <Campo rotulo="Arquivo" obrigatorio>
-          {(p) => (
-            <Entrada
-              {...p}
-              type="file"
-              accept=".csv,.geojson,.json"
-              className="py-1.5"
-              onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
-            />
-          )}
+          {(p) => <EntradaArquivo {...p} accept=".csv,.geojson,.json" onChange={setArquivo} />}
         </Campo>
       </div>
     </Dialogo>

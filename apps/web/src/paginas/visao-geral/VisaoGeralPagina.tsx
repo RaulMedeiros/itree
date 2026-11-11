@@ -28,7 +28,7 @@ import { ROTULOS_CONDICAO } from "@itree/domain";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { LinhaDoTempo } from "../../componentes/Historico";
-import { Entrada, Selecao } from "../../ui/campos";
+import { EntradaData, Selecao } from "../../ui/campos";
 import { CORES_CONDICAO } from "../../mapa/simbologia";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -375,19 +375,17 @@ export function VisaoGeralPagina() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           De
-          <Entrada
-            type="date"
+          <EntradaData
             value={filtros.inicio ?? ""}
-            onChange={(e) => filtrar({ inicio: e.target.value || undefined })}
+            onChange={(v) => filtrar({ inicio: v || undefined })}
             className="w-40"
           />
         </label>
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           até
-          <Entrada
-            type="date"
+          <EntradaData
             value={filtros.fim ?? ""}
-            onChange={(e) => filtrar({ fim: e.target.value || undefined })}
+            onChange={(v) => filtrar({ fim: v || undefined })}
             className="w-40"
           />
         </label>

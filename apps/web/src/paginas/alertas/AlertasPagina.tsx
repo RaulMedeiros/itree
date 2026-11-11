@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { SeloStatusAlerta } from "../../componentes/selos";
-import { Entrada, Selecao } from "../../ui/campos";
+import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
@@ -100,19 +100,17 @@ export function AlertasPagina() {
         </Selecao>
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           Detectados de
-          <Entrada
-            type="date"
+          <EntradaData
             value={filtros.deteccao_desde ?? ""}
-            onChange={(e) => filtrar({ deteccao_desde: e.target.value || undefined })}
+            onChange={(v) => filtrar({ deteccao_desde: v || undefined })}
             className="w-40"
           />
         </label>
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           até
-          <Entrada
-            type="date"
+          <EntradaData
             value={filtros.deteccao_ate ?? ""}
-            onChange={(e) => filtrar({ deteccao_ate: e.target.value || undefined })}
+            onChange={(v) => filtrar({ deteccao_ate: v || undefined })}
             className="w-40"
           />
         </label>

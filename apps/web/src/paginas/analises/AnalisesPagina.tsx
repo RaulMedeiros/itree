@@ -10,7 +10,7 @@ import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Botao } from "../../ui/botao";
-import { Entrada, Selecao } from "../../ui/campos";
+import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
@@ -148,19 +148,17 @@ export function AnalisesPagina() {
         </Selecao>
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           De{" "}
-          <Entrada
-            type="date"
+          <EntradaData
             value={filtros.inicio ?? ""}
-            onChange={(e) => filtrar({ inicio: e.target.value || undefined })}
+            onChange={(v) => filtrar({ inicio: v || undefined })}
             className="w-40"
           />
         </label>
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           até{" "}
-          <Entrada
-            type="date"
+          <EntradaData
             value={filtros.fim ?? ""}
-            onChange={(e) => filtrar({ fim: e.target.value || undefined })}
+            onChange={(v) => filtrar({ fim: v || undefined })}
             className="w-40"
           />
         </label>

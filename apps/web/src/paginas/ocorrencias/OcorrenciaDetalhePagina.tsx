@@ -31,7 +31,7 @@ import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
-import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
+import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -603,9 +603,7 @@ function AtribuicaoDialogo({
           )}
         </Campo>
         <Campo rotulo="Prazo">
-          {(p) => (
-            <Entrada {...p} type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
-          )}
+          {(p) => <EntradaData {...p} value={prazo} onChange={(v) => setPrazo(v)} />}
         </Campo>
       </div>
     </Dialogo>
