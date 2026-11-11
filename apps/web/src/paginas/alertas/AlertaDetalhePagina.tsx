@@ -29,7 +29,7 @@ import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { RAIO_PADRAO_M, SeletorRaio, type RaioM } from "./raio";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { invalidarCaminhos } from "../../util/cache";
-import { formatarDataHora, plural } from "../../util/formatos";
+import { descreverAreaVerdeProxima, formatarDataHora, plural } from "../../util/formatos";
 
 export function AlertaDetalhePagina() {
   const { id } = useParams({ from: "/autenticado/alertas/$id" });
@@ -154,6 +154,16 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
               {a.tipo_geometria === "Point" ? "Ponto" : "Polígono"}
               {a.area_ha ? ` · ${a.area_ha.toLocaleString("pt-BR")} ha` : ""}
             </dd>
+            {descreverAreaVerdeProxima(a.area_verde_proxima) && (
+              <>
+                <dt className="text-texto-suave">Área verde</dt>
+                <dd>
+                  <span className="font-medium text-atencao">
+                    {descreverAreaVerdeProxima(a.area_verde_proxima)}
+                  </span>
+                </dd>
+              </>
+            )}
             <dt className="text-texto-suave">SRC original</dt>
             <dd>{a.src_original || "EPSG:4326"}</dd>
             <dt className="text-texto-suave">Bairros</dt>

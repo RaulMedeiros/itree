@@ -231,6 +231,9 @@ CELERY_TIMEZONE = TIME_ZONE
 # Focos diários do INPE: https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_{data}.csv
 ALERTAS_FONTES = env.json("ALERTAS_FONTES", default={})
 ALERTAS_INTERVALO_HORAS = env.int("ALERTAS_INTERVALO_HORAS", default=6)
+# Focos de calor a até este raio (km) de um parque ou unidade de conservação ficam
+# marcados no alerta, mesmo fora do município; o escopo dos focos ganha o mesmo buffer.
+ALERTAS_FOCOS_RAIO_AREA_VERDE_KM = env.float("ALERTAS_FOCOS_RAIO_AREA_VERDE_KM", default=1.0)
 
 # --- Referências das espécies (M-01) ------------------------------------------
 # Wikidata, Wikipedia e Wikimedia Commons; a política de uso pede identificação.

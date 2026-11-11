@@ -19,6 +19,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from itree.alertas.escopo import filtrar_alertas_por_escopo
 from itree.alertas.models import AlertaAmbiental
 from itree.contas.acesso import filtrar_por_escopo
 from itree.indicadores import externos
@@ -183,7 +184,7 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             .order_by("mes")
         ]
     if chave == "alertas_por_fonte":
-        alertas = filtrar_por_escopo(AlertaAmbiental.objects.all(), usuario).filter(
+        alertas = filtrar_alertas_por_escopo(AlertaAmbiental.objects.all(), usuario).filter(
             data_deteccao__date__gte=inicio, data_deteccao__date__lte=fim
         )
         fontes = dict(AlertaAmbiental._meta.get_field("fonte").choices)
@@ -269,7 +270,7 @@ def _serie_mensal(chave: str, usuario, inicio: date, fim: date) -> dict | None:
         )
         series = [("inspecoes", "Inspeções", _contagem_mensal(inspecoes, "realizada_em"))]
     elif chave == "alertas_por_fonte":
-        alertas = filtrar_por_escopo(AlertaAmbiental.objects.all(), usuario).filter(
+        alertas = filtrar_alertas_por_escopo(AlertaAmbiental.objects.all(), usuario).filter(
             data_deteccao__date__gte=inicio, data_deteccao__date__lte=fim
         )
         series = [("alertas", "Alertas detectados", _contagem_mensal(alertas, "data_deteccao"))]
@@ -471,7 +472,7 @@ def tabela_ocorrencias(qs):
 
 
 def _dados_alertas(usuario, params):
-    qs = filtrar_por_escopo(AlertaAmbiental.objects.all(), usuario)
+    qs = filtrar_alertas_por_escopo(AlertaAmbiental.objects.all(), usuario)
     if s := params.get("status"):
         qs = qs.filter(status__in=s.split(","))
     colunas = [

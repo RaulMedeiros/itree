@@ -72,6 +72,13 @@ class AlertaAmbiental(ModeloBase):
         default=list, help_text="Bairros cadastrados que a geometria intersecta."
     )
 
+    area_verde_proxima = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Parque ou unidade de conservação a até o raio configurado (foco de calor): "
+        "id, nome, tipo e distância em metros. Calculado na ingestão.",
+    )
+
     status = models.CharField(
         max_length=30, choices=StatusAlerta.choices, default=StatusAlerta.DETECTADO
     )

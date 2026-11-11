@@ -17,12 +17,13 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from itree.auditoria.views import EventoAuditoriaSerializer
-from itree.contas.acesso import filtrar_por_escopo, requer
+from itree.contas.acesso import requer
 from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
 from itree.ocorrencias.models import Ocorrencia, OrigemOcorrencia, TipoOcorrencia
 
 from . import fontes, proximidade
+from .escopo import filtrar_alertas_por_escopo
 from .models import (
     EXIGEM_JUSTIFICATIVA,
     EXIGEM_REFERENCIA,
@@ -80,6 +81,7 @@ class AlertaSerializer(serializers.ModelSerializer):
             "ocorrencia",
             "arvores_proximas",
             "ocorrencias_proximas",
+            "area_verde_proxima",
             "atualizado_em",
         ]
 
@@ -226,7 +228,7 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return AlertaAmbiental.objects.none()
-        qs = filtrar_por_escopo(
+        qs = filtrar_alertas_por_escopo(
             AlertaAmbiental.objects.select_related("analisado_por", "ocorrencia"), self.request.user
         )
         p = self.request.query_params
@@ -407,7 +409,9 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
 
 # Geometrias para o mapa (polígonos e pontos), com escopo.
 def alertas_geojson(usuario, params) -> dict:
-    qs = filtrar_por_escopo(AlertaAmbiental.objects.exclude(status__in=FINAIS_ALERTA), usuario)
+    qs = filtrar_alertas_por_escopo(
+        AlertaAmbiental.objects.exclude(status__in=FINAIS_ALERTA), usuario
+    )
     qs = filtrar_por_bairro(qs, params.get("bairro"))
     qs = qs.annotate(g=AsGeoJSON("geom", precision=6))[:5000]
     return {

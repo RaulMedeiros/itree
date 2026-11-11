@@ -8,6 +8,7 @@ escopo territorial de quem consulta.
 from django.contrib.gis.db.models import GeometryField
 from django.db.models import BooleanField, Count, F, FloatField, Func, OuterRef, Subquery, Value
 
+from itree.areas_verdes.models import AreaVerde, TipoAreaVerde
 from itree.contas.acesso import filtrar_por_escopo
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.ocorrencias.models import ESTADOS_FINAIS, Ocorrencia
@@ -103,3 +104,38 @@ def Coalesce0(expressao):  # noqa: N802 - atalho local
     from django.db.models.functions import Coalesce
 
     return Coalesce(expressao, Value(0), output_field=IntegerField())
+
+
+TIPOS_AREA_VERDE_PROXIMA = (TipoAreaVerde.PARQUE, TipoAreaVerde.UNIDADE_CONSERVACAO)
+
+
+def area_verde_proxima(geom, raio_km: float) -> dict | None:
+    """Parque ou unidade de conservação mais próximo a até ``raio_km`` de ``geom``.
+
+    Praça não conta: o sinal é de foco perto de vegetação de maior porte. A área
+    pode estar fora do município. Devolve nome, tipo e distância em metros (0 se o
+    foco está dentro da área), ou ``None`` quando não há nenhuma no raio.
+    """
+    area = (
+        AreaVerde.objects.filter(tipo__in=TIPOS_AREA_VERDE_PROXIMA)
+        .filter(
+            DentroDoRaio(
+                F("geom"), Value(geom, output_field=GeometryField(srid=4326)), Value(raio_km * 1000)
+            )
+        )
+        .annotate(
+            distancia_m=DistanciaM(F("geom"), Value(geom, output_field=GeometryField(srid=4326)))
+        )
+        .order_by("distancia_m", "nome")
+        .only("id", "nome", "tipo")
+        .first()
+    )
+    if area is None:
+        return None
+    return {
+        "id": str(area.id),
+        "nome": area.nome,
+        "tipo": area.tipo,
+        "tipo_rotulo": area.get_tipo_display(),
+        "distancia_m": round(area.distancia_m),
+    }

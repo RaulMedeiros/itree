@@ -15,7 +15,7 @@ import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th, ThOrdenavel } from "../../ui/tabela";
-import { formatarDataHora, plural } from "../../util/formatos";
+import { descreverAreaVerdeProxima, formatarDataHora, plural } from "../../util/formatos";
 
 const TAMANHO = 50;
 
@@ -213,6 +213,11 @@ export function AlertasPagina() {
                       {ROTULOS_TIPO_ALERTA[a.tipo]}
                       {a.area_ha ? ` · ${a.area_ha.toLocaleString("pt-BR")} ha` : ""}
                     </p>
+                    {descreverAreaVerdeProxima(a.area_verde_proxima) && (
+                      <p className="text-xs font-medium text-atencao">
+                        {descreverAreaVerdeProxima(a.area_verde_proxima)}
+                      </p>
+                    )}
                   </Td>
                   <Td className="whitespace-nowrap">{formatarDataHora(a.data_deteccao)}</Td>
                   <Td className="whitespace-nowrap">{formatarDataHora(a.ingerido_em)}</Td>

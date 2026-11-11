@@ -51,5 +51,7 @@ export interface Alerta {
   readonly arvores_proximas: number;
   /** Ocorrências abertas no escopo a até `raio` m (padrão 100 m) do alerta. */
   readonly ocorrencias_proximas: number;
+  /** Parque ou unidade de conservação a até o raio configurado (foco de calor): id, nome, tipo e distância em metros. Calculado na ingestão. */
+  area_verde_proxima?: unknown;
   readonly atualizado_em: string;
 }

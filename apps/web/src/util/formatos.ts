@@ -121,3 +121,49 @@ export function prazoRestante(
   if (dias === 1) return { texto: "vence amanhã", atrasado: false };
   return { texto: `vence em ${dias} dias`, atrasado: false };
 }
+
+/** Parque ou unidade de conservação perto de um foco, como a API grava (distância em metros). */
+export interface AreaVerdeProxima {
+  nome: string;
+  tipo: string;
+  tipo_rotulo?: string;
+  distancia_m: number;
+}
+
+/**
+ * "a 0,6 km do Parque Estadual do Cocó" ou "dentro de Parque ..."; vazio sem área próxima.
+ * Abaixo de 100 m mostra em metros, para não arredondar para "0,0 km".
+ */
+export function descreverAreaVerdeProxima(area: unknown): string | null {
+  if (!area || typeof area !== "object") return null;
+  const { nome, distancia_m: metros } = area as Partial<AreaVerdeProxima>;
+  if (!nome || typeof metros !== "number") return null;
+  if (metros <= 0) return `dentro de ${nome}`;
+  const distancia =
+    metros < 100
+      ? `${metros} m`
+      : `${(metros / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
+  return `a ${distancia} ${contracao(nome)} ${nome}`;
+}
+
+const PRIMEIRAS_MASCULINAS = new Set([
+  "parque",
+  "monumento",
+  "refúgio",
+  "jardim",
+  "bosque",
+  "horto",
+  "mosaico",
+  "corredor",
+  "santuário",
+  "complexo",
+]);
+const SIGLAS_FEMININAS = new Set(["apa", "arie", "rppn", "esec", "flona", "rebio", "resex"]);
+
+/** "do", "da" ou "de", pela primeira palavra do nome ("Parque ..." → do, "APA ..." → da). */
+function contracao(nome: string): string {
+  const primeira = nome.trim().split(/\s+/)[0]!.toLowerCase();
+  if (PRIMEIRAS_MASCULINAS.has(primeira)) return "do";
+  if (SIGLAS_FEMININAS.has(primeira) || /(a|ã|ção|são)$/.test(primeira)) return "da";
+  return "de";
+}

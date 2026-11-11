@@ -24,10 +24,11 @@ from django.contrib.gis.geos import GEOSGeometry, Point
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
-from itree.core.geo import SRID_METRICO
+from itree.core.geo import SRID_METRICO, ampliar
 from itree.notificacoes import servicos as notificacoes
 from itree.territorio.models import Territorio, TipoTerritorio
 
+from . import proximidade
 from .models import AlertaAmbiental, FonteAlerta, IngestaoAlertas, TipoAlerta
 
 
@@ -236,12 +237,23 @@ def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoA
                 fonte=fonte, id_externo__in=[r.id_externo for r in registros]
             ).values_list("id_externo", flat=True)
         )
+        foco = fonte == FonteAlerta.INPE_FOCOS
+        raio_km = settings.ALERTAS_FOCOS_RAIO_AREA_VERDE_KM
+        # Focos: o município ganha um buffer de raio_km, para pegar o foco logo além do
+        # limite que fica junto de um parque ou unidade de conservação.
+        busca = ampliar(municipio, raio_km * 1000) if foco else municipio
         transformacao = CoordTransform(SpatialReference(4326), SpatialReference(SRID_METRICO))
         for r in registros:
             if r.id_externo in existentes:
                 ingestao.ja_existentes += 1
                 continue
-            if not municipio.intersects(r.geom):
+            dentro = municipio.intersects(r.geom)
+            if not dentro and not (foco and busca.intersects(r.geom)):
+                ingestao.fora_do_municipio += 1
+                continue
+            proxima = proximidade.area_verde_proxima(r.geom, raio_km) if foco else None
+            if not dentro and proxima is None:
+                # Fora do município, só interessa o foco junto de área verde.
                 ingestao.fora_do_municipio += 1
                 continue
             area = None
@@ -256,6 +268,7 @@ def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoA
                 geom=r.geom,
                 src_original=r.src_original,
                 area_ha=area,
+                area_verde_proxima=proxima,
                 data_deteccao=r.data_deteccao,
                 propriedades=r.propriedades,
                 bairros=[
