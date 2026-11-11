@@ -13,6 +13,7 @@ export type ArvoresContadoresParams = {
   /** Use 'sem' para sem avaliação. */
   condicao_aparente?: string;
   especie?: string;
+  /** Estado da espécie. Use 'nao_confirmada' para tudo que não é 'confirmada'. */
   especie_estado?: string;
   localizacao_origem?: string;
   lote?: string;

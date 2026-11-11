@@ -357,3 +357,13 @@ def test_contadores_informam_o_limite_do_lote_de_tarefas(cliente, gestor_municip
 
     corpo = cliente.como(gestor_municipal).get(f"{URL}/contadores").json()
     assert corpo["limite_tarefas_em_lote"] == LIMITE_LOTE
+
+
+def test_filtro_especie_nao_confirmada_exclui_so_as_confirmadas(cliente, revisor, ipe):
+    confirmada = criar(cliente, revisor, especie_id=str(ipe.id), especie_estado="confirmada").json()
+    informada = criar(cliente, revisor, especie_id=str(ipe.id), especie_estado="informada").json()
+    sem_especie = criar(cliente, revisor).json()
+    r = cliente.como(revisor).get(URL, {"especie_estado": "nao_confirmada"}).json()
+    ids = {a["id"] for a in r["results"]}
+    assert ids == {informada["id"], sem_especie["id"]}
+    assert confirmada["id"] not in ids

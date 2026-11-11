@@ -148,6 +148,7 @@ export * from './paginatedTarefaList';
 export * from './paginatedTerritorioList';
 export * from './paginatedUsuarioAdminList';
 export * from './painelIndicadores';
+export * from './painelIndicadoresBairrosAtencao';
 export * from './painelIndicadoresContextoExternoItem';
 export * from './painelIndicadoresDistribuicoes';
 export * from './painelIndicadoresEquipesItem';

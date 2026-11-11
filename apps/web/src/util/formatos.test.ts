@@ -4,6 +4,7 @@ import {
   contar,
   descreverAreaVerdeProxima,
   descreverPrazo,
+  descreverVariacao,
   diasDesde,
   prazoRestante,
 } from "./formatos";
@@ -63,5 +64,20 @@ describe("descreverPrazo", () => {
     );
     expect(descreverAreaVerdeProxima(null)).toBeNull();
     expect(descreverAreaVerdeProxima(undefined)).toBeNull();
+  });
+});
+
+describe("descreverVariacao (R2-22)", () => {
+  it("mostra a diferença absoluta quando a base anterior é menor que 20", () => {
+    expect(descreverVariacao(7, 2)).toEqual({ texto: "+5", diferenca: 5 }); // não "+250%"
+    expect(descreverVariacao(12, 9).texto).toBe("+3");
+    expect(descreverVariacao(3, 11).texto).toBe("−8");
+    expect(descreverVariacao(5, 0).texto).toBe("+5");
+    expect(descreverVariacao(19, 19).texto).toBe("0");
+  });
+
+  it("usa o percentual a partir de 20", () => {
+    expect(descreverVariacao(30, 20).texto).toBe("+50%");
+    expect(descreverVariacao(90, 120).texto).toBe("−25%");
   });
 });

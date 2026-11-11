@@ -35,7 +35,13 @@ import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Tabela, Td, Th, Linha } from "../../ui/tabela";
 import { cn } from "../../util/cn";
-import { formatarData, formatarDataCurta, formatarDataHora } from "../../util/formatos";
+import {
+  descreverVariacao,
+  formatarData,
+  formatarDataCurta,
+  formatarDataHora,
+  plural,
+} from "../../util/formatos";
 import {
   BarraSegmentada,
   BarrasHorizontais,
@@ -90,6 +96,21 @@ interface Distribuicao {
   definicao: string;
   nao_confirmadas?: number;
   itens: { rotulo: string; quantidade: number }[];
+}
+
+interface BairroAtencao {
+  id: string;
+  nome: string;
+  indice: number;
+  componentes: { id: string; rotulo: string; quantidade: number; peso: number }[];
+  link: { pagina: string; filtros: Record<string, string> };
+}
+
+interface BairrosAtencao {
+  titulo: string;
+  definicao: string;
+  formula: string;
+  itens: BairroAtencao[];
 }
 
 interface DesempenhoEquipe {
@@ -181,22 +202,30 @@ function LinhaComparacao({
 function Variacao({ i }: { i: Indicador }) {
   if (i.periodo !== "selecionado" || i.anterior === null || i.anterior === undefined) return null;
   if (i.valor === null) return null;
-  const diferenca = i.valor - i.anterior;
-  if (i.anterior === 0) {
+  // Contagens com base pequena mostram a diferença absoluta; médias (dias) seguem em %.
+  const { texto, diferenca } =
+    i.unidade === "" ? descreverVariacao(i.valor, i.anterior) : porcentagem(i.valor, i.anterior);
+  if (texto === null) {
     return <p className="text-xs text-texto-suave">Período anterior: 0</p>;
   }
-  const pct = Math.round((100 * diferenca) / i.anterior);
   const subiu = diferenca > 0;
   const bom = MELHOR_SUBIR[i.id] === undefined ? null : MELHOR_SUBIR[i.id] === subiu;
   return (
     <LinhaComparacao
-      texto={`${pct > 0 ? "+" : ""}${pct}%`}
+      texto={texto}
       data={i.anterior_em}
       rotuloBase="período anterior"
       diferenca={diferenca}
       bom={bom}
     />
   );
+}
+
+function porcentagem(valor: number, anterior: number) {
+  const diferenca = valor - anterior;
+  if (anterior === 0) return { texto: null, diferenca };
+  const pct = Math.round((100 * diferenca) / anterior);
+  return { texto: `${pct > 0 ? "+" : ""}${pct}%`, diferenca };
 }
 
 /** Variação de um instantâneo desde o registro anterior ao período (ou, sem ele,
@@ -228,18 +257,24 @@ function Tendencia({ i }: { i: Indicador }) {
   );
 }
 
-/** Janela temporal do indicador: só os do período selecionado seguem o filtro. */
-function JanelaTemporal({ i }: { i: Indicador }) {
-  if (i.periodo === "selecionado") return null;
+/** Janela temporal do indicador, dita só em "Como é calculado": a face do cartão fica
+ * com valor, nome, comparação e tendência. */
+function textoJanela(i: Indicador): string {
+  if (i.periodo === "selecionado") return "o período selecionado";
   const fixa = /12 meses/.test(i.nome);
-  return (
-    <p className="text-xs text-texto-suave">
-      {fixa ? "Janela fixa de 12 meses" : "Situação atual"} (ignora o período)
-    </p>
-  );
+  return `${fixa ? "fixa de 12 meses" : "situação atual"} (ignora o período)`;
 }
 
-function Definicao({ i, compacta = false }: { i: Indicador; compacta?: boolean }) {
+/** "Como é calculado": definição, fórmula, base, janela e fonte, fora da face do cartão. */
+function Definicao({
+  i,
+  compacta = false,
+  notas = [],
+}: {
+  i: Indicador;
+  compacta?: boolean;
+  notas?: string[];
+}) {
   return (
     <details className="mt-2 text-xs text-texto-suave">
       <summary
@@ -251,12 +286,21 @@ function Definicao({ i, compacta = false }: { i: Indicador; compacta?: boolean }
       </summary>
       <p className="mt-1">{i.definicao}</p>
       <p className="mt-1">Fórmula: {i.formula}</p>
+      {i.base !== null && i.unidade !== "dias" && (
+        <p className="mt-1">Base: {i.base.toLocaleString("pt-BR")} árvores válidas</p>
+      )}
+      {notas.map((n) => (
+        <p key={n} className="mt-1">
+          {n}
+        </p>
+      ))}
+      <p className="mt-1">Janela: {textoJanela(i)}</p>
       <p className="mt-1">Fonte: {i.fonte}</p>
     </details>
   );
 }
 
-function CartaoDestaque({ i, extra }: { i: Indicador; extra?: ReactNode }) {
+function CartaoDestaque({ i, notas }: { i: Indicador; notas?: string[] }) {
   const Icone = ICONES[i.id] ?? Info;
   const conteudo = (
     <div className="flex items-start gap-3">
@@ -276,8 +320,9 @@ function CartaoDestaque({ i, extra }: { i: Indicador; extra?: ReactNode }) {
       </div>
     </div>
   );
+  // Altura igual na linha: o cartão estica e o "Como é calculado" fica no pé.
   return (
-    <div className="rounded-xl border border-borda bg-superficie p-4 shadow-sm has-[a:hover]:border-marca">
+    <div className="flex h-full flex-col rounded-xl border border-borda bg-superficie p-4 shadow-sm has-[a:hover]:border-marca">
       {i.link ? (
         <Link to={i.link.pagina} search={i.link.filtros} className="block">
           {conteudo}
@@ -288,23 +333,21 @@ function CartaoDestaque({ i, extra }: { i: Indicador; extra?: ReactNode }) {
       <div className="mt-2 flex flex-col gap-0.5 pl-[3.25rem]">
         <Variacao i={i} />
         <Tendencia i={i} />
-        {extra}
-        {i.periodo !== "selecionado" && i.base !== null && i.unidade === "%" && (
-          <p className="text-xs text-texto-suave">Base: {i.base.toLocaleString("pt-BR")}</p>
-        )}
-        <JanelaTemporal i={i} />
       </div>
-      <Definicao i={i} compacta />
+      <div className="mt-auto">
+        <Definicao i={i} compacta notas={notas} />
+      </div>
     </div>
   );
 }
 
-function CartaoCompacto({ i }: { i: Indicador }) {
+/** Linha simples de um indicador secundário: nome, valor e, se houver, a comparação. */
+function LinhaIndicador({ i }: { i: Indicador }) {
   return (
-    <div className="rounded-lg border border-borda bg-superficie px-3 py-2.5">
+    <li className="py-2.5">
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm text-texto-suave">{i.nome}</p>
-        <p className={cn("font-semibold", i.valor === null && "text-texto-suave")}>
+        <p className={cn("font-semibold tabular-nums", i.valor === null && "text-texto-suave")}>
           {i.link ? (
             <Link to={i.link.pagina} search={i.link.filtros} className="hover:underline">
               {valorFormatado(i)}
@@ -316,9 +359,8 @@ function CartaoCompacto({ i }: { i: Indicador }) {
       </div>
       <Variacao i={i} />
       <Tendencia i={i} />
-      <JanelaTemporal i={i} />
-      <Definicao i={i} />
-    </div>
+      <Definicao i={i} compacta />
+    </li>
   );
 }
 
@@ -422,6 +464,81 @@ function Pendencias({ itens }: { itens: Pendencia[] }) {
     </section>
   );
 }
+
+/** Ranking dos bairros do escopo por um índice simples: cada componente aparece separado
+ * e a fórmula, em "Como é calculado". Cada bairro abre o mapa com ele em destaque. */
+function BairrosQuePedemAtencao({ dados }: { dados: BairrosAtencao }) {
+  return (
+    <Painel
+      titulo={dados.titulo}
+      definicao="Onde agir primeiro: os bairros do seu escopo com mais ocorrências e árvores pendentes."
+      className="mb-4"
+    >
+      {dados.itens.length === 0 ? (
+        <p className="flex items-center gap-2 text-sm text-sucesso">
+          <CircleCheck className="size-4" aria-hidden /> Nenhum bairro com pendência no momento.
+        </p>
+      ) : (
+        <Tabela>
+          <thead>
+            <tr>
+              <Th>Bairro</Th>
+              {dados.itens[0]!.componentes.map((c) => (
+                <Th key={c.id} className="text-right">
+                  {c.rotulo}
+                </Th>
+              ))}
+              <Th className="text-right">Índice</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {dados.itens.map((b, posicao) => (
+              <Linha key={b.id}>
+                <Td className="font-medium">
+                  <span className="mr-2 text-texto-suave tabular-nums">{posicao + 1}.</span>
+                  <Link
+                    to={b.link.pagina}
+                    search={b.link.filtros}
+                    className="text-marca-escura hover:underline"
+                    aria-label={`${b.nome}: ver no mapa`}
+                  >
+                    {b.nome}
+                  </Link>
+                </Td>
+                {b.componentes.map((c) => (
+                  <Td
+                    key={c.id}
+                    className={cn(
+                      "text-right tabular-nums",
+                      c.quantidade === 0 && "text-texto-suave",
+                    )}
+                  >
+                    {c.quantidade.toLocaleString("pt-BR")}
+                  </Td>
+                ))}
+                <Td className="text-right font-semibold tabular-nums">
+                  {b.indice.toLocaleString("pt-BR")}
+                </Td>
+              </Linha>
+            ))}
+          </tbody>
+        </Tabela>
+      )}
+      <details className="mt-3 text-xs text-texto-suave">
+        <summary className="inline-flex cursor-pointer items-center gap-1">
+          <Info className="size-3.5" aria-hidden /> Como é calculado
+        </summary>
+        <p className="mt-1">{dados.definicao}</p>
+        <p className="mt-1">Índice = {dados.formula}.</p>
+        <p className="mt-1">
+          Ordem: do maior para o menor índice; em empate, por nome. Fonte: {FONTE_REGISTROS}.
+        </p>
+      </details>
+    </Painel>
+  );
+}
+
+const FONTE_REGISTROS = "Registros da plataforma";
 
 /** Cor da condição pelo rótulo devolvido pela API; texto da barra por luminância. */
 const COR_POR_ROTULO: Record<string, { cor: string; textoClaro: boolean }> = {
@@ -587,7 +704,11 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
   const distribuicoes = dados.distribuicoes as unknown as Record<string, Distribuicao>;
   const series = dados.series_mensais as unknown as SeriesMensais;
   const pendencias = dados.pendencias as unknown as Pendencia[];
-  const atrasadas = porId.ocorrencias_atrasadas?.valor;
+  const bairrosAtencao = dados.bairros_atencao as unknown as BairrosAtencao | undefined;
+  // Não repete o que já está nos cartões nem em "Alertas e pendências" (que traz, com
+  // link, os que têm quantidade). A contagem de registros fica na base do 1º cartão.
+  const repetidos = new Set([...DESTAQUE, "arvores_registros", ...pendencias.map((p) => p.id)]);
+  const outros = indicadores.filter((i) => !repetidos.has(i.id));
   const externos = (dados.contexto_externo ?? []) as unknown as IndicadorExterno[];
   return (
     <>
@@ -598,21 +719,12 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
               <CartaoDestaque
                 key={id}
                 i={porId[id]!}
-                extra={
-                  id === "ocorrencias_abertas" && atrasadas ? (
-                    <p className="text-xs font-medium text-perigo">
-                      {atrasadas.toLocaleString("pt-BR")} com prazo vencido
-                    </p>
-                  ) : id === "arvores_validas" && porId.arvores_registros?.valor ? (
-                    <>
-                      <p className="text-xs text-texto-suave">
-                        Base: {porId.arvores_registros.valor.toLocaleString("pt-BR")} registros
-                      </p>
-                      <p className="text-xs text-texto-suave">
-                        Válido: ativa, com localização e origem registradas (critério provisório).
-                      </p>
-                    </>
-                  ) : null
+                notas={
+                  id === "arvores_validas" && porId.arvores_registros?.valor
+                    ? [
+                        `Base: ${porId.arvores_registros.valor.toLocaleString("pt-BR")} registros no escopo, em qualquer situação.`,
+                      ]
+                    : undefined
                 }
               />
             ))}
@@ -620,6 +732,8 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
         </div>
         <Pendencias itens={pendencias} />
       </div>
+
+      {bairrosAtencao && <BairrosQuePedemAtencao dados={bairrosAtencao} />}
 
       <div className="mb-4">
         <MapaResumo />
@@ -674,24 +788,33 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
             />
             {distribuicoes.especies.nao_confirmadas ? (
               <p className="mt-3 text-xs text-texto-suave">
-                {distribuicoes.especies.nao_confirmadas.toLocaleString("pt-BR")} árvores válidas
-                ainda sem espécie confirmada não entram nesta distribuição.{" "}
-                <Link to="/inventario/especies" className="text-marca-escura underline">
-                  Ver catálogo
+                {plural(distribuicoes.especies.nao_confirmadas, "árvore válida", "árvores válidas")}{" "}
+                ainda sem espécie confirmada{" "}
+                {distribuicoes.especies.nao_confirmadas === 1 ? "não entra" : "não entram"} nesta
+                distribuição.{" "}
+                <Link
+                  to="/inventario/arvores"
+                  search={{ especie_estado: "nao_confirmada", valida: true }}
+                  className="text-marca-escura underline"
+                >
+                  Ver {plural(distribuicoes.especies.nao_confirmadas, "árvore", "árvores")}
                 </Link>
               </p>
             ) : null}
           </Painel>
         )}
-        <Painel titulo="Outros indicadores">
-          <div className="grid gap-2 sm:grid-cols-2">
-            {indicadores
-              .filter((i) => !DESTAQUE.includes(i.id) && i.id !== "ocorrencias_atrasadas")
-              .map((i) => (
-                <CartaoCompacto key={i.id} i={i} />
+        {outros.length > 0 && (
+          <Painel
+            titulo="Outros indicadores"
+            definicao="O que não está nos cartões nem em “Alertas e pendências”."
+          >
+            <ul className="flex flex-col divide-y divide-borda">
+              {outros.map((i) => (
+                <LinhaIndicador key={i.id} i={i} />
               ))}
-          </div>
-        </Painel>
+            </ul>
+          </Painel>
+        )}
       </div>
 
       {externos.length > 0 && (

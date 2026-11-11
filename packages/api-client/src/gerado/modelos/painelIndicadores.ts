@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { EventoAuditoria } from './eventoAuditoria';
+import type { PainelIndicadoresBairrosAtencao } from './painelIndicadoresBairrosAtencao';
 import type { PainelIndicadoresContextoExternoItem } from './painelIndicadoresContextoExternoItem';
 import type { PainelIndicadoresDistribuicoes } from './painelIndicadoresDistribuicoes';
 import type { PainelIndicadoresEquipesItem } from './painelIndicadoresEquipesItem';
@@ -24,6 +25,7 @@ export interface PainelIndicadores {
   distribuicoes: PainelIndicadoresDistribuicoes;
   series_mensais: PainelIndicadoresSeriesMensais;
   pendencias: PainelIndicadoresPendenciasItem[];
+  bairros_atencao: PainelIndicadoresBairrosAtencao;
   equipes: PainelIndicadoresEquipesItem[];
   atividades: EventoAuditoria[];
 }

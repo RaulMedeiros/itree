@@ -567,6 +567,7 @@ paths:
         name: especie_estado
         schema:
           type: string
+        description: Estado da espécie. Use 'nao_confirmada' para tudo que não é 'confirmada'.
       - in: query
         name: localizacao_origem
         schema:
@@ -858,6 +859,7 @@ paths:
         name: especie_estado
         schema:
           type: string
+        description: Estado da espécie. Use 'nao_confirmada' para tudo que não é 'confirmada'.
       - in: query
         name: localizacao_origem
         schema:
@@ -6025,6 +6027,9 @@ components:
           items:
             type: object
             additionalProperties: {}
+        bairros_atencao:
+          type: object
+          additionalProperties: {}
         equipes:
           type: array
           items:
@@ -6036,6 +6041,7 @@ components:
             $ref: '#/components/schemas/EventoAuditoria'
       required:
       - atividades
+      - bairros_atencao
       - calculado_em
       - contexto_externo
       - distribuicoes

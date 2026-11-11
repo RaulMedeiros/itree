@@ -51,6 +51,24 @@ export function plural(n: number, singular: string, pluralForma = `${singular}s`
   return `${n} ${n === 1 ? singular : pluralForma}`;
 }
 
+/** Abaixo desta base anterior, o percentual exagera diferenças pequenas (2 → 7 vira "+250%"). */
+export const BASE_MINIMA_PERCENTUAL = 20;
+
+/** Texto da variação de uma contagem contra a base anterior: a diferença absoluta ("+5") quando
+ * a base é pequena e o percentual ("+12%") quando é grande. */
+export function descreverVariacao(
+  valor: number,
+  anterior: number,
+): { texto: string; diferenca: number } {
+  const diferenca = valor - anterior;
+  const sinal = diferenca > 0 ? "+" : diferenca < 0 ? "−" : "";
+  if (anterior < BASE_MINIMA_PERCENTUAL) {
+    return { texto: `${sinal}${Math.abs(diferenca).toLocaleString("pt-BR")}`, diferenca };
+  }
+  const pct = Math.round((100 * Math.abs(diferenca)) / anterior);
+  return { texto: `${sinal}${pct}%`, diferenca };
+}
+
 /** dd/mm/aaaa → AAAA-MM-DD; vazio se a data estiver incompleta ou não existir no calendário. */
 export function dataBrParaIso(texto: string): string {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto);

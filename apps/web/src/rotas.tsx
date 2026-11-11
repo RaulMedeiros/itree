@@ -300,7 +300,14 @@ const arvores = createRoute({
     busca: textoOpcional,
     especie: textoOpcional,
     especie_estado: z
-      .enum(["confirmada", "sugerida_ia", "informada", "nao_identificada"])
+      .enum(["confirmada", "sugerida_ia", "informada", "nao_identificada", "nao_confirmada"])
+      .optional()
+      .catch(undefined),
+    // Só registros válidos (RN-INV-001, provisório): vem da Visão geral, onde as
+    // contagens de espécie são sobre as árvores válidas.
+    valida: z
+      .union([z.literal("true"), z.literal(true)])
+      .transform(() => true as const)
       .optional()
       .catch(undefined),
     bairro: textoOpcional,

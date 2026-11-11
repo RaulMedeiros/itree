@@ -74,7 +74,7 @@ export function MapaResumo() {
   }, [pronto, limites]);
 
   return (
-    <section className="flex h-full flex-col overflow-hidden rounded-xl border border-borda bg-superficie">
+    <section className="flex flex-col overflow-hidden rounded-xl border border-borda bg-superficie">
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <div>
           <h2 className="font-semibold">Árvores no território</h2>
@@ -90,7 +90,9 @@ export function MapaResumo() {
       <Mapa
         base="ruas"
         rotulo="Mapa resumido das árvores do seu escopo"
-        className="min-h-72 flex-1"
+        // Altura própria: o contêiner interno do mapa usa `h-full`, que vira 0 quando o
+        // pai só tem `min-height` (o mapa aparecia em branco).
+        className="h-80 shrink-0"
         aoCarregar={aoCarregar}
       />
       <ul className="flex flex-wrap gap-x-4 gap-y-1 px-4 py-2.5 text-xs text-texto-suave">
