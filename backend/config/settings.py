@@ -224,6 +224,8 @@ CELERY_TIMEZONE = TIME_ZONE
 # --- Alertas ambientais (W-08, T-05) ------------------------------------------
 # JSON {"inpe_focos": "<url>", "inpe_deter": "<url de WFS em GeoJSON>"}; vazio = só
 # ingestão manual. Verificar licença e limites de cada fonte antes (DP-11).
+# A URL aceita {data} (AAAAMMDD do dia anterior, fuso de Fortaleza) e {data_hoje}.
+# Focos diários do INPE: https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_{data}.csv
 ALERTAS_FONTES = env.json("ALERTAS_FONTES", default={})
 ALERTAS_INTERVALO_HORAS = env.int("ALERTAS_INTERVALO_HORAS", default=6)
 

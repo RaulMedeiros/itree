@@ -14,7 +14,8 @@ import hashlib
 import io
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import requests
 from django.conf import settings
@@ -146,6 +147,22 @@ def ler(conteudo: bytes, fonte: str) -> tuple[list[Registro], int]:
     return ler_geojson(conteudo, fonte)
 
 
+FUSO_FORTALEZA = ZoneInfo("America/Fortaleza")
+
+
+def resolver_url(url: str, agora: datetime | None = None) -> str:
+    """Substitui os marcadores de data da URL, no fuso de Fortaleza.
+
+    ``{data}`` vira AAAAMMDD do dia anterior (o arquivo diário do INPE só fecha
+    no dia seguinte) e ``{data_hoje}`` vira AAAAMMDD do dia corrente. URLs sem
+    marcador não mudam.
+    """
+    hoje = (agora or timezone.now()).astimezone(FUSO_FORTALEZA).date()
+    return url.replace("{data}", (hoje - timedelta(days=1)).strftime("%Y%m%d")).replace(
+        "{data_hoje}", hoje.strftime("%Y%m%d")
+    )
+
+
 def baixar(url: str) -> bytes:
     """Busca o arquivo da fonte (WFS do TerraBrasilis com saída GeoJSON, CSV do
     BDQueimadas). Tempo limite curto; falhas ficam registradas na ingestão."""
@@ -161,9 +178,39 @@ TIPO_POR_FONTE = {
 }
 
 
+# Órgão e licença de cada fonte, gravados em cada ingestão (RN-PROV-003, DP-11).
+# O INPE não declara licença nos dados de focos de calor: registra-se isso, com a
+# citação pedida, até haver resposta do órgão.
+PROVENIENCIA_FONTE = {
+    FonteAlerta.INPE_FOCOS: {
+        "orgao": "INPE, Programa Queimadas",
+        "licenca": "Não declarada pela fonte (DP-11). Citar: INPE, Programa Queimadas.",
+    },
+    FonteAlerta.INPE_DETER: {
+        "orgao": "INPE, TerraBrasilis",
+        "licenca": "Não declarada para os dados (o WMS informa Fees e AccessConstraints "
+        "como 'none'). Citar: INPE, TerraBrasilis (DP-11).",
+    },
+    FonteAlerta.MAPBIOMAS: {
+        "orgao": "MapBiomas Alerta",
+        "licenca": "Termos da API do MapBiomas, ainda não verificados (DP-11).",
+    },
+}
+
+
+def criar_ingestao(fonte: str, origem: str, usuario=None, **extras) -> IngestaoAlertas:
+    return IngestaoAlertas.objects.create(
+        fonte=fonte,
+        origem=origem[:500],
+        usuario=usuario,
+        **PROVENIENCIA_FONTE.get(fonte, {}),
+        **extras,
+    )
+
+
 def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoAlertas:
     """Ingere o conteúdo, registrando o resultado mesmo em caso de erro."""
-    ingestao = IngestaoAlertas.objects.create(fonte=fonte, origem=origem[:500], usuario=usuario)
+    ingestao = criar_ingestao(fonte, origem, usuario)
     try:
         registros, invalidos = ler(conteudo, fonte)
         municipio = (
@@ -180,6 +227,8 @@ def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoA
         )
         ingestao.recebidos = len(registros)
         ingestao.invalidos = invalidos
+        if registros:
+            ingestao.data_referencia = max(r.data_deteccao for r in registros).date()
         existentes = set(
             AlertaAmbiental.objects.filter(
                 fonte=fonte, id_externo__in=[r.id_externo for r in registros]

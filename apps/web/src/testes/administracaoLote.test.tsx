@@ -95,6 +95,9 @@ const servidor = setupServer(
         fora_do_municipio: 0,
         invalidos: 0,
         erro: "",
+        orgao: "INPE, Programa Queimadas",
+        licenca: "Não declarada pela fonte (DP-11). Citar: INPE, Programa Queimadas.",
+        data_referencia: "2026-11-10",
         usuario: null,
       },
     ]),
@@ -159,6 +162,13 @@ describe("integrações", () => {
     expect(await screen.findByText("Arquivo sintético")).toBeInTheDocument();
     expect(screen.queryByText(/ALERTAS_FONTES/)).toBeNull();
     expect(screen.getByText("DP-11")).toHaveClass("whitespace-nowrap");
+  });
+
+  it("mostra órgão, licença e data de referência da fonte", async () => {
+    await abrir("/administracao/integracoes");
+    expect(await screen.findByText("INPE, Programa Queimadas")).toBeInTheDocument();
+    expect(screen.getByText(/Não declarada pela fonte/)).toBeInTheDocument();
+    expect(screen.getByText(/Dados de 10\/11\/2026/)).toBeInTheDocument();
   });
 });
 
