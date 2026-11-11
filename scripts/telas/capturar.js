@@ -99,6 +99,23 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
         .waitFor({ timeout: 15000 });
     },
   });
+  await tela(
+    p,
+    "35-mapa-areas-verdes",
+    `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=14.6&areas_verdes=1`,
+    {
+      esperar: "Legenda",
+      espera: 5000,
+    },
+  );
+  await tela(p, "36-notificacoes", "/visao-geral", {
+    esperar: "Como é calculado",
+    espera: 1500,
+    acao: async (p) => {
+      await p.getByRole("button", { name: /^Notificações/ }).click();
+      await p.waitForTimeout(800);
+    },
+  });
   await tela(p, "05-arvores", "/inventario/arvores", { esperar: /ARV-/ });
   await tela(p, "06-arvore-resumo", `/inventario/arvores/${ids.arvore}`, { esperar: "Resumo" });
   await tela(p, "07-arvore-medidas", null, {
@@ -139,7 +156,7 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
   });
   await tela(p, "13-duplicidades", "/inventario/duplicidades", { espera: 2500 });
   await tela(p, "14-qualidade", "/inventario/qualidade", {
-    esperar: "Medidas fora da faixa plausível",
+    esperar: "Sem problemas",
     inteira: true,
   });
   await tela(

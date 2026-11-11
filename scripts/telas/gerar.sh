@@ -37,6 +37,14 @@ if docker compose exec -T api python -c "import urllib.request; urllib.request.u
 else
   echo "Sem acesso ao Wikidata a partir do contêiner: rode atualizar_referencias_especies onde houver acesso."
 fi
+# Áreas verdes oficiais (Fortaleza em Mapas). O contêiner não tem acesso à rede
+# externa; o comando roda no host, contra o banco do compose, quando houver acesso.
+if curl -sf -m 15 "https://mapas.fortaleza.ce.gov.br/api/v1/maps" >/dev/null; then
+  (cd "$RAIZ/backend" && DATABASE_URL=postgis://itree:itree@localhost:5432/itree \
+    uv run python manage.py importar_areas_verdes) || echo "Áreas verdes não importadas."
+else
+  echo "Sem acesso ao Fortaleza em Mapas: a camada de áreas verdes fica vazia nas capturas."
+fi
 $M shell -c "exec(open('/tmp/telas-dados/ids.py').read())" | tail -1 > /tmp/telas-ids.json
 
 node "$AQUI/capturar.js" /tmp/telas-ids.json "$RAIZ/docs/telas"
