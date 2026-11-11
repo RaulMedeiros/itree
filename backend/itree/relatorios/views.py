@@ -21,6 +21,8 @@ from rest_framework.response import Response
 
 from itree.alertas.models import AlertaAmbiental
 from itree.contas.acesso import filtrar_por_escopo
+from itree.indicadores import externos
+from itree.indicadores.models import IndicadorTerritorialExterno
 from itree.inspecoes.models import EstadoInspecao, Inspecao
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
@@ -52,6 +54,18 @@ ANALISES = {
         "permissao": "inventario.ler",
         "por_bairro": True,
     },
+    "arborizacao_entorno_por_bairro": {
+        "titulo": "Arborização do entorno por bairro (Censo 2022)",
+        "definicao": externos.DEFINICAO_ARBORIZACAO
+        + " Valor: percentual de faces com árvore. "
+        + externos.METODO_ARBORIZACAO
+        + " Dado do Censo: não depende do período escolhido.",
+        "permissao": "inventario.ler",
+        "por_bairro": True,
+        "fonte": f"{externos.FONTE_CENSO} ({externos.URL_CENSO_FACES})",
+        "unidade": "%",
+        "base_rotulo": "faces de quadra",
+    },
     "ocorrencias_por_tipo": {
         "titulo": "Ocorrências registradas por tipo no período",
         "definicao": "Contagem por tipo, pela data de registro. Não inclui alertas ambientais não convertidos.",
@@ -66,6 +80,7 @@ ANALISES = {
         "titulo": "Tempo médio de atendimento por tipo (dias)",
         "definicao": "Média entre registro e conclusão das ocorrências concluídas no período. Tipos sem conclusões não aparecem.",
         "permissao": "ocorrencias.ler",
+        "base_rotulo": "concluídas",
     },
     "inspecoes_por_mes": {
         "titulo": "Inspeções realizadas por mês",
@@ -108,6 +123,23 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
                 }
             )
         return sorted(linhas, key=lambda linha: -linha["valor"])
+    if chave == "arborizacao_entorno_por_bairro":
+        # Só bairros do escopo e com dado: sem dado não aparece (nunca zero).
+        dados = IndicadorTerritorialExterno.objects.filter(
+            indicador=externos.ARBORIZACAO_FACES,
+            territorio__in=externos.bairros_do_escopo(usuario),
+            valor__isnull=False,
+        ).select_related("territorio")
+        return [
+            {
+                "rotulo": i.territorio.nome,
+                "valor": float(i.valor),
+                "base": i.denominador,
+                "numerador": i.numerador,
+                "territorio_id": str(i.territorio_id),
+            }
+            for i in sorted(dados, key=lambda i: (-i.valor, i.territorio.nome))
+        ]
     if chave == "ocorrencias_por_tipo":
         return [
             {"rotulo": r["tipo__nome"], "valor": r["n"]}
@@ -182,6 +214,8 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             "periodo": serializers.DictField(),
             "calculado_em": serializers.DateTimeField(),
             "por_bairro": serializers.BooleanField(),
+            "unidade": serializers.CharField(),
+            "base_rotulo": serializers.CharField(),
             "linhas": serializers.ListField(child=serializers.DictField()),
             "total": serializers.IntegerField(
                 allow_null=True,
@@ -208,13 +242,17 @@ def analise(request: Request):
             "id": chave,
             "titulo": definicao["titulo"],
             "definicao": definicao["definicao"],
-            "fonte": FONTE,
+            "fonte": definicao.get("fonte", FONTE),
             "periodo": {"inicio": inicio, "fim": fim},
             "calculado_em": timezone.now(),
             "por_bairro": definicao.get("por_bairro", False),
+            "unidade": definicao.get("unidade", ""),
+            "base_rotulo": definicao.get("base_rotulo", ""),
             "linhas": linhas,
-            # Médias (tempo de atendimento) não se somam; contagens, sim.
-            "total": None if chave in NAO_SOMAVEIS else sum(linha["valor"] for linha in linhas),
+            # Médias (tempo de atendimento) e percentuais não se somam; contagens, sim.
+            "total": None
+            if chave in NAO_SOMAVEIS or definicao.get("unidade") == "%"
+            else sum(linha["valor"] for linha in linhas),
         }
     )
 

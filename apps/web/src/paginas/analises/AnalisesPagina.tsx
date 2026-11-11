@@ -27,6 +27,7 @@ interface LinhaAnalise {
   rotulo: string;
   valor: number;
   base?: number;
+  numerador?: number;
 }
 
 export function AnalisesPagina() {
@@ -67,7 +68,9 @@ export function AnalisesPagina() {
 
   const dados = consulta.data?.data;
   const linhas = (dados?.linhas ?? []) as unknown as LinhaAnalise[];
-  const maximo = Math.max(1, ...linhas.map((l) => l.valor));
+  const percentual = dados?.unidade === "%";
+  const baseRotulo = dados?.base_rotulo || "concluídas";
+  const maximo = percentual ? 100 : Math.max(1, ...linhas.map((l) => l.valor));
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -205,10 +208,15 @@ export function AnalisesPagina() {
                         </div>
                         <span className="w-20 text-right font-medium tabular-nums">
                           {l.valor.toLocaleString("pt-BR")}
+                          {percentual ? "%" : ""}
                         </span>
                       </div>
                       {l.base !== undefined && (
-                        <p className="text-xs text-texto-suave">base: {l.base} concluídas</p>
+                        <p className="text-xs text-texto-suave">
+                          {l.numerador !== undefined
+                            ? `${l.numerador.toLocaleString("pt-BR")} de ${l.base.toLocaleString("pt-BR")} ${baseRotulo}`
+                            : `base: ${l.base} ${baseRotulo}`}
+                        </p>
                       )}
                     </Td>
                   </Linha>

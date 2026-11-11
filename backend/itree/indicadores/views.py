@@ -19,7 +19,7 @@ from itree.auditoria.views import ENTIDADES, EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo
 from itree.contas.models import Equipe
 from itree.core.parametros import uuid_do_parametro
-from itree.indicadores import instantaneos
+from itree.indicadores import externos, instantaneos
 from itree.inspecoes.models import CondicaoAparente, EstadoInspecao, Inspecao
 from itree.inventario.models import Arvore, EstadoEspecie
 from itree.ocorrencias.models import ESTADOS_FINAIS, EstadoOcorrencia, Ocorrencia, Prioridade
@@ -52,6 +52,7 @@ Painel = inline_serializer(
         "filtros": serializers.DictField(),
         "calculado_em": serializers.DateTimeField(),
         "indicadores": serializers.ListField(child=serializers.DictField()),
+        "contexto_externo": serializers.ListField(child=serializers.DictField()),
         "distribuicoes": serializers.DictField(),
         "series_mensais": serializers.DictField(),
         "pendencias": serializers.ListField(child=serializers.DictField()),
@@ -506,6 +507,9 @@ def painel(request: Request):
             "filtros": {"bairro": bairro_nome, "equipe": equipe_nome},
             "calculado_em": timezone.now(),
             "indicadores": indicadores,
+            # Fontes externas ficam fora de ``indicadores``: não são da operação
+            # e não passam pelo filtro de equipe (o dado é por bairro).
+            "contexto_externo": externos.contexto_externo(usuario, bairro_obj),
             "distribuicoes": distribuicoes,
             "series_mensais": series_mensais,
             "pendencias": pendencias,

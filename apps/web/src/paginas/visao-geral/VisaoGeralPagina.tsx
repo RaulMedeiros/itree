@@ -99,6 +99,24 @@ interface DesempenhoEquipe {
   inspecoes_periodo: number;
 }
 
+interface IndicadorExterno {
+  id: string;
+  nome: string;
+  valor: number | null;
+  numerador: number;
+  base: number | null;
+  unidade: string;
+  fonte: string;
+  fonte_url: string;
+  licenca: string;
+  data_referencia: string | null;
+  ingerido_em: string;
+  definicao: string;
+  metodo: string;
+  bairros_com_dado: number;
+  bairros_no_escopo: number;
+}
+
 const ICONES: Record<string, LucideIcon> = {
   arvores_validas: TreeDeciduous,
   especie_confirmada: Leaf,
@@ -300,6 +318,61 @@ function CartaoCompacto({ i }: { i: Indicador }) {
       <JanelaTemporal i={i} />
       <Definicao i={i} />
     </div>
+  );
+}
+
+/** Indicador de fonte pública externa: separado dos da operação (borda tracejada,
+ * fundo neutro) e sempre com órgão, data de referência, ingestão e definição. */
+function CartaoExterno({ i }: { i: IndicadorExterno }) {
+  const numero =
+    i.valor === null
+      ? "Sem dados"
+      : `${i.valor.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}${i.unidade === "%" ? "%" : ""}`;
+  const ano = i.data_referencia?.slice(0, 4);
+  return (
+    <article
+      aria-label={i.nome}
+      className="rounded-xl border border-dashed border-borda bg-fundo p-4 sm:max-w-md"
+    >
+      <p className="text-sm text-texto-suave">{i.nome}</p>
+      <p
+        className={cn(
+          "text-2xl leading-tight font-semibold",
+          i.valor === null && "text-texto-suave",
+        )}
+      >
+        {numero}
+      </p>
+      {i.base !== null && (
+        <p className="text-xs text-texto-suave">
+          {i.numerador.toLocaleString("pt-BR")} de {i.base.toLocaleString("pt-BR")} faces de quadra
+          {i.bairros_no_escopo > i.bairros_com_dado
+            ? ` · ${i.bairros_com_dado} de ${i.bairros_no_escopo} bairros do escopo com dado`
+            : ` · ${i.bairros_com_dado} bairro${i.bairros_com_dado === 1 ? "" : "s"}`}
+        </p>
+      )}
+      <p className="mt-1 text-xs text-texto-suave">
+        Fonte:{" "}
+        <a
+          href={i.fonte_url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-marca-escura underline"
+        >
+          {i.fonte}
+        </a>
+        {ano ? ` (referência: ${formatarData(i.data_referencia)})` : ""} · ingerido em{" "}
+        {formatarData(i.ingerido_em)}
+      </p>
+      <details className="mt-2 text-xs text-texto-suave">
+        <summary className="inline-flex cursor-pointer items-center gap-1">
+          <Info className="size-3.5" aria-hidden /> Como é calculado
+        </summary>
+        <p className="mt-1">{i.definicao}</p>
+        <p className="mt-1">Método: {i.metodo}</p>
+        <p className="mt-1">Licença ou termos: {i.licenca}</p>
+      </details>
+    </article>
   );
 }
 
@@ -511,6 +584,7 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
   const series = dados.series_mensais as unknown as SeriesMensais;
   const pendencias = dados.pendencias as unknown as Pendencia[];
   const atrasadas = porId.ocorrencias_atrasadas?.valor;
+  const externos = (dados.contexto_externo ?? []) as unknown as IndicadorExterno[];
   return (
     <>
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
@@ -615,6 +689,23 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
           </div>
         </Painel>
       </div>
+
+      {externos.length > 0 && (
+        <section aria-labelledby="contexto-externo" className="mb-6">
+          <h2 id="contexto-externo" className="font-semibold">
+            Contexto (fontes externas)
+          </h2>
+          <p className="mb-2 text-xs text-texto-suave">
+            Dados públicos de outros órgãos, no seu escopo. Não vêm dos registros da operação e não
+            entram nos indicadores acima.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {externos.map((i) => (
+              <CartaoExterno key={i.id} i={i} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {dados.equipes.length > 0 && (
         <section className="mb-6">

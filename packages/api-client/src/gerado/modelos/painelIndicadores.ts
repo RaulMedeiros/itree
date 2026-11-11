@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { EventoAuditoria } from './eventoAuditoria';
+import type { PainelIndicadoresContextoExternoItem } from './painelIndicadoresContextoExternoItem';
 import type { PainelIndicadoresDistribuicoes } from './painelIndicadoresDistribuicoes';
 import type { PainelIndicadoresEquipesItem } from './painelIndicadoresEquipesItem';
 import type { PainelIndicadoresFiltros } from './painelIndicadoresFiltros';
@@ -19,6 +20,7 @@ export interface PainelIndicadores {
   filtros: PainelIndicadoresFiltros;
   calculado_em: string;
   indicadores: PainelIndicadoresIndicadoresItem[];
+  contexto_externo: PainelIndicadoresContextoExternoItem[];
   distribuicoes: PainelIndicadoresDistribuicoes;
   series_mensais: PainelIndicadoresSeriesMensais;
   pendencias: PainelIndicadoresPendenciasItem[];
