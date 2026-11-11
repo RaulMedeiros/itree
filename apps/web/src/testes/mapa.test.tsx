@@ -108,11 +108,17 @@ const AREAS_VERDES = {
   ],
 };
 const consultasAreasVerdes: URL[] = [];
+let situacaoFonteAreasVerdes: Record<string, unknown> = {
+  ultima_importacao: "2026-11-01T04:00:00Z",
+  dias: 10,
+  limite_dias: 60,
+  desatualizada: false,
+};
 
 const servidor = criarServidor(
   http.get(`${API}/api/v1/areas-verdes`, ({ request }) => {
     consultasAreasVerdes.push(new URL(request.url));
-    return HttpResponse.json(AREAS_VERDES);
+    return HttpResponse.json({ ...AREAS_VERDES, situacao_da_fonte: situacaoFonteAreasVerdes });
   }),
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(GESTOR)),
   http.get(`${API}/api/v1/mapa/camadas`, () =>
@@ -173,6 +179,12 @@ beforeAll(() => {
 beforeEach(() => {
   mapasCriados.length = 0;
   consultasAreasVerdes.length = 0;
+  situacaoFonteAreasVerdes = {
+    ultima_importacao: "2026-11-01T04:00:00Z",
+    dias: 10,
+    limite_dias: 60,
+    desatualizada: false,
+  };
 });
 afterEach(() => servidor.resetHandlers());
 afterAll(() => servidor.close());
@@ -514,6 +526,29 @@ describe("áreas verdes (praças, parques e unidades de conservação)", () => {
     expect(await screen.findByText(/Praça: Fortaleza em Mapas.*dados de 2019/)).toHaveTextContent(
       /uso livre, com citação obrigatória da fonte.*ingerido em/,
     );
+  });
+
+  it("avisa no painel de camadas quando a fonte das áreas verdes está desatualizada", async () => {
+    situacaoFonteAreasVerdes = {
+      ultima_importacao: "2026-08-01T04:00:00Z",
+      dias: 71,
+      limite_dias: 60,
+      desatualizada: true,
+    };
+    const usuario = userEvent.setup();
+    await abrirMapa();
+    await usuario.click(screen.getByRole("checkbox", { name: "Áreas verdes" }));
+    expect(
+      await screen.findByText(/Fonte desatualizada: última importação há 71 dias/),
+    ).toBeInTheDocument();
+  });
+
+  it("não avisa quando a fonte das áreas verdes está em dia", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await usuario.click(screen.getByRole("checkbox", { name: "Áreas verdes" }));
+    await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));
+    expect(screen.queryByText(/Fonte desatualizada/)).toBeNull();
   });
 
   it("o preenchimento não usa a cor Boa das árvores e tem uma cor por tipo", async () => {

@@ -96,7 +96,7 @@ import { Botao } from "../../ui/botao";
 import { Selecao } from "../../ui/campos";
 import { useTituloDocumento } from "../../util/titulo";
 import { Carregando } from "../../ui/estados";
-import { formatarData, formatarDataHora } from "../../util/formatos";
+import { formatarData, formatarDataHora, plural } from "../../util/formatos";
 import { BarraSelecaoArea, PainelSelecaoArea } from "./SelecaoArea";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
@@ -163,6 +163,14 @@ const CAMADAS_COM_CLIQUE = [
   "ocorrencias-grupos",
   "ocorrencias-pontos",
 ];
+
+/** Estado da última importação das áreas verdes, devolvido junto da camada (RF-INT-005). */
+interface SituacaoFonteAreasVerdes {
+  ultima_importacao: string | null;
+  dias: number | null;
+  limite_dias: number;
+  desatualizada: boolean;
+}
 
 /** Propriedades de uma feição de `GET /api/v1/areas-verdes`, como chegam do MapLibre. */
 interface AreaVerdeSelecionada {
@@ -238,6 +246,7 @@ export function MapaPagina() {
     "inicial",
   );
   const areasVerdesIniciadas = useRef(false);
+  const [fonteAreasVerdes, setFonteAreasVerdes] = useState<SituacaoFonteAreasVerdes | null>(null);
   const [areaVerde, setAreaVerde] = useState<AreaVerdeSelecionada | null>(null);
   // Arborização do entorno (Censo 2022): carregada na primeira vez que a camada é ligada.
   const [estadoArborizacao, setEstadoArborizacao] = useState<"inicial" | "pronto" | "erro">(
@@ -654,6 +663,9 @@ export function MapaPagina() {
         (mapa.current?.getSource("areas-verdes") as GeoJSONSource | undefined)?.setData(
           data as Parameters<GeoJSONSource["setData"]>[0],
         );
+        setFonteAreasVerdes(
+          (data as { situacao_da_fonte?: SituacaoFonteAreasVerdes }).situacao_da_fonte ?? null,
+        );
         setEstadoAreasVerdes("pronto");
       })
       .catch(() => setEstadoAreasVerdes("erro"));
@@ -963,6 +975,13 @@ export function MapaPagina() {
                       {mostrarAreasVerdes && pronto && estadoAreasVerdes === "inicial" && (
                         <p role="status" className="text-xs text-texto-suave">
                           Carregando áreas verdes…
+                        </p>
+                      )}
+                      {mostrarAreasVerdes && fonteAreasVerdes?.desatualizada && (
+                        <p role="status" className="text-xs text-atencao">
+                          Fonte desatualizada: última importação há{" "}
+                          {plural(fonteAreasVerdes.dias ?? 0, "dia", "dias")} (limite de{" "}
+                          {fonteAreasVerdes.limite_dias}). Os limites podem ter mudado.
                         </p>
                       )}
                       {mostrarAreasVerdes && estadoAreasVerdes === "erro" && (

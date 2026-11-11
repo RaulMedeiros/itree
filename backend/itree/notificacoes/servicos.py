@@ -9,6 +9,7 @@ from collections.abc import Iterable
 
 from django.db import transaction
 
+from itree.alertas.escopo import alerta_no_escopo
 from itree.contas.acesso import area_do_escopo
 from itree.contas.models import Usuario
 from itree.contas.permissoes import Permissao
@@ -143,10 +144,7 @@ def alertas_novos(alertas: list) -> None:
     for u in Usuario.objects.filter(is_active=True):
         if not u.tem_permissao(Permissao.ALERTAS_LER):
             continue
-        area = area_do_escopo(u)
-        if area is None:
-            continue
-        no_escopo = [a for a in alertas if area.intersects(a.geom)]
+        no_escopo = [a for a in alertas if alerta_no_escopo(a, u)]
         n = len(no_escopo)
         if n == 0:
             continue

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { contar, descreverPrazo, diasDesde, prazoRestante } from "./formatos";
+import {
+  contar,
+  descreverAreaVerdeProxima,
+  descreverPrazo,
+  diasDesde,
+  prazoRestante,
+} from "./formatos";
 
 const agora = new Date("2026-11-10T15:00:00Z"); // 10/11 12h em Fortaleza
 
@@ -38,5 +44,24 @@ describe("descreverPrazo", () => {
     expect(descreverPrazo("2026-11-12", hoje)).toBe("falta 1 dia");
     expect(descreverPrazo("2026-11-11", hoje)).toBe("vence hoje");
     expect(descreverPrazo("2026-11-08", hoje)).toBe("atrasado há 3 dias");
+  });
+
+  it("descreve a área verde próxima ao foco, com a distância em km", () => {
+    const parque = { nome: "Parque Estadual do Cocó", tipo: "parque", distancia_m: 611 };
+    expect(descreverAreaVerdeProxima(parque)).toBe("a 0,6 km do Parque Estadual do Cocó");
+    expect(descreverAreaVerdeProxima({ ...parque, distancia_m: 1000 })).toBe(
+      "a 1,0 km do Parque Estadual do Cocó",
+    );
+    expect(descreverAreaVerdeProxima({ ...parque, distancia_m: 40 })).toBe(
+      "a 40 m do Parque Estadual do Cocó",
+    );
+    expect(descreverAreaVerdeProxima({ ...parque, distancia_m: 0 })).toBe(
+      "dentro de Parque Estadual do Cocó",
+    );
+    expect(descreverAreaVerdeProxima({ nome: "APA do Rio Ceará", distancia_m: 800 })).toBe(
+      "a 0,8 km da APA do Rio Ceará",
+    );
+    expect(descreverAreaVerdeProxima(null)).toBeNull();
+    expect(descreverAreaVerdeProxima(undefined)).toBeNull();
   });
 });

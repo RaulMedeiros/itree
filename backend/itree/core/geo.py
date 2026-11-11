@@ -15,3 +15,16 @@ def bairro_do_ponto(geom):
     if geom is None:
         return None
     return Territorio.objects.filter(tipo=TipoTerritorio.BAIRRO, geom__contains=geom).first()
+
+
+def ampliar(geom, metros: float):
+    """Cópia de ``geom`` (EPSG:4326) ampliada em ``metros`` em todas as direções.
+
+    O buffer é calculado em metros, no SRC métrico de Fortaleza, e devolvido em 4326.
+    """
+    if metros <= 0:
+        return geom
+    metrica = geom.transform(SRID_METRICO, clone=True)
+    ampliada = metrica.buffer(metros)
+    ampliada.transform(4326)
+    return ampliada

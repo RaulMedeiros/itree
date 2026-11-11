@@ -15,6 +15,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from itree.alertas.escopo import filtrar_alertas_por_escopo
 from itree.alertas.models import AlertaAmbiental, StatusAlerta
 from itree.alertas.views import filtrar_por_bairro
 from itree.auditoria.views import ENTIDADES, EventoAuditoriaSerializer
@@ -395,7 +396,7 @@ def painel(request: Request):
         ),
     ]
     if usuario.tem_permissao("alertas.ler"):
-        alertas_detectados = filtrar_por_escopo(
+        alertas_detectados = filtrar_alertas_por_escopo(
             AlertaAmbiental.objects.filter(status=StatusAlerta.DETECTADO), usuario
         )
         if bairro_obj is not None:

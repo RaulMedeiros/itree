@@ -3113,6 +3113,10 @@ components:
           readOnly: true
           description: Ocorrências abertas no escopo a até `raio` m (padrão 100 m)
             do alerta.
+        area_verde_proxima:
+          nullable: true
+          description: 'Parque ou unidade de conservação a até o raio configurado
+            (foco de calor): id, nome, tipo e distância em metros. Calculado na ingestão.'
         atualizado_em:
           type: string
           format: date-time

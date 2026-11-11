@@ -19,6 +19,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from itree.alertas.escopo import filtrar_alertas_por_escopo
 from itree.alertas.models import AlertaAmbiental
 from itree.contas.acesso import filtrar_por_escopo
 from itree.indicadores import externos
@@ -183,7 +184,7 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             .order_by("mes")
         ]
     if chave == "alertas_por_fonte":
-        alertas = filtrar_por_escopo(AlertaAmbiental.objects.all(), usuario).filter(
+        alertas = filtrar_alertas_por_escopo(AlertaAmbiental.objects.all(), usuario).filter(
             data_deteccao__date__gte=inicio, data_deteccao__date__lte=fim
         )
         fontes = dict(AlertaAmbiental._meta.get_field("fonte").choices)
@@ -269,7 +270,7 @@ def _serie_mensal(chave: str, usuario, inicio: date, fim: date) -> dict | None:
         )
         series = [("inspecoes", "Inspeções", _contagem_mensal(inspecoes, "realizada_em"))]
     elif chave == "alertas_por_fonte":
-        alertas = filtrar_por_escopo(AlertaAmbiental.objects.all(), usuario).filter(
+        alertas = filtrar_alertas_por_escopo(AlertaAmbiental.objects.all(), usuario).filter(
             data_deteccao__date__gte=inicio, data_deteccao__date__lte=fim
         )
         series = [("alertas", "Alertas detectados", _contagem_mensal(alertas, "data_deteccao"))]
@@ -471,7 +472,7 @@ def tabela_ocorrencias(qs):
 
 
 def _dados_alertas(usuario, params):
-    qs = filtrar_por_escopo(AlertaAmbiental.objects.all(), usuario)
+    qs = filtrar_alertas_por_escopo(AlertaAmbiental.objects.all(), usuario)
     if s := params.get("status"):
         qs = qs.filter(status__in=s.split(","))
     colunas = [
@@ -779,6 +780,40 @@ def painel_pdf(request: Request):
             5,
             texto(
                 f"{i['definicao']} Formula: {i['formula']}. Periodo: {i['periodo']}. Fonte: {i['fonte']}."
+            ),
+        )
+        pdf.ln(1.5)
+    # Contexto de fontes externas (Censo): separado dos indicadores da plataforma, com
+    # fonte, data de referencia, definicao e metodo. Sem dado, a secao nao aparece.
+    if dados["contexto_externo"]:
+        pdf.ln(2)
+        pdf.set_font("Helvetica", "B", 13)
+        bloco(8, "Contexto (fontes externas)")
+        pdf.set_font("Helvetica", size=9)
+        bloco(
+            5,
+            texto(
+                "Dados de outras instituicoes, que nao dependem do periodo escolhido e "
+                "nao se misturam aos registros da plataforma."
+            ),
+        )
+        pdf.ln(1.5)
+    for c in dados["contexto_externo"]:
+        valor = "Sem dados" if c["valor"] is None else f"{c['valor']:.1f}".replace(".", ",")
+        valor += f" {c['unidade']}" if c["valor"] is not None and c["unidade"] else ""
+        pdf.set_font("Helvetica", "B", 11)
+        bloco(6, texto(f"{c['nome']}: {valor}"))
+        pdf.set_font("Helvetica", size=9)
+        milhar = f"{c['base']:,}".replace(",", ".") if c["base"] else ""
+        base = f", base de {milhar}" if milhar else ""
+        bloco(
+            5,
+            texto(
+                f"Definicao: {c['definicao']} Metodo: {c['metodo']} "
+                f"Cobertura: {c['bairros_com_dado']} de {c['bairros_no_escopo']} bairros do "
+                f"escopo{base}. Fonte: {c['fonte']} ({c['fonte_url']}). "
+                f"Data de referencia: {c['data_referencia']:%d/%m/%Y}. "
+                f"Licenca: {c['licenca']}."
             ),
         )
         pdf.ln(1.5)

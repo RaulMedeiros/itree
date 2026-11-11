@@ -63,6 +63,13 @@ const ALERTA: Alerta = {
   ocorrencia: null,
   arvores_proximas: 2,
   ocorrencias_proximas: 1,
+  area_verde_proxima: {
+    id: "av-1",
+    nome: "Parque Estadual do Cocó",
+    tipo: "parque",
+    tipo_rotulo: "Parque urbano",
+    distancia_m: 611,
+  },
   atualizado_em: "2026-10-31T10:00:00Z",
 };
 
@@ -187,6 +194,7 @@ describe("alertas ambientais", () => {
     expect(screen.getByText("42 m")).toBeInTheDocument();
     expect(screen.getByText("88 m")).toBeInTheDocument();
     expect(screen.getByText(/1 ocorrência aberta no mesmo raio/)).toBeInTheDocument();
+    expect(screen.getByText("a 0,6 km do Parque Estadual do Cocó")).toBeInTheDocument();
   });
 
   it("a lista mostra as contagens e ordena por árvores próximas", async () => {
@@ -202,6 +210,7 @@ describe("alertas ambientais", () => {
       </QueryClientProvider>,
     );
     expect(await screen.findByText("2 árvores")).toBeInTheDocument();
+    expect(screen.getByText("a 0,6 km do Parque Estadual do Cocó")).toBeInTheDocument();
     expect(screen.getByText("1 aberta a até 100 m")).toBeInTheDocument();
     await usuario.click(screen.getByRole("button", { name: "Árvores a até 100 m" }));
     await vi.waitFor(() => expect(pedidosLista).toContain("-arvores_proximas"));

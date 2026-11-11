@@ -6,7 +6,9 @@ importação idempotente, agregação por escopo, painel e análise.
 o cabeçalho completo, quatro bairros de Fortaleza e um de outro município."""
 
 import io
+import re
 import zipfile
+import zlib
 from datetime import date
 from pathlib import Path
 
@@ -30,6 +32,7 @@ ESPERADO = {
     "2304400004": (266, 459),  # Amadeu Furtado
 }
 URL_PAINEL = "/api/v1/indicadores/painel"
+URL_PDF = "/api/v1/relatorios/painel.pdf"
 
 
 def _zip(conteudo: bytes) -> bytes:
@@ -220,3 +223,36 @@ def test_camada_geojson_sem_importacao_nao_tem_proveniencia(cliente, bairros_ibg
     corpo = cliente.como(gestor).get(URL_CAMADA, {"precisao": 3}).json()
     assert corpo["proveniencia"] is None
     assert all(f["properties"]["valor"] is None for f in corpo["features"])
+
+
+def _texto_do_pdf(conteudo: bytes) -> str:
+    """Texto dos fluxos do PDF (fonte padrão, Latin-1), sem depender de leitor externo."""
+    trechos = []
+    for fluxo in re.findall(rb"stream\r?\n(.*?)\r?\nendstream", conteudo, re.S):
+        try:
+            fluxo = zlib.decompress(fluxo)
+        except zlib.error:
+            continue
+        trechos += re.findall(rb"\((.*?)\) Tj", fluxo)
+    texto = " ".join(t.decode("latin-1") for t in trechos)
+    return re.sub(r"\\([()\\])", r"\1", texto)  # parênteses e barras escapados no PDF
+
+
+def test_pdf_do_painel_traz_contexto_externo_com_fonte_e_definicao(cliente, bairros_ibge):
+    municipio = criar_territorio("Fortaleza", tipo="municipio", geom=quadrado(-38.6, -3.8, 0.2))
+    gestor = com_escopo(criar_usuario("g@itree.teste", ["gestor"]), municipio)
+    # Sem dado do Censo, a seção não aparece (nunca "zero").
+    vazio = cliente.como(gestor).get(URL_PDF)
+    assert vazio.status_code == 200
+    assert "Contexto (fontes externas)" not in _texto_do_pdf(vazio.content)
+
+    _importar()
+    r = cliente.get(URL_PDF)
+    assert r.status_code == 200 and r.content.startswith(b"%PDF")
+    texto = _texto_do_pdf(r.content)
+    assert "Contexto (fontes externas)" in texto
+    assert "68,3 %" in texto  # (938 + 390) / (1449 + 495), o mesmo valor do painel
+    assert "IBGE, Censo Demogr" in texto
+    assert "Definicao: " in texto and "Metodo: " in texto
+    assert "Cobertura: 2 de 3 bairros do escopo, base de 1.944" in texto
+    assert "Data de referencia: 31/07/2022" in texto

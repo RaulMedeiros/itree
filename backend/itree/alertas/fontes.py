@@ -13,6 +13,11 @@ import csv
 import hashlib
 import io
 import json
+import tempfile
+import unicodedata
+import zipfile
+from collections.abc import Callable, Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -24,10 +29,11 @@ from django.contrib.gis.geos import GEOSGeometry, Point
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
-from itree.core.geo import SRID_METRICO
+from itree.core.geo import SRID_METRICO, ampliar
 from itree.notificacoes import servicos as notificacoes
 from itree.territorio.models import Territorio, TipoTerritorio
 
+from . import proximidade
 from .models import AlertaAmbiental, FonteAlerta, IngestaoAlertas, TipoAlerta
 
 
@@ -65,6 +71,28 @@ def _data(valor) -> datetime | None:
     return dt if timezone.is_aware(dt) else timezone.make_aware(dt, UTC)
 
 
+def _registro_foco(linha: dict) -> Registro | None:
+    """Uma linha do CSV do BDQueimadas como ``Registro``; ``None`` se inválida."""
+    lat = _primeiro(linha, "lat", "latitude")
+    lon = _primeiro(linha, "lon", "longitude")
+    quando = _data(_primeiro(linha, "data_hora_gmt", "datahora", "data_hora", "data"))
+    try:
+        ponto = Point(
+            float(str(lon).replace(",", ".")), float(str(lat).replace(",", ".")), srid=4326
+        )
+    except (TypeError, ValueError):
+        return None
+    if quando is None:
+        return None
+    ident = _primeiro(linha, "id", "foco_id", "id_foco")
+    if ident is None:
+        # Sem identificador na fonte: deriva um estável dos atributos do foco.
+        satelite = _primeiro(linha, "satelite") or ""
+        chave = f"{ponto.x:.5f}|{ponto.y:.5f}|{quando.isoformat()}|{satelite}"
+        ident = hashlib.sha1(chave.encode(), usedforsecurity=False).hexdigest()[:20]
+    return Registro(str(ident), ponto, quando, dict(linha))
+
+
 def ler_focos_csv(conteudo: bytes) -> tuple[list[Registro], int]:
     """BDQueimadas (CSV). Colunas reconhecidas: lat/latitude, lon/longitude,
     data_hora_gmt/datahora/data, id/foco_id e demais atributos preservados."""
@@ -75,27 +103,44 @@ def ler_focos_csv(conteudo: bytes) -> tuple[list[Registro], int]:
         dialeto = csv.excel
     registros, invalidos = [], 0
     for linha in csv.DictReader(io.StringIO(texto), dialect=dialeto):
-        lat = _primeiro(linha, "lat", "latitude")
-        lon = _primeiro(linha, "lon", "longitude")
-        quando = _data(_primeiro(linha, "data_hora_gmt", "datahora", "data_hora", "data"))
-        try:
-            ponto = Point(
-                float(str(lon).replace(",", ".")), float(str(lat).replace(",", ".")), srid=4326
-            )
-        except (TypeError, ValueError):
+        registro = _registro_foco(linha)
+        if registro is None:
             invalidos += 1
-            continue
-        if quando is None:
-            invalidos += 1
-            continue
-        ident = _primeiro(linha, "id", "foco_id", "id_foco")
-        if ident is None:
-            # Sem identificador na fonte: deriva um estável dos atributos do foco.
-            satelite = _primeiro(linha, "satelite") or ""
-            chave = f"{ponto.x:.5f}|{ponto.y:.5f}|{quando.isoformat()}|{satelite}"
-            ident = hashlib.sha1(chave.encode(), usedforsecurity=False).hexdigest()[:20]
-        registros.append(Registro(str(ident), ponto, quando, dict(linha)))
+        else:
+            registros.append(registro)
     return registros, invalidos
+
+
+def _sem_acento(texto: str) -> str:
+    base = unicodedata.normalize("NFD", texto)
+    return "".join(c for c in base if not unicodedata.combining(c)).strip().upper()
+
+
+def ler_focos_em_fluxo(
+    linhas: Iterable[str], estado: str | None = None
+) -> tuple[list[Registro], int, int]:
+    """Lê o CSV do BDQueimadas linha a linha, sem carregar o arquivo na memória.
+
+    Com ``estado`` (coluna ``estado``, sem distinguir acento nem caixa: "Ceará"
+    casa com "CEARÁ"), descarta as outras linhas **antes** de montar os registros;
+    só as do estado ficam na memória. Devolve (registros, inválidos, lidas), em que
+    ``lidas`` conta todas as linhas de dados do arquivo, do estado ou não.
+    """
+    leitor = csv.DictReader(linhas)
+    alvo = _sem_acento(estado) if estado else None
+    if alvo and leitor.fieldnames and "estado" not in [f.lower() for f in leitor.fieldnames]:
+        raise ErroFonte("O CSV não tem a coluna 'estado'; não dá para filtrar pelo estado.")
+    registros, invalidos, lidas = [], 0, 0
+    for linha in leitor:
+        lidas += 1
+        if alvo and _sem_acento(str(_primeiro(linha, "estado") or "")) != alvo:
+            continue
+        registro = _registro_foco(linha)
+        if registro is None:
+            invalidos += 1
+        else:
+            registros.append(registro)
+    return registros, invalidos, lidas
 
 
 CHAVES_GEOJSON = {
@@ -211,10 +256,25 @@ def criar_ingestao(fonte: str, origem: str, usuario=None, **extras) -> IngestaoA
 
 def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoAlertas:
     """Ingere o conteúdo, registrando o resultado mesmo em caso de erro."""
+    return ingerir_leitura(fonte, lambda: ler(conteudo, fonte), origem, usuario)
+
+
+def ingerir_leitura(
+    fonte: str,
+    leitor: Callable[[], tuple[list[Registro], int]],
+    origem: str,
+    usuario=None,
+    *,
+    notificar: bool = True,
+) -> IngestaoAlertas:
+    """Corpo de ``ingerir``, com a leitura separada: ``leitor`` devolve (registros,
+    inválidos). Serve a quem já filtra na leitura (backfill mensal do INPE) e
+    mantém a mesma ingestão idempotente, com os mesmos filtros e a mesma proveniência.
+    ``notificar=False`` não avisa os usuários (carga histórica, sem novidade)."""
     ingestao = criar_ingestao(fonte, origem, usuario)
     criados: list[AlertaAmbiental] = []
     try:
-        registros, invalidos = ler(conteudo, fonte)
+        registros, invalidos = leitor()
         municipio = (
             Territorio.objects.filter(tipo=TipoTerritorio.MUNICIPIO)
             .values_list("geom", flat=True)
@@ -236,12 +296,23 @@ def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoA
                 fonte=fonte, id_externo__in=[r.id_externo for r in registros]
             ).values_list("id_externo", flat=True)
         )
+        foco = fonte == FonteAlerta.INPE_FOCOS
+        raio_km = settings.ALERTAS_FOCOS_RAIO_AREA_VERDE_KM
+        # Focos: o município ganha um buffer de raio_km, para pegar o foco logo além do
+        # limite que fica junto de um parque ou unidade de conservação.
+        busca = ampliar(municipio, raio_km * 1000) if foco else municipio
         transformacao = CoordTransform(SpatialReference(4326), SpatialReference(SRID_METRICO))
         for r in registros:
             if r.id_externo in existentes:
                 ingestao.ja_existentes += 1
                 continue
-            if not municipio.intersects(r.geom):
+            dentro = municipio.intersects(r.geom)
+            if not dentro and not (foco and busca.intersects(r.geom)):
+                ingestao.fora_do_municipio += 1
+                continue
+            proxima = proximidade.area_verde_proxima(r.geom, raio_km) if foco else None
+            if not dentro and proxima is None:
+                # Fora do município, só interessa o foco junto de área verde.
                 ingestao.fora_do_municipio += 1
                 continue
             area = None
@@ -256,6 +327,7 @@ def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoA
                 geom=r.geom,
                 src_original=r.src_original,
                 area_ha=area,
+                area_verde_proxima=proxima,
                 data_deteccao=r.data_deteccao,
                 propriedades=r.propriedades,
                 bairros=[
@@ -272,5 +344,79 @@ def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoA
         ingestao.erro = f"Falha inesperada: {exc.__class__.__name__}: {exc}"
     ingestao.concluida_em = timezone.now()
     ingestao.save()
-    notificacoes.alertas_novos(criados)
+    if notificar:
+        notificacoes.alertas_novos(criados)
     return ingestao
+
+
+# --- Backfill mensal do INPE ---------------------------------------------------
+
+URL_FOCOS_MENSAL = "https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/mensal/Brasil/"
+ESTADO_PADRAO_FOCOS = "Ceará"
+
+
+def urls_focos_mensal(ano: int, mes: int, base: str = URL_FOCOS_MENSAL) -> list[str]:
+    """URLs candidatas do arquivo mensal: .zip até 2023 e .csv a partir de 2024, com a
+    outra extensão como reserva (a publicação do INPE já mudou de formato antes)."""
+    nome = f"focos_mensal_br_{ano:04d}{mes:02d}"
+    extensoes = ["zip", "csv"] if ano <= 2023 else ["csv", "zip"]
+    return [f"{base.rstrip('/')}/{nome}.{ext}" for ext in extensoes]
+
+
+@contextmanager
+def abrir_focos_mensal(url: str) -> Iterator[Iterable[str]]:
+    """Abre o CSV mensal como fluxo de linhas de texto, sem carregá-lo inteiro.
+
+    O .csv é lido direto da resposta; o .zip (que exige acesso aleatório) vai para
+    um arquivo temporário em disco e o CSV é lido de dentro dele, em fluxo.
+    """
+    timeout = getattr(settings, "ALERTAS_TIMEOUT", 60)
+    with requests.get(url, stream=True, timeout=timeout) as resposta:
+        resposta.raise_for_status()
+        if url.endswith(".zip"):
+            with tempfile.TemporaryFile() as temporario:
+                for bloco in resposta.iter_content(1 << 20):
+                    temporario.write(bloco)
+                temporario.seek(0)
+                with zipfile.ZipFile(temporario) as pacote:
+                    membros = [n for n in pacote.namelist() if n.lower().endswith(".csv")]
+                    if not membros:
+                        raise ErroFonte("O .zip do INPE não traz nenhum CSV.")
+                    with pacote.open(membros[0]) as bruto:
+                        yield io.TextIOWrapper(
+                            bruto, encoding="utf-8-sig", errors="replace", newline=""
+                        )
+        else:
+            resposta.encoding = "utf-8-sig"
+            yield resposta.iter_lines(decode_unicode=True)
+
+
+def ingerir_focos_mensal(
+    ano: int, mes: int, estado: str | None = ESTADO_PADRAO_FOCOS, base: str = URL_FOCOS_MENSAL
+) -> tuple[IngestaoAlertas, int]:
+    """Ingere um mês do BDQueimadas pelo mesmo ``ingerir`` (idempotente pelo id do foco),
+    filtrando pelo estado na leitura. Devolve a ingestão e o total de linhas do arquivo."""
+    urls = urls_focos_mensal(ano, mes, base)
+    lidas = 0
+    usada = urls[0]
+
+    def leitor() -> tuple[list[Registro], int]:
+        nonlocal lidas, usada
+        for i, url in enumerate(urls):
+            usada = url
+            try:
+                with abrir_focos_mensal(url) as linhas:
+                    registros, invalidos, lidas = ler_focos_em_fluxo(linhas, estado)
+                return registros, invalidos
+            except requests.HTTPError as exc:
+                ultimo = i == len(urls) - 1
+                if ultimo or exc.response is None or exc.response.status_code != 404:
+                    raise
+        raise ErroFonte("Nenhuma URL candidata.")  # inalcançável; satisfaz o verificador
+
+    ingestao = ingerir_leitura(FonteAlerta.INPE_FOCOS, leitor, usada, notificar=False)
+    # A origem real só se conhece depois de tentar; grava a que foi usada.
+    if ingestao.origem != usada[:500]:
+        ingestao.origem = usada[:500]
+        ingestao.save(update_fields=["origem"])
+    return ingestao, lidas
