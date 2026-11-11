@@ -21,10 +21,10 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #24503a;
+  color: var(--color-marca-escura);
   white-space: nowrap;
   text-shadow:
-    0 0 3px #fff,
-    0 0 3px #fff,
-    0 0 6px #fff;
+    0 0 3px var(--color-superficie),
+    0 0 3px var(--color-superficie),
+    0 0 6px var(--color-superficie);
 }

@@ -10,11 +10,12 @@
   --color-marca: #1f6b45;
   --color-marca-escura: #16502f;
   --color-marca-clara: #e3f1e8;
-  /* Barra lateral: texto branco 12:1, texto secundário 8:1, item ativo 8:1. */
+  /* Barra lateral: razões de contraste em README.md (verificadas por scripts/contraste.mjs). */
   --color-barra: #123d2a;
   --color-barra-ativo: #1f5a3f;
   --color-barra-texto: #ffffff;
   --color-barra-suave: #c6d9cd;
+  --color-barra-realce: #8fd3a8;
   --color-info: #1d5fa8;
   --color-info-clara: #e4eefa;
   --color-atencao: #8a5a00;
