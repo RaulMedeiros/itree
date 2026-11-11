@@ -191,14 +191,29 @@ def test_tecnico_nao_valida_e_revisor_nao_valida_a_propria(cliente, tecnico_a, r
     assert r.status_code == 400 and "outra pessoa" in r.json()[0]
 
 
-def test_detalhe_traz_inspecao_anterior(cliente, tecnico_a, arvore_a):
-    primeira = inspecao(
-        arvore_a["id"], realizada_em=(timezone.now() - timedelta(days=30)).isoformat()
+def test_detalhe_traz_a_inspecao_validada_anterior_com_as_medidas(
+    cliente, tecnico_a, revisor, arvore_a
+):
+    antiga = enviada(
+        cliente,
+        tecnico_a,
+        arvore_a["id"],
+        realizada_em=(timezone.now() - timedelta(days=60)).isoformat(),
+        medidas=[{"tipo": "dap", "valor": "30", "metodo": "fita_diametrica", "origem": "medido"}],
     )
-    segunda = inspecao(arvore_a["id"])
-    sincronizar(cliente, tecnico_a, primeira, segunda)
-    detalhe = cliente.get(f"/api/v1/inspecoes/{segunda['id']}").json()
-    assert detalhe["anterior"]["id"] == primeira["id"]
+    cliente.como(revisor).post(f"/api/v1/inspecoes/{antiga}/validar", {}, format="json")
+    # Mais recente, mas só em revisão: não conta como "anterior".
+    em_revisao = enviada(
+        cliente,
+        tecnico_a,
+        arvore_a["id"],
+        realizada_em=(timezone.now() - timedelta(days=30)).isoformat(),
+        medidas=[{"tipo": "dap", "valor": "99", "metodo": "fita_diametrica", "origem": "medido"}],
+    )
+    atual = enviada(cliente, tecnico_a, arvore_a["id"])
+    detalhe = cliente.como(revisor).get(f"/api/v1/inspecoes/{atual}").json()
+    assert detalhe["anterior"]["id"] == antiga != em_revisao
+    assert [(m["tipo"], m["valor"]) for m in detalhe["anterior"]["medidas"]] == [("dap", "30.00")]
     assert detalhe["medidas"][0]["tipo"] == "altura"
 
 
@@ -235,6 +250,19 @@ def test_tarefas_em_lote_pelos_filtros(cliente, coordenador, revisor, tecnico_a)
     assert (
         cliente.como(tecnico_a).get("/api/v1/tarefas", {"responsavel": "eu"}).json()["count"] == 2
     )
+
+
+def test_tarefas_em_lote_recusa_acima_do_limite_do_lote(cliente, coordenador, revisor, monkeypatch):
+    from itree.tarefas import views as views_tarefas
+
+    for ponto in (PONTO_A, PONTO_A):
+        cliente.como(revisor).post("/api/v1/arvores", {"localizacao": ponto}, format="json")
+    ids = [str(i) for i in Arvore.objects.values_list("id", flat=True)]
+    monkeypatch.setattr(views_tarefas, "LIMITE_LOTE", 1)
+    r = cliente.como(coordenador).post("/api/v1/tarefas/lote", {"arvore_ids": ids}, format="json")
+    assert r.status_code == 400
+    assert "limite por lote é 1" in str(r.json())
+    assert not Tarefa.objects.exists()
 
 
 def test_enviar_inspecao_conclui_a_tarefa(cliente, coordenador, tecnico_a, arvore_a):

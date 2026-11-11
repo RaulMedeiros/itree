@@ -2506,6 +2506,35 @@ paths:
                 type: string
                 format: binary
           description: ''
+  /api/v1/relatorios/exportar-arvores:
+    post:
+      operationId: relatorios_exportar_arvores
+      description: Exporta árvores escolhidas na lista (ids no corpo) ou todas as
+        que os filtros alcançam.
+      tags:
+      - relatorios
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportarArvoresRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExportarArvoresRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExportarArvoresRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/v1/relatorios/painel.pdf:
     get:
       operationId: relatorios_painel_pdf
@@ -3600,7 +3629,11 @@ components:
           type: integer
         validos:
           type: integer
+        limite_tarefas_em_lote:
+          type: integer
+          description: Máximo de árvores por lote de tarefas de inspeção.
       required:
+      - limite_tarefas_em_lote
       - total
       - validos
     ContagemNaoLidas:
@@ -4315,6 +4348,33 @@ components:
       - tamanho
       - tipo_conteudo
       - url
+    ExportarArvoresRequest:
+      type: object
+      description: 'Exportação do inventário por POST: os ids marcados ou os próprios
+        filtros da lista.'
+      properties:
+        formato:
+          $ref: '#/components/schemas/FormatoEnum'
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Árvores marcadas na lista. Sem limite de URL; no máximo o limite
+            do arquivo.
+          maxItems: 50000
+        todos_filtrados:
+          type: boolean
+          default: false
+          description: Exporta todas as árvores dos `filtros`, sem enviar a lista
+            de ids.
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+          description: Mesmos filtros da listagem de árvores; só valem com `todos_filtrados`.
+      required:
+      - formato
     FonteAlertaEnum:
       enum:
       - inpe_focos
@@ -4628,10 +4688,11 @@ components:
             para comparar com as medidas da inspeção.
         anterior:
           allOf:
-          - $ref: '#/components/schemas/InspecaoResumo'
+          - $ref: '#/components/schemas/InspecaoAnterior'
           nullable: true
           readOnly: true
-          description: Inspeção anterior da mesma árvore, para comparação (RF-INSP-004).
+          description: Inspeção validada anterior da mesma árvore, com as medidas
+            dela, para comparação (RF-INSP-004).
         tarefa:
           type: object
           additionalProperties: {}
@@ -4651,6 +4712,90 @@ components:
       - recebida_em
       - revisor
       - tarefa
+      - tecnico
+    InspecaoAnterior:
+      type: object
+      description: Inspeção validada anterior, com as medidas que ela registrou (RF-INSP-004).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        arvore:
+          allOf:
+          - $ref: '#/components/schemas/ArvoreDaInspecao'
+          readOnly: true
+        tecnico:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+        realizada_em:
+          type: string
+          format: date-time
+          description: Momento da inspeção no dispositivo.
+        recebida_em:
+          type: string
+          format: date-time
+          readOnly: true
+        estado:
+          $ref: '#/components/schemas/EstadoInspecaoEnum'
+        condicao_aparente:
+          $ref: '#/components/schemas/CondicaoAparenteEnum'
+        sinais:
+          type: array
+          items:
+            $ref: '#/components/schemas/SinalObservadoEnum'
+        especie:
+          allOf:
+          - $ref: '#/components/schemas/EspecieResumo'
+          readOnly: true
+          nullable: true
+        especie_texto:
+          type: string
+          maxLength: 200
+        requer_encaminhamento:
+          type: boolean
+        origem:
+          $ref: '#/components/schemas/OrigemInspecaoEnum'
+        revisor:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+          nullable: true
+        validada_em:
+          type: string
+          format: date-time
+          nullable: true
+        versao:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Controle de concorrência na sincronização.
+        medidas_propostas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+          description: Medidas da inspeção em revisão que ainda não valem no cadastro
+            da árvore (vazio em qualquer outro estado).
+        medidas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+      required:
+      - arvore
+      - codigo
+      - especie
+      - id
+      - medidas
+      - medidas_propostas
+      - realizada_em
+      - recebida_em
+      - revisor
       - tecnico
     InspecaoResumo:
       type: object

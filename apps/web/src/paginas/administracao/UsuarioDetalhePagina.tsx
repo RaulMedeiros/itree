@@ -30,12 +30,15 @@ export function UsuarioDetalhePagina() {
 
   return (
     <>
-      <Link
-        to="/administracao/usuarios"
-        className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
-      >
-        <ArrowLeft className="size-4" aria-hidden /> Usuários
-      </Link>
+      {/* Com os dados carregados, as migalhas do cabeçalho já levam de volta; o link só fica no erro. */}
+      {consulta.isError && (
+        <Link
+          to="/administracao/usuarios"
+          className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
+        >
+          <ArrowLeft className="size-4" aria-hidden /> Usuários
+        </Link>
+      )}
       {consulta.isPending ? (
         <Carregando linhas={8} />
       ) : consulta.isError ? (

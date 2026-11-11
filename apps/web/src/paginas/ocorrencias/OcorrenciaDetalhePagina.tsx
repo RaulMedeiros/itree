@@ -44,12 +44,15 @@ export function OcorrenciaDetalhePagina() {
   const consulta = useOcorrenciasObter(id);
   return (
     <div className="mx-auto max-w-6xl">
-      <Link
-        to="/ocorrencias"
-        className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
-      >
-        <ArrowLeft className="size-4" aria-hidden /> Ocorrências
-      </Link>
+      {/* Com os dados carregados, as migalhas do cabeçalho já levam de volta; o link só fica no erro. */}
+      {consulta.isError && (
+        <Link
+          to="/ocorrencias"
+          className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
+        >
+          <ArrowLeft className="size-4" aria-hidden /> Ocorrências
+        </Link>
+      )}
       {consulta.isPending ? (
         <Carregando linhas={8} />
       ) : consulta.isError ? (

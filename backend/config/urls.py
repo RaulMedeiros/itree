@@ -53,6 +53,11 @@ api_v1 = [
     path("relatorios/catalogo", relatorios.catalogo, name="relatorios-catalogo"),
     path("relatorios/analise", relatorios.analise, name="relatorios-analise"),
     path("relatorios/exportar", relatorios.exportar, name="relatorios-exportar"),
+    path(
+        "relatorios/exportar-arvores",
+        relatorios.exportar_arvores,
+        name="relatorios-exportar-arvores",
+    ),
     path("relatorios/painel.pdf", relatorios.painel_pdf, name="relatorios-painel-pdf"),
     path("qualidade/pendencias", pendencias, name="qualidade-pendencias"),
     path("mapa/camadas", mapa.camadas, name="mapa-camadas"),

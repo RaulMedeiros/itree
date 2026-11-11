@@ -18,10 +18,10 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from itree.contas.acesso import area_do_escopo
+from itree.core.parametros import LIMITE_LOTE
 from itree.inventario.models import Arvore
 from itree.ocorrencias.models import Ocorrencia
 from itree.relatorios import views as relatorios
-from itree.tarefas.views import LIMITE_LOTE
 
 from .views import _CONDICOES_POR_GRAVIDADE, _filtros_arvores, _filtros_ocorrencias
 

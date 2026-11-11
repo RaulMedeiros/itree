@@ -281,7 +281,15 @@ export function AuditoriaPagina() {
                       <Td>{ev.entidade}</Td>
                       <Td>
                         {lote ? (
-                          <span className="text-texto-suave">{eventos.length} registros</span>
+                          <span className="text-texto-suave">
+                            {eventos.length} registros
+                            {ev.pai ? (
+                              <>
+                                {" "}
+                                <Registro ev={ev} />
+                              </>
+                            ) : null}
+                          </span>
                         ) : (
                           <Registro ev={ev} />
                         )}

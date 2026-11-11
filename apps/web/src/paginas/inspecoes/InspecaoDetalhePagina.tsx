@@ -33,7 +33,7 @@ import { Selo } from "../../ui/selo";
 import { cn } from "../../util/cn";
 import { invalidarCaminhos } from "../../util/cache";
 import { formatarData, formatarDataHora, plural } from "../../util/formatos";
-import { compararMedidas, descreverDiferenca } from "./medidas";
+import { compararMedidas, descreverDiferenca, descreverMedidaAnterior } from "./medidas";
 
 const ROTULOS_APLICAVEL: Record<string, string> = {
   especie: "espécie",
@@ -47,12 +47,15 @@ export function InspecaoDetalhePagina() {
   const consulta = useInspecoesObter(id);
   return (
     <div className="mx-auto max-w-6xl">
-      <Link
-        to="/inspecoes"
-        className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
-      >
-        <ArrowLeft className="size-4" aria-hidden /> Inspeções
-      </Link>
+      {/* Com os dados carregados, as migalhas do cabeçalho já levam de volta; o link só fica no erro. */}
+      {consulta.isError && (
+        <Link
+          to="/inspecoes"
+          className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
+        >
+          <ArrowLeft className="size-4" aria-hidden /> Inspeções
+        </Link>
+      )}
       {consulta.isPending ? (
         <Carregando linhas={8} />
       ) : consulta.isError ? (
@@ -279,7 +282,11 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                       <span className="text-texto-suave">Sem valor no cadastro</span>
                     )
                   }
-                  anterior={i.anterior ? "—" : undefined}
+                  anterior={
+                    i.anterior
+                      ? descreverMedidaAnterior(i.anterior.medidas, c.proposta.tipo)
+                      : undefined
+                  }
                   destaque={c.diferenca !== 0}
                 />
               ))

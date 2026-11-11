@@ -75,8 +75,13 @@ export function ArvoresPagina() {
   const podeExportar = usePermissao("relatorios.exportar", "inventario.ler");
   const [criandoTarefas, setCriandoTarefas] = useState(false);
   const [tarefasDaSelecao, setTarefasDaSelecao] = useState(false);
-  // Seleção em lote: só vale para a página e os filtros em que foi feita.
-  const [selecao, setSelecao] = useState<{ chave: string; ids: string[] }>({ chave: "", ids: [] });
+  // Seleção em lote: atravessa as páginas, mas só vale para os filtros em que foi feita.
+  // Com `todos`, vale para todas as árvores dos filtros, sem lista de ids.
+  const [selecao, setSelecao] = useState<{ chave: string; ids: string[]; todos: boolean }>({
+    chave: "",
+    ids: [],
+    todos: false,
+  });
   const [baixando, setBaixando] = useState(false);
   const [erroArquivo, setErroArquivo] = useState<string | null>(null);
   const [nova, setNova] = useState(false);
@@ -111,26 +116,53 @@ export function ArvoresPagina() {
   const ordenarPor = (campo: CampoOrdenacao) =>
     filtrar({ ordenar: proximaOrdenacao(ordenacao, campo) });
 
-  const chaveDaPagina = JSON.stringify(filtros);
-  const selecionadas = selecao.chave === chaveDaPagina ? selecao.ids : [];
-  const setSelecionadas = (ids: string[]) => setSelecao({ chave: chaveDaPagina, ids });
+  // Filtros em texto, como a API espera (os mesmos da listagem, sem página nem ordem).
+  const filtrosEmTexto: Record<string, string> = Object.fromEntries(
+    Object.entries({ ...semPagina, bairro })
+      .filter(([, v]) => v !== undefined && v !== "")
+      .map(([k, v]) => [k, String(v)]),
+  );
+  const chaveDosFiltros = JSON.stringify(filtrosEmTexto);
+  const total = consulta.data?.data.count ?? 0;
+  const limiteLote = contadores.data?.data.limite_tarefas_em_lote;
+
+  const selecaoVigente = selecao.chave === chaveDosFiltros;
+  const todosFiltrados = selecaoVigente && selecao.todos;
+  const selecionadas = selecaoVigente ? selecao.ids : [];
+  const setSelecionadas = (ids: string[]) =>
+    setSelecao({ chave: chaveDosFiltros, ids, todos: false });
+  const marcarTodosFiltrados = () =>
+    setSelecao({ chave: chaveDosFiltros, ids: selecionadas, todos: true });
+  const totalSelecionado = todosFiltrados ? total : selecionadas.length;
 
   const itens = consulta.data?.data.results ?? [];
   const idsDaPagina = itens.map((a) => a.id);
-  const marcadasNaPagina = idsDaPagina.filter((id) => selecionadas.includes(id));
+  const marcadasNaPagina = idsDaPagina.filter((id) => todosFiltrados || selecionadas.includes(id));
   const paginaInteira = idsDaPagina.length > 0 && marcadasNaPagina.length === idsDaPagina.length;
   const alternar = (id: string, marcado: boolean) =>
     setSelecionadas(marcado ? [...selecionadas, id] : selecionadas.filter((x) => x !== id));
+  const alternarPagina = (marcado: boolean) =>
+    setSelecionadas(
+      marcado
+        ? [...selecionadas, ...idsDaPagina.filter((id) => !selecionadas.includes(id))]
+        : selecionadas.filter((id) => !idsDaPagina.includes(id)),
+    );
+  const excedeLote = limiteLote !== undefined && totalSelecionado > limiteLote;
 
   const exportarSelecao = async (formato: "csv" | "xlsx" | "geojson") => {
     setBaixando(true);
     setErroArquivo(null);
     try {
-      await baixarArquivo("/api/v1/relatorios/exportar", {
-        conjunto: "arvores",
-        formato,
-        ids: marcadasNaPagina.join(","),
-      });
+      // POST com o corpo em JSON: a lista de ids não cabe numa URL.
+      await baixarArquivo(
+        "/api/v1/relatorios/exportar-arvores",
+        {},
+        {
+          corpo: todosFiltrados
+            ? { formato, todos_filtrados: true, filtros: filtrosEmTexto }
+            : { formato, ids: selecionadas },
+        },
+      );
     } catch (e) {
       setErroArquivo(e instanceof ErroApi ? e.message : "Falha ao gerar o arquivo.");
     } finally {
@@ -166,7 +198,12 @@ export function ArvoresPagina() {
             {podeTarefas && (
               <Botao
                 variante="secundario"
-                disabled={!consulta.data?.data.count}
+                disabled={!total || (limiteLote !== undefined && total > limiteLote)}
+                title={
+                  limiteLote !== undefined && total > limiteLote
+                    ? `Os filtros alcançam mais de ${limiteLote.toLocaleString("pt-BR")} árvores, o limite por lote. Refine os filtros.`
+                    : undefined
+                }
                 onClick={() => setCriandoTarefas(true)}
               >
                 Criar tarefas de inspeção
@@ -289,17 +326,27 @@ export function ArvoresPagina() {
         </Vazio>
       ) : (
         <>
-          {marcadasNaPagina.length > 0 && (
+          {totalSelecionado > 0 && (
             <div
               role="region"
               aria-label="Ações da seleção"
               className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-marca bg-marca-clara px-3 py-2"
             >
               <p role="status" className="mr-2 text-sm font-medium">
-                {plural(marcadasNaPagina.length, "árvore selecionada", "árvores selecionadas")}
+                {plural(totalSelecionado, "árvore selecionada", "árvores selecionadas")}
+                {todosFiltrados && " (todas as dos filtros)"}
               </p>
+              {!todosFiltrados && paginaInteira && total > idsDaPagina.length && (
+                <Botao variante="fantasma" onClick={marcarTodosFiltrados}>
+                  Selecionar todos os {total.toLocaleString("pt-BR")} filtrados
+                </Botao>
+              )}
               {podeTarefas && (
-                <Botao variante="secundario" onClick={() => setTarefasDaSelecao(true)}>
+                <Botao
+                  variante="secundario"
+                  disabled={excedeLote}
+                  onClick={() => setTarefasDaSelecao(true)}
+                >
                   Criar tarefas de inspeção
                 </Botao>
               )}
@@ -338,6 +385,12 @@ export function ArvoresPagina() {
                   {erroArquivo}
                 </p>
               )}
+              {excedeLote && podeTarefas && (
+                <p role="status" className="basis-full text-xs text-texto-suave">
+                  O limite é de {limiteLote.toLocaleString("pt-BR")} árvores por lote de tarefas.
+                  Reduza a seleção ou refine os filtros para criar as tarefas.
+                </p>
+              )}
             </div>
           )}
           <Tabela>
@@ -352,7 +405,8 @@ export function ArvoresPagina() {
                     ref={(el) => {
                       if (el) el.indeterminate = marcadasNaPagina.length > 0 && !paginaInteira;
                     }}
-                    onChange={(e) => setSelecionadas(e.target.checked ? idsDaPagina : [])}
+                    disabled={todosFiltrados}
+                    onChange={(e) => alternarPagina(e.target.checked)}
                   />
                 </Th>
                 <ThOrdenavel
@@ -393,7 +447,8 @@ export function ArvoresPagina() {
                       type="checkbox"
                       aria-label={`Selecionar ${a.codigo}`}
                       className="size-4 accent-marca"
-                      checked={selecionadas.includes(a.id)}
+                      checked={todosFiltrados || selecionadas.includes(a.id)}
+                      disabled={todosFiltrados}
                       onChange={(e) => alternar(a.id, e.target.checked)}
                     />
                   </Td>
@@ -455,7 +510,11 @@ export function ArvoresPagina() {
       {nova && <NovaArvoreDialogo aoFechar={() => setNova(false)} />}
       {tarefasDaSelecao && (
         <CriarTarefasDialogo
-          alvo={{ tipo: "selecao", arvoreIds: marcadasNaPagina, origem: "lista" }}
+          alvo={
+            todosFiltrados
+              ? { tipo: "lote", filtros: filtrosEmTexto, total }
+              : { tipo: "selecao", arvoreIds: selecionadas, origem: "lista" }
+          }
           aoFechar={() => setTarefasDaSelecao(false)}
         />
       )}
@@ -463,12 +522,8 @@ export function ArvoresPagina() {
         <CriarTarefasDialogo
           alvo={{
             tipo: "lote",
-            filtros: Object.fromEntries(
-              Object.entries(semPagina)
-                .filter(([, v]) => v !== undefined && v !== "")
-                .map(([k, v]) => [k, String(v)]),
-            ),
-            total: consulta.data?.data.count ?? 0,
+            filtros: filtrosEmTexto,
+            total,
           }}
           aoFechar={() => setCriandoTarefas(false)}
         />

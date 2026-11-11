@@ -6,16 +6,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -23,6 +27,7 @@ import type {
 import type {
   Analise,
   CatalogoAnalises,
+  ExportarArvoresRequest,
   RelatoriosAnaliseParams,
   RelatoriosExportarParams,
   RelatoriosPainelPdfParams
@@ -382,7 +387,103 @@ export function useRelatoriosExportar<TData = Awaited<ReturnType<typeof relatori
 
 
 
-export type relatoriosPainelPdfResponse200 = {
+export type relatoriosExportarArvoresResponse200 = {
+  data: Blob
+  status: 200
+}
+
+export type relatoriosExportarArvoresResponseSuccess = (relatoriosExportarArvoresResponse200) & {
+  headers: Headers;
+};
+;
+
+export type relatoriosExportarArvoresResponse = (relatoriosExportarArvoresResponseSuccess)
+
+export const getRelatoriosExportarArvoresUrl = () => {
+
+
+
+
+  return `/api/v1/relatorios/exportar-arvores`
+}
+
+/**
+ * Exporta árvores escolhidas na lista (ids no corpo) ou todas as que os filtros alcançam.
+ */
+export const relatoriosExportarArvores = async (exportarArvoresRequest: ExportarArvoresRequest, options?: Parameters<typeof requisicao>[1]): Promise<relatoriosExportarArvoresResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<relatoriosExportarArvoresResponse>(getRelatoriosExportarArvoresUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(exportarArvoresRequest)
+  }
+);}
+
+
+
+
+
+export const getRelatoriosExportarArvoresMutationKey = () => ['relatoriosExportarArvores'] as const;
+
+export const getRelatoriosExportarArvoresMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof relatoriosExportarArvores>>, TError,RelatoriosExportarArvoresMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof relatoriosExportarArvores>>, TError,RelatoriosExportarArvoresMutationVariables, TContext> => {
+
+const mutationKey = getRelatoriosExportarArvoresMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof relatoriosExportarArvores>>, RelatoriosExportarArvoresMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  relatoriosExportarArvores(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RelatoriosExportarArvoresMutationResult = NonNullable<Awaited<ReturnType<typeof relatoriosExportarArvores>>>
+    export type RelatoriosExportarArvoresMutationBody = ExportarArvoresRequest
+    export type RelatoriosExportarArvoresMutationError = unknown
+    export type RelatoriosExportarArvoresMutationVariables = {data: ExportarArvoresRequest}
+
+    export const useRelatoriosExportarArvores = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof relatoriosExportarArvores>>, TError,RelatoriosExportarArvoresMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof relatoriosExportarArvores>>,
+        TError,
+        RelatoriosExportarArvoresMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRelatoriosExportarArvoresMutationOptions(options), queryClient);
+    }
+    export type relatoriosPainelPdfResponse200 = {
   data: Blob
   status: 200
 }

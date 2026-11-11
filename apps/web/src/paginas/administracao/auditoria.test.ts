@@ -31,4 +31,18 @@ describe("agruparEventos", () => {
     ]);
     expect(itens.map((i) => i.eventos.length)).toEqual([4, 1, 1]);
   });
+
+  it("não junta filhos de pais diferentes, mesmo no mesmo minuto e com a mesma ação", () => {
+    const pai = (id: string, codigo: string) => ({ tipo: "arvore", id, codigo });
+    const itens = agruparEventos([
+      ev("1", { pai: pai("a-1", "ARV-000001") }),
+      ev("2", { pai: pai("a-1", "ARV-000001") }),
+      ev("3", { pai: pai("a-2", "ARV-000002") }),
+      ev("4", { pai: pai("a-2", "ARV-000002") }),
+    ]);
+    expect(itens.map((i) => i.eventos.map((e) => e.id))).toEqual([
+      ["1", "2"],
+      ["3", "4"],
+    ]);
+  });
 });

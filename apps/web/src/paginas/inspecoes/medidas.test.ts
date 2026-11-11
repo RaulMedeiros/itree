@@ -1,7 +1,7 @@
 import type { Medida } from "@itree/api-client";
 import { describe, expect, it } from "vitest";
 
-import { compararMedidas, descreverDiferenca } from "./medidas";
+import { compararMedidas, descreverDiferenca, descreverMedidaAnterior } from "./medidas";
 
 const medida = (tipo: Medida["tipo"], valor: string, unidade = "cm"): Medida =>
   ({ id: `${tipo}-${valor}`, tipo, valor, unidade }) as Medida;
@@ -33,5 +33,15 @@ describe("compararMedidas", () => {
   it("não compara tipos diferentes", () => {
     const [altura] = compararMedidas([medida("altura", "10", "m")], [medida("dap", "32")]);
     expect(altura!.cadastro).toBeUndefined();
+  });
+});
+
+describe("descreverMedidaAnterior", () => {
+  it("usa a medida do mesmo tipo da inspeção anterior ou um traço", () => {
+    const anteriores = [medida("dap", "30"), medida("altura", "8.5", "m")];
+    expect(descreverMedidaAnterior(anteriores, "dap")).toBe("30 cm");
+    expect(descreverMedidaAnterior(anteriores, "altura")).toBe("8,5 m");
+    expect(descreverMedidaAnterior(anteriores, "copa")).toBe("—");
+    expect(descreverMedidaAnterior([], "dap")).toBe("—");
   });
 });
