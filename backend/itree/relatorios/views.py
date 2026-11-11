@@ -782,6 +782,40 @@ def painel_pdf(request: Request):
             ),
         )
         pdf.ln(1.5)
+    # Contexto de fontes externas (Censo): separado dos indicadores da plataforma, com
+    # fonte, data de referencia, definicao e metodo. Sem dado, a secao nao aparece.
+    if dados["contexto_externo"]:
+        pdf.ln(2)
+        pdf.set_font("Helvetica", "B", 13)
+        bloco(8, "Contexto (fontes externas)")
+        pdf.set_font("Helvetica", size=9)
+        bloco(
+            5,
+            texto(
+                "Dados de outras instituicoes, que nao dependem do periodo escolhido e "
+                "nao se misturam aos registros da plataforma."
+            ),
+        )
+        pdf.ln(1.5)
+    for c in dados["contexto_externo"]:
+        valor = "Sem dados" if c["valor"] is None else f"{c['valor']:.1f}".replace(".", ",")
+        valor += f" {c['unidade']}" if c["valor"] is not None and c["unidade"] else ""
+        pdf.set_font("Helvetica", "B", 11)
+        bloco(6, texto(f"{c['nome']}: {valor}"))
+        pdf.set_font("Helvetica", size=9)
+        milhar = f"{c['base']:,}".replace(",", ".") if c["base"] else ""
+        base = f", base de {milhar}" if milhar else ""
+        bloco(
+            5,
+            texto(
+                f"Definicao: {c['definicao']} Metodo: {c['metodo']} "
+                f"Cobertura: {c['bairros_com_dado']} de {c['bairros_no_escopo']} bairros do "
+                f"escopo{base}. Fonte: {c['fonte']} ({c['fonte_url']}). "
+                f"Data de referencia: {c['data_referencia']:%d/%m/%Y}. "
+                f"Licenca: {c['licenca']}."
+            ),
+        )
+        pdf.ln(1.5)
     Exportacao.objects.create(
         usuario=request.user,
         conjunto="painel",
