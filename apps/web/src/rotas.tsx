@@ -129,6 +129,12 @@ const bandeira = <T extends string>(valor: T) =>
 
 const paginaOpcional = z.coerce.number().int().positive().optional().catch(undefined);
 const textoOpcional = z.string().optional().catch(undefined);
+/** Raio das árvores próximas de um alerta: só os valores oferecidos na tela. */
+const raioOpcional = z.coerce
+  .number()
+  .refine((v) => [50, 100, 250, 500].includes(v))
+  .optional()
+  .catch(undefined);
 
 const usuarios = createRoute({
   getParentRoute: () => administracao,
@@ -463,6 +469,8 @@ const alertasLista = createRoute({
   validateSearch: z.object({
     status: textoOpcional,
     fonte: z.enum(["inpe_focos", "inpe_deter", "mapbiomas"]).optional().catch(undefined),
+    bairro: textoOpcional,
+    raio: raioOpcional,
     deteccao_desde: dataOpcionalF2,
     deteccao_ate: dataOpcionalF2,
     ordem: z
@@ -483,6 +491,7 @@ const alertasLista = createRoute({
 const alertaDetalhe = createRoute({
   getParentRoute: () => alertas,
   path: "$id",
+  validateSearch: z.object({ raio: raioOpcional }),
   component: AlertaDetalhePagina,
 });
 

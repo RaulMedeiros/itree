@@ -244,7 +244,16 @@ REFERENCIAS_AUTOMATICAS = env.bool("REFERENCIAS_AUTOMATICAS", default=True)
 # Reconsulta mensal das referências antigas (M-09).
 REFERENCIAS_IDADE_MAXIMA_DIAS = env.int("REFERENCIAS_IDADE_MAXIMA_DIAS", default=30)
 REFERENCIAS_INTERVALO_SEGUNDOS = env.float("REFERENCIAS_INTERVALO_SEGUNDOS", default=1.0)
+# --- Notificações: retenção -----------------------------------------------------
+# A tarefa diária apaga as lidas há mais de NOTIFICACOES_RETENCAO_LIDAS_DIAS e as não
+# lidas criadas há mais de NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS.
+NOTIFICACOES_RETENCAO_LIDAS_DIAS = env.int("NOTIFICACOES_RETENCAO_LIDAS_DIAS", default=90)
+NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS = env.int("NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS", default=365)
 CELERY_BEAT_SCHEDULE = {
+    "limpar-notificacoes": {
+        "task": "itree.notificacoes.tasks.limpar_notificacoes_antigas",
+        "schedule": crontab(hour=2, minute=15),
+    },
     # Instantâneos da visão geral (M-11): um registro por dia e território.
     "registrar-indicadores": {
         "task": "itree.indicadores.tasks.registrar_indicadores",

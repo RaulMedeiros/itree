@@ -4,7 +4,7 @@ import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { criarServidor } from "./servidorPadrao";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-oidc-context", () => ({
@@ -116,7 +116,7 @@ const tarefa = {
 let evidencias: unknown[] = [];
 const consultasOcorrencias: URLSearchParams[] = [];
 
-const servidor = setupServer(
+const servidor = criarServidor(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(GESTOR)),
   http.get(`${API}/api/v1/territorios`, () => HttpResponse.json(pagina([]))),
   http.get(`${API}/api/v1/inspecoes`, () =>
@@ -428,6 +428,15 @@ describe("atribuição a equipe incompleta", () => {
   });
 });
 
+const ZERADAS = {
+  aberta: 0,
+  em_triagem: 0,
+  encaminhada: 0,
+  em_atendimento: 0,
+  concluida: 0,
+  cancelada: 0,
+};
+
 describe("tipos de ocorrência (administração)", () => {
   it("tem ação Editar explícita por linha e legenda de situações em ordem fixa", async () => {
     servidor.use(
@@ -436,8 +445,27 @@ describe("tipos de ocorrência (administração)", () => {
       ),
       http.get(`${API}/api/v1/tipos-ocorrencia`, () =>
         HttpResponse.json([
-          { id: "t-1", nome: "Risco de queda", descricao: "", prazo_padrao_dias: 1, ativo: true },
-          { id: "t-2", nome: "Poda", descricao: "", prazo_padrao_dias: null, ativo: true },
+          {
+            id: "t-1",
+            nome: "Risco de queda",
+            descricao: "",
+            prazo_padrao_dias: 1,
+            ativo: true,
+            ocorrencias_por_estado: { ...ZERADAS, aberta: 3, em_triagem: 1, encaminhada: 2 },
+          },
+          {
+            id: "t-2",
+            nome: "Poda",
+            descricao: "",
+            prazo_padrao_dias: null,
+            ativo: true,
+            ocorrencias_por_estado: {
+              ...ZERADAS,
+              em_atendimento: 4,
+              concluida: 1200,
+              cancelada: 2,
+            },
+          },
         ]),
       ),
     );
@@ -457,6 +485,23 @@ describe("tipos de ocorrência (administração)", () => {
       "→Concluída",
       "→Cancelada",
     ]);
+
+    // Contagem por situação, por tipo (triagem e encaminhada somadas).
+    const cabecalhos = screen.getAllByRole("columnheader").map((th) => th.textContent);
+    expect(cabecalhos.slice(2, 7)).toEqual([
+      "Abertas",
+      "Em triagem ou encaminhadas",
+      "Em atendimento",
+      "Concluídas",
+      "Canceladas",
+    ]);
+    const contagem = (nome: string) =>
+      within(screen.getByText(nome).closest("tr")!)
+        .getAllByRole("cell")
+        .slice(2, 7)
+        .map((td) => td.textContent);
+    expect(contagem("Risco de queda")).toEqual(["3", "3", "0", "0", "0"]);
+    expect(contagem("Poda")).toEqual(["0", "0", "4", "1.200", "2"]);
 
     const linha = screen.getByText("Poda").closest("tr")!;
     await usuario.click(within(linha).getByRole("button", { name: "Editar Poda" }));

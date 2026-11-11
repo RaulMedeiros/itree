@@ -4,7 +4,7 @@ import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { criarServidor } from "./servidorPadrao";
 import { useState } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -56,7 +56,7 @@ const ingestao = (p: Partial<Ingestao>): Ingestao =>
 let eu: Eu = USUARIO;
 let ingestoes: Ingestao[] = [];
 
-const servidor = setupServer(
+const servidor = criarServidor(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(eu)),
   http.get(`${API}/api/v1/alertas/ingestoes`, () => HttpResponse.json(ingestoes)),
 );

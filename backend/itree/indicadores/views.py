@@ -16,6 +16,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from itree.alertas.models import AlertaAmbiental, StatusAlerta
+from itree.alertas.views import filtrar_por_bairro
 from itree.auditoria.views import ENTIDADES, EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo, requer
 from itree.contas.models import Equipe
@@ -394,14 +395,17 @@ def painel(request: Request):
         ),
     ]
     if usuario.tem_permissao("alertas.ler"):
+        alertas_detectados = filtrar_por_escopo(
+            AlertaAmbiental.objects.filter(status=StatusAlerta.DETECTADO), usuario
+        )
+        if bairro_obj is not None:
+            alertas_detectados = filtrar_por_bairro(alertas_detectados, bairro_obj.id)
         candidatas.append(
             (
                 "alertas_detectados",
                 "Alertas ambientais aguardando triagem",
                 "media",
-                filtrar_por_escopo(
-                    AlertaAmbiental.objects.filter(status=StatusAlerta.DETECTADO), usuario
-                ).count(),
+                alertas_detectados.count(),
                 {"pagina": "/alertas", "filtros": {}},
             )
         )

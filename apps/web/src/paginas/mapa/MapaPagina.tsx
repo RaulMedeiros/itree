@@ -265,6 +265,7 @@ export function MapaPagina() {
     sem_inspecao_dias: busca.sem_inspecao_dias ? String(busca.sem_inspecao_dias) : undefined,
   };
   const filtrosOcorrencias = { estado: busca.estado ?? "abertas", bairro: territorioAtivo.id };
+  const filtrosTarefas = { bairro: territorioAtivo.id };
   const [tipoSelecao, idSelecao] = (busca.selecao ?? "").split(":") as [
     "arvore" | "ocorrencia" | "",
     string,
@@ -479,7 +480,7 @@ export function MapaPagina() {
     if (podeTarefas) {
       m.addSource("tarefas", {
         type: "vector",
-        tiles: [urlTiles("tarefas", {})],
+        tiles: [urlTiles("tarefas", filtrosTarefas)],
         minzoom: 0,
         maxzoom: 22,
       });
@@ -637,12 +638,12 @@ export function MapaPagina() {
   // Alertas ambientais em aberto (geometria como recebida da fonte).
   useEffect(() => {
     if (!pronto || !mostrarAlertas) return;
-    void mapaAlertas().then(({ data }) => {
+    void mapaAlertas({ bairro: territorioAtivo.id }).then(({ data }) => {
       (mapa.current?.getSource("alertas") as GeoJSONSource | undefined)?.setData(
         data as Parameters<GeoJSONSource["setData"]>[0],
       );
     });
-  }, [pronto, mostrarAlertas]);
+  }, [pronto, mostrarAlertas, territorioAtivo.id]);
 
   // Áreas verdes: busca única, na primeira vez que a camada é ligada (escopo do usuário).
   useEffect(() => {
@@ -804,6 +805,7 @@ export function MapaPagina() {
   // Filtros → URLs dos tiles.
   const chaveArvores = JSON.stringify(filtrosArvores);
   const chaveOcorrencias = JSON.stringify(filtrosOcorrencias);
+  const chaveTarefas = JSON.stringify(filtrosTarefas);
   useEffect(() => {
     if (!pronto) return;
     (mapa.current?.getSource("arvores") as VectorTileSource | undefined)?.setTiles([
@@ -816,6 +818,12 @@ export function MapaPagina() {
       urlTiles("ocorrencias", JSON.parse(chaveOcorrencias)),
     ]);
   }, [pronto, chaveOcorrencias]);
+  useEffect(() => {
+    if (!pronto) return;
+    (mapa.current?.getSource("tarefas") as VectorTileSource | undefined)?.setTiles([
+      urlTiles("tarefas", JSON.parse(chaveTarefas)),
+    ]);
+  }, [pronto, chaveTarefas]);
 
   // Modo de cor das árvores.
   useEffect(() => {

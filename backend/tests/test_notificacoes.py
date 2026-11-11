@@ -265,3 +265,125 @@ def test_usuario_nao_ve_nem_altera_notificacao_de_outro(cliente, tecnico_a, revi
 
 def test_api_exige_autenticacao(cliente, db):
     assert cliente.get(URL).status_code in (401, 403)
+
+
+# --- Tarefa concluída ou bloqueada: avisa quem a criou ---------------------------
+
+
+@pytest.fixture
+def tarefa_do_coordenador(cliente, coordenador, tecnico_a, arvore_a):
+    corpo = {
+        "tipo": "inspecao_arvore",
+        "arvore_id": arvore_a["id"],
+        "responsavel_id": str(tecnico_a.id),
+    }
+    return cliente.como(coordenador).post("/api/v1/tarefas", corpo, format="json").json()
+
+
+def test_tarefa_bloqueada_e_concluida_notificam_quem_criou(
+    cliente, executar, coordenador, tecnico_a, tarefa_do_coordenador
+):
+    url = f"/api/v1/tarefas/{tarefa_do_coordenador['id']}/transicao"
+    with executar():
+        r = cliente.como(tecnico_a).post(
+            url, {"estado": "bloqueada", "motivo": "Portão fechado"}, format="json"
+        )
+    assert r.status_code == 200, r.json()
+    assert tipos(coordenador) == ["tarefa_bloqueada"]
+    aviso = Notificacao.objects.get(usuario=coordenador)
+    assert "bloqueada" in aviso.titulo and aviso.texto == "Portão fechado"
+    with executar():
+        cliente.post(url, {"estado": "em_execucao"}, format="json")
+        cliente.post(url, {"estado": "concluida"}, format="json")
+    assert sorted(tipos(coordenador)) == ["tarefa_bloqueada", "tarefa_concluida"]
+    assert tipos(tecnico_a) == []  # quem agiu não é avisado
+
+
+def test_quem_criou_a_tarefa_nao_notifica_a_si_mesmo(
+    cliente, executar, coordenador, tarefa_do_coordenador
+):
+    with executar():
+        cliente.como(coordenador).post(
+            f"/api/v1/tarefas/{tarefa_do_coordenador['id']}/transicao",
+            {"estado": "bloqueada", "motivo": "Sem acesso"},
+            format="json",
+        )
+    assert tipos(coordenador) == []
+
+
+def test_cancelar_nao_notifica_quem_criou(
+    cliente, executar, coordenador, tecnico_a, tarefa_do_coordenador
+):
+    with executar():
+        cliente.como(tecnico_a).post(
+            f"/api/v1/tarefas/{tarefa_do_coordenador['id']}/transicao",
+            {"estado": "cancelada", "motivo": "Duplicada"},
+            format="json",
+        )
+    assert tipos(coordenador) == []
+
+
+def test_concluir_a_ocorrencia_avisa_quem_criou_a_tarefa_de_atendimento(
+    cliente, executar, coordenador, gestor_municipal, tipo_queda
+):
+    oco = cliente.como(gestor_municipal).post(
+        "/api/v1/ocorrencias",
+        {"tipo_id": str(tipo_queda.id), "localizacao": PONTO_A, "descricao": "x"},
+        format="json",
+    )
+    cliente.como(coordenador).post(
+        "/api/v1/tarefas",
+        {"tipo": "atendimento_ocorrencia", "ocorrencia_id": oco.json()["id"]},
+        format="json",
+    )
+    url = f"/api/v1/ocorrencias/{oco.json()['id']}/transicao"
+    cliente.como(gestor_municipal)
+    with executar():
+        for estado in ("em_triagem", "em_atendimento", "concluida"):
+            cliente.post(url, {"estado": estado}, format="json")
+    assert tipos(coordenador) == ["tarefa_concluida"]
+    assert tipos(gestor_municipal) == []
+
+
+# --- Retenção ---------------------------------------------------------------------
+
+
+def test_retencao_apaga_lidas_antigas_e_nao_lidas_muito_antigas(tecnico_a, settings):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from itree.notificacoes.tasks import limpar_notificacoes_antigas
+
+    assert settings.NOTIFICACOES_RETENCAO_LIDAS_DIAS == 90
+    assert settings.NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS == 365
+    agora = timezone.now()
+
+    def criar(titulo, criada_ha, lida_ha=None):
+        n = Notificacao.objects.create(
+            usuario=tecnico_a,
+            tipo="alerta_novo",
+            titulo=titulo,
+            lida_em=agora - timedelta(days=lida_ha) if lida_ha is not None else None,
+        )
+        Notificacao.objects.filter(pk=n.pk).update(criado_em=agora - timedelta(days=criada_ha))
+
+    criar("lida há 91 dias", 120, lida_ha=91)
+    criar("lida há 89 dias", 120, lida_ha=89)
+    criar("não lida de 366 dias", 366)
+    criar("não lida de 364 dias", 364)
+    criar("não lida de 100 dias", 100)
+    resultado = limpar_notificacoes_antigas()
+    assert resultado == {"lidas": 1, "nao_lidas": 1}
+    assert set(Notificacao.objects.values_list("titulo", flat=True)) == {
+        "lida há 89 dias",
+        "não lida de 364 dias",
+        "não lida de 100 dias",
+    }
+    settings.NOTIFICACOES_RETENCAO_LIDAS_DIAS = 30
+    assert limpar_notificacoes_antigas()["lidas"] == 1
+
+
+def test_retencao_esta_agendada_diariamente(settings):
+    agenda = settings.CELERY_BEAT_SCHEDULE["limpar-notificacoes"]
+    assert agenda["task"] == "itree.notificacoes.tasks.limpar_notificacoes_antigas"

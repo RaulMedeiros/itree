@@ -1881,6 +1881,11 @@ paths:
       operationId: mapa_alertas
       description: Alertas ambientais em aberto como GeoJSON (polígonos e pontos),
         com escopo.
+      parameters:
+      - in: query
+        name: bairro
+        schema:
+          type: string
       tags:
       - mapa
       security:
@@ -3667,6 +3672,28 @@ components:
           type: integer
       required:
       - nao_lidas
+    ContagemPorEstado:
+      type: object
+      properties:
+        aberta:
+          type: integer
+        em_triagem:
+          type: integer
+        encaminhada:
+          type: integer
+        em_atendimento:
+          type: integer
+        concluida:
+          type: integer
+        cancelada:
+          type: integer
+      required:
+      - aberta
+      - cancelada
+      - concluida
+      - em_atendimento
+      - em_triagem
+      - encaminhada
     ConversaoRequest:
       type: object
       properties:
@@ -5301,6 +5328,8 @@ components:
     NotificacaoTipoEnum:
       enum:
       - tarefa_atribuida
+      - tarefa_concluida
+      - tarefa_bloqueada
       - risco_confirmado
       - inspecao_devolvida
       - inspecao_para_revisao
@@ -5308,6 +5337,8 @@ components:
       type: string
       description: |-
         * `tarefa_atribuida` - Tarefa atribuída
+        * `tarefa_concluida` - Tarefa concluída
+        * `tarefa_bloqueada` - Tarefa bloqueada
         * `risco_confirmado` - Risco confirmado
         * `inspecao_devolvida` - Inspeção devolvida
         * `inspecao_para_revisao` - Inspeção para revisão
@@ -6982,9 +7013,17 @@ components:
           nullable: true
         ativo:
           type: boolean
+        ocorrencias_por_estado:
+          allOf:
+          - $ref: '#/components/schemas/ContagemPorEstado'
+          readOnly: true
+          description: Ocorrências do tipo em cada situação, só as do escopo de quem
+            consulta. Vem preenchido na listagem; nas demais respostas, é calculado
+            para o tipo.
       required:
       - id
       - nome
+      - ocorrencias_por_estado
     TipoOcorrenciaRequest:
       type: object
       properties:

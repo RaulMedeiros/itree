@@ -4,7 +4,7 @@ import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { criarServidor } from "./servidorPadrao";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-oidc-context", () => ({
@@ -42,7 +42,21 @@ const GESTOR: Eu = {
 const OCORRENCIA: Ocorrencia = {
   id: "o-1",
   codigo: "OCO-000007",
-  tipo: { id: "t-1", nome: "Galho caído", descricao: "", prazo_padrao_dias: 3, ativo: true },
+  tipo: {
+    id: "t-1",
+    nome: "Galho caído",
+    descricao: "",
+    prazo_padrao_dias: 3,
+    ativo: true,
+    ocorrencias_por_estado: {
+      aberta: 1,
+      em_triagem: 0,
+      encaminhada: 0,
+      em_atendimento: 0,
+      concluida: 0,
+      cancelada: 0,
+    },
+  },
   arvore: { id: "a-1", codigo: "ARV-000042" },
   localizacao: { longitude: -38.5, latitude: -3.7 },
   bairro: { id: "b-1", nome: "Meireles", tipo: "bairro" },
@@ -78,11 +92,35 @@ const pagina = <T,>(results: T[]) => ({
   results,
 });
 
-const servidor = setupServer(
+const servidor = criarServidor(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(GESTOR)),
   http.get(`${API}/api/v1/ocorrencias/o-1`, () => HttpResponse.json(OCORRENCIA)),
   http.get(`${API}/api/v1/ocorrencias/o-1/historico`, () => HttpResponse.json([])),
   http.get(`${API}/api/v1/evidencias`, () => HttpResponse.json([])),
+  http.get(`${API}/api/v1/equipes`, () =>
+    HttpResponse.json(
+      pagina([
+        {
+          id: "e-1",
+          nome: "Equipe Leste",
+          descricao: "",
+          ativa: true,
+          coordenador: null,
+          membros: [{ id: "u-1", nome: "Téo Técnico", email: "teo@itree.teste" }],
+          territorios: [{ id: "b-1", nome: "Meireles" }],
+        },
+        {
+          id: "e-2",
+          nome: "Equipe de Poda Oeste",
+          descricao: "",
+          ativa: true,
+          coordenador: null,
+          membros: [],
+          territorios: [],
+        },
+      ]),
+    ),
+  ),
   http.post(`${API}/api/v1/ocorrencias/o-1/transicao`, async ({ request }) => {
     const corpo = (await request.json()) as { estado: string };
     transicoes.push(corpo);
@@ -191,6 +229,24 @@ describe("ocorrência", () => {
     expect(
       await within(dialogo).findByText(/sem responsável atribuído e sem evidência anexada/),
     ).toBeInTheDocument();
+  });
+
+  it("avisa, sem bloquear, ao atribuir a uma equipe incompleta", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/ocorrencias/o-1");
+    await usuario.click(await screen.findByRole("button", { name: "Alterar" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).queryByRole("note")).toBeNull();
+
+    await within(dialogo).findByRole("option", { name: "Equipe de Poda Oeste" });
+    await usuario.selectOptions(within(dialogo).getByLabelText("Equipe"), "e-2");
+    expect(await within(dialogo).findByRole("note")).toHaveTextContent(
+      /Equipe de Poda Oeste está incompleta \(sem membros e sem território\)/,
+    );
+    expect(within(dialogo).getByRole("button", { name: "Salvar" })).toBeEnabled();
+
+    await usuario.selectOptions(within(dialogo).getByLabelText("Equipe"), "e-1");
+    expect(within(dialogo).queryByRole("note")).toBeNull();
   });
 
   it("cancelar exige justificativa", async () => {

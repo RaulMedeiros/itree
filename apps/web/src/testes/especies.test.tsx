@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { criarServidor } from "./servidorPadrao";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-oidc-context", () => ({
@@ -80,7 +80,7 @@ const SEM_REFERENCIA = {
 } as unknown as Especie;
 
 const consultas: URLSearchParams[] = [];
-const servidor = setupServer(
+const servidor = criarServidor(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(LEITOR)),
   http.get(`${API}/api/v1/especies`, ({ request }) => {
     consultas.push(new URL(request.url).searchParams);

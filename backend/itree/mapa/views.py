@@ -87,6 +87,18 @@ def _filtros_ocorrencias(params) -> tuple[str, dict]:
     return "".join(f" AND {c}" for c in clausulas), valores
 
 
+def _filtros_tarefas(params) -> tuple[str, dict]:
+    extra, valores = " AND t.estado NOT IN ('concluida', 'cancelada')", {}
+    if bairro := params.get("bairro"):
+        # Mesmo critério da lista de tarefas: o alvo está dentro do bairro.
+        extra += (
+            " AND ST_Intersects(t.geom,"
+            " (SELECT b.geom FROM territorio_territorio b WHERE b.id = %(bairro)s))"
+        )
+        valores["bairro"] = str(uuid_do_parametro(bairro, "bairro"))
+    return extra, valores
+
+
 # Da menos para a mais grave; o índice (base 1) é o rank usado na agregação por célula.
 _CONDICOES_POR_GRAVIDADE = ["nao_avaliada", "boa", "regular", "ruim", "morta"]
 _RANK_CONDICAO = " ".join(f"WHEN '{c}' THEN {i}" for i, c in enumerate(_CONDICOES_POR_GRAVIDADE, 1))
@@ -128,7 +140,7 @@ CAMADAS = {
     },
     "tarefas": {
         "permissao": "tarefas.ler",
-        "filtros": lambda params: (" AND t.estado NOT IN ('concluida', 'cancelada')", {}),
+        "filtros": _filtros_tarefas,
         "base": """
             SELECT t.id::text AS id, t.numero, t.tipo, t.estado,
                    (t.prazo IS NOT NULL AND t.prazo < current_date) AS atrasada,
@@ -405,7 +417,9 @@ def camadas(request: Request):
 
 
 @extend_schema(
-    operation_id="mapa_alertas", responses={(200, "application/geo+json"): OpenApiTypes.OBJECT}
+    operation_id="mapa_alertas",
+    parameters=[OpenApiParameter("bairro", str)],
+    responses={(200, "application/geo+json"): OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
 def alertas(request: Request):

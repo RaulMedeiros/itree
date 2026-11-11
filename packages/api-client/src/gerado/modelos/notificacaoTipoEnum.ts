@@ -8,6 +8,8 @@
 
 /**
  * * `tarefa_atribuida` - Tarefa atribuída
+ * * `tarefa_concluida` - Tarefa concluída
+ * * `tarefa_bloqueada` - Tarefa bloqueada
  * * `risco_confirmado` - Risco confirmado
  * * `inspecao_devolvida` - Inspeção devolvida
  * * `inspecao_para_revisao` - Inspeção para revisão
@@ -18,6 +20,8 @@ export type NotificacaoTipoEnum = typeof NotificacaoTipoEnum[keyof typeof Notifi
 
 export const NotificacaoTipoEnum = {
   tarefa_atribuida: 'tarefa_atribuida',
+  tarefa_concluida: 'tarefa_concluida',
+  tarefa_bloqueada: 'tarefa_bloqueada',
   risco_confirmado: 'risco_confirmado',
   inspecao_devolvida: 'inspecao_devolvida',
   inspecao_para_revisao: 'inspecao_para_revisao',

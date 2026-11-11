@@ -219,6 +219,18 @@ const ORDEM_SITUACOES = [
   "cancelada",
 ] as const;
 
+/**
+ * Contagem de ocorrências de cada tipo, no escopo de quem consulta. Triagem e encaminhamento
+ * ficam juntos para as colunas fecharem com o total do tipo.
+ */
+const COLUNAS_CONTAGEM: { rotulo: string; estados: (typeof ORDEM_SITUACOES)[number][] }[] = [
+  { rotulo: "Abertas", estados: ["aberta"] },
+  { rotulo: "Em triagem ou encaminhadas", estados: ["em_triagem", "encaminhada"] },
+  { rotulo: "Em atendimento", estados: ["em_atendimento"] },
+  { rotulo: "Concluídas", estados: ["concluida"] },
+  { rotulo: "Canceladas", estados: ["cancelada"] },
+];
+
 export function TiposOcorrenciaPagina() {
   const consulta = useTiposOcorrenciaListar();
   const [editando, setEditando] = useState<TipoOcorrencia | "novo" | null>(null);
@@ -265,6 +277,11 @@ export function TiposOcorrenciaPagina() {
             <tr>
               <Th>Tipo</Th>
               <Th>Prazo padrão</Th>
+              {COLUNAS_CONTAGEM.map((c) => (
+                <Th key={c.rotulo} className="text-right">
+                  {c.rotulo}
+                </Th>
+              ))}
               <Th>Situação</Th>
               <Th className="text-right">Ação</Th>
             </tr>
@@ -279,6 +296,13 @@ export function TiposOcorrenciaPagina() {
                 <Td>
                   {t.prazo_padrao_dias ? plural(t.prazo_padrao_dias, "dia") : "Sem prazo padrão"}
                 </Td>
+                {COLUNAS_CONTAGEM.map((c) => (
+                  <Td key={c.rotulo} className="text-right tabular-nums">
+                    {c.estados
+                      .reduce((soma, e) => soma + t.ocorrencias_por_estado[e], 0)
+                      .toLocaleString("pt-BR")}
+                  </Td>
+                ))}
                 <Td>{t.ativo ? <Selo tom="sucesso">Ativo</Selo> : <Selo>Inativo</Selo>}</Td>
                 <Td className="text-right">
                   <Botao

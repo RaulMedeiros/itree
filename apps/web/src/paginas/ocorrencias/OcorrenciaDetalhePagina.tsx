@@ -28,6 +28,7 @@ import { useState, type ReactNode } from "react";
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
+import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
@@ -617,6 +618,7 @@ function AtribuicaoDialogo({
         </p>
       )}
       <div className="flex flex-col gap-3">
+        <AvisoEquipeIncompleta equipe={equipes.data?.data.results.find((e) => e.id === equipe)} />
         <Campo rotulo="Responsável">
           {(p) => (
             <Selecao {...p} value={responsavel} onChange={(e) => setResponsavel(e.target.value)}>

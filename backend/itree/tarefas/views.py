@@ -178,11 +178,12 @@ class TarefaViewSet(
             raise ValidationError({"estado": ["Transição não permitida a partir do estado atual."]})
         if novo in EXIGEM_MOTIVO and not motivo:
             raise ValidationError({"motivo": ["Informe o motivo."]})
-        with pghistory.context(motivo=motivo or None):
+        with transaction.atomic(), pghistory.context(motivo=motivo or None):
             tarefa.estado = novo
             tarefa.motivo_estado = motivo
             tarefa.concluida_em = timezone.now() if novo == EstadoTarefa.CONCLUIDA else None
             tarefa.save(update_fields=["estado", "motivo_estado", "concluida_em", "atualizado_em"])
+            notificacoes.tarefa_concluida_ou_bloqueada(tarefa, autor=request.user)
         return Response(TarefaSerializer(tarefa).data)
 
     @extend_schema(

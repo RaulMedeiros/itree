@@ -147,3 +147,45 @@ def test_tipos_de_ocorrencia(cliente, admin, tecnico_a, tipo_queda):
         "/api/v1/tipos-ocorrencia", {"nome": "Raiz danificando calçada"}, format="json"
     )
     assert r.status_code == 201
+
+
+def test_tipos_trazem_contagem_por_situacao_no_escopo_de_quem_consulta(
+    cliente, tecnico_a, gestor_municipal, tipo_queda, territorios
+):
+    from django.contrib.gis.geos import Point
+
+    from itree.ocorrencias.models import Ocorrencia, TipoOcorrencia
+
+    TipoOcorrencia.objects.create(nome="Poda")
+
+    def criar(tipo, ponto, estado):
+        Ocorrencia.objects.create(
+            tipo=tipo,
+            geom=Point(ponto["longitude"], ponto["latitude"], srid=4326),
+            descricao="x",
+            origem="web",
+            registrada_por=gestor_municipal,
+            estado=estado,
+        )
+
+    for estado in ("aberta", "aberta", "em_atendimento", "concluida", "cancelada", "em_triagem"):
+        criar(tipo_queda, PONTO_A, estado)
+    criar(tipo_queda, PONTO_B, "aberta")  # fora do escopo do técnico
+    criar(tipo_queda, PONTO_B, "concluida")
+
+    def contagens(usuario):
+        tipos = cliente.como(usuario).get("/api/v1/tipos-ocorrencia").json()
+        return {t["nome"]: t["ocorrencias_por_estado"] for t in tipos}
+
+    todos = contagens(gestor_municipal)
+    assert todos["Galho caído"] == {
+        "aberta": 3,
+        "em_triagem": 1,
+        "encaminhada": 0,
+        "em_atendimento": 1,
+        "concluida": 2,
+        "cancelada": 1,
+    }
+    assert set(todos["Poda"].values()) == {0}  # tipo sem ocorrências: zeros, não ausente
+    assert contagens(tecnico_a)["Galho caído"]["aberta"] == 2
+    assert contagens(tecnico_a)["Galho caído"]["concluida"] == 1
