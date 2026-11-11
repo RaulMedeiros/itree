@@ -35,7 +35,7 @@ comando ou ingestão no código.
 | Ocorrências COPDC (CKAN) | SESEC | dataset `ocorrencias-copdc` | CSV agregado | `cc-by` | 2026-06 | A | Não usar (sem queda de árvore) |
 | GeoServer, WMS e WFS de Fortaleza | Ipplan | `/geoserver/...` | n/a | n/a | n/a | A (404) | Não usar; preferir GeoJSON da API |
 | BDQueimadas, focos diários | INPE, Programa Queimadas | `https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_AAAAMMDD.csv` | CSV, 1 a 4 MB por dia | Não declarada (DP-11); citar "INPE, Programa Queimadas" | Diária; o do dia fica pronto ~21h (BRT), o fechado ~09h | V | Implementada: `FonteAlerta.INPE_FOCOS` |
-| BDQueimadas, mensal e 10 min | INPE | `.../focos/csv/mensal/Brasil/` e `.../focos/csv/10min/` | CSV (.zip até 2023), 23 a 137 MB por mês | idem | Mês corrente atualizado | V | Backlog (backfill; filtrar o Ceará na leitura) |
+| BDQueimadas, mensal e 10 min | INPE | `.../focos/csv/mensal/Brasil/` e `.../focos/csv/10min/` | CSV (.zip até 2023), 23 a 137 MB por mês | idem | Mês corrente atualizado | V | Implementada: `ingerir_focos_historico` (filtra o Ceará na leitura) |
 | TerraBrasilis WFS | INPE | `https://terrabrasilis.dpi.inpe.br/geoserver/wfs` | WFS 2.0.0, GeoJSON | WMS informa Fees e AccessConstraints "none"; licença formal não declarada | Varia por camada | V | `FonteAlerta.INPE_DETER` (URL de WFS) |
 | PRODES Caatinga | INPE | camada `prodes-caatinga-nb:yearly_deforestation` | WFS, EPSG:4674 | idem | Anual | V | Backlog (exige a chave `image_date` em `CHAVES_GEOJSON`) |
 | DETER Amazônia e Cerrado | INPE | `deter-amz`, `deter-cerrado-nb` | WFS | idem | Diária | A (não cobre Fortaleza) | Descartada |
@@ -103,6 +103,33 @@ Configure a coleta automática em `ALERTAS_FONTES` (variável de ambiente, JSON)
 - Citação: "INPE, Programa Queimadas".
 - Envio manual: a tela de integrações aceita o CSV baixado.
 
+### Backfill mensal dos focos do INPE
+
+```bash
+cd backend
+uv run python manage.py ingerir_focos_historico --desde 2023-01 --ate 2023-03
+```
+
+- Baixa `focos_mensal_br_AAAAMM` (`.zip` até 2023, `.csv` a partir de 2024; se a extensão
+  esperada der 404, tenta a outra), lê em fluxo e guarda só o estado de `--estado`
+  (padrão Ceará, sem distinguir acento nem caixa) **antes** de montar os registros. O
+  `.zip` vai para um arquivo temporário em disco; nada do Brasil inteiro fica na memória.
+- Passa pelo mesmo `ingerir` do dia a dia: idempotente pelo id do foco, com os mesmos
+  filtros (município ou junto de área verde) e a mesma proveniência. Não envia notificações.
+- Um mês que falha (404, rede) não interrompe os demais; o comando termina com erro listando
+  os meses, e cada mês fica registrado em Integrações.
+- Os focos entram como "Alerta detectado" e aparecem nas pendências de triagem (ver AV-06).
+
+### Focos junto de áreas verdes
+
+- Ao ingerir um foco, o sistema grava o parque ou a unidade de conservação (`areas_verdes`;
+  praça não conta) a até `ALERTAS_FOCOS_RAIO_AREA_VERDE_KM` (padrão 1 km), mesmo fora do
+  município, e o alerta mostra "a 0,6 km do Parque Estadual do Cocó".
+- Fora do município só entra o foco que cai no buffer do município e está junto de área
+  verde. O escopo dos focos (lista, mapa, painel, relatórios e notificações) ganha o mesmo
+  buffer; os outros tipos de alerta seguem o escopo exato.
+- Depende de `importar_areas_verdes` ter rodado; sem áreas, nenhum foco ganha a marca.
+
 ### Validação contra o dado real (2026-11-11)
 
 - `importar_limites_fortaleza` na API real: 12 regionais e 121 bairros criados; segunda
@@ -113,6 +140,13 @@ Configure a coleta automática em `ALERTAS_FONTES` (variável de ambiente, JSON)
   de fora, porque o filtro é geográfico e não pelo nome.
 - Os testes (`backend/tests/test_fontes_publicas.py`) usam trechos reais pequenos em
   `backend/tests/dados/` e não acessam a rede.
+
+### Validação do backfill (2026-11-11)
+
+- `ingerir_focos_historico --desde 2023-01 --ate 2023-01` contra o INPE real (zip de 1,9 MB,
+  40.979 focos no Brasil): 3.480 no Ceará, 4 em Fortaleza, 3.476 fora do município. A segunda
+  execução deu 0 novos e 4 já existentes. Os 4 focos ficaram junto de parque ou unidade de
+  conservação (de 7 m a 672 m).
 
 ## Pendências
 
