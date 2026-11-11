@@ -13,8 +13,13 @@ export function TerritoriosPagina() {
     <>
       <CabecalhoPagina
         titulo="Territórios"
-        descricao="Limites administrativos usados no escopo de usuários e equipes, com fonte e data de cada dado."
+        descricao="Limites administrativos usados no escopo de usuários e equipes, com fonte e data de cada dado. Esta tela é somente leitura."
       />
+      <p className="mb-3 rounded-md bg-info-clara px-3 py-2 text-sm text-info">
+        Os limites vêm de fonte aberta e não são oficiais. A importação dos limites oficiais depende
+        da definição das fontes municipais e dos responsáveis (
+        <span className="whitespace-nowrap">DP-10</span>).
+      </p>
       {consulta.isPending ? (
         <Carregando />
       ) : consulta.isError ? (
@@ -41,7 +46,7 @@ export function TerritoriosPagina() {
               <Linha key={t.id}>
                 <Td className="font-medium">{t.nome}</Td>
                 <Td>{ROTULOS_TIPO_TERRITORIO[t.tipo]}</Td>
-                <Td className="font-mono text-xs">{t.codigo}</Td>
+                <Td className="font-mono text-sm">{t.codigo}</Td>
                 <Td>
                   {t.fonte_url ? (
                     <a
