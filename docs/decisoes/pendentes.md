@@ -18,8 +18,8 @@ responsável, a decisão e as specs atualizadas.
 | <a id="dp-07"></a>DP-07 | Provedor de mapas (ruas/satélite) e política de cache | W-02 (data da imagem, custo, licença) | F1 | Parcial: MapLibre definido em ADR-0001; provedores em ADR futura |
 | <a id="dp-08"></a>DP-08 | Infraestrutura de armazenamento de imagens | W-03, W-05 | F1 | Parcial: S3-compatível definido em ADR-0001; onde hospedar depende da hospedagem |
 | <a id="dp-09"></a>DP-09 | Retenção, privacidade e acesso a fotos e localização | W-03, W-05, W-07, W-09 | F1 | Aberta. Hoje "remover evidência" só a oculta: o arquivo e seus metadados (EXIF) seguem no bucket. Definir prazo de retenção, eliminação a pedido (LGPD) e remoção de EXIF |
-| <a id="dp-10"></a>DP-10 | Fontes municipais oficiais e responsáveis | T-05, camadas de W-02 | F1 | Aberta |
-| <a id="dp-11"></a>DP-11 | Credenciais, limites e condições das APIs externas | W-08, T-05 | F3 | Aberta |
+| <a id="dp-10"></a>DP-10 | Fontes municipais oficiais e responsáveis | T-05, camadas de W-02 | F1 | Aberta. Fontes verificadas em 2026-11-11 ([fontes públicas](../integracoes/fontes-publicas.md)); falta confirmar o responsável |
+| <a id="dp-11"></a>DP-11 | Credenciais, limites e condições das APIs externas | W-08, T-05 | F3 | Aberta. INPE (focos) não declara licença: registrado em cada ingestão; consultar o órgão |
 | <a id="dp-12"></a>DP-12 | Interoperabilidade com sistemas municipais | T-05, importação W-03 | F1 | Aberta |
 | <a id="dp-13"></a>DP-13 | Calibração e validação dos modelos de IA | T-04 | F3 | Aberta |
 | <a id="dp-14"></a>DP-14 | Indicadores oficiais e fórmulas (incl. "registro válido") | W-06, W-09, RN-INV-001 | F2 | Aberta |

@@ -17,7 +17,7 @@ import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { invalidarCaminhos } from "../../util/cache";
-import { formatarDataHora } from "../../util/formatos";
+import { formatarData, formatarDataHora } from "../../util/formatos";
 
 /** Origem em forma de nome ("arquivo sintético" vira "Arquivo sintético"); URLs ficam como estão. */
 const rotuloOrigem = (origem: string) =>
@@ -64,7 +64,16 @@ export function IntegracoesPagina() {
           <tbody>
             {consulta.data.data.map((i) => (
               <Linha key={i.id}>
-                <Td>{ROTULOS_FONTE_ALERTA[i.fonte]}</Td>
+                <Td>
+                  {ROTULOS_FONTE_ALERTA[i.fonte]}
+                  {i.orgao && <p className="text-xs text-texto-suave">{i.orgao}</p>}
+                  {i.licenca && <p className="text-xs text-texto-suave">{i.licenca}</p>}
+                  {i.data_referencia && (
+                    <p className="text-xs text-texto-suave">
+                      Dados de {formatarData(i.data_referencia)}
+                    </p>
+                  )}
+                </Td>
                 <Td className="max-w-64 truncate" title={i.origem}>
                   {rotuloOrigem(i.origem)}
                 </Td>

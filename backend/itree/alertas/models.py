@@ -125,6 +125,19 @@ class IngestaoAlertas(models.Model):
     fora_do_municipio = models.PositiveIntegerField(default=0)
     invalidos = models.PositiveIntegerField(default=0)
     erro = models.TextField(blank=True)
+    orgao = models.CharField(
+        max_length=200, blank=True, help_text="Órgão responsável pela fonte, para citação."
+    )
+    licenca = models.CharField(
+        max_length=300,
+        blank=True,
+        help_text="Licença ou termos de uso da fonte; registra quando não é declarada (DP-11).",
+    )
+    data_referencia = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Data mais recente de detecção entre os registros recebidos.",
+    )
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )

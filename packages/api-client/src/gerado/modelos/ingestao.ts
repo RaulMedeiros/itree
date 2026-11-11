@@ -45,6 +45,21 @@ export interface Ingestao {
      */
   invalidos?: number;
   erro?: string;
+  /**
+     * Órgão responsável pela fonte, para citação.
+     * @maxLength 200
+     */
+  orgao?: string;
+  /**
+     * Licença ou termos de uso da fonte; registra quando não é declarada (DP-11).
+     * @maxLength 300
+     */
+  licenca?: string;
+  /**
+     * Data mais recente de detecção entre os registros recebidos.
+     * @nullable
+     */
+  data_referencia?: string | null;
   /** @nullable */
   readonly usuario: string | null;
 }

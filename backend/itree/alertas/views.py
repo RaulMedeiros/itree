@@ -126,6 +126,9 @@ class IngestaoSerializer(serializers.ModelSerializer):
             "fora_do_municipio",
             "invalidos",
             "erro",
+            "orgao",
+            "licenca",
+            "data_referencia",
             "usuario",
         ]
 

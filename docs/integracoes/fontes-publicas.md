@@ -1,0 +1,121 @@
+# Fontes públicas verificadas
+
+Verificação real feita em 2026-11-11, abrindo cada endpoint e olhando o dado. Ela
+substitui as fontes "a verificar" da [T-05](../specs/transversal/05-integracoes.md).
+O relatório completo (comandos, volumes e achados por fonte) está em
+[verificacao-fontes-2026-11-11.md](verificacao-fontes-2026-11-11.md). Esta página guarda
+o resumo e o modo de usar o que já está implementado.
+
+Regras que valem para todas as fontes (ver [ciclo de melhoria](../melhoria/README.md)):
+nenhum número ambiental sem fonte e método; toda fonte mostra órgão, licença ou
+termos, data de referência e data de ingestão. Licença não declarada é registrada
+como tal, nunca presumida ([DP-11](../decisoes/pendentes.md#dp-11)).
+
+Legenda de status: **V** verificado (dado visto); **A** acessível, sem o dado
+procurado ou não aberto; **I** indisponível da rede da verificação.
+
+## Tabela
+
+"Mapas" é o Fortaleza em Mapas (`https://mapas.fortaleza.ce.gov.br`), com API sem
+token e sem limite de taxa. Na coluna Integração, "Implementada" quer dizer que há
+comando ou ingestão no código.
+
+| Fonte | Órgão | URL | Formato | Licença ou termos | Atualização | Status | Integração |
+| ----- | ----- | --- | ------- | ----------------- | ----------- | ------ | ---------- |
+| Regionais (Mapas, id 17) | Ipplan | `/api/v1/geojson?id=17` | GeoJSON, 12 MultiPolygon | Uso livre com citação da fonte (termos da API) | ano_ref 2020 | V | Implementada: `importar_limites_fortaleza` |
+| Bairros (Mapas, id 21) | Ipplan | `/api/v1/geojson?id=21` | GeoJSON, 121 MultiPolygon, com "Código do  IBGE" | idem | campo `data` 2022-11-13 | V | Implementada: `importar_limites_fortaleza` |
+| Bairros e regionais (CKAN) | SEUMA | `dados.fortaleza.ce.gov.br`, datasets `bairros` e `regionais-atuais` | KMZ | `other-open` | 2025-05 e 2023-05 | V | `importar_territorios` (alternativa) |
+| Limite municipal (CKAN) | SEFIN | dataset `limite-municipal-fortaleza` | CSV | `cc-by` | 2023-10 | A | Não implementada |
+| Praças (CKAN) | URBFOR | dataset `pracas-e-areas-verdes-pracas-de-fortaleza` | GeoJSON, 484 feições | vazia no CKAN | 2024-02 | V | Backlog |
+| Parques e UCs (CKAN; Mapas ids 737 e 86) | SEUMA, CEUC/SEMA | CKAN `parques-uc`; Mapas `?id=737`, `?id=86` | KMZ; GeoJSON | `other-open`; termos da API | 2026-01; ano_ref 2023 | V | Backlog (falta tipo "área verde") |
+| Podas, recolhimento e supressão (CKAN) | URBFOR | dataset `podas_recolhimento_supressao` | CSV mensal, sem coordenadas | vazia | 2023 (falta setembro) | V parcial | Backlog |
+| Doação de mudas e plantio (CKAN) | URBFOR | dataset `doacao-mudas-pf` | XLSX | `cc-by-sa` | 2022-12 | V | Backlog |
+| Atendimentos Plano de Arborização (Mapas, id 534) | SEUMA | `/api/v1/geojson?id=534` | GeoJSON, 577 pontos | termos da API | 2021 | V | Backlog |
+| Adoção de Praças e Áreas Verdes (Mapas, id 622) | SEUMA | `/api/v1/geojson?id=622` | GeoJSON, 490 pontos; traz nome do adotante (dado pessoal) | termos da API | 2023 | V | Backlog |
+| Ocorrências COPDC (CKAN) | SESEC | dataset `ocorrencias-copdc` | CSV agregado | `cc-by` | 2026-06 | A | Não usar (sem queda de árvore) |
+| GeoServer, WMS e WFS de Fortaleza | Ipplan | `/geoserver/...` | n/a | n/a | n/a | A (404) | Não usar; preferir GeoJSON da API |
+| BDQueimadas, focos diários | INPE, Programa Queimadas | `https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_AAAAMMDD.csv` | CSV, 1 a 4 MB por dia | Não declarada (DP-11); citar "INPE, Programa Queimadas" | Diária; o do dia fica pronto ~21h (BRT), o fechado ~09h | V | Implementada: `FonteAlerta.INPE_FOCOS` |
+| BDQueimadas, mensal e 10 min | INPE | `.../focos/csv/mensal/Brasil/` e `.../focos/csv/10min/` | CSV (.zip até 2023), 23 a 137 MB por mês | idem | Mês corrente atualizado | V | Backlog (backfill; filtrar o Ceará na leitura) |
+| TerraBrasilis WFS | INPE | `https://terrabrasilis.dpi.inpe.br/geoserver/wfs` | WFS 2.0.0, GeoJSON | WMS informa Fees e AccessConstraints "none"; licença formal não declarada | Varia por camada | V | `FonteAlerta.INPE_DETER` (URL de WFS) |
+| PRODES Caatinga | INPE | camada `prodes-caatinga-nb:yearly_deforestation` | WFS, EPSG:4674 | idem | Anual | V | Backlog (exige a chave `image_date` em `CHAVES_GEOJSON`) |
+| DETER Amazônia e Cerrado | INPE | `deter-amz`, `deter-cerrado-nb` | WFS | idem | Diária | A (não cobre Fortaleza) | Descartada |
+| CNUC, tabela e polígonos | MMA | `dados.mma.gov.br`, dataset do CNUC | CSV e Shapefile | `cc-by` | 2026-08 (tabela) | V | Backlog (conferir UCs) |
+| Censo 2022, entorno por bairro | IBGE | `ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/` | ZIP com CSV, 121 bairros de Fortaleza | Não declarada na listagem | 2025-04 | V | Backlog (arborização do entorno por bairro) |
+| Malha de bairros do Censo 2022, CE | IBGE | `ftp.ibge.gov.br/.../malha_com_atributos/bairros/shp/UF/CE/` | Shapefile em ZIP | Não declarada | 2024-11 | A | Não implementada |
+| IBGE API de malhas (servicodados) | IBGE | `servicodados.ibge.gov.br/api/v3/` | JSON | n/a | n/a | I (TLS não completa) | Usar o FTP |
+| GBIF | GBIF | `api.gbif.org/v1/` | JSON | Por registro (CC0, CC BY, CC BY-NC) | Contínua | V | Backlog (nomes de espécies) |
+| INMET | INMET | `apitempo.inmet.gov.br` | n/a | n/a | n/a | I (host fora da lista da sessão) | Adiada |
+| Flora e Funga do Brasil | JBRJ | `floradobrasil.jbrj.gov.br` | n/a | n/a | n/a | I (desafio anti-robô) | Adiada |
+| MapBiomas Alerta | MapBiomas | `plataforma.alerta.mapbiomas.org` | GraphQL com token | n/a | n/a | I (host fora da lista da sessão) | Adiada |
+
+Fontes com órgão e licença próprios entram sempre com a citação pedida pela fonte.
+Os códigos de regional divergem entre CKAN e Mapas (por exemplo, "SER VI" contra
+"Secretaria Executiva Regional 8"); por isso a importação oficial usa só o Mapas,
+que traz bairro e regional na mesma fonte.
+
+## Como usar o que está implementado
+
+### Limites oficiais: regionais e bairros de Fortaleza
+
+```bash
+cd backend
+uv run python manage.py importar_limites_fortaleza
+```
+
+- Lê as 12 regionais (id 17) e os 121 bairros (id 21) da API do Mapas e grava
+  `Territorio` (tipo `regional` e `bairro`), com a hierarquia município > regional > bairro.
+  O município é criado pela união das regionais se ainda não existir
+  (`--municipio`, padrão "Fortaleza").
+- Código da regional: `id` da fonte. Código do bairro: campo "Código do  IBGE" (o nome
+  real tem dois espaços). A regional de cada bairro vem de "Regional Atual".
+- Fonte gravada: "Prefeitura Municipal de Fortaleza - Fortaleza em Mapas (Ipplan
+  Fortaleza). Acesso via API de Dados Abertos.", com a URL da página do mapa, a licença
+  "Uso livre com citação da fonte (termos da API)" e a data de referência da fonte
+  (bairros: campo `data`; regionais: só há `ano_ref`, então 1º de janeiro do ano, com
+  `metadados.data_referencia_precisao = "ano"`). A data de ingestão é gravada à parte.
+- Idempotente: reexecutar atualiza geometria e proveniência pelo código, sem duplicar.
+- Sem rede: `--arquivo-regionais` e `--arquivo-bairros` aceitam os GeoJSON baixados.
+  A contagem esperada (12 e 121) é conferida; `--permitir-contagem-diferente` a ignora.
+- Se já existirem bairros importados por `importar_territorios` com outro código
+  (por exemplo, do CKAN), a importação oficial cria registros novos pelo código do IBGE.
+  Limpe os antigos antes, ou use só uma das fontes.
+
+### Focos de calor diários do INPE
+
+Configure a coleta automática em `ALERTAS_FONTES` (variável de ambiente, JSON):
+
+```json
+{"inpe_focos": "https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_{data}.csv"}
+```
+
+- `{data}` vira AAAAMMDD do dia anterior no fuso de Fortaleza (o arquivo fechado de
+  ontem); `{data_hoje}` vira o dia corrente, cujo arquivo parcial aparece ~21h. Sem
+  marcador, a URL é usada como está.
+- O `beat` roda a cada `ALERTAS_INTERVALO_HORAS` (padrão 6). O arquivo é idempotente
+  pelo UUID do foco, então reexecuções não duplicam.
+- Só ficam os focos que intersectam o município cadastrado (o arquivo cobre o Brasil
+  inteiro). Zero focos em Fortaleza é o resultado normal na maioria dos dias; foco
+  urbano costuma ser queima de lixo ou falso positivo, e a triagem humana continua
+  obrigatória (W-08).
+- Cada ingestão grava o órgão ("INPE, Programa Queimadas"), a licença ("Não declarada
+  pela fonte (DP-11). Citar: INPE, Programa Queimadas.") e a data de referência (a
+  detecção mais recente do arquivo). A tela de integrações mostra os três.
+- Citação: "INPE, Programa Queimadas".
+- Envio manual: a tela de integrações aceita o CSV baixado.
+
+### Validação contra o dado real (2026-11-11)
+
+- `importar_limites_fortaleza` na API real: 12 regionais e 121 bairros criados; segunda
+  execução, 0 criados e 133 atualizados; os 121 bairros ficam ligados a uma regional.
+- Arquivo `focos_diario_br_20261110.csv` (1,28 MB): 8.276 focos no Brasil, 0 em
+  Fortaleza. Dois focos reais de janeiro de 2023 (arquivo mensal), contra os limites
+  reais, caíram em Centro e Passaré; o foco de "Fortaleza dos Nogueiras" (MA) ficou
+  de fora, porque o filtro é geográfico e não pelo nome.
+- Os testes (`backend/tests/test_fontes_publicas.py`) usam trechos reais pequenos em
+  `backend/tests/dados/` e não acessam a rede.
+
+## Pendências
+
+- [DP-10](../decisoes/pendentes.md#dp-10): confirmar a Ipplan como responsável pelos limites oficiais.
+- [DP-11](../decisoes/pendentes.md#dp-11): ler os PDFs de governança do INPE ou perguntar ao órgão a licença
+  dos focos antes do uso produtivo.
