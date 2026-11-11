@@ -566,6 +566,11 @@ def _metadados(usuario, titulo: str, params: dict, linhas: int) -> dict:
             "conjunto", str, required=True, description="arvores | ocorrencias | alertas"
         ),
         OpenApiParameter("formato", str, required=True, description="csv | xlsx | geojson"),
+        OpenApiParameter(
+            "ids",
+            str,
+            description="Só para o conjunto arvores: IDs separados por vírgula (seleção na lista).",
+        ),
     ],
     responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
 )

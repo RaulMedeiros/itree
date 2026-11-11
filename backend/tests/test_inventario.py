@@ -209,3 +209,95 @@ def test_catalogo_de_especies(cliente, admin, tecnico_a, ipe):
         "/api/v1/especies", {"nome_cientifico": "Cassia fistula"}, format="json"
     )
     assert r.status_code == 201
+
+
+@pytest.fixture
+def arvores_ordenaveis(territorios):
+    """Quatro árvores com condição e última inspeção diferentes (uma nunca inspecionada)."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    agora = timezone.now()
+    dados = [
+        ("boa", agora - timedelta(days=10)),
+        ("ruim", agora - timedelta(days=100)),
+        ("regular", None),
+        ("", agora - timedelta(days=50)),
+    ]
+    arvores = []
+    for condicao, inspecao in dados:
+        arvores.append(
+            Arvore.objects.create(
+                geom=_ponto(PONTO_A),
+                bairro=territorios["a"],
+                localizacao_origem="estimada_web",
+                condicao_aparente=condicao,
+                ultima_inspecao_em=inspecao,
+            )
+        )
+    return arvores  # [boa, ruim, regular, sem condição]
+
+
+def _ponto(p):
+    from django.contrib.gis.geos import Point
+
+    return Point(p["longitude"], p["latitude"], srid=4326)
+
+
+def _codigos(cliente, **params):
+    r = cliente.get(URL, params)
+    assert r.status_code == 200, r.json()
+    return [a["codigo"] for a in r.json()["results"]]
+
+
+def test_ordenar_por_ultima_inspecao_deixa_sem_inspecao_no_fim(
+    cliente, gestor_municipal, arvores_ordenaveis
+):
+    cliente.como(gestor_municipal)
+    boa, ruim, sem_inspecao, sem_condicao = (a.codigo for a in arvores_ordenaveis)
+    # Crescente: a inspeção mais antiga primeiro.
+    assert _codigos(cliente, ordenar="ultima_inspecao_em") == [
+        ruim,
+        sem_condicao,
+        boa,
+        sem_inspecao,
+    ]
+    # Decrescente: a mais recente primeiro; nunca inspecionada continua no fim.
+    assert _codigos(cliente, ordenar="-ultima_inspecao_em") == [
+        boa,
+        sem_condicao,
+        ruim,
+        sem_inspecao,
+    ]
+
+
+def test_ordenar_por_condicao_aparente_do_melhor_ao_pior_e_sem_avaliacao_no_fim(
+    cliente, gestor_municipal, arvores_ordenaveis
+):
+    cliente.como(gestor_municipal)
+    boa, ruim, regular, sem_condicao = (a.codigo for a in arvores_ordenaveis)
+    assert _codigos(cliente, ordenar="condicao_aparente") == [boa, regular, ruim, sem_condicao]
+    # Do pior para o melhor, sem avaliação continua no fim.
+    assert _codigos(cliente, ordenar="-condicao_aparente") == [ruim, regular, boa, sem_condicao]
+
+
+def test_ordenacao_desconhecida_mantem_a_padrao(cliente, gestor_municipal, arvores_ordenaveis):
+    cliente.como(gestor_municipal)
+    padrao = _codigos(cliente)
+    assert _codigos(cliente, ordenar="endereco") == padrao
+    assert padrao == sorted(padrao, reverse=True)
+
+
+def test_filtro_ids_limita_a_lista_e_a_exportacao(cliente, gestor_municipal, arvores_ordenaveis):
+    cliente.como(gestor_municipal)
+    escolhidas = arvores_ordenaveis[:2]
+    ids = ",".join(str(a.id) for a in escolhidas)
+    assert sorted(_codigos(cliente, ids=ids)) == sorted(a.codigo for a in escolhidas)
+    r = cliente.get(
+        "/api/v1/relatorios/exportar", {"conjunto": "arvores", "formato": "csv", "ids": ids}
+    )
+    assert r.status_code == 200
+    dados = [ln for ln in r.content.decode("utf-8-sig").splitlines() if not ln.startswith("#")]
+    assert len(dados) - 1 == 2
+    assert cliente.get(URL, {"ids": "nao-e-uuid"}).status_code == 400

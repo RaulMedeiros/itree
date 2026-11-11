@@ -579,7 +579,10 @@ paths:
         name: ordenar
         schema:
           type: string
-        description: numero, -numero, atualizado_em, -atualizado_em
+        description: numero, atualizado_em, ultima_inspecao_em ou condicao_aparente;
+          com '-' na frente, ordem decrescente. Em ultima_inspecao_em, árvores sem
+          inspeção ficam no fim. Em condicao_aparente, a ordem crescente vai da melhor
+          para a pior condição e as não avaliadas ficam no fim, em qualquer direção.
       - name: pagina
         required: false
         in: query
@@ -867,7 +870,10 @@ paths:
         name: ordenar
         schema:
           type: string
-        description: numero, -numero, atualizado_em, -atualizado_em
+        description: numero, atualizado_em, ultima_inspecao_em ou condicao_aparente;
+          com '-' na frente, ordem decrescente. Em ultima_inspecao_em, árvores sem
+          inspeção ficam no fim. Em condicao_aparente, a ordem crescente vai da melhor
+          para a pior condição e as não avaliadas ficam no fim, em qualquer direção.
       - in: query
         name: sem_inspecao_dias
         schema:
@@ -2482,6 +2488,12 @@ paths:
           type: string
         description: csv | xlsx | geojson
         required: true
+      - in: query
+        name: ids
+        schema:
+          type: string
+        description: 'Só para o conjunto arvores: IDs separados por vírgula (seleção
+          na lista).'
       tags:
       - relatorios
       security:

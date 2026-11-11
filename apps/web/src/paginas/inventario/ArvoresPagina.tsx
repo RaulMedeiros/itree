@@ -1,6 +1,8 @@
 import {
+  ErroApi,
   EstadoEspecieEnum,
   OrigemLocalizacaoEnum,
+  baixarArquivo,
   useArvoresContadores,
   useArvoresListar,
   useEspeciesListar,
@@ -12,7 +14,7 @@ import {
   ROTULOS_ORIGEM_LOCALIZACAO,
 } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { Map as IconeMapa, Plus } from "lucide-react";
+import { Download, Map as IconeMapa, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
@@ -21,17 +23,17 @@ import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
+import { MenuAgrupado } from "../../ui/menu";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th, ThOrdenavel } from "../../ui/tabela";
 import { CORES_CONDICAO } from "../../mapa/simbologia";
-import { formatarDataHora } from "../../util/formatos";
+import { formatarData, formatarDataHora, plural } from "../../util/formatos";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { NovaArvoreDialogo } from "./NovaArvoreDialogo";
+import { direcaoDe, proximaOrdenacao, type CampoOrdenacao, type Ordenacao } from "./ordenacao";
 
 const TAMANHO = 50;
-
-export type Ordenacao = "numero" | "-numero" | "atualizado_em" | "-atualizado_em";
 
 export interface BuscaArvores {
   busca?: string;
@@ -70,7 +72,13 @@ export function ArvoresPagina() {
   const navegar = useNavigate({ from: "/inventario/arvores" });
   const podeEditar = usePermissao("inventario.editar");
   const podeTarefas = usePermissao("tarefas.editar");
+  const podeExportar = usePermissao("relatorios.exportar", "inventario.ler");
   const [criandoTarefas, setCriandoTarefas] = useState(false);
+  const [tarefasDaSelecao, setTarefasDaSelecao] = useState(false);
+  // Seleção em lote: só vale para a página e os filtros em que foi feita.
+  const [selecao, setSelecao] = useState<{ chave: string; ids: string[] }>({ chave: "", ids: [] });
+  const [baixando, setBaixando] = useState(false);
+  const [erroArquivo, setErroArquivo] = useState<string | null>(null);
   const [nova, setNova] = useState(false);
   const [busca, setBusca] = useState(filtros.busca ?? "");
   const especies = useEspeciesListar({ tamanho: 500, ativa: true });
@@ -99,11 +107,36 @@ export function ArvoresPagina() {
   const filtrar = (parcial: Partial<BuscaArvores>) =>
     void navegar({ search: (s: BuscaArvores) => ({ ...s, ...parcial, pagina: undefined }) });
 
-  const ordenacao = ordenar ?? "-numero";
-  const direcaoDe = (campo: "numero" | "atualizado_em") =>
-    ordenacao === campo ? "asc" : ordenacao === `-${campo}` ? "desc" : undefined;
-  const ordenarPor = (campo: "numero" | "atualizado_em") =>
-    filtrar({ ordenar: ordenacao === `-${campo}` ? campo : (`-${campo}` as Ordenacao) });
+  const ordenacao: Ordenacao = ordenar ?? "-numero";
+  const ordenarPor = (campo: CampoOrdenacao) =>
+    filtrar({ ordenar: proximaOrdenacao(ordenacao, campo) });
+
+  const chaveDaPagina = JSON.stringify(filtros);
+  const selecionadas = selecao.chave === chaveDaPagina ? selecao.ids : [];
+  const setSelecionadas = (ids: string[]) => setSelecao({ chave: chaveDaPagina, ids });
+
+  const itens = consulta.data?.data.results ?? [];
+  const idsDaPagina = itens.map((a) => a.id);
+  const marcadasNaPagina = idsDaPagina.filter((id) => selecionadas.includes(id));
+  const paginaInteira = idsDaPagina.length > 0 && marcadasNaPagina.length === idsDaPagina.length;
+  const alternar = (id: string, marcado: boolean) =>
+    setSelecionadas(marcado ? [...selecionadas, id] : selecionadas.filter((x) => x !== id));
+
+  const exportarSelecao = async (formato: "csv" | "xlsx" | "geojson") => {
+    setBaixando(true);
+    setErroArquivo(null);
+    try {
+      await baixarArquivo("/api/v1/relatorios/exportar", {
+        conjunto: "arvores",
+        formato,
+        ids: marcadasNaPagina.join(","),
+      });
+    } catch (e) {
+      setErroArquivo(e instanceof ErroApi ? e.message : "Falha ao gerar o arquivo.");
+    } finally {
+      setBaixando(false);
+    }
+  };
 
   return (
     <>
@@ -256,19 +289,96 @@ export function ArvoresPagina() {
         </Vazio>
       ) : (
         <>
+          {marcadasNaPagina.length > 0 && (
+            <div
+              role="region"
+              aria-label="Ações da seleção"
+              className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-marca bg-marca-clara px-3 py-2"
+            >
+              <p role="status" className="mr-2 text-sm font-medium">
+                {plural(marcadasNaPagina.length, "árvore selecionada", "árvores selecionadas")}
+              </p>
+              {podeTarefas && (
+                <Botao variante="secundario" onClick={() => setTarefasDaSelecao(true)}>
+                  Criar tarefas de inspeção
+                </Botao>
+              )}
+              {podeExportar && (
+                <MenuAgrupado
+                  rotulo="Exportar seleção"
+                  icone={<Download />}
+                  desabilitado={baixando}
+                  grupos={[
+                    {
+                      titulo: "Formato do arquivo",
+                      itens: (
+                        [
+                          ["csv", "CSV"],
+                          ["xlsx", "XLSX"],
+                          ["geojson", "GeoJSON"],
+                        ] as const
+                      ).map(([formato, rotulo]) => ({
+                        rotulo,
+                        aoEscolher: () => void exportarSelecao(formato),
+                      })),
+                    },
+                  ]}
+                />
+              )}
+              <Botao variante="fantasma" onClick={() => setSelecionadas([])}>
+                Limpar seleção
+              </Botao>
+              {baixando && (
+                <p role="status" className="text-xs text-texto-suave">
+                  Gerando arquivo…
+                </p>
+              )}
+              {erroArquivo && (
+                <p role="alert" className="text-sm text-perigo">
+                  {erroArquivo}
+                </p>
+              )}
+            </div>
+          )}
           <Tabela>
             <thead>
               <tr>
-                <ThOrdenavel direcao={direcaoDe("numero")} aoOrdenar={() => ordenarPor("numero")}>
+                <Th className="w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="Selecionar todas as árvores da página"
+                    className="size-4 accent-marca"
+                    checked={paginaInteira}
+                    ref={(el) => {
+                      if (el) el.indeterminate = marcadasNaPagina.length > 0 && !paginaInteira;
+                    }}
+                    onChange={(e) => setSelecionadas(e.target.checked ? idsDaPagina : [])}
+                  />
+                </Th>
+                <ThOrdenavel
+                  direcao={direcaoDe(ordenacao, "numero")}
+                  aoOrdenar={() => ordenarPor("numero")}
+                >
                   Código
                 </ThOrdenavel>
                 <Th>Espécie</Th>
                 <Th>Localização</Th>
                 <Th>Endereço / bairro</Th>
-                <Th>Condição aparente</Th>
+                <ThOrdenavel
+                  direcao={direcaoDe(ordenacao, "condicao_aparente")}
+                  aoOrdenar={() => ordenarPor("condicao_aparente")}
+                >
+                  Condição aparente
+                </ThOrdenavel>
+                <ThOrdenavel
+                  direcao={direcaoDe(ordenacao, "ultima_inspecao_em")}
+                  aoOrdenar={() => ordenarPor("ultima_inspecao_em")}
+                >
+                  Última inspeção
+                </ThOrdenavel>
                 <Th>Ocorrências abertas</Th>
                 <ThOrdenavel
-                  direcao={direcaoDe("atualizado_em")}
+                  direcao={direcaoDe(ordenacao, "atualizado_em")}
                   aoOrdenar={() => ordenarPor("atualizado_em")}
                 >
                   Atualizado em
@@ -278,6 +388,15 @@ export function ArvoresPagina() {
             <tbody>
               {consulta.data.data.results.map((a) => (
                 <Linha key={a.id} className="hover:bg-fundo">
+                  <Td>
+                    <input
+                      type="checkbox"
+                      aria-label={`Selecionar ${a.codigo}`}
+                      className="size-4 accent-marca"
+                      checked={selecionadas.includes(a.id)}
+                      onChange={(e) => alternar(a.id, e.target.checked)}
+                    />
+                  </Td>
                   <Td>
                     <Link
                       to="/inventario/arvores/$id"
@@ -308,6 +427,11 @@ export function ArvoresPagina() {
                   <Td>
                     <CondicaoAparente condicao={a.condicao_aparente} />
                   </Td>
+                  <Td className="whitespace-nowrap">
+                    {formatarData(a.ultima_inspecao_em) ?? (
+                      <span className="text-texto-suave">Nunca</span>
+                    )}
+                  </Td>
                   <Td>
                     {a.ocorrencias_abertas ? (
                       <Selo tom="atencao">{a.ocorrencias_abertas}</Selo>
@@ -329,6 +453,12 @@ export function ArvoresPagina() {
         </>
       )}
       {nova && <NovaArvoreDialogo aoFechar={() => setNova(false)} />}
+      {tarefasDaSelecao && (
+        <CriarTarefasDialogo
+          alvo={{ tipo: "selecao", arvoreIds: marcadasNaPagina, origem: "lista" }}
+          aoFechar={() => setTarefasDaSelecao(false)}
+        />
+      )}
       {criandoTarefas && (
         <CriarTarefasDialogo
           alvo={{

@@ -5,7 +5,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { camposDiferentes } from "../paginas/inventario/duplicidades";
 import { ordenarPendencias, type Pendencia } from "../paginas/inventario/qualidade";
@@ -76,13 +76,33 @@ const resumo = (extra: Record<string, unknown> = {}) => ({
 });
 
 const consultas: URL[] = [];
+const exportacoes: URL[] = [];
+const pedidosLote: Record<string, unknown>[] = [];
+let eu: Eu = REVISOR;
 const decisoes: unknown[] = [];
 
 const servidor = setupServer(
-  http.get(`${API}/api/v1/eu`, () => HttpResponse.json(REVISOR)),
+  http.get(`${API}/api/v1/eu`, () => HttpResponse.json(eu)),
   http.get(`${API}/api/v1/arvores`, ({ request }) => {
     consultas.push(new URL(request.url));
     return HttpResponse.json(pagina([resumo()]));
+  }),
+  http.get(`${API}/api/v1/equipes`, () => HttpResponse.json(pagina([]))),
+  http.post(`${API}/api/v1/tarefas/lote`, async ({ request }) => {
+    pedidosLote.push((await request.json()) as Record<string, unknown>);
+    return HttpResponse.json(
+      { criadas: 2, ignoradas: 0, fora_do_escopo_do_responsavel: 0 },
+      { status: 201 },
+    );
+  }),
+  http.get(`${API}/api/v1/relatorios/exportar`, ({ request }) => {
+    exportacoes.push(new URL(request.url));
+    return new HttpResponse("codigo\nARV-000001\n", {
+      headers: {
+        "Content-Type": "text/csv",
+        "Content-Disposition": 'attachment; filename="itree-arvores.csv"',
+      },
+    });
   }),
   http.get(`${API}/api/v1/arvores/contadores`, () => HttpResponse.json({ total: 1, validos: 1 })),
   http.get(`${API}/api/v1/arvores/a-1`, () =>
@@ -222,10 +242,15 @@ const servidor = setupServer(
 beforeAll(() => {
   servidor.listen({ onUnhandledRequest: "error" });
   configurarCliente({ urlBase: API, origem: "web", obterToken: () => "t" });
+  URL.createObjectURL = vi.fn(() => "blob:teste");
+  URL.revokeObjectURL = vi.fn();
 });
 afterEach(() => {
   servidor.resetHandlers();
   consultas.length = 0;
+  exportacoes.length = 0;
+  pedidosLote.length = 0;
+  eu = REVISOR;
   decisoes.length = 0;
   mapasCriados.length = 0;
 });
@@ -258,6 +283,128 @@ describe("lista de árvores (C-13, C-14)", () => {
     expect(await screen.findByRole("columnheader", { name: /Atualizado em/ })).toHaveAttribute(
       "aria-sort",
       "descending",
+    );
+  });
+});
+
+const DUAS_ARVORES = [
+  resumo({ condicao_aparente: "boa", ultima_inspecao_em: "2026-10-01T12:00:00Z" }),
+  resumo({
+    id: "a-2",
+    codigo: "ARV-000002",
+    condicao_aparente: "ruim",
+    ultima_inspecao_em: null,
+  }),
+];
+const COORDENADOR: Eu = {
+  ...REVISOR,
+  permissoes: [...REVISOR.permissoes, "tarefas.ler", "tarefas.editar", "relatorios.exportar"],
+};
+
+describe("lista de árvores: ordenação por inspeção e condição", () => {
+  it("ordena pelos cabeçalhos Última inspeção e Condição aparente", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    // A tabela some enquanto a nova consulta carrega: cada clique busca o cabeçalho de novo.
+    const clicar = async (nome: RegExp) =>
+      usuario.click(await screen.findByRole("button", { name: nome }));
+    const ordenacao = () => consultas.at(-1)?.searchParams.get("ordenar");
+    await clicar(/Última inspeção/);
+    await vi.waitFor(() => expect(ordenacao()).toBe("-ultima_inspecao_em"));
+    await clicar(/Última inspeção/);
+    await vi.waitFor(() => expect(ordenacao()).toBe("ultima_inspecao_em"));
+    await clicar(/Condição aparente/);
+    await vi.waitFor(() => expect(ordenacao()).toBe("-condicao_aparente"));
+    expect(await screen.findByRole("columnheader", { name: /Condição aparente/ })).toHaveAttribute(
+      "aria-sort",
+      "descending",
+    );
+  });
+
+  it("mostra a data da última inspeção ou 'Nunca'", async () => {
+    servidor.use(http.get(`${API}/api/v1/arvores`, () => HttpResponse.json(pagina(DUAS_ARVORES))));
+    await abrir("/inventario/arvores");
+    const linhas = await screen.findAllByRole("row");
+    expect(within(linhas[1]!).getByText("01/10/2026")).toBeInTheDocument();
+    expect(within(linhas[2]!).getByText("Nunca")).toBeInTheDocument();
+  });
+});
+
+describe("lista de árvores: seleção em lote", () => {
+  beforeEach(() => {
+    servidor.use(
+      http.get(`${API}/api/v1/arvores`, ({ request }) => {
+        consultas.push(new URL(request.url));
+        return HttpResponse.json(pagina(DUAS_ARVORES));
+      }),
+    );
+  });
+
+  it("seleciona a página inteira e uma a uma, e sem permissão não oferece as ações", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    expect(screen.queryByRole("region", { name: "Ações da seleção" })).toBeNull();
+
+    await usuario.click(screen.getByRole("checkbox", { name: "Selecionar ARV-000002" }));
+    const barra = await screen.findByRole("region", { name: "Ações da seleção" });
+    expect(within(barra).getByText("1 árvore selecionada")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Selecionar todas/ })).toHaveProperty(
+      "indeterminate",
+      true,
+    );
+
+    await usuario.click(screen.getByRole("checkbox", { name: /Selecionar todas/ }));
+    expect(within(barra).getByText("2 árvores selecionadas")).toBeInTheDocument();
+    // REVISOR não tem tarefas.editar nem relatorios.exportar.
+    expect(within(barra).queryByRole("button", { name: /Criar tarefas/ })).toBeNull();
+    expect(within(barra).queryByRole("button", { name: /Exportar seleção/ })).toBeNull();
+
+    await usuario.click(within(barra).getByRole("button", { name: "Limpar seleção" }));
+    expect(screen.queryByRole("region", { name: "Ações da seleção" })).toBeNull();
+  });
+
+  it("cria tarefas de inspeção só para as árvores marcadas", async () => {
+    eu = COORDENADOR;
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    await usuario.click(screen.getByRole("checkbox", { name: "Selecionar ARV-000002" }));
+    const barra = await screen.findByRole("region", { name: "Ações da seleção" });
+    await usuario.click(within(barra).getByRole("button", { name: "Criar tarefas de inspeção" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByText(/para 1 árvore/)).toBeInTheDocument();
+    expect(within(dialogo).getByText(/marcada na lista/)).toBeInTheDocument();
+    await usuario.click(within(dialogo).getByRole("button", { name: "Criar" }));
+    await vi.waitFor(() =>
+      expect(pedidosLote).toEqual([expect.objectContaining({ arvore_ids: ["a-2"] })]),
+    );
+  });
+
+  it("exporta só a seleção, em CSV, pelos ids marcados", async () => {
+    eu = COORDENADOR;
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    await usuario.click(screen.getByRole("checkbox", { name: /Selecionar todas/ }));
+    const barra = await screen.findByRole("region", { name: "Ações da seleção" });
+    await usuario.click(within(barra).getByRole("button", { name: /Exportar seleção/ }));
+    await usuario.click(await screen.findByRole("menuitem", { name: "CSV" }));
+    await vi.waitFor(() => expect(exportacoes).toHaveLength(1));
+    expect(exportacoes[0]!.searchParams.get("conjunto")).toBe("arvores");
+    expect(exportacoes[0]!.searchParams.get("formato")).toBe("csv");
+    expect(exportacoes[0]!.searchParams.get("ids")).toBe("a-1,a-2");
+  });
+
+  it("a seleção some quando os filtros mudam", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    await usuario.click(screen.getByRole("checkbox", { name: /Selecionar todas/ }));
+    await screen.findByRole("region", { name: "Ações da seleção" });
+    await usuario.selectOptions(screen.getByLabelText("Situação do registro"), "todas");
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Ações da seleção" })).toBeNull(),
     );
   });
 });

@@ -17,13 +17,13 @@ import { plural } from "../../util/formatos";
 
 type Alvo =
   | { tipo: "lote"; filtros: Record<string, string>; total: number }
-  | { tipo: "selecao"; arvoreIds: string[] }
+  | { tipo: "selecao"; arvoreIds: string[]; origem?: "area" | "lista" }
   | { tipo: "arvore"; id: string; codigo: string }
   | { tipo: "ocorrencia"; id: string; codigo: string };
 
 /**
  * Cria uma tarefa (árvore ou ocorrência) ou várias, a partir dos filtros do
- * inventário ou de árvores escolhidas (ex.: seleção por área no mapa).
+ * inventário ou de árvores escolhidas (seleção por área no mapa ou marcadas na lista).
  */
 export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: () => void }) {
   const equipes = useEquipesListar({ ativa: true, tamanho: 200 });
@@ -93,7 +93,7 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
         alvo.tipo === "lote"
           ? "Uma tarefa por árvore dos filtros atuais. Árvores que já têm tarefa de inspeção aberta são ignoradas."
           : alvo.tipo === "selecao"
-            ? "Uma tarefa por árvore da área selecionada no mapa. Árvores que já têm tarefa de inspeção aberta são ignoradas."
+            ? `Uma tarefa por árvore ${alvo.origem === "lista" ? "marcada na lista" : "da área selecionada no mapa"}. Árvores que já têm tarefa de inspeção aberta são ignoradas.`
             : undefined
       }
       rodape={
