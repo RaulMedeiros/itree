@@ -8,6 +8,8 @@ from itree.core.models import ModeloBase
 
 class TipoNotificacao(models.TextChoices):
     TAREFA_ATRIBUIDA = "tarefa_atribuida", "Tarefa atribuída"
+    TAREFA_CONCLUIDA = "tarefa_concluida", "Tarefa concluída"
+    TAREFA_BLOQUEADA = "tarefa_bloqueada", "Tarefa bloqueada"
     RISCO_CONFIRMADO = "risco_confirmado", "Risco confirmado"
     INSPECAO_DEVOLVIDA = "inspecao_devolvida", "Inspeção devolvida"
     INSPECAO_PARA_REVISAO = "inspecao_para_revisao", "Inspeção para revisão"

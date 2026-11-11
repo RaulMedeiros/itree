@@ -68,6 +68,37 @@ def tarefa_atribuida(tarefa, autor=None) -> None:
     )
 
 
+def tarefa_concluida_ou_bloqueada(tarefa, autor=None) -> None:
+    """Quem criou a tarefa sabe quando ela foi concluída ou bloqueada (e por quê).
+
+    Não notifica quando a própria pessoa fez a mudança.
+    """
+    from itree.tarefas.models import EstadoTarefa
+
+    criador = tarefa.criada_por
+    if (
+        tarefa.estado not in (EstadoTarefa.CONCLUIDA, EstadoTarefa.BLOQUEADA)
+        or criador.pk == getattr(autor, "pk", None)
+        or not criador.is_active
+        or not criador.tem_permissao(Permissao.TAREFAS_LER)
+        or not _alcanca(criador, tarefa.geom)
+    ):
+        return
+    if tarefa.estado == EstadoTarefa.CONCLUIDA:
+        tipo, titulo, texto = (
+            TipoNotificacao.TAREFA_CONCLUIDA,
+            f"Tarefa {tarefa.codigo} concluída",
+            tarefa.get_tipo_display(),
+        )
+    else:
+        tipo, titulo, texto = (
+            TipoNotificacao.TAREFA_BLOQUEADA,
+            f"Tarefa {tarefa.codigo} bloqueada",
+            tarefa.motivo_estado[:200],
+        )
+    _agendar([criador], tipo, titulo, texto, "/equipes-tarefas")
+
+
 def risco_confirmado(ocorrencia, autor=None) -> None:
     recebem = destinatarios(Permissao.OCORRENCIAS_PRIORIZAR, ocorrencia.geom, excluir=[autor])
     _agendar(

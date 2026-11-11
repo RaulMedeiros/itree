@@ -48,6 +48,7 @@ def _concluir_tarefa(inspecao: Inspecao) -> None:
         tarefa.concluida_em = timezone.now()
         tarefa.motivo_estado = f"Concluída pelo envio da inspeção {inspecao.codigo} para revisão."
         tarefa.save(update_fields=["estado", "concluida_em", "motivo_estado", "atualizado_em"])
+        notificacoes.tarefa_concluida_ou_bloqueada(tarefa, autor=inspecao.tecnico)
 
 
 def _gravar_medidas(inspecao: Inspecao, medidas: list[dict], usuario) -> None:

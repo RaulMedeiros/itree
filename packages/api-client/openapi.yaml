@@ -5306,6 +5306,8 @@ components:
     NotificacaoTipoEnum:
       enum:
       - tarefa_atribuida
+      - tarefa_concluida
+      - tarefa_bloqueada
       - risco_confirmado
       - inspecao_devolvida
       - inspecao_para_revisao
@@ -5313,6 +5315,8 @@ components:
       type: string
       description: |-
         * `tarefa_atribuida` - Tarefa atribuída
+        * `tarefa_concluida` - Tarefa concluída
+        * `tarefa_bloqueada` - Tarefa bloqueada
         * `risco_confirmado` - Risco confirmado
         * `inspecao_devolvida` - Inspeção devolvida
         * `inspecao_para_revisao` - Inspeção para revisão
