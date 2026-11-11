@@ -10,8 +10,8 @@ import {
   type StatusAlertaEnum,
 } from "@itree/api-client";
 import { ACOES_STATUS_ALERTA, ROTULOS_FONTE_ALERTA, ROTULOS_TIPO_ALERTA } from "@itree/domain";
-import { useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "@tanstack/react-router";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import type { GeoJSONSource, LngLatBoundsLike, Map as MapaMapLibre } from "maplibre-gl";
 import { ArrowLeft } from "lucide-react";
 import { Fragment, useState } from "react";
@@ -26,13 +26,16 @@ import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
+import { RAIO_PADRAO_M, SeletorRaio, type RaioM } from "./raio";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { invalidarCaminhos } from "../../util/cache";
 import { formatarDataHora, plural } from "../../util/formatos";
 
 export function AlertaDetalhePagina() {
   const { id } = useParams({ from: "/autenticado/alertas/$id" });
-  const consulta = useAlertasObter(id);
+  const { raio = RAIO_PADRAO_M } = useSearch({ from: "/autenticado/alertas/$id" });
+  // Ao trocar o raio, mantém a tela com os dados anteriores até chegarem os novos.
+  const consulta = useAlertasObter(id, { raio }, { query: { placeholderData: keepPreviousData } });
   return (
     <div className="mx-auto max-w-6xl">
       {/* Com os dados carregados, as migalhas do cabeçalho já levam de volta; o link só fica no erro. */}
@@ -49,7 +52,7 @@ export function AlertaDetalhePagina() {
       ) : consulta.isError ? (
         <Erro erro={consulta.error} />
       ) : (
-        <Detalhe alerta={consulta.data.data} />
+        <Detalhe alerta={consulta.data.data} raio={raio} />
       )}
     </div>
   );
@@ -67,7 +70,7 @@ function limites(geometria: { type: string; coordinates: unknown }): LngLatBound
   return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
 }
 
-function Detalhe({ alerta: a }: { alerta: AlertaAmbiental }) {
+function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) {
   const podeTriar = usePermissao("alertas.triar");
   const podeRegistrar = usePermissao("ocorrencias.editar");
   const podeConverter =
@@ -196,7 +199,7 @@ function Detalhe({ alerta: a }: { alerta: AlertaAmbiental }) {
           </p>
         </section>
       </div>
-      <ArvoresProximas alerta={a} />
+      <ArvoresProximas alerta={a} raio={raio} />
       <details className="mb-6 rounded-lg border border-borda bg-superficie p-4">
         <summary className="cursor-pointer font-semibold">Atributos originais da fonte</summary>
         <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-sm">
@@ -220,16 +223,25 @@ function Detalhe({ alerta: a }: { alerta: AlertaAmbiental }) {
   );
 }
 
-const RAIO_M = 100;
-
-function ArvoresProximas({ alerta }: { alerta: AlertaAmbiental }) {
-  const consulta = useAlertasArvoresProximas(alerta.id);
+function ArvoresProximas({ alerta, raio }: { alerta: AlertaAmbiental; raio: RaioM }) {
+  const navegar = useNavigate({ from: "/alertas/$id" });
+  const consulta = useAlertasArvoresProximas(
+    alerta.id,
+    { raio },
+    { query: { placeholderData: keepPreviousData } },
+  );
   const arvores = consulta.data?.data ?? [];
   return (
     <section className="mb-6" aria-labelledby="arvores-proximas">
-      <h2 id="arvores-proximas" className="mb-1 font-semibold">
-        Árvores a até {RAIO_M} m
-      </h2>
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+        <h2 id="arvores-proximas" className="font-semibold">
+          Árvores a até {raio} m
+        </h2>
+        <SeletorRaio
+          valor={raio}
+          aoMudar={(r) => void navegar({ search: (s: { raio?: RaioM }) => ({ ...s, raio: r }) })}
+        />
+      </div>
       <p className="mb-3 text-sm text-texto-suave">
         {plural(alerta.ocorrencias_proximas, "ocorrência aberta", "ocorrências abertas")} no mesmo
         raio. Distância medida até o ponto ou a borda do polígono; só entram árvores do seu escopo.
@@ -240,7 +252,7 @@ function ArvoresProximas({ alerta }: { alerta: AlertaAmbiental }) {
         <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />
       ) : arvores.length === 0 ? (
         <p className="rounded-lg border border-borda bg-superficie px-4 py-3 text-sm text-texto-suave">
-          Nenhuma árvore cadastrada a até {RAIO_M} m deste alerta.
+          Nenhuma árvore cadastrada a até {raio} m deste alerta.
         </p>
       ) : (
         <Tabela>

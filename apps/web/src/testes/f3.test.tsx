@@ -69,6 +69,8 @@ const ALERTA: Alerta = {
 const triagens: unknown[] = [];
 const pedidosLista: (string | null)[] = [];
 const parametrosLista: URLSearchParams[] = [];
+const parametrosDetalhe: URLSearchParams[] = [];
+const parametrosProximas: URLSearchParams[] = [];
 
 const servidor = setupServer(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(ANALISTA)),
@@ -84,9 +86,13 @@ const servidor = setupServer(
     }),
   ),
   http.get(`${API}/api/v1/alertas/ingestoes`, () => HttpResponse.json([])),
-  http.get(`${API}/api/v1/alertas/al-1`, () => HttpResponse.json(ALERTA)),
-  http.get(`${API}/api/v1/alertas/al-1/arvores-proximas`, () =>
-    HttpResponse.json([
+  http.get(`${API}/api/v1/alertas/al-1`, ({ request }) => {
+    parametrosDetalhe.push(new URL(request.url).searchParams);
+    return HttpResponse.json(ALERTA);
+  }),
+  http.get(`${API}/api/v1/alertas/al-1/arvores-proximas`, ({ request }) => {
+    parametrosProximas.push(new URL(request.url).searchParams);
+    return HttpResponse.json([
       {
         id: "a-1",
         codigo: "ARV-000001",
@@ -95,8 +101,8 @@ const servidor = setupServer(
         distancia_m: 42.4,
       },
       { id: "a-2", codigo: "ARV-000002", especie: null, condicao_aparente: "", distancia_m: 87.6 },
-    ]),
-  ),
+    ]);
+  }),
   http.get(`${API}/api/v1/alertas`, ({ request }) => {
     const { searchParams } = new URL(request.url);
     pedidosLista.push(searchParams.get("ordem"));
@@ -119,6 +125,8 @@ afterEach(() => {
   triagens.length = 0;
   pedidosLista.length = 0;
   parametrosLista.length = 0;
+  parametrosDetalhe.length = 0;
+  parametrosProximas.length = 0;
   localStorage.clear();
 });
 afterAll(() => servidor.close());
@@ -223,5 +231,52 @@ describe("alertas ambientais", () => {
     );
     await vi.waitFor(() => expect(parametrosLista.at(-1)?.get("bairro")).toBe("b-2"));
     expect(await screen.findByRole("combobox", { name: "Bairro" })).toHaveValue("b-2");
+  });
+  it("o raio escolhido na lista vai para a API e aparece no rótulo da coluna", async () => {
+    const usuario = userEvent.setup();
+    const { criarRoteador } = await import("../rotas");
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <RouterProvider
+          router={criarRoteador(createMemoryHistory({ initialEntries: ["/alertas"] }))}
+        />
+      </QueryClientProvider>,
+    );
+    const seletor = await screen.findByRole("combobox", {
+      name: "Raio das árvores e ocorrências próximas",
+    });
+    expect(
+      within(seletor)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["50 m", "100 m", "250 m", "500 m"]);
+    await usuario.selectOptions(seletor, "250");
+    await vi.waitFor(() => expect(parametrosLista.at(-1)?.get("raio")).toBe("250"));
+    expect(await screen.findByRole("button", { name: "Árvores a até 250 m" })).toBeInTheDocument();
+    expect(screen.getByText("1 aberta a até 250 m")).toBeInTheDocument();
+  });
+
+  it("o raio do detalhe vale para a contagem e para a lista de árvores", async () => {
+    const usuario = userEvent.setup();
+    const { criarRoteador } = await import("../rotas");
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <RouterProvider
+          router={criarRoteador(createMemoryHistory({ initialEntries: ["/alertas/al-1"] }))}
+        />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole("heading", { name: "Árvores a até 100 m" })).toBeInTheDocument();
+    await usuario.selectOptions(
+      screen.getByRole("combobox", { name: "Raio das árvores e ocorrências próximas" }),
+      "500",
+    );
+    expect(await screen.findByRole("heading", { name: "Árvores a até 500 m" })).toBeInTheDocument();
+    await vi.waitFor(() => expect(parametrosProximas.at(-1)?.get("raio")).toBe("500"));
+    expect(parametrosDetalhe.at(-1)?.get("raio")).toBe("500");
   });
 });

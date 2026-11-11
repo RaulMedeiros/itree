@@ -9,6 +9,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { useBairroDoFiltro } from "../../layout/territorio";
+import { RAIO_PADRAO_M, SeletorRaio, type RaioM } from "./raio";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
@@ -25,13 +26,11 @@ export type OrdemAlertas =
   | "ocorrencias_proximas"
   | "-ocorrencias_proximas";
 
-/** Raio padrão das árvores e ocorrências próximas, em metros (o mesmo da API). */
-const RAIO_M = 100;
-
 export interface BuscaAlertas {
   status?: string;
   fonte?: FonteAlertaEnum;
   bairro?: string;
+  raio?: RaioM;
   deteccao_desde?: string;
   deteccao_ate?: string;
   /** Ausente = mais recentes primeiro. */
@@ -74,9 +73,11 @@ export function AlertasPagina() {
   const navegar = useNavigate({ from: "/alertas/" });
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
   const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
+  const raio = filtros.raio ?? RAIO_PADRAO_M;
   const consulta = useAlertasListar({
     ...filtros,
     bairro,
+    raio,
     status: filtros.status ?? "abertos",
     ordem: filtros.ordem,
     tamanho: TAMANHO,
@@ -142,6 +143,7 @@ export function AlertasPagina() {
             </option>
           ))}
         </Selecao>
+        <SeletorRaio valor={raio} aoMudar={(r) => filtrar({ raio: r })} />
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           Detectados de
           <EntradaData
@@ -181,7 +183,7 @@ export function AlertasPagina() {
                   direcao={direcaoDe("arvores_proximas")}
                   aoOrdenar={() => ordenarPor("arvores_proximas")}
                 >
-                  {`Árvores a até ${RAIO_M} m`}
+                  {`Árvores a até ${raio} m`}
                 </ThOrdenavel>
                 <ThOrdenavel
                   direcao={direcaoDe("ocorrencias_proximas")}
@@ -232,8 +234,8 @@ export function AlertasPagina() {
                     )}
                     <p className="text-xs text-texto-suave">
                       {a.ocorrencias_proximas === 0
-                        ? `nenhuma aberta a até ${RAIO_M} m`
-                        : `${plural(a.ocorrencias_proximas, "aberta", "abertas")} a até ${RAIO_M} m`}
+                        ? `nenhuma aberta a até ${raio} m`
+                        : `${plural(a.ocorrencias_proximas, "aberta", "abertas")} a até ${raio} m`}
                     </p>
                   </Td>
                   <Td>
