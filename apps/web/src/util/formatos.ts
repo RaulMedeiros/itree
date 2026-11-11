@@ -21,3 +21,9 @@ export function formatarData(valor: string | null | undefined): string | null {
   }
   return data.format(new Date(valor));
 }
+
+/** AAAA-MM-DD como dd/mm/aa, sem conversão de fuso. */
+export function formatarDataCurta(valor: string): string {
+  const [a, m, d] = valor.split("-");
+  return `${d}/${m}/${(a ?? "").slice(2)}`;
+}

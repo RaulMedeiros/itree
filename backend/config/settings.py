@@ -4,6 +4,7 @@ variáveis de ambiente (ver ``.env.example``)."""
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -234,16 +235,23 @@ REFERENCIAS_USER_AGENT = env.str(
 REFERENCIAS_TIMEOUT = env.int("REFERENCIAS_TIMEOUT", default=15)
 # Ao cadastrar uma espécie, enfileira a consulta (Celery).
 REFERENCIAS_AUTOMATICAS = env.bool("REFERENCIAS_AUTOMATICAS", default=True)
-CELERY_BEAT_SCHEDULE = (
-    {
-        "ingerir-alertas": {
-            "task": "itree.alertas.tasks.ingerir_fontes_configuradas",
-            "schedule": ALERTAS_INTERVALO_HORAS * 3600,
+CELERY_BEAT_SCHEDULE = {
+    # Instantâneos da visão geral (M-11): um registro por dia e território.
+    "registrar-indicadores": {
+        "task": "itree.indicadores.tasks.registrar_indicadores",
+        "schedule": crontab(hour=1, minute=30),
+    },
+    **(
+        {
+            "ingerir-alertas": {
+                "task": "itree.alertas.tasks.ingerir_fontes_configuradas",
+                "schedule": ALERTAS_INTERVALO_HORAS * 3600,
+            }
         }
-    }
-    if ALERTAS_FONTES
-    else {}
-)
+        if ALERTAS_FONTES
+        else {}
+    ),
+}
 
 LOGGING = {
     "version": 1,

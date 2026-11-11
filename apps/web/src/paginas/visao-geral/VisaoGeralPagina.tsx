@@ -34,8 +34,15 @@ import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Tabela, Td, Th, Linha } from "../../ui/tabela";
 import { cn } from "../../util/cn";
-import { formatarData, formatarDataHora } from "../../util/formatos";
-import { BarraSegmentada, BarrasHorizontais, GraficoMensal, type Serie } from "./graficos";
+import { formatarData, formatarDataCurta, formatarDataHora } from "../../util/formatos";
+import {
+  BarraSegmentada,
+  BarrasHorizontais,
+  GraficoMensal,
+  Sparkline,
+  type PontoSerie,
+  type Serie,
+} from "./graficos";
 import { MapaResumo } from "./MapaResumo";
 
 export interface BuscaVisaoGeral {
@@ -57,6 +64,10 @@ interface Indicador {
   fonte: string;
   link: { pagina: string; filtros: Record<string, string> } | null;
   anterior?: number | null;
+  /** Data do valor anterior: início do período anterior ou data do registro (M-11). */
+  anterior_em?: string | null;
+  /** Instantâneos registrados (até 12 pontos, mensais); vazia sem histórico. */
+  serie?: PontoSerie[];
 }
 
 interface Pendencia {
@@ -101,6 +112,12 @@ const DESTAQUE = Object.keys(ICONES);
 const MELHOR_SUBIR: Record<string, boolean | undefined> = {
   inspecoes_realizadas: true,
   tempo_atendimento: false,
+  arvores_validas: true,
+  especie_confirmada: true,
+  com_medidas: true,
+  cobertura_inspecao: true,
+  tarefas_atrasadas: false,
+  ocorrencias_atrasadas: false,
 };
 
 function valorFormatado(i: Indicador) {
@@ -130,6 +147,38 @@ function Variacao({ i }: { i: Indicador }) {
       <Icone className="size-3.5" aria-hidden />
       {diferenca === 0 ? "Igual" : `${pct > 0 ? "+" : ""}${pct}%`} vs. período anterior
     </p>
+  );
+}
+
+/** Variação de um instantâneo desde o registro anterior ao período (ou, sem ele,
+ * o primeiro ponto da série), com a data; mais o sparkline. Sem série, nada. */
+function Tendencia({ i }: { i: Indicador }) {
+  const serie = i.serie ?? [];
+  if (i.periodo === "selecionado" || serie.length < 2 || i.valor === null) return null;
+  const referencia =
+    i.anterior != null && i.anterior_em ? { valor: i.anterior, data: i.anterior_em } : serie[0]!;
+  const diferenca = Math.round((i.valor - referencia.valor) * 10) / 10;
+  const numero = Math.abs(diferenca).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  const sinal = diferenca > 0 ? "+" : diferenca < 0 ? "−" : "";
+  const texto = i.unidade === "%" ? `${sinal}${numero} p.p.` : `${sinal}${numero}`;
+  const bom =
+    MELHOR_SUBIR[i.id] === undefined || diferenca === 0
+      ? null
+      : MELHOR_SUBIR[i.id] === diferenca > 0;
+  const Icone = diferenca === 0 ? Minus : diferenca > 0 ? ArrowUpRight : ArrowDownRight;
+  return (
+    <div>
+      <p
+        className={cn(
+          "flex items-center gap-1 text-xs font-medium",
+          bom === null ? "text-texto-suave" : bom ? "text-sucesso" : "text-perigo",
+        )}
+      >
+        <Icone className="size-3.5" aria-hidden />
+        {diferenca === 0 ? "Igual" : texto} desde {formatarDataCurta(referencia.data)}
+      </p>
+      <Sparkline serie={serie} unidade={i.unidade} />
+    </div>
   );
 }
 
@@ -177,6 +226,7 @@ function CartaoDestaque({ i, extra }: { i: Indicador; extra?: ReactNode }) {
       )}
       <div className="mt-2 flex flex-col gap-0.5 pl-[3.25rem]">
         <Variacao i={i} />
+        <Tendencia i={i} />
         {extra}
         {i.periodo !== "selecionado" && i.base !== null && i.unidade === "%" && (
           <p className="text-xs text-texto-suave">Base: {i.base.toLocaleString("pt-BR")}</p>
@@ -203,6 +253,7 @@ function CartaoCompacto({ i }: { i: Indicador }) {
         </p>
       </div>
       <Variacao i={i} />
+      <Tendencia i={i} />
       <Definicao i={i} />
     </div>
   );
