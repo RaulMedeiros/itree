@@ -17,6 +17,9 @@ ITEM = {
         "P225": [{"mainsnak": {"datavalue": {"value": "Licania tomentosa"}}}],
         "P18": [{"mainsnak": {"datavalue": {"value": "Oiti em Fortaleza.jpg"}}}],
         "P846": [{"mainsnak": {"datavalue": {"value": "5583617"}}}],
+        # Formato real observado no Wikidata (P10701, "Reflora ID"): FB + dígitos
+        # (Licania tomentosa Q9022290 = FB16857).
+        "P10701": [{"mainsnak": {"datavalue": {"value": "FB16857"}}}],
     },
     "sitelinks": {"ptwiki": {"title": "Oiti"}, "enwiki": {"title": "Licania tomentosa"}},
 }
@@ -494,3 +497,96 @@ def test_sinonimos_lidos_da_caixa_taxonomica():
     en = "{{Speciesbox\n| genus = Moquilea\n| synonyms =\n* ''Licania tomentosa'' (Benth.) Fritsch\n}}"
     assert referencias._sinonimos(en) == ["Licania tomentosa"]
     assert referencias._sinonimos("{{Info/Taxonomia\n| nome = X\n}}") == []
+
+
+def test_flora_e_funga_do_brasil_vem_da_propriedade_do_wikidata(oiti, sessao):
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert oiti.flora_brasil_id == "FB16857"
+    # Formatter URL da P10701: https://floradobrasil.jbrj.gov.br/$1
+    assert oiti.flora_brasil_url == "https://floradobrasil.jbrj.gov.br/FB16857"
+
+
+def test_sem_propriedade_ou_formato_invalido_nao_ha_link(oiti, monkeypatch):
+    sem = {**ITEM, "claims": {k: v for k, v in ITEM["claims"].items() if k != "P10701"}}
+    monkeypatch.setattr(referencias, "_sessao", lambda: Sessao(item=sem))
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert oiti.flora_brasil_id == "" and oiti.flora_brasil_url == ""
+
+    invalido = {
+        **ITEM,
+        "claims": {**ITEM["claims"], "P10701": [{"mainsnak": {"datavalue": {"value": "xyz"}}}]},
+    }
+    monkeypatch.setattr(referencias, "_sessao", lambda: Sessao(item=invalido))
+    referencias.atualizar(oiti)
+    oiti.refresh_from_db()
+    assert oiti.flora_brasil_id == ""
+
+
+def test_api_expoe_link_da_flora_e_funga_do_brasil(cliente, revisor, oiti, sessao):
+    referencias.atualizar(oiti)
+    r = cliente.como(revisor).get(f"/api/v1/especies/{oiti.pk}")
+    assert r.status_code == 200
+    assert r.json()["flora_brasil_url"] == "https://floradobrasil.jbrj.gov.br/FB16857"
+    assert r.json()["flora_brasil_id"] == "FB16857"
+
+
+def test_tarefa_mensal_esta_agendada_no_dia_1_de_madrugada(settings):
+    from celery.schedules import crontab
+
+    from config import settings as config_settings
+
+    agenda = config_settings.CELERY_BEAT_SCHEDULE["atualizar-referencias-especies"]
+    assert agenda["task"] == "itree.inventario.tasks.atualizar_referencias_antigas"
+    assert agenda["schedule"] == crontab(minute=30, hour=3, day_of_month=1)
+
+
+def _especie(nome, consultada_em=None, **extra):
+    return Especie.objects.create(
+        nome_cientifico=nome, referencias_consultadas_em=consultada_em, **extra
+    )
+
+
+def test_tarefa_seleciona_so_antigas_ou_nunca_consultadas(monkeypatch, settings):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    from itree.inventario import tasks
+
+    settings.REFERENCIAS_IDADE_MAXIMA_DIAS = 30
+    settings.REFERENCIAS_INTERVALO_SEGUNDOS = 0
+    agora = timezone.now()
+    _especie("Antiga a", agora - timedelta(days=31))
+    _especie("Nunca b")
+    _especie("Recente c", agora - timedelta(days=5))
+    _especie("Inativa d", agora - timedelta(days=90), ativa=False)
+    vistas = []
+    monkeypatch.setattr(referencias, "atualizar", lambda e: vistas.append(e.nome_cientifico) or e)
+    monkeypatch.setattr(tasks.time, "sleep", lambda s: None)
+    resultado = tasks.atualizar_referencias_antigas()
+    assert sorted(vistas) == ["Antiga a", "Nunca b"]
+    assert resultado == {"selecionadas": 2, "atualizadas": 2, "falhas": 0}
+
+
+def test_tarefa_nao_para_quando_uma_especie_falha(monkeypatch, settings):
+    from itree.inventario import tasks
+
+    settings.REFERENCIAS_INTERVALO_SEGUNDOS = 0.5
+    for nome in ("A", "B", "C"):
+        _especie(nome)
+    vistas, pausas = [], []
+
+    def atualizar(especie):
+        vistas.append(especie.nome_cientifico)
+        if especie.nome_cientifico == "B":
+            raise RuntimeError("falha inesperada")
+        return especie
+
+    monkeypatch.setattr(referencias, "atualizar", atualizar)
+    monkeypatch.setattr(tasks.time, "sleep", pausas.append)
+    resultado = tasks.atualizar_referencias_antigas()
+    assert vistas == ["A", "B", "C"]
+    assert resultado == {"selecionadas": 3, "atualizadas": 2, "falhas": 1}
+    assert pausas == [0.5, 0.5]  # intervalo entre consultas, não antes da primeira

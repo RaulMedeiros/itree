@@ -235,11 +235,18 @@ REFERENCIAS_USER_AGENT = env.str(
 REFERENCIAS_TIMEOUT = env.int("REFERENCIAS_TIMEOUT", default=15)
 # Ao cadastrar uma espécie, enfileira a consulta (Celery).
 REFERENCIAS_AUTOMATICAS = env.bool("REFERENCIAS_AUTOMATICAS", default=True)
+# Reconsulta mensal das referências antigas (M-09).
+REFERENCIAS_IDADE_MAXIMA_DIAS = env.int("REFERENCIAS_IDADE_MAXIMA_DIAS", default=30)
+REFERENCIAS_INTERVALO_SEGUNDOS = env.float("REFERENCIAS_INTERVALO_SEGUNDOS", default=1.0)
 CELERY_BEAT_SCHEDULE = {
     # Instantâneos da visão geral (M-11): um registro por dia e território.
     "registrar-indicadores": {
         "task": "itree.indicadores.tasks.registrar_indicadores",
         "schedule": crontab(hour=1, minute=30),
+    },
+    "atualizar-referencias-especies": {
+        "task": "itree.inventario.tasks.atualizar_referencias_antigas",
+        "schedule": crontab(minute=30, hour=3, day_of_month=1),
     },
     **(
         {

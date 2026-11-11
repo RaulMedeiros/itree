@@ -20,6 +20,7 @@ export interface EspecieCartao {
   /** @nullable */
   nativa_brasil?: boolean | null;
   wikipedia_url?: string;
+  readonly flora_brasil_url: string;
   /** @maxLength 300 */
   wikipedia_descricao?: string;
   /** Cópia local (URL temporária) quando houver; senão, a miniatura da Wikimedia. */
