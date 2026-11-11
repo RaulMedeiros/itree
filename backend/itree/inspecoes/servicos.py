@@ -1,6 +1,7 @@
 """Regras de inspeção: sincronização com o aplicativo e revisão no web (W-05)."""
 
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pghistory
@@ -17,10 +18,11 @@ from itree.inventario.models import (
     SituacaoArvore,
 )
 from itree.notificacoes import servicos as notificacoes
+from itree.ocorrencias.models import Ocorrencia, OrigemOcorrencia, TipoOcorrencia
 from itree.tarefas.acesso import pode_atuar
-from itree.tarefas.models import ESTADOS_FINAIS_TAREFA, EstadoTarefa
+from itree.tarefas.models import ESTADOS_FINAIS_TAREFA, EstadoTarefa, Tarefa, TipoTarefa
 
-from .models import EstadoInspecao, Inspecao
+from .models import CondicaoAparente, EstadoInspecao, Inspecao, SinalObservado
 
 EDITAVEIS_NO_DISPOSITIVO = {EstadoInspecao.RASCUNHO, EstadoInspecao.DEVOLVIDA}
 APLICAVEIS = ("especie", "condicao_aparente", "medidas", "localizacao")
@@ -241,3 +243,90 @@ def devolver(inspecao: Inspecao, revisor, motivo: str) -> Inspecao:
         inspecao.save()
         notificacoes.inspecao_devolvida(inspecao, motivo)
     return inspecao
+
+
+@dataclass
+class Encaminhamento:
+    """Resultado de "validar e encaminhar": a inspeção validada e o que ela gerou."""
+
+    inspecao: Inspecao
+    ocorrencia: Ocorrencia
+    tarefa: Tarefa | None = None
+
+
+def _condicao_observada(inspecao: Inspecao) -> str:
+    """O que a inspeção observou, em texto: condição aparente e sinais (não é diagnóstico)."""
+    condicao = CondicaoAparente(inspecao.condicao_aparente).label.lower()
+    partes = [f"Inspeção {inspecao.codigo}: condição aparente {condicao}."]
+    if inspecao.sinais:
+        sinais = ", ".join(SinalObservado(s).label.lower() for s in inspecao.sinais)
+        partes.append(f"Sinais observados: {sinais}.")
+    return " ".join(partes)
+
+
+@transaction.atomic
+def validar_e_encaminhar(
+    inspecao: Inspecao,
+    revisor,
+    *,
+    aplicar: list[str],
+    tipo: TipoOcorrencia,
+    motivo: str = "",
+    descricao: str = "",
+    prazo: date | None = None,
+    criar_tarefa: bool = False,
+    responsavel=None,
+    equipe=None,
+) -> Encaminhamento:
+    """Valida a inspeção e abre, na mesma operação, a ocorrência de origem nela (G-01).
+
+    A ocorrência nasce vinculada à inspeção e à árvore, sem prioridade nem risco
+    (que são decisões da gestão e de avaliação técnica). Com ``criar_tarefa``, já
+    nasce uma tarefa de atendimento ligada à ocorrência. Qualquer falha desfaz tudo:
+    não existe inspeção validada pela metade.
+    """
+    arvore = inspecao.arvore
+    texto = descricao.strip() or inspecao.observacoes.strip()
+    if not texto:
+        raise ErroInspecao("Descreva o que deve ser atendido (a inspeção não tem observações).")
+    inspecao = validar(inspecao, revisor, aplicar, motivo)
+    arvore.refresh_from_db()
+    if arvore.geom is None:
+        raise ErroInspecao("A árvore não tem localização para abrir a ocorrência.")
+    if prazo is None and tipo.prazo_padrao_dias:
+        prazo = timezone.localdate() + timedelta(days=tipo.prazo_padrao_dias)
+
+    with pghistory.context(
+        evento="encaminhamento_inspecao", inspecao=inspecao.codigo, motivo=motivo or None
+    ):
+        ocorrencia = Ocorrencia.objects.create(
+            tipo=tipo,
+            arvore=arvore,
+            geom=arvore.geom,
+            endereco=arvore.endereco,
+            descricao=texto,
+            condicao_aparente=_condicao_observada(inspecao),
+            prazo=prazo,
+            origem=OrigemOcorrencia.INSPECAO,
+            origem_referencia=inspecao.codigo,
+            inspecao=inspecao,
+            registrada_por=revisor,
+        )
+        tarefa = None
+        if criar_tarefa:
+            if responsavel is not None and not ponto_no_escopo(responsavel, ocorrencia.geom):
+                raise ErroInspecao(
+                    "O local da tarefa está fora do escopo territorial do responsável."
+                )
+            tarefa = Tarefa.objects.create(
+                tipo=TipoTarefa.ATENDIMENTO_OCORRENCIA,
+                ocorrencia=ocorrencia,
+                geom=ocorrencia.geom,
+                descricao=f"Atender {ocorrencia.codigo}, aberta a partir de {inspecao.codigo}.",
+                responsavel=responsavel,
+                equipe=equipe,
+                prazo=prazo,
+                criada_por=revisor,
+            )
+            notificacoes.tarefa_atribuida(tarefa, autor=revisor)
+    return Encaminhamento(inspecao, ocorrencia, tarefa)

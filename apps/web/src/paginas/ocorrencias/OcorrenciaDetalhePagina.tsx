@@ -30,7 +30,7 @@ import { Evidencias } from "../../componentes/Evidencias";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
 import { LinhaDoTempo } from "../../componentes/Historico";
-import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
+import { SeloEstadoOcorrencia, SeloEstadoTarefa, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -289,6 +289,35 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
               <dt className="text-xs text-texto-suave uppercase">Local</dt>
               <dd>{[o.endereco, o.bairro?.nome].filter(Boolean).join(" · ") || "—"}</dd>
             </div>
+            <div className="col-span-2">
+              <dt className="text-xs text-texto-suave uppercase">Origem</dt>
+              <dd>
+                {ROTULOS_ORIGEM_OCORRENCIA[o.origem]}
+                {o.origem_vinculo?.tipo === "inspecao" ? (
+                  <>
+                    {" · "}
+                    <Link
+                      to="/inspecoes/$id"
+                      params={{ id: o.origem_vinculo.id }}
+                      className="font-mono text-marca-escura hover:underline"
+                    >
+                      {o.origem_vinculo.codigo}
+                    </Link>
+                  </>
+                ) : o.origem_vinculo?.tipo === "alerta" ? (
+                  <>
+                    {" · "}
+                    <Link
+                      to="/alertas/$id"
+                      params={{ id: o.origem_vinculo.id }}
+                      className="font-mono text-marca-escura hover:underline"
+                    >
+                      {o.origem_vinculo.codigo}
+                    </Link>
+                  </>
+                ) : null}
+              </dd>
+            </div>
           </dl>
         </section>
         <Cartao
@@ -340,6 +369,26 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
           </dl>
         </Cartao>
       </div>
+
+      <section className="mb-6 rounded-lg border border-borda bg-superficie p-4">
+        <h2 className="mb-2 font-semibold">Tarefas vinculadas</h2>
+        {o.tarefas.length === 0 ? (
+          <p className="text-sm text-texto-suave">Nenhuma tarefa de atendimento criada.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-borda text-sm">
+            {o.tarefas.map((t) => (
+              <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                <span className="font-mono font-medium">{t.codigo}</span>
+                <SeloEstadoTarefa estado={t.estado} />
+                <span className="text-texto-suave">
+                  {t.responsavel ?? "Sem responsável"}
+                  {t.prazo ? ` · ${descreverPrazo(t.prazo)}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <h2 className="mb-2 font-semibold">Evidências</h2>
       <div className="mb-6">

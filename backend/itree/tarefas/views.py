@@ -93,7 +93,12 @@ class TarefaViewSet(
         if getattr(self, "swagger_fake_view", False):
             return Tarefa.objects.none()
         qs = Tarefa.objects.select_related(
-            "arvore", "ocorrencia", "responsavel", "equipe", "criada_por"
+            "arvore",
+            "ocorrencia",
+            "ocorrencia__inspecao",
+            "responsavel",
+            "equipe",
+            "criada_por",
         )
         qs = filtrar_por_escopo(qs, self.request.user)
         if self.action != "list":

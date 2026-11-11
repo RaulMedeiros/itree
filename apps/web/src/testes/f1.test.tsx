@@ -78,6 +78,8 @@ const OCORRENCIA: Ocorrencia = {
   atrasada: false,
   origem: "web",
   origem_referencia: "",
+  origem_vinculo: null,
+  tarefas: [],
   registrada_por: { id: "u-gestor", nome: "Gabi Gestora", email: "gabi@itree.teste" },
   criado_em: "2026-10-31T12:00:00Z",
   atualizado_em: "2026-10-31T12:00:00Z",
@@ -247,6 +249,44 @@ describe("ocorrência", () => {
 
     await usuario.selectOptions(within(dialogo).getByLabelText("Equipe"), "e-1");
     expect(within(dialogo).queryByRole("note")).toBeNull();
+  });
+
+  it("mostra a origem na inspeção, com link, e as tarefas vinculadas com o estado", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/ocorrencias/o-1`, () =>
+        HttpResponse.json({
+          ...OCORRENCIA,
+          origem: "inspecao",
+          origem_referencia: "INS-000009",
+          origem_vinculo: { tipo: "inspecao", id: "i-9", codigo: "INS-000009" },
+          tarefas: [
+            {
+              id: "tf-1",
+              codigo: "TAR-000004",
+              estado: "bloqueada",
+              responsavel: "Tiago Técnico",
+              prazo: "2999-12-31",
+            },
+          ],
+        }),
+      ),
+    );
+    await abrir("/ocorrencias/o-1");
+    const origem = (await screen.findByText("Origem")).closest("div")!;
+    expect(within(origem).getByText(/Encaminhamento de inspeção/)).toBeInTheDocument();
+    expect(within(origem).getByRole("link", { name: "INS-000009" })).toHaveAttribute(
+      "href",
+      "/inspecoes/i-9",
+    );
+    const tarefas = screen.getByRole("heading", { name: "Tarefas vinculadas" }).closest("section")!;
+    expect(within(tarefas).getByText("TAR-000004")).toBeInTheDocument();
+    expect(within(tarefas).getByText("Bloqueada")).toBeInTheDocument();
+    expect(within(tarefas).getByText(/Tiago Técnico/)).toBeInTheDocument();
+  });
+
+  it("sem tarefas vinculadas, diz que não há", async () => {
+    await abrir("/ocorrencias/o-1");
+    expect(await screen.findByText("Nenhuma tarefa de atendimento criada.")).toBeInTheDocument();
   });
 
   it("cancelar exige justificativa", async () => {

@@ -3,7 +3,7 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema
 from pghistory.models import Events
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from itree.auditoria.views import EventoAuditoriaSerializer
@@ -15,6 +15,8 @@ from . import servicos
 from .models import EstadoInspecao, Inspecao
 from .serializers import (
     DevolucaoSerializer,
+    EncaminhamentoResultadoSerializer,
+    EncaminhamentoSerializer,
     InspecaoDeCampoSerializer,
     InspecaoResumoSerializer,
     InspecaoSerializer,
@@ -49,6 +51,7 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
     def get_permissions(self):
         mapa = {
             "validar": P.INSPECOES_VALIDAR,
+            "validar_e_encaminhar": P.INSPECOES_VALIDAR,
             "devolver": P.INSPECOES_VALIDAR,
             "sincronizar": P.INSPECOES_EXECUTAR,
         }
@@ -62,7 +65,7 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
             return Inspecao.objects.none()
         qs = Inspecao.objects.select_related(
             "arvore", "arvore__especie", "arvore__bairro", "tecnico", "revisor", "especie", "tarefa"
-        ).prefetch_related("medidas", "medidas__responsavel")
+        ).prefetch_related("medidas", "medidas__responsavel", "ocorrencias_geradas")
         qs = filtrar_por_escopo(qs, self.request.user, campo_geom="arvore__geom")
         if self.action != "list":
             return qs
@@ -133,6 +136,54 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
         except servicos.ErroInspecao as exc:
             raise ValidationError(str(exc)) from exc
         return Response(InspecaoSerializer(self.get_object()).data)
+
+    @extend_schema(
+        operation_id="inspecoes_validar_e_encaminhar",
+        request=EncaminhamentoSerializer,
+        responses=EncaminhamentoResultadoSerializer,
+        description="Valida a inspeção e abre, na mesma operação, a ocorrência vinculada a ela "
+        "(com tarefa de atendimento opcional). Exige também registrar ocorrências e, para a "
+        "tarefa, criar tarefas.",
+    )
+    @action(detail=True, methods=["post"], url_path="validar-e-encaminhar")
+    def validar_e_encaminhar(self, request, pk=None):
+        usuario = request.user
+        if not usuario.tem_permissao(P.OCORRENCIAS_EDITAR):
+            raise PermissionDenied("Você não pode registrar ocorrências.")
+        dados = EncaminhamentoSerializer(data=request.data)
+        dados.is_valid(raise_exception=True)
+        v = dados.validated_data
+        if v["criar_tarefa"] and not usuario.tem_permissao(P.TAREFAS_EDITAR):
+            raise PermissionDenied("Você não pode criar tarefas.")
+        try:
+            resultado = servicos.validar_e_encaminhar(
+                self.get_object(),
+                usuario,
+                aplicar=v["aplicar"],
+                tipo=v["tipo_id"],
+                motivo=v.get("motivo", ""),
+                descricao=v.get("descricao", ""),
+                prazo=v.get("prazo"),
+                criar_tarefa=v["criar_tarefa"],
+                responsavel=v.get("responsavel"),
+                equipe=v.get("equipe"),
+            )
+        except servicos.ErroInspecao as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(
+            {
+                "inspecao": InspecaoSerializer(self.get_object()).data,
+                "ocorrencia": {
+                    "id": str(resultado.ocorrencia.pk),
+                    "codigo": resultado.ocorrencia.codigo,
+                },
+                "tarefa": (
+                    {"id": str(resultado.tarefa.pk), "codigo": resultado.tarefa.codigo}
+                    if resultado.tarefa
+                    else None
+                ),
+            }
+        )
 
     @extend_schema(
         operation_id="inspecoes_devolver", request=DevolucaoSerializer, responses=InspecaoSerializer

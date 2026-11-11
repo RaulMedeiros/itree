@@ -192,6 +192,18 @@ export function TarefasPagina() {
                         {String(t.alvo.codigo)}
                       </Link>
                     )}
+                    {t.origem?.tipo === "inspecao" && (
+                      <p className="text-xs text-texto-suave">
+                        Origem:{" "}
+                        <Link
+                          to="/inspecoes/$id"
+                          params={{ id: t.origem.id }}
+                          className="font-mono text-marca-escura hover:underline"
+                        >
+                          {t.origem.codigo}
+                        </Link>
+                      </p>
+                    )}
                   </Td>
                   <Td>
                     {t.responsavel ? (

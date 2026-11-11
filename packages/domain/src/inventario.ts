@@ -112,4 +112,5 @@ export const ROTULOS_ORIGEM_OCORRENCIA: Record<OrigemOcorrenciaEnum, string> = {
   app: "Aplicativo",
   importacao: "Importação",
   alerta: "Alerta ambiental convertido",
+  inspecao: "Encaminhamento de inspeção",
 };

@@ -4,7 +4,10 @@ import {
   useInspecoesDevolver,
   useInspecoesHistorico,
   useInspecoesObter,
+  useEquipesListar,
   useInspecoesValidar,
+  useInspecoesValidarEEncaminhar,
+  useTiposOcorrenciaListar,
   type Inspecao,
 } from "@itree/api-client";
 import {
@@ -16,7 +19,7 @@ import {
   ROTULOS_TIPO_MEDIDA,
 } from "@itree/domain";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
@@ -25,7 +28,7 @@ import { Evidencias } from "../../componentes/Evidencias";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloEstadoInspecao, SeloLocalizacao, SeloOrigemValor } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
-import { AreaTexto, Campo, ListaMarcavel } from "../../ui/campos";
+import { AreaTexto, Campo, EntradaData, ListaMarcavel, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -98,7 +101,9 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
   const eu = useUsuario();
   const podeValidar =
     usePermissao("inspecoes.validar") && i.estado === "em_revisao" && i.tecnico.id !== eu.id;
-  const [validando, setValidando] = useState(false);
+  const podeRegistrarOcorrencia = usePermissao("ocorrencias.editar");
+  const podeEncaminhar = podeValidar && podeRegistrarOcorrencia;
+  const [validando, setValidando] = useState<"validar" | "encaminhar" | null>(null);
   const [devolvendo, setDevolvendo] = useState(false);
   const historico = useInspecoesHistorico(i.id);
   // Mesma consulta da seção de evidências: o aviso e a lista nunca divergem.
@@ -149,6 +154,25 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
             ? i.aplicado_ao_cadastro.map((c) => ROTULOS_APLICAVEL[c] ?? c).join(", ")
             : "nada (somente registro da inspeção)"}
           .
+          {i.ocorrencias_geradas.length > 0 && (
+            <>
+              {" "}
+              Ocorrência aberta:{" "}
+              {i.ocorrencias_geradas.map((o, n) => (
+                <span key={o.id}>
+                  {n > 0 && ", "}
+                  <Link
+                    to="/ocorrencias/$id"
+                    params={{ id: o.id }}
+                    className="font-mono font-medium underline"
+                  >
+                    {o.codigo}
+                  </Link>
+                </span>
+              ))}
+              .
+            </>
+          )}
         </p>
       )}
 
@@ -341,30 +365,60 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
       </details>
 
       {podeValidar && (
-        <div
-          role="region"
-          aria-label="Decisão da revisão"
-          className="sticky bottom-0 z-10 -mx-6 flex flex-wrap items-center justify-end gap-3 border-t border-borda bg-superficie px-6 py-3"
-        >
-          {semEvidencias && (
-            <p className="mr-auto text-sm font-medium text-atencao">
-              Sem evidências anexadas: confira com o técnico antes de validar.
-            </p>
-          )}
-          <Botao variante="secundario" onClick={() => setDevolvendo(true)}>
-            Devolver para correção
-          </Botao>
-          <Botao onClick={() => setValidando(true)}>Validar…</Botao>
-        </div>
+        <>
+          <div
+            role="region"
+            aria-label="Decisão da revisão"
+            className="sticky bottom-0 z-10 -mx-6 flex flex-wrap items-center justify-end gap-3 border-t border-borda bg-superficie px-6 py-3"
+          >
+            {semEvidencias && (
+              <p className="mr-auto text-sm font-medium text-atencao">
+                Sem evidências anexadas: confira com o técnico antes de validar.
+              </p>
+            )}
+            <Botao variante="secundario" onClick={() => setDevolvendo(true)}>
+              Devolver para correção
+            </Botao>
+            {podeEncaminhar && (
+              <Botao
+                variante={i.requer_encaminhamento ? "primario" : "secundario"}
+                onClick={() => setValidando("encaminhar")}
+              >
+                Validar e encaminhar…
+              </Botao>
+            )}
+            <Botao
+              variante={podeEncaminhar && i.requer_encaminhamento ? "secundario" : "primario"}
+              onClick={() => setValidando("validar")}
+            >
+              Validar…
+            </Botao>
+          </div>
+        </>
       )}
 
-      {validando && <ValidarDialogo inspecao={i} aoFechar={() => setValidando(false)} />}
+      {validando && (
+        <ValidarDialogo
+          inspecao={i}
+          encaminhar={validando === "encaminhar"}
+          aoFechar={() => setValidando(null)}
+        />
+      )}
       {devolvendo && <DevolverDialogo inspecao={i} aoFechar={() => setDevolvendo(false)} />}
     </>
   );
 }
 
-function ValidarDialogo({ inspecao: i, aoFechar }: { inspecao: Inspecao; aoFechar: () => void }) {
+function ValidarDialogo({
+  inspecao: i,
+  encaminhar,
+  aoFechar,
+}: {
+  inspecao: Inspecao;
+  /** Valida e abre a ocorrência de origem nesta inspeção (G-01). */
+  encaminhar: boolean;
+  aoFechar: () => void;
+}) {
   const opcoes = [
     {
       valor: "condicao_aparente",
@@ -400,46 +454,95 @@ function ValidarDialogo({ inspecao: i, aoFechar }: { inspecao: Inspecao; aoFecha
   );
   const [motivo, setMotivo] = useState("");
   const validar = useInspecoesValidar<ErroApi>();
+  const encaminhamento = useInspecoesValidarEEncaminhar<ErroApi>();
+  const mutacao = encaminhar ? encaminhamento : validar;
   const cliente = useQueryClient();
+  const navegar = useNavigate();
+  const podeTarefa = usePermissao("tarefas.editar");
+  const tipos = useTiposOcorrenciaListar({ ativo: true }, { query: { enabled: encaminhar } });
+  const equipes = useEquipesListar(
+    { ativa: true, tamanho: 200 },
+    { query: { enabled: encaminhar && podeTarefa } },
+  );
+  const [tipo, setTipo] = useState("");
+  const [descricao, setDescricao] = useState(i.observacoes ?? "");
+  const [prazo, setPrazo] = useState("");
+  const [criarTarefa, setCriarTarefa] = useState(false);
+  const [equipe, setEquipe] = useState("");
+  const aplicarSelecionado = aplicar as (
+    "especie" | "condicao_aparente" | "medidas" | "localizacao"
+  )[];
+  const erros = encaminhamento.error?.errosDeCampo ?? {};
+  const enviar = () => {
+    if (!encaminhar) {
+      validar.mutate(
+        { id: i.id, data: { aplicar: aplicarSelecionado, motivo } },
+        {
+          onSuccess: async () => (
+            await invalidarCaminhos(cliente, "/api/v1/inspecoes", "/api/v1/arvores"),
+            aoFechar()
+          ),
+        },
+      );
+      return;
+    }
+    encaminhamento.mutate(
+      {
+        id: i.id,
+        data: {
+          aplicar: aplicarSelecionado,
+          motivo,
+          tipo_id: tipo,
+          descricao: descricao.trim(),
+          prazo: prazo || null,
+          criar_tarefa: criarTarefa,
+          equipe_id: criarTarefa ? equipe || null : null,
+        },
+      },
+      {
+        onSuccess: async (r) => {
+          await invalidarCaminhos(
+            cliente,
+            "/api/v1/inspecoes",
+            "/api/v1/arvores",
+            "/api/v1/ocorrencias",
+            "/api/v1/tarefas",
+          );
+          aoFechar();
+          void navegar({ to: "/ocorrencias/$id", params: { id: r.data.ocorrencia.id } });
+        },
+      },
+    );
+  };
   return (
     <Dialogo
       aberto
       aoMudar={(v) => !v && aoFechar()}
-      titulo={`Validar ${i.codigo}`}
-      descricao="Escolha o que esta inspeção atualiza no cadastro da árvore. O que não for marcado fica só no registro da inspeção."
+      titulo={`${encaminhar ? "Validar e encaminhar" : "Validar"} ${i.codigo}`}
+      descricao={
+        encaminhar
+          ? "Valida a inspeção e abre uma ocorrência vinculada a ela e à árvore. Prioridade e risco ficam para quem tem essa atribuição."
+          : "Escolha o que esta inspeção atualiza no cadastro da árvore. O que não for marcado fica só no registro da inspeção."
+      }
       rodape={
         <>
           <Botao variante="secundario" onClick={aoFechar}>
             Cancelar
           </Botao>
           <Botao
-            disabled={validar.isPending}
-            onClick={() =>
-              validar.mutate(
-                {
-                  id: i.id,
-                  data: {
-                    aplicar: aplicar as (
-                      "especie" | "condicao_aparente" | "medidas" | "localizacao"
-                    )[],
-                    motivo,
-                  },
-                },
-                {
-                  onSuccess: async () => (
-                    await invalidarCaminhos(cliente, "/api/v1/inspecoes", "/api/v1/arvores"),
-                    aoFechar()
-                  ),
-                },
-              )
-            }
+            disabled={mutacao.isPending || (encaminhar && (!tipo || !descricao.trim()))}
+            onClick={enviar}
           >
-            Validar
+            {encaminhar ? "Validar e encaminhar" : "Validar"}
           </Botao>
         </>
       }
     >
-      {validar.error && <p className="mb-3 text-sm text-perigo">{validar.error.message}</p>}
+      {mutacao.error && (
+        <p role="alert" className="mb-3 text-sm text-perigo">
+          {Object.values(mutacao.error.errosDeCampo ?? {}).flat()[0] ?? mutacao.error.message}
+        </p>
+      )}
       <div className="flex flex-col gap-3">
         <ListaMarcavel
           legenda="Aplicar ao cadastro"
@@ -453,6 +556,72 @@ function ValidarDialogo({ inspecao: i, aoFechar }: { inspecao: Inspecao; aoFecha
         <Campo rotulo="Observação da revisão (opcional)">
           {(p) => <AreaTexto {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
         </Campo>
+        {encaminhar && (
+          <fieldset className="flex flex-col gap-3 rounded-md border border-borda p-3">
+            <legend className="px-1 text-sm font-medium">Ocorrência a abrir</legend>
+            <Campo rotulo="Tipo" obrigatorio erros={erros.tipo_id}>
+              {(p) => (
+                <Selecao {...p} value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                  <option value="">Selecione</option>
+                  {tipos.data?.data.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.nome}
+                      {t.prazo_padrao_dias ? ` (prazo ${plural(t.prazo_padrao_dias, "dia")})` : ""}
+                    </option>
+                  ))}
+                </Selecao>
+              )}
+            </Campo>
+            <Campo
+              rotulo="O que deve ser atendido"
+              obrigatorio
+              ajuda="Começa com as observações da inspeção; ajuste se precisar."
+              erros={erros.descricao}
+            >
+              {(p) => (
+                <AreaTexto
+                  {...p}
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                />
+              )}
+            </Campo>
+            <Campo
+              rotulo="Prazo (opcional)"
+              ajuda="Vazio usa o prazo padrão do tipo."
+              erros={erros.prazo}
+            >
+              {(p) => <EntradaData {...p} value={prazo} onChange={setPrazo} />}
+            </Campo>
+            {podeTarefa && (
+              <>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-marca"
+                    checked={criarTarefa}
+                    onChange={(e) => setCriarTarefa(e.target.checked)}
+                  />
+                  Criar também a tarefa de atendimento
+                </label>
+                {criarTarefa && (
+                  <Campo rotulo="Equipe (opcional)">
+                    {(p) => (
+                      <Selecao {...p} value={equipe} onChange={(e) => setEquipe(e.target.value)}>
+                        <option value="">Sem equipe</option>
+                        {equipes.data?.data.results.map((q) => (
+                          <option key={q.id} value={q.id}>
+                            {q.nome}
+                          </option>
+                        ))}
+                      </Selecao>
+                    )}
+                  </Campo>
+                )}
+              </>
+            )}
+          </fieldset>
+        )}
       </div>
     </Dialogo>
   );

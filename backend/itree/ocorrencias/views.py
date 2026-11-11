@@ -178,7 +178,9 @@ class OcorrenciaViewSet(
             "registrada_por",
             "prioridade_definida_por",
             "risco_responsavel",
-        )
+            "inspecao",
+            "alerta",
+        ).prefetch_related("tarefas", "tarefas__responsavel")
         qs = filtrar_por_escopo(qs, self.request.user)
         if self.action == "list":
             qs = ordenar_ocorrencias(

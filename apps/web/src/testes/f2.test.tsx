@@ -80,6 +80,7 @@ const INSPECAO: Inspecao = {
   medidas_do_cadastro: [],
   anterior: null,
   tarefa: null,
+  ocorrencias_geradas: [],
 };
 
 const validacoes: unknown[] = [];
