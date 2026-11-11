@@ -33,6 +33,11 @@ class OrigemRegistro(models.TextChoices):
     IMPORTACAO = "importacao", "Importação"
 
 
+# Formatter URL (P1630) da propriedade P10701 "Reflora ID" do Wikidata,
+# conferido em 2026-11: https://floradobrasil.jbrj.gov.br/$1
+FLORA_BRASIL_URL = "https://floradobrasil.jbrj.gov.br/{id}"
+
+
 class SituacaoReferencias(models.TextChoices):
     NAO_CONSULTADA = "nao_consultada", "Ainda não consultadas"
     ENCONTRADAS = "encontradas", "Encontradas"
@@ -75,6 +80,9 @@ class Especie(ModeloBase):
     wikipedia_descricao = models.CharField(max_length=300, blank=True)
     wikipedia_resumo = models.TextField(blank=True)
     gbif_id = models.BigIntegerField(null=True, blank=True)
+    # Identificador na Flora e Funga do Brasil (Wikidata P10701, "Reflora ID"),
+    # ex.: FB16857. Só vem do Wikidata, nunca de busca aproximada (M-09).
+    flora_brasil_id = models.CharField(max_length=20, blank=True)
     imagem_url = models.URLField(max_length=1000, blank=True)
     imagem_pagina_url = models.URLField(max_length=1000, blank=True)
     imagem_autor = models.CharField(max_length=300, blank=True)
@@ -93,6 +101,10 @@ class Especie(ModeloBase):
     @property
     def gbif_url(self) -> str:
         return f"https://www.gbif.org/species/{self.gbif_id}" if self.gbif_id else ""
+
+    @property
+    def flora_brasil_url(self) -> str:
+        return FLORA_BRASIL_URL.format(id=self.flora_brasil_id) if self.flora_brasil_id else ""
 
     @property
     def wikidata_url(self) -> str:

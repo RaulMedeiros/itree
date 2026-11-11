@@ -3483,6 +3483,12 @@ components:
         gbif_url:
           type: string
           readOnly: true
+        flora_brasil_id:
+          type: string
+          readOnly: true
+        flora_brasil_url:
+          type: string
+          readOnly: true
         imagem_url:
           type: string
           readOnly: true
@@ -3504,6 +3510,8 @@ components:
           readOnly: true
       required:
       - arvores_no_escopo
+      - flora_brasil_id
+      - flora_brasil_url
       - gbif_id
       - gbif_url
       - id
@@ -3552,6 +3560,9 @@ components:
             maxLength: 500
           - type: string
             maxLength: 0
+        flora_brasil_url:
+          type: string
+          readOnly: true
         wikipedia_descricao:
           type: string
           maxLength: 300
@@ -3574,6 +3585,7 @@ components:
           - type: string
             maxLength: 0
       required:
+      - flora_brasil_url
       - id
       - imagem_url
       - nome_cientifico

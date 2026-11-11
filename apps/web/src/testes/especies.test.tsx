@@ -52,6 +52,8 @@ const OITI = {
   wikipedia_resumo: "O oiti é uma árvore da família Chrysobalanaceae.",
   gbif_id: 5583617,
   gbif_url: "https://www.gbif.org/species/5583617",
+  flora_brasil_id: "FB16857",
+  flora_brasil_url: "https://floradobrasil.jbrj.gov.br/FB16857",
   imagem_url: "https://upload.wikimedia.org/oiti.jpg",
   imagem_pagina_url: "https://commons.wikimedia.org/wiki/File:Oiti.jpg",
   imagem_autor: "Fulana de Tal",
@@ -72,6 +74,8 @@ const SEM_REFERENCIA = {
   wikipedia_descricao: "",
   imagem_url: "",
   gbif_url: "",
+  flora_brasil_id: "",
+  flora_brasil_url: "",
   wikidata_url: "",
 } as unknown as Especie;
 
@@ -135,12 +139,17 @@ describe("catálogo de espécies", () => {
       "href",
       "https://www.gbif.org/species/5583617",
     );
+    expect(screen.getByRole("link", { name: /^Flora e Funga do Brasil/ })).toHaveAttribute(
+      "href",
+      "https://floradobrasil.jbrj.gov.br/FB16857",
+    );
     // Leitura não oferece a ação de administração.
     expect(screen.queryByRole("button", { name: /Atualizar referências/ })).toBeNull();
   });
 
   it("sem referência correspondente, diz isso em vez de inventar", async () => {
     await abrir("/inventario/especies/e-2");
+    expect(screen.queryByRole("link", { name: /^Flora e Funga do Brasil/ })).toBeNull();
     expect(
       await screen.findByText(/Nenhuma referência externa corresponde exatamente/),
     ).toBeInTheDocument();

@@ -51,7 +51,7 @@ export function EspeciesCatalogoPagina() {
     <>
       <CabecalhoPagina
         titulo="Espécies"
-        descricao="Espécies do catálogo, com as árvores do seu escopo e referências externas (Wikipedia, Wikimedia Commons, GBIF)."
+        descricao="Espécies do catálogo, com as árvores do seu escopo e referências externas (Wikipedia, Wikimedia Commons, GBIF, Flora e Funga do Brasil)."
       />
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative w-80">
@@ -220,6 +220,7 @@ export function EspecieDetalhePagina() {
             <LinkExterno href={e.wikipedia_url}>Wikipedia</LinkExterno>
             <LinkExterno href={e.wikidata_url}>Wikidata</LinkExterno>
             <LinkExterno href={e.gbif_url}>GBIF</LinkExterno>
+            <LinkExterno href={e.flora_brasil_url}>Flora e Funga do Brasil</LinkExterno>
             {e.imagem_licenca_url && (
               <LinkExterno
                 href={e.imagem_licenca_url}

@@ -124,6 +124,7 @@ export function CartaoEspecie({ especie }: { especie: EspecieCartao }) {
             Ver no catálogo
           </Link>
           <LinkExterno href={especie.wikipedia_url}>Wikipedia</LinkExterno>
+          <LinkExterno href={especie.flora_brasil_url}>Flora e Funga do Brasil</LinkExterno>
         </div>
       </div>
     </section>

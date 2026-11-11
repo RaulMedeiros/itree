@@ -60,6 +60,7 @@ class EspecieSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
     )
     gbif_url = serializers.CharField(read_only=True)
     wikidata_url = serializers.CharField(read_only=True)
+    flora_brasil_url = serializers.CharField(read_only=True)
 
     class Meta:
         model = Especie
@@ -85,6 +86,8 @@ class EspecieSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
             "wikipedia_resumo",
             "gbif_id",
             "gbif_url",
+            "flora_brasil_id",
+            "flora_brasil_url",
             "imagem_url",
             "imagem_pagina_url",
             "imagem_autor",
@@ -102,6 +105,7 @@ class EspecieSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
             "wikipedia_descricao",
             "wikipedia_resumo",
             "gbif_id",
+            "flora_brasil_id",
             "imagem_pagina_url",
             "imagem_autor",
             "imagem_licenca",
@@ -112,6 +116,8 @@ class EspecieSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
 class EspecieCartaoSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
     """Resumo da espécie com imagem e links, para a ficha da árvore."""
 
+    flora_brasil_url = serializers.CharField(read_only=True)
+
     class Meta:
         model = Especie
         fields = [
@@ -121,6 +127,7 @@ class EspecieCartaoSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
             "familia",
             "nativa_brasil",
             "wikipedia_url",
+            "flora_brasil_url",
             "wikipedia_descricao",
             "imagem_url",
             "imagem_autor",

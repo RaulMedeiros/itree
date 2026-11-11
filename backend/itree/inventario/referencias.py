@@ -3,9 +3,11 @@
 O Wikidata é o ponto de partida: o item é localizado pelo nome científico
 (propriedade P225, "nome do táxon") e só é aceito se esse nome for **igual**
 ao do catálogo. Do item vêm os vínculos para a Wikipedia (pt, senão en), a
-imagem no Wikimedia Commons (P18) e o identificador do GBIF (P846). Se o item
-não tem link para a Wikipedia, o artigo é procurado pelo nome científico, mas
-só é aceito se o item do próprio artigo tiver P225 idêntico ao do catálogo.
+imagem no Wikimedia Commons (P18), o identificador do GBIF (P846) e o da
+Flora e Funga do Brasil (P10701, "Reflora ID"). Se o item não tem link para a
+Wikipedia, o artigo é procurado pelo nome científico, mas só é aceito se o
+item do próprio artigo tiver P225 idêntico ao do catálogo ou se o artigo
+declarar esse nome como sinônimo.
 
 Nada é inventado ou completado por aproximação: sem item correspondente, a
 espécie fica como "não encontrada"; uma imagem sem licença declarada não é
@@ -33,6 +35,13 @@ WIKIDATA_ENTIDADE = "https://www.wikidata.org/wiki/Special:EntityData/{id}.json"
 WIKIPEDIA_API = "https://{idioma}.wikipedia.org/w/api.php"
 WIKIPEDIA_RESUMO = "https://{idioma}.wikipedia.org/api/rest_v1/page/summary/{titulo}"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+# Flora e Funga do Brasil no Wikidata (observado em 2026-11): a propriedade é a
+# P10701 ("Reflora ID"; formatter URL https://floradobrasil.jbrj.gov.br/$1;
+# formato FB[0-9]{2,6}). Valores reais: Licania tomentosa Q9022290 = FB16857,
+# Handroanthus impetiginosus Q3266951 = FB114086. O URL do modelo vem desse
+# formatter (ver FLORA_BRASIL_URL em models.py).
+PROPRIEDADE_FLORA_BRASIL = "P10701"
+FORMATO_FLORA_BRASIL = re.compile(r"FB\d{2,6}")
 IDIOMAS = ("pt", "en")
 LARGURA_IMAGEM = 960
 MAX_CANDIDATOS = 5
@@ -309,8 +318,11 @@ def consultar(nome_cientifico: str) -> Referencias:
     if entidade is None:
         return Referencias(False, "Nenhum item do Wikidata com este nome científico exato (P225).")
     gbif = _valor(entidade, "P846")
+    flora = str(_valor(entidade, PROPRIEDADE_FLORA_BRASIL) or "").strip()
     campos = {
         "wikidata_id": entidade["id"],
+        # Só aceita o formato documentado; qualquer outra coisa é descartada.
+        "flora_brasil_id": flora if FORMATO_FLORA_BRASIL.fullmatch(flora) else "",
         "gbif_id": int(gbif) if gbif and str(gbif).isdigit() else None,
         **_wikipedia(sessao, entidade, nome_cientifico),
         **_imagem(sessao, entidade),
@@ -334,6 +346,7 @@ CAMPOS_REFERENCIA = (
     "wikipedia_descricao",
     "wikipedia_resumo",
     "gbif_id",
+    "flora_brasil_id",
     "imagem_url",
     "imagem_pagina_url",
     "imagem_autor",
