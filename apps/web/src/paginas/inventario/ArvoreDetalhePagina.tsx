@@ -47,6 +47,8 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
 import { CartaoEspecie } from "../../componentes/especies";
 import { FotoPrincipalArvore } from "../../componentes/FotoPrincipalArvore";
+import type { IdTermo } from "../../ajuda/glossario";
+import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { MiniMapaArvore } from "../../componentes/MiniMapaArvore";
 import { SeletorLocalizacao, type Ponto } from "../../componentes/SeletorLocalizacao";
@@ -266,10 +268,21 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
   );
 }
 
-function Item({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+function Item({
+  rotulo,
+  ajuda,
+  children,
+}: {
+  rotulo: string;
+  ajuda?: IdTermo;
+  children: ReactNode;
+}) {
   return (
     <div>
-      <dt className="text-xs font-medium tracking-wide text-texto-suave uppercase">{rotulo}</dt>
+      <dt className="text-xs font-medium tracking-wide text-texto-suave uppercase">
+        {rotulo}
+        {ajuda && <AjudaTermo id={ajuda} className="ml-1 normal-case" />}
+      </dt>
       <dd className="mt-0.5 text-sm">{children}</dd>
     </div>
   );
@@ -291,7 +304,7 @@ function Resumo({ arvore }: { arvore: Arvore }) {
               <SeloEspecie estado={arvore.especie_estado ?? "nao_identificada"} />
             </div>
           </Item>
-          <Item rotulo="Localização">
+          <Item rotulo="Localização" ajuda="origem_localizacao">
             {arvore.localizacao ? (
               <span className="font-mono text-xs">
                 {formatarPontoGeografico(arvore.localizacao.latitude, arvore.localizacao.longitude)}
@@ -358,7 +371,7 @@ function Resumo({ arvore }: { arvore: Arvore }) {
             <Item rotulo="Cadastrado por">{arvore.criado_por_nome || "—"}</Item>
             <Item rotulo="Cadastrado em">{formatarDataHora(arvore.criado_em)}</Item>
             <Item rotulo="Última alteração">{formatarDataHora(arvore.atualizado_em)}</Item>
-            <Item rotulo="Condição aparente">
+            <Item rotulo="Condição aparente" ajuda="condicao_aparente">
               {arvore.condicao_aparente ? (
                 <>
                   {ROTULOS_CONDICAO[arvore.condicao_aparente as keyof typeof ROTULOS_CONDICAO]}
@@ -665,6 +678,7 @@ function SugestoesIA({ arvore }: { arvore: Arvore }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">Sugestão de espécie</span>
                 <Selo tom="info">Sugestão de IA</Selo>
+                <AjudaTermo id="sugestao_ia" />
                 <Selo
                   tom={
                     s.decisao === "aceita"

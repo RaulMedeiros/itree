@@ -16,6 +16,7 @@ import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
+import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { Carregando, Erro, ListaVazia } from "../../ui/estados";
 import { contarFiltros } from "../../util/filtros";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
@@ -241,7 +242,9 @@ export function OcorrenciasPagina() {
                 <Th>Tipo e descrição</Th>
                 <Th>Local</Th>
                 <Th>Estado</Th>
-                <Th>Prioridade</Th>
+                <Th>
+                  Prioridade <AjudaTermo id="prioridade_operacional" />
+                </Th>
                 <Th>Responsável</Th>
                 <Th>Prazo</Th>
               </tr>

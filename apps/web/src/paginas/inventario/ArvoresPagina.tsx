@@ -18,6 +18,7 @@ import { Download, Map as IconeMapa, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
+import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { SeloEspecie, SeloLocalizacao, nomeEspecie } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
@@ -184,9 +185,7 @@ export function ArvoresPagina() {
             <span>
               <strong>{contadores.data.data.total.toLocaleString("pt-BR")}</strong> registros ·{" "}
               <strong>{contadores.data.data.validos.toLocaleString("pt-BR")}</strong> válidos{" "}
-              <span title="Válido: ativo, com localização e origem da localização conhecida (RN-INV-001, provisório até DP-14).">
-                (o que é válido?)
-              </span>
+              <AjudaTermo id="registro_valido" />
             </span>
           ) : (
             "Cadastro individual georreferenciado, no seu escopo territorial."

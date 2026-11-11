@@ -1,5 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, CircleHelp, LogOut } from "lucide-react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { ROTULOS_PAPEL } from "@itree/domain";
 import { useAuth } from "react-oidc-context";
@@ -53,6 +53,16 @@ export function Shell() {
                 {!m.entregue && <span className="text-[11px] text-barra-suave">{m.fase}</span>}
               </Link>
             ))}
+          </nav>
+          <nav aria-label="Ajuda" className="mt-auto border-t border-white/10 p-3">
+            <Link
+              to="/ajuda"
+              className="relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-barra-suave hover:bg-white/10 hover:text-barra-texto focus-visible:outline-white"
+              activeProps={{ className: "bg-barra-ativo font-medium text-barra-texto!" }}
+            >
+              <CircleHelp className="size-4 shrink-0" aria-hidden />
+              <span className="flex-1">Ajuda</span>
+            </Link>
           </nav>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">

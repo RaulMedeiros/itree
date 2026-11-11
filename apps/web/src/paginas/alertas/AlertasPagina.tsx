@@ -10,6 +10,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { RAIO_PADRAO_M, SeletorRaio, type RaioM } from "./raio";
+import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { Botao } from "../../ui/botao";
@@ -191,7 +192,9 @@ export function AlertasPagina() {
             <thead>
               <tr>
                 <Th>Alerta</Th>
-                <Th>Fonte e tipo</Th>
+                <Th>
+                  Fonte e tipo <AjudaTermo id="fonte_externa" />
+                </Th>
                 <Th>Detecção (fonte)</Th>
                 <Th>Ingestão</Th>
                 <Th>Bairros</Th>

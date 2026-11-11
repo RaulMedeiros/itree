@@ -2,6 +2,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { MapPin } from "lucide-react";
 
 import { useUsuario } from "../acesso/ContextoUsuario";
+import { AjudaTermo } from "../componentes/AjudaTermo";
 import { Selecao } from "../ui/campos";
 import { Selo } from "../ui/selo";
 import { temSeletorDeTerritorio, useTerritorioAtivo } from "./territorio";
@@ -31,6 +32,7 @@ export function SeletorTerritorio() {
         ) : (
           <Selo tom="atencao">Sem escopo territorial atribuído</Selo>
         )}
+        <AjudaTermo id="escopo_territorial" />
       </div>
     );
   }
@@ -72,6 +74,7 @@ export function SeletorTerritorio() {
             ))}
         </Selecao>
       </label>
+      <AjudaTermo id="escopo_territorial" />
     </div>
   );
 }

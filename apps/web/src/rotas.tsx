@@ -45,6 +45,7 @@ import { VisaoGeralPagina } from "./paginas/visao-geral/VisaoGeralPagina";
 import { AlertaDetalhePagina } from "./paginas/alertas/AlertaDetalhePagina";
 import { AlertasPagina } from "./paginas/alertas/AlertasPagina";
 import { AnalisesPagina } from "./paginas/analises/AnalisesPagina";
+import { AjudaPagina } from "./paginas/ajuda/AjudaPagina";
 import { NotificacoesPagina } from "./paginas/notificacoes/NotificacoesPagina";
 import { IntegracoesPagina } from "./paginas/administracao/IntegracoesPagina";
 import { QualidadePagina } from "./paginas/inventario/QualidadePagina";
@@ -569,6 +570,12 @@ const notificacoes = createRoute({
   component: NotificacoesPagina,
 });
 
+const ajuda = createRoute({
+  getParentRoute: () => autenticado,
+  path: "ajuda",
+  component: AjudaPagina,
+});
+
 const arvore = raiz.addChildren([
   autenticado.addChildren([
     inicio,
@@ -601,6 +608,7 @@ const arvore = raiz.addChildren([
     alertas.addChildren([alertasLista, alertaDetalhe]),
     analises,
     notificacoes,
+    ajuda,
     ...modulosFuturos,
   ]),
 ]);
