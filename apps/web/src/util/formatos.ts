@@ -77,3 +77,8 @@ export function mascararDataBr(texto: string): string {
   if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
   return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
 }
+
+/** Graus decimais com vírgula decimal (pt-BR), seis casas. */
+export function formatarCoordenada(valor: number): string {
+  return valor.toLocaleString("pt-BR", { minimumFractionDigits: 6, maximumFractionDigits: 6 });
+}
