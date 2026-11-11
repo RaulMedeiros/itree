@@ -294,6 +294,9 @@ describe("áreas verdes (praças, parques e unidades de conservação)", () => {
     await vi.waitFor(() => expect(visibilidades(mapa, true)).toBe(true));
 
     const legenda = screen.getByRole("region", { name: "Legenda" });
+    // Com o painel de camadas aberto, a legenda começa recolhida (C-09).
+    const alternar = within(legenda).getByRole("button", { name: /Legenda/ });
+    if (alternar.getAttribute("aria-expanded") === "false") await usuario.click(alternar);
     expect(within(legenda).getByText("Áreas verdes — tipo")).toBeInTheDocument();
     for (const tipo of ["Praça", "Parque urbano", "Unidade de conservação"])
       expect(within(legenda).getByText(tipo)).toBeInTheDocument();
