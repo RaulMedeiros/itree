@@ -111,6 +111,7 @@ export * from './loteImportacaoDetalhe';
 export * from './loteSincronizacaoRequest';
 export * from './loteSincronizacaoRequestInspecoesItem';
 export * from './mapaAlertas200';
+export * from './mapaAlertasParams';
 export * from './mapaBuscaParams';
 export * from './mapaTileParams';
 export * from './medida';

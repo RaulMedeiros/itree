@@ -1881,6 +1881,11 @@ paths:
       operationId: mapa_alertas
       description: Alertas ambientais em aberto como GeoJSON (polígonos e pontos),
         com escopo.
+      parameters:
+      - in: query
+        name: bairro
+        schema:
+          type: string
       tags:
       - mapa
       security:

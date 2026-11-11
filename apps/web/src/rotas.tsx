@@ -463,6 +463,7 @@ const alertasLista = createRoute({
   validateSearch: z.object({
     status: textoOpcional,
     fonte: z.enum(["inpe_focos", "inpe_deter", "mapbiomas"]).optional().catch(undefined),
+    bairro: textoOpcional,
     deteccao_desde: dataOpcionalF2,
     deteccao_ate: dataOpcionalF2,
     ordem: z

@@ -1,8 +1,14 @@
-import { FonteAlertaEnum, StatusAlertaEnum, useAlertasListar } from "@itree/api-client";
+import {
+  FonteAlertaEnum,
+  StatusAlertaEnum,
+  useAlertasListar,
+  useTerritoriosListar,
+} from "@itree/api-client";
 import { ROTULOS_FONTE_ALERTA, ROTULOS_STATUS_ALERTA, ROTULOS_TIPO_ALERTA } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
+import { useBairroDoFiltro } from "../../layout/territorio";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
@@ -25,6 +31,7 @@ const RAIO_M = 100;
 export interface BuscaAlertas {
   status?: string;
   fonte?: FonteAlertaEnum;
+  bairro?: string;
   deteccao_desde?: string;
   deteccao_ate?: string;
   /** Ausente = mais recentes primeiro. */
@@ -65,8 +72,11 @@ export function AbasOcorrencias({ ativa }: { ativa: "ocorrencias" | "alertas" })
 export function AlertasPagina() {
   const filtros = useSearch({ from: "/autenticado/alertas/" });
   const navegar = useNavigate({ from: "/alertas/" });
+  const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
+  const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
   const consulta = useAlertasListar({
     ...filtros,
+    bairro,
     status: filtros.status ?? "abertos",
     ordem: filtros.ordem,
     tamanho: TAMANHO,
@@ -113,6 +123,22 @@ export function AlertasPagina() {
           {Object.values(FonteAlertaEnum).map((f) => (
             <option key={f} value={f}>
               {ROTULOS_FONTE_ALERTA[f]}
+            </option>
+          ))}
+        </Selecao>
+        <Selecao
+          aria-label="Bairro"
+          value={bairro ?? ""}
+          onChange={(e) => {
+            filtrar({ bairro: e.target.value || undefined });
+            aoEscolherBairro(e.target.value);
+          }}
+          className="max-w-48"
+        >
+          <option value="">Todos os bairros</option>
+          {bairros.data?.data.results.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.nome}
             </option>
           ))}
         </Selecao>

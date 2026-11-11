@@ -183,6 +183,15 @@ FILTROS = [
 PARAMETRO_RAIO = OpenApiParameter(
     "raio", int, description="Raio, em metros, das árvores e ocorrências próximas (1 a 1000; 100)."
 )
+
+
+def filtrar_por_bairro(qs, bairro):
+    """Alertas cuja geometria intersecta o bairro (``bairros`` é gravado na ingestão)."""
+    if not bairro:
+        return qs
+    return qs.filter(bairros__contains=[{"id": str(uuid_do_parametro(bairro, "bairro"))}])
+
+
 ORDENS = {
     "data_deteccao": ("data_deteccao", "numero"),
     "-data_deteccao": ("-data_deteccao", "-numero"),
@@ -236,8 +245,7 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
         for campo in ("fonte", "tipo"):
             if valor := p.get(campo):
                 qs = qs.filter(**{campo: valor})
-        if bairro := p.get("bairro"):
-            qs = qs.filter(bairros__contains=[{"id": str(uuid_do_parametro(bairro, "bairro"))}])
+        qs = filtrar_por_bairro(qs, p.get("bairro"))
         if v := p.get("deteccao_desde"):
             qs = qs.filter(data_deteccao__date__gte=v)
         if v := p.get("deteccao_ate"):
@@ -400,6 +408,7 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
 # Geometrias para o mapa (polígonos e pontos), com escopo.
 def alertas_geojson(usuario, params) -> dict:
     qs = filtrar_por_escopo(AlertaAmbiental.objects.exclude(status__in=FINAIS_ALERTA), usuario)
+    qs = filtrar_por_bairro(qs, params.get("bairro"))
     qs = qs.annotate(g=AsGeoJSON("geom", precision=6))[:5000]
     return {
         "type": "FeatureCollection",

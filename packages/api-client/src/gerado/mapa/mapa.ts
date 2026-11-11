@@ -27,6 +27,7 @@ import type {
 import type {
   Camadas,
   MapaAlertas200,
+  MapaAlertasParams,
   MapaBuscaParams,
   MapaTileParams,
   ResultadoBusca,
@@ -69,20 +70,27 @@ export type mapaAlertasResponseSuccess = (mapaAlertasResponse200) & {
 
 export type mapaAlertasResponse = (mapaAlertasResponseSuccess)
 
-export const getMapaAlertasUrl = () => {
+export const getMapaAlertasUrl = (params?: MapaAlertasParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/mapa/alertas`
+  return stringifiedParams.length > 0 ? `/api/v1/mapa/alertas?${stringifiedParams}` : `/api/v1/mapa/alertas`
 }
 
 /**
  * Alertas ambientais em aberto como GeoJSON (polígonos e pontos), com escopo.
  */
-export const mapaAlertas = async ( options?: Parameters<typeof requisicao>[1]): Promise<mapaAlertasResponse> => {
+export const mapaAlertas = async (params?: MapaAlertasParams, options?: Parameters<typeof requisicao>[1]): Promise<mapaAlertasResponse> => {
 
-  return requisicao<mapaAlertasResponse>(getMapaAlertasUrl(),
+  return requisicao<mapaAlertasResponse>(getMapaAlertasUrl(params),
   {
     ...options,
     method: 'GET'
@@ -95,23 +103,23 @@ export const mapaAlertas = async ( options?: Parameters<typeof requisicao>[1]): 
 
 
 
-export const getMapaAlertasQueryKey = () => {
+export const getMapaAlertasQueryKey = (params?: MapaAlertasParams,) => {
     return [
-    `/api/v1/mapa/alertas`
+    `/api/v1/mapa/alertas`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getMapaAlertasQueryOptions = <TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+export const getMapaAlertasQueryOptions = <TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>(params?: MapaAlertasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getMapaAlertasQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getMapaAlertasQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof mapaAlertas>>> = ({ signal }) => mapaAlertas({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof mapaAlertas>>> = ({ signal }) => mapaAlertas(params, { signal, ...requestOptions });
 
 
 
@@ -125,7 +133,7 @@ export type MapaAlertasQueryError = unknown
 
 
 export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>> & Pick<
+ params: undefined |  MapaAlertasParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof mapaAlertas>>,
           TError,
@@ -135,7 +143,7 @@ export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, 
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>> & Pick<
+ params?: MapaAlertasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof mapaAlertas>>,
           TError,
@@ -145,16 +153,16 @@ export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, 
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ params?: MapaAlertasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useMapaAlertas<TData = Awaited<ReturnType<typeof mapaAlertas>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ params?: MapaAlertasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaAlertas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getMapaAlertasQueryOptions(options)
+  const queryOptions = getMapaAlertasQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

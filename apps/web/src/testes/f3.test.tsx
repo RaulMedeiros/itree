@@ -68,9 +68,21 @@ const ALERTA: Alerta = {
 
 const triagens: unknown[] = [];
 const pedidosLista: (string | null)[] = [];
+const parametrosLista: URLSearchParams[] = [];
 
 const servidor = setupServer(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(ANALISTA)),
+  http.get(`${API}/api/v1/territorios`, () =>
+    HttpResponse.json({
+      count: 2,
+      next: null,
+      previous: null,
+      results: [
+        { id: "b-1", nome: "Aldeota", tipo: "bairro" },
+        { id: "b-2", nome: "Meireles", tipo: "bairro" },
+      ],
+    }),
+  ),
   http.get(`${API}/api/v1/alertas/ingestoes`, () => HttpResponse.json([])),
   http.get(`${API}/api/v1/alertas/al-1`, () => HttpResponse.json(ALERTA)),
   http.get(`${API}/api/v1/alertas/al-1/arvores-proximas`, () =>
@@ -86,7 +98,9 @@ const servidor = setupServer(
     ]),
   ),
   http.get(`${API}/api/v1/alertas`, ({ request }) => {
-    pedidosLista.push(new URL(request.url).searchParams.get("ordem"));
+    const { searchParams } = new URL(request.url);
+    pedidosLista.push(searchParams.get("ordem"));
+    parametrosLista.push(searchParams);
     return HttpResponse.json({ count: 1, next: null, previous: null, results: [ALERTA] });
   }),
   http.get(`${API}/api/v1/alertas/al-1/historico`, () => HttpResponse.json([])),
@@ -104,6 +118,8 @@ afterEach(() => {
   servidor.resetHandlers();
   triagens.length = 0;
   pedidosLista.length = 0;
+  parametrosLista.length = 0;
+  localStorage.clear();
 });
 afterAll(() => servidor.close());
 
@@ -181,5 +197,31 @@ describe("alertas ambientais", () => {
     expect(screen.getByText("1 aberta a até 100 m")).toBeInTheDocument();
     await usuario.click(screen.getByRole("button", { name: "Árvores a até 100 m" }));
     await vi.waitFor(() => expect(pedidosLista).toContain("-arvores_proximas"));
+  });
+  it("aplica o território do cabeçalho como filtro de bairro, como nas ocorrências", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({
+          ...ANALISTA,
+          territorios: [
+            { id: "b-1", nome: "Aldeota", tipo: "bairro" },
+            { id: "b-2", nome: "Meireles", tipo: "bairro" },
+          ],
+        }),
+      ),
+    );
+    localStorage.setItem("itree:territorio-ativo:u-ana", "b-2");
+    const { criarRoteador } = await import("../rotas");
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <RouterProvider
+          router={criarRoteador(createMemoryHistory({ initialEntries: ["/alertas"] }))}
+        />
+      </QueryClientProvider>,
+    );
+    await vi.waitFor(() => expect(parametrosLista.at(-1)?.get("bairro")).toBe("b-2"));
+    expect(await screen.findByRole("combobox", { name: "Bairro" })).toHaveValue("b-2");
   });
 });
