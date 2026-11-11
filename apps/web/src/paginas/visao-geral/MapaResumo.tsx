@@ -103,6 +103,14 @@ export function MapaResumo() {
             {ROTULOS_CONDICAO[c]}
           </li>
         ))}
+        <li className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="inline-block size-3.5 shrink-0 rounded-full border-[3px] bg-white"
+            style={{ borderColor: CORES_CONDICAO.ruim }}
+          />
+          Grupo: o anel mostra a pior condição
+        </li>
       </ul>
     </section>
   );

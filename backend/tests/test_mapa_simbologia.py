@@ -34,3 +34,33 @@ def test_geojson_de_bairros_traz_ponto_de_rotulo_dentro_do_poligono(cliente, rev
         assert territorios["a" if f["properties"]["nome"] == "Bairro A" else "b"].geom.contains(
             Point(lon, lat, srid=4326)
         )
+
+
+def _grupo_em_zoom_baixo(cliente, condicoes):
+    """Cria uma árvore por condição na mesma célula e devolve o conteúdo do tile agrupado."""
+    for c in condicoes:
+        a = Arvore.objects.create(
+            geom=Point(PONTO_A["longitude"], PONTO_A["latitude"], srid=4326),
+            condicao_aparente=c,
+        )
+        assert a.pk
+    x, y = _tile(PONTO_A["longitude"], PONTO_A["latitude"], 10)
+    return cliente.get(f"/api/v1/mapa/tiles/arvores/10/{x}/{y}").content
+
+
+def test_grupo_de_arvores_traz_a_pior_condicao(cliente, revisor):
+    cliente.como(revisor)
+    # Os valores de condição só aparecem no tile via `pior_condicao` (grupo não leva `condicao`).
+    conteudo = _grupo_em_zoom_baixo(cliente, ["boa", "ruim", "morta"])
+    assert b"pior_condicao" in conteudo and b"morta" in conteudo
+    assert b"ruim" not in conteudo and b"boa" not in conteudo
+
+
+def test_grupo_sem_morta_indica_ruim(cliente, revisor):
+    conteudo = _grupo_em_zoom_baixo(cliente.como(revisor), ["boa", "regular", "ruim"])
+    assert b"ruim" in conteudo and b"morta" not in conteudo and b"regular" not in conteudo
+
+
+def test_grupo_so_de_nao_avaliadas(cliente, revisor):
+    conteudo = _grupo_em_zoom_baixo(cliente.como(revisor), ["", ""])
+    assert b"pior_condicao" in conteudo and b"nao_avaliada" in conteudo

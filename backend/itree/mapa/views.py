@@ -72,6 +72,12 @@ def _filtros_ocorrencias(params) -> tuple[str, dict]:
     return "".join(f" AND {c}" for c in clausulas), valores
 
 
+# Da menos para a mais grave; o índice (base 1) é o rank usado na agregação por célula.
+_CONDICOES_POR_GRAVIDADE = ["nao_avaliada", "boa", "regular", "ruim", "morta"]
+_RANK_CONDICAO = " ".join(f"WHEN '{c}' THEN {i}" for i, c in enumerate(_CONDICOES_POR_GRAVIDADE, 1))
+_NOMES_CONDICAO = ", ".join(f"'{c}'" for c in _CONDICOES_POR_GRAVIDADE)
+SQL_PIOR_CONDICAO = f"(ARRAY[{_NOMES_CONDICAO}])[max(CASE condicao {_RANK_CONDICAO} ELSE 1 END)]"
+
 CAMADAS = {
     "arvores": {
         "permissao": "mapa.ler",
@@ -171,6 +177,10 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
             f"CASE WHEN count(*) = 1 THEN (array_agg({p}))[1] END AS {p}"
             for p in (c.strip() for c in definicao["propriedades"].split(","))
         )
+        # Grupos de árvores indicam a pior condição contida (morta > ruim > regular > boa
+        # > nao_avaliada), para o anel do grupo não esconder concentrações de problema.
+        if camada == "arvores":
+            individuais += f",\n                   {SQL_PIOR_CONDICAO} AS pior_condicao"
         selecao = f"""
             SELECT count(*)::int AS quantidade,
                    {individuais},
