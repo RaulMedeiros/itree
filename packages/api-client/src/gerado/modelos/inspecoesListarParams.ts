@@ -11,11 +11,13 @@ export type InspecoesListarParams = {
   /** AAAA-MM-DD */
   ate?: string;
   bairro?: string;
+  /** Uma ou mais condições, separadas por vírgula. */
+  condicao?: string;
   /** AAAA-MM-DD (data da inspeção) */
   desde?: string;
   /** Um ou mais, separados por vírgula. */
   estado?: string;
-  /** realizada_em ou -realizada_em (padrão) */
+  /** realizada_em, recebida_em ou condicao (da pior para a melhor), com '-' na frente para inverter. Padrão: -realizada_em. */
   ordenar?: string;
   /** Um número de página dentro do conjunto de resultados paginado. */
   pagina?: number;

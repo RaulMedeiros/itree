@@ -209,6 +209,44 @@ describe("inspeções", () => {
     expect(screen.getAllByText(/aguarda há \d+ dias/).length).toBe(2);
   });
 
+  it("a fila abre pelas mais antigas e ordena e filtra por condição e por encaminhamento", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inspecoes");
+    await screen.findByText("INS-000001");
+    const ultima = () => consultasInspecoes[consultasInspecoes.length - 1]!;
+    expect(ultima().get("estado")).toBe("em_revisao");
+    expect(ultima().get("ordenar")).toBe("recebida_em");
+    expect(ultima().get("requer_encaminhamento")).toBeNull();
+
+    await usuario.selectOptions(screen.getByLabelText("Ordenar por"), "condicao");
+    await vi.waitFor(() => expect(ultima().get("ordenar")).toBe("condicao"));
+    await usuario.selectOptions(screen.getByLabelText("Condição aparente"), "ruim");
+    await vi.waitFor(() => expect(ultima().get("condicao")).toBe("ruim"));
+    await usuario.click(screen.getByRole("checkbox", { name: "Requer encaminhamento" }));
+    await vi.waitFor(() => expect(ultima().get("requer_encaminhamento")).toBe("true"));
+    // Os três filtros valem juntos.
+    expect(ultima().get("ordenar")).toBe("condicao");
+    expect(ultima().get("condicao")).toBe("ruim");
+  });
+
+  it('mostra "chegou hoje" só para quem chegou hoje', async () => {
+    const agora = new Date().toISOString();
+    servidor.use(
+      http.get(`${API}/api/v1/inspecoes`, () =>
+        HttpResponse.json(
+          pagina([
+            { ...inspecao("i-1", "INS-000001", []), recebida_em: agora },
+            inspecao("i-2", "INS-000002", []),
+          ]),
+        ),
+      ),
+    );
+    await abrir("/inspecoes");
+    await screen.findByText("INS-000001");
+    expect(screen.getAllByText("chegou hoje")).toHaveLength(1);
+    expect(screen.getAllByText(/aguarda há \d+ dias/)).toHaveLength(1);
+  });
+
   it('com "requer encaminhamento", "Validar e encaminhar" é a ação principal e abre a ocorrência', async () => {
     const usuario = userEvent.setup();
     servidor.use(

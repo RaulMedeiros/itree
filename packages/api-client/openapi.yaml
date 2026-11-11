@@ -1686,6 +1686,11 @@ paths:
         schema:
           type: string
       - in: query
+        name: condicao
+        schema:
+          type: string
+        description: Uma ou mais condições, separadas por vírgula.
+      - in: query
         name: desde
         schema:
           type: string
@@ -1699,7 +1704,8 @@ paths:
         name: ordenar
         schema:
           type: string
-        description: realizada_em ou -realizada_em (padrão)
+        description: 'realizada_em, recebida_em ou condicao (da pior para a melhor),
+          com ''-'' na frente para inverter. Padrão: -realizada_em.'
       - name: pagina
         required: false
         in: query

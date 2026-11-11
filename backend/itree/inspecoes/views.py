@@ -1,3 +1,4 @@
+from django.db.models import Case, IntegerField, Value, When
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from pghistory.models import Events
@@ -12,7 +13,7 @@ from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
 
 from . import servicos
-from .models import EstadoInspecao, Inspecao
+from .models import CondicaoAparente, EstadoInspecao, Inspecao
 from .serializers import (
     DevolucaoSerializer,
     EncaminhamentoResultadoSerializer,
@@ -35,8 +36,40 @@ FILTROS = [
     OpenApiParameter("desde", str, description="AAAA-MM-DD (data da inspeção)"),
     OpenApiParameter("ate", str, description="AAAA-MM-DD"),
     OpenApiParameter("requer_encaminhamento", bool),
-    OpenApiParameter("ordenar", str, description="realizada_em ou -realizada_em (padrão)"),
+    OpenApiParameter("condicao", str, description="Uma ou mais condições, separadas por vírgula."),
+    OpenApiParameter(
+        "ordenar",
+        str,
+        description="realizada_em, recebida_em ou condicao (da pior para a melhor), com '-' "
+        "na frente para inverter. Padrão: -realizada_em.",
+    ),
 ]
+
+ORDENACOES = {"realizada_em", "recebida_em"}
+# Da pior condição para a melhor; "não avaliada" por último.
+ESCALA_CONDICAO = [
+    CondicaoAparente.MORTA,
+    CondicaoAparente.RUIM,
+    CondicaoAparente.REGULAR,
+    CondicaoAparente.BOA,
+    CondicaoAparente.NAO_AVALIADA,
+]
+
+
+def ordenar_inspecoes(qs, ordem: str):
+    """Ordenação da listagem; valor desconhecido cai no padrão (mais recentes primeiro)."""
+    descendente = ordem.startswith("-")
+    campo = ordem.lstrip("-")
+    if campo == "condicao":
+        peso = Case(
+            *[When(condicao_aparente=c, then=Value(i)) for i, c in enumerate(ESCALA_CONDICAO)],
+            default=Value(len(ESCALA_CONDICAO)),
+            output_field=IntegerField(),
+        )
+        return qs.order_by(peso.desc() if descendente else peso.asc(), "recebida_em")
+    if campo in ORDENACOES:
+        return qs.order_by(ordem, "numero")
+    return qs.order_by("-realizada_em")
 
 
 @extend_schema_view(
@@ -83,8 +116,9 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
             qs = qs.filter(realizada_em__date__lte=ate)
         if p.get("requer_encaminhamento") == "true":
             qs = qs.filter(requer_encaminhamento=True)
-        ordem = p.get("ordenar", "-realizada_em")
-        return qs.order_by(ordem if ordem in ("realizada_em", "-realizada_em") else "-realizada_em")
+        if condicao := p.get("condicao"):
+            qs = qs.filter(condicao_aparente__in=condicao.split(","))
+        return ordenar_inspecoes(qs, p.get("ordenar", "-realizada_em"))
 
     @extend_schema(
         operation_id="inspecoes_sincronizar",

@@ -14,7 +14,15 @@ import { contar, diasDesde, formatarDataHora } from "../../util/formatos";
 
 const TAMANHO = 50;
 
-/** Tempo na fila de revisão, em dias corridos. */
+/** Ordenações oferecidas. A fila abre pelas mais antigas; o histórico, pelas mais recentes. */
+const ORDENACOES = [
+  { valor: "recebida_em", rotulo: "Mais antigas primeiro" },
+  { valor: "-recebida_em", rotulo: "Mais recentes primeiro" },
+  { valor: "condicao", rotulo: "Pior condição primeiro" },
+  { valor: "-realizada_em", rotulo: "Última realizada primeiro" },
+] as const;
+
+/** Tempo na fila de revisão, em dias corridos. "Chegou hoje" só aparece para quem chegou hoje. */
 function aguardaHa(dias: number): string {
   if (dias <= 0) return "chegou hoje";
   return `aguarda há ${contar(dias, "dia", "dias")}`;
@@ -25,6 +33,9 @@ export interface BuscaInspecoes {
   bairro?: string;
   desde?: string;
   ate?: string;
+  condicao?: string;
+  requer_encaminhamento?: "true";
+  ordenar?: string;
   pagina?: number;
 }
 
@@ -32,13 +43,20 @@ export function InspecoesPagina() {
   const filtros = useSearch({ from: "/autenticado/inspecoes/" });
   const navegar = useNavigate({ from: "/inspecoes/" });
   const fila = (filtros.estado ?? "em_revisao") === "em_revisao";
+  const ordenacao = ORDENACOES.some((o) => o.valor === filtros.ordenar)
+    ? (filtros.ordenar as string)
+    : fila
+      ? "recebida_em"
+      : "-realizada_em";
   const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
   const consulta = useInspecoesListar({
     ...filtros,
     bairro,
     estado: filtros.estado ?? "em_revisao",
-    // A fila é atendida por ordem de chegada; o histórico, do mais recente.
-    ordenar: fila ? "realizada_em" : "-realizada_em",
+    condicao: filtros.condicao,
+    requer_encaminhamento: filtros.requer_encaminhamento === "true" ? true : undefined,
+    // A fila é atendida pelas que esperam há mais tempo; o histórico abre pelas mais recentes.
+    ordenar: ordenacao,
     tamanho: TAMANHO,
   });
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
@@ -81,6 +99,42 @@ export function InspecoesPagina() {
           {bairros.data?.data.results.map((b) => (
             <option key={b.id} value={b.id}>
               {b.nome}
+            </option>
+          ))}
+        </Selecao>
+        <Selecao
+          aria-label="Condição aparente"
+          value={filtros.condicao ?? ""}
+          onChange={(e) => filtrar({ condicao: e.target.value || undefined })}
+          className="max-w-52"
+        >
+          <option value="">Todas as condições</option>
+          {Object.entries(ROTULOS_CONDICAO).map(([valor, rotulo]) => (
+            <option key={valor} value={valor}>
+              {rotulo}
+            </option>
+          ))}
+        </Selecao>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="size-4 accent-marca"
+            checked={filtros.requer_encaminhamento === "true"}
+            onChange={(e) =>
+              filtrar({ requer_encaminhamento: e.target.checked ? "true" : undefined })
+            }
+          />
+          Requer encaminhamento
+        </label>
+        <Selecao
+          aria-label="Ordenar por"
+          value={ordenacao}
+          onChange={(e) => filtrar({ ordenar: e.target.value })}
+          className="max-w-56"
+        >
+          {ORDENACOES.map((o) => (
+            <option key={o.valor} value={o.valor}>
+              {o.rotulo}
             </option>
           ))}
         </Selecao>
