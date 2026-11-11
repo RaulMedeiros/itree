@@ -249,6 +249,9 @@ REFERENCIAS_INTERVALO_SEGUNDOS = env.float("REFERENCIAS_INTERVALO_SEGUNDOS", def
 # lidas criadas há mais de NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS.
 NOTIFICACOES_RETENCAO_LIDAS_DIAS = env.int("NOTIFICACOES_RETENCAO_LIDAS_DIAS", default=90)
 NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS = env.int("NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS", default=365)
+# Áreas verdes (Fortaleza em Mapas): reimportação mensal e aviso de fonte desatualizada
+# quando a última importação passa deste limite (RF-INT-005).
+AREAS_VERDES_IDADE_MAXIMA_DIAS = env.int("AREAS_VERDES_IDADE_MAXIMA_DIAS", default=60)
 CELERY_BEAT_SCHEDULE = {
     "limpar-notificacoes": {
         "task": "itree.notificacoes.tasks.limpar_notificacoes_antigas",
@@ -262,6 +265,10 @@ CELERY_BEAT_SCHEDULE = {
     "atualizar-referencias-especies": {
         "task": "itree.inventario.tasks.atualizar_referencias_antigas",
         "schedule": crontab(minute=30, hour=3, day_of_month=1),
+    },
+    "reimportar-areas-verdes": {
+        "task": "itree.areas_verdes.tasks.reimportar_areas_verdes",
+        "schedule": crontab(minute=0, hour=4, day_of_month=2),
     },
     **(
         {

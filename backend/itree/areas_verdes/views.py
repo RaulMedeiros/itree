@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from itree.contas.acesso import filtrar_por_escopo, requer
 
 from .models import AreaVerde, TipoAreaVerde
+from .servico import situacao_da_fonte
 
 PARAMETROS = [
     OpenApiParameter("tipo", str, description="praca | parque | unidade_conservacao"),
@@ -99,7 +100,14 @@ class AreaVerdeViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request: Request, *args, **kwargs) -> Response:
         """FeatureCollection com fonte, licença e datas em cada feição (RN-PROV-003)."""
         feicoes = [_feicao(a) for a in self.get_queryset()]
-        return Response({"type": "FeatureCollection", "features": feicoes})
+        return Response(
+            {
+                "type": "FeatureCollection",
+                "features": feicoes,
+                # Última importação e aviso de fonte desatualizada (RF-INT-005).
+                "situacao_da_fonte": situacao_da_fonte(),
+            }
+        )
 
     def retrieve(self, request: Request, *args, **kwargs) -> Response:
         return Response(_feicao(self.get_object()))

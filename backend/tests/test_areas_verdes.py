@@ -6,7 +6,7 @@ valores e a geometria, inclusive o Z das unidades de conservação.
 """
 
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -20,7 +20,8 @@ from itree.areas_verdes.management.commands.importar_areas_verdes import (
     nome_legivel,
 )
 from itree.areas_verdes.models import AreaVerde
-from itree.areas_verdes.servico import area_verde_do_ponto
+from itree.areas_verdes.servico import area_verde_do_ponto, situacao_da_fonte
+from itree.areas_verdes.tasks import reimportar_areas_verdes
 from itree.contas.models import EscopoUsuario
 from itree.inventario.models import Arvore
 
@@ -422,3 +423,66 @@ def test_ficha_da_arvore_informa_a_area_verde(cliente, importadas, revisor):
     }
     assert c.get(f"/api/v1/arvores/{fora.id}").json()["em_area_verde"] is None
     assert c.get(f"/api/v1/arvores/{sem_geom.id}").json()["em_area_verde"] is None
+
+
+# --- Reimportação mensal e fonte desatualizada (RF-INT-005) ---------------------
+
+
+def _antes(dias):
+    AreaVerde.objects.update(ingerido_em=timezone.now() - timedelta(days=dias))
+
+
+def test_fonte_recente_nao_e_marcada_como_desatualizada(cliente, importadas):
+    _antes(60)  # no limite: ainda vale
+    situacao = cliente.como(_usuario_com_escopo(_fortaleza())).get(URL).json()["situacao_da_fonte"]
+    assert (situacao["dias"], situacao["limite_dias"], situacao["desatualizada"]) == (60, 60, False)
+
+
+def test_fonte_com_mais_de_60_dias_e_marcada_como_desatualizada(cliente, importadas):
+    _antes(61)
+    situacao = cliente.como(_usuario_com_escopo(_fortaleza())).get(URL).json()["situacao_da_fonte"]
+    assert situacao["desatualizada"] is True and situacao["dias"] == 61
+    assert situacao["ultima_importacao"]
+
+
+def test_sem_areas_importadas_nao_ha_aviso(cliente, db):
+    situacao = cliente.como(_usuario_com_escopo(_fortaleza())).get(URL).json()["situacao_da_fonte"]
+    assert situacao["ultima_importacao"] is None and situacao["desatualizada"] is False
+
+
+def test_limite_do_aviso_vem_da_configuracao(cliente, importadas, settings):
+    settings.AREAS_VERDES_IDADE_MAXIMA_DIAS = 10
+    _antes(11)
+    situacao = cliente.como(_usuario_com_escopo(_fortaleza())).get(URL).json()["situacao_da_fonte"]
+    assert situacao["desatualizada"] is True and situacao["limite_dias"] == 10
+
+
+def test_tarefa_mensal_esta_agendada():
+    from config.settings import CELERY_BEAT_SCHEDULE
+
+    agenda = CELERY_BEAT_SCHEDULE["reimportar-areas-verdes"]
+    assert agenda["task"] == "itree.areas_verdes.tasks.reimportar_areas_verdes"
+    assert agenda["schedule"].day_of_month == {2}
+
+
+@responses.activate
+def test_tarefa_reimporta_pela_api_e_renova_a_data(importadas):
+    _antes(90)
+    for mapa, caminho in [(99, PRACAS), (86, PARQUES), (737, UCS)]:
+        responses.get(
+            f"https://mapas.fortaleza.ce.gov.br/api/v1/geojson?id={mapa}",
+            body=Path(caminho).read_text(),
+            content_type="application/json",
+        )
+    reimportar_areas_verdes()
+    assert AreaVerde.objects.count() == 7
+    assert situacao_da_fonte()["desatualizada"] is False
+
+
+@responses.activate
+def test_tarefa_com_falha_da_api_mantem_a_data_antiga_e_o_aviso(importadas):
+    _antes(90)
+    responses.get("https://mapas.fortaleza.ce.gov.br/api/v1/geojson?id=99", status=503)
+    with pytest.raises(CommandError):
+        reimportar_areas_verdes()
+    assert situacao_da_fonte()["desatualizada"] is True
