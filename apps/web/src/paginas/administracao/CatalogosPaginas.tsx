@@ -13,9 +13,10 @@ import {
   type TipoOcorrencia,
 } from "@itree/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw } from "lucide-react";
+import { Pencil, Plus, RefreshCw } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+import { SeloEstadoOcorrencia } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -204,6 +205,16 @@ function EspecieDialogo({ especie, aoFechar }: { especie: Especie | null; aoFech
   );
 }
 
+/** Situações de uma ocorrência na ordem do fluxo, para a legenda de cores. */
+const ORDEM_SITUACOES = [
+  "aberta",
+  "em_triagem",
+  "encaminhada",
+  "em_atendimento",
+  "concluida",
+  "cancelada",
+] as const;
+
 export function TiposOcorrenciaPagina() {
   const consulta = useTiposOcorrenciaListar();
   const [editando, setEditando] = useState<TipoOcorrencia | "novo" | null>(null);
@@ -218,6 +229,17 @@ export function TiposOcorrenciaPagina() {
           </Botao>
         }
       />
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-texto-suave">
+        <span id="legenda-situacoes">Situações das ocorrências, na ordem do fluxo:</span>
+        <ol aria-labelledby="legenda-situacoes" className="flex flex-wrap items-center gap-2">
+          {ORDEM_SITUACOES.map((estado, i) => (
+            <li key={estado} className="flex items-center gap-2">
+              {i > 0 && <span aria-hidden>→</span>}
+              <SeloEstadoOcorrencia estado={estado} />
+            </li>
+          ))}
+        </ol>
+      </div>
       {consulta.isPending ? (
         <Carregando />
       ) : consulta.isError ? (
@@ -236,24 +258,30 @@ export function TiposOcorrenciaPagina() {
               <Th>Tipo</Th>
               <Th>Prazo padrão</Th>
               <Th>Situação</Th>
+              <Th className="text-right">Ação</Th>
             </tr>
           </thead>
           <tbody>
             {consulta.data.data.map((t) => (
               <Linha key={t.id}>
                 <Td>
-                  <button
-                    className="text-left font-medium text-marca-escura hover:underline"
-                    onClick={() => setEditando(t)}
-                  >
-                    {t.nome}
-                  </button>
+                  <p className="font-medium">{t.nome}</p>
                   {t.descricao && <p className="text-xs text-texto-suave">{t.descricao}</p>}
                 </Td>
                 <Td>
                   {t.prazo_padrao_dias ? plural(t.prazo_padrao_dias, "dia") : "Sem prazo padrão"}
                 </Td>
                 <Td>{t.ativo ? <Selo tom="sucesso">Ativo</Selo> : <Selo>Inativo</Selo>}</Td>
+                <Td className="text-right">
+                  <Botao
+                    variante="secundario"
+                    tamanho="pequeno"
+                    aria-label={`Editar ${t.nome}`}
+                    onClick={() => setEditando(t)}
+                  >
+                    <Pencil /> Editar
+                  </Botao>
+                </Td>
               </Linha>
             ))}
           </tbody>

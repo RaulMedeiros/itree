@@ -389,3 +389,39 @@ describe("atribuição a equipe incompleta", () => {
     expect(within(dialogo).queryByRole("note")).toBeNull();
   });
 });
+
+describe("tipos de ocorrência (administração)", () => {
+  it("tem ação Editar explícita por linha e legenda de situações em ordem fixa", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "admin.configuracao"] }),
+      ),
+      http.get(`${API}/api/v1/tipos-ocorrencia`, () =>
+        HttpResponse.json([
+          { id: "t-1", nome: "Risco de queda", descricao: "", prazo_padrao_dias: 1, ativo: true },
+          { id: "t-2", nome: "Poda", descricao: "", prazo_padrao_dias: null, ativo: true },
+        ]),
+      ),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/administracao/tipos-ocorrencia");
+    expect(await screen.findByText("1 dia")).toBeInTheDocument();
+    const legenda = screen.getByRole("list", { name: /Situações das ocorrências/ });
+    expect(
+      within(legenda)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual([
+      "Aberta",
+      "→Em triagem",
+      "→Encaminhada",
+      "→Em atendimento",
+      "→Concluída",
+      "→Cancelada",
+    ]);
+
+    const linha = screen.getByText("Poda").closest("tr")!;
+    await usuario.click(within(linha).getByRole("button", { name: "Editar Poda" }));
+    expect(await screen.findByRole("dialog", { name: /Editar Poda/ })).toBeInTheDocument();
+  });
+});
