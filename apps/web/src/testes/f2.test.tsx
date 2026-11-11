@@ -237,16 +237,16 @@ describe("visão geral: período e comparação (C-06, C-07)", () => {
     const usuario = userEvent.setup();
     await abrir("/visao-geral");
     await screen.findByText("Espécie confirmada");
-    const [de, ate] = screen.getAllByDisplayValue(/^\d{4}-\d{2}-\d{2}$/) as HTMLInputElement[];
-    expect(de!.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(ate!.value).toBe(ate!.value);
+    const br = /^\d{2}\/\d{2}\/\d{4}$/;
+    const iso = (v: string) => v.split("/").reverse().join("-");
+    const [de, ate] = screen.getAllByDisplayValue(br) as HTMLInputElement[];
+    expect(de!.value).toMatch(br);
+    expect(ate!.value).toMatch(br);
     const grupo = screen.getByRole("group", { name: "Atalhos de período" });
     await usuario.click(within(grupo).getByRole("button", { name: "12 meses" }));
     await vi.waitFor(() => {
-      const [inicio, fim] = screen.getAllByDisplayValue(
-        /^\d{4}-\d{2}-\d{2}$/,
-      ) as HTMLInputElement[];
-      const dias = (Date.parse(fim!.value) - Date.parse(inicio!.value)) / 86_400_000;
+      const [inicio, fim] = screen.getAllByDisplayValue(br) as HTMLInputElement[];
+      const dias = (Date.parse(iso(fim!.value)) - Date.parse(iso(inicio!.value))) / 86_400_000;
       expect(dias).toBe(365);
     });
   });
