@@ -12,6 +12,8 @@ quando houver espaço ou decisão.
 | --- | --- | --- | --- | --- |
 | M-04 | P2 | Mapa: círculo de incerteza (RN-MAPA-001) | Não sugerir precisão maior que a real. | Ao aproximar, pontos com precisão pior que o limiar mostram o raio. Depende do limiar (DP-06). |
 | M-06 | P2 | Mapa base em vector tiles próprios (dados OSM) | O OSM raster é carregado, e o servidor público tem política de uso restrita para produção. | Estilo claro próprio (Protomaps/PMTiles hospedado ou provedor), com glifos para rótulos nativos. Depende da DP-21 (hospedagem). |
+| M-12 | P3 | Seleção por área: persistência e toque | A área não vai para a URL (abrir um item perde a seleção) e o retângulo não funciona com toque. | Área codificada na URL e restaurada; arrasto por toque; clicar numa árvore com área ativa abre o painel da árvore. |
+| M-13 | P2 | Achados da crítica das telas de 2026-11-11 que não couberem nos lotes | Ver [crítica](criticas/2026-11-11-telas.md). | Cada achado restante vira item próprio aqui, com critério de pronto. |
 
 ## Plataforma e dependências
 
