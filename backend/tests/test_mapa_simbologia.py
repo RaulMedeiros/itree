@@ -64,3 +64,13 @@ def test_grupo_sem_morta_indica_ruim(cliente, revisor):
 def test_grupo_so_de_nao_avaliadas(cliente, revisor):
     conteudo = _grupo_em_zoom_baixo(cliente.como(revisor), ["", ""])
     assert b"pior_condicao" in conteudo and b"nao_avaliada" in conteudo
+
+
+def test_celula_de_agrupamento_e_maior_no_zoom_de_municipio():
+    """Os grupos do zoom afastado não podem se sobrepor: a célula cresce ali (C-08)."""
+    from itree.mapa.views import tamanho_da_celula
+
+    # Mesmo nível de detalhe por tile, só que mais grosseiro no município.
+    assert tamanho_da_celula(10) * 2**10 == pytest.approx(tamanho_da_celula(11) * 2**11)
+    assert tamanho_da_celula(11) * 2**11 == pytest.approx(tamanho_da_celula(12) * 2**12 * 4)
+    assert tamanho_da_celula(12) * 2**12 == pytest.approx(tamanho_da_celula(15) * 2**15)
