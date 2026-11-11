@@ -42,7 +42,7 @@ export function Shell() {
                 className="relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-barra-suave hover:bg-white/10 hover:text-barra-texto focus-visible:outline-white"
                 activeProps={{
                   className:
-                    "bg-barra-ativo font-medium text-barra-texto! before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-[#8fd3a8]",
+                    "bg-barra-ativo font-medium text-barra-texto! before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-barra-realce",
                 }}
               >
                 <m.icone className="size-4 shrink-0" aria-hidden />
