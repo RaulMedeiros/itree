@@ -11,7 +11,7 @@ import { useState } from "react";
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Botao } from "../../ui/botao";
 import { MenuAgrupado } from "../../ui/menu";
-import { Entrada, EntradaData, Selecao } from "../../ui/campos";
+import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";

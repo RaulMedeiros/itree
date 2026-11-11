@@ -4,7 +4,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { SeloEstadoInspecao } from "../../componentes/selos";
 import { CORES_CONDICAO } from "../../mapa/simbologia";
-import { Entrada, EntradaData, Selecao } from "../../ui/campos";
+import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
