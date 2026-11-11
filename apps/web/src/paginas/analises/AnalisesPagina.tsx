@@ -16,11 +16,17 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarData, formatarDataHora } from "../../util/formatos";
+import { GraficoMensal, type Serie } from "../visao-geral/graficos";
 
 export interface BuscaAnalises {
   analise?: string;
   inicio?: string;
   fim?: string;
+}
+
+interface SerieMensal {
+  meses: string[];
+  series: Serie[];
 }
 
 interface LinhaAnalise {
@@ -71,6 +77,7 @@ export function AnalisesPagina() {
   const percentual = dados?.unidade === "%";
   const baseRotulo = dados?.base_rotulo || "concluídas";
   const maximo = percentual ? 100 : Math.max(1, ...linhas.map((l) => l.valor));
+  const evolucao = (dados?.serie_mensal ?? null) as SerieMensal | null;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -187,52 +194,60 @@ export function AnalisesPagina() {
           {linhas.length === 0 ? (
             <Vazio titulo="Sem dados para o período" />
           ) : (
-            <Tabela>
-              <thead>
-                <tr>
-                  <Th>Item</Th>
-                  <Th className="w-1/2">Valor</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {linhas.map((l) => (
-                  <Linha key={l.rotulo}>
-                    <Td>{l.rotulo}</Td>
-                    <Td>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 flex-1 rounded bg-neutro-clara" aria-hidden>
-                          <div
-                            className="h-2 rounded bg-marca"
-                            style={{ width: `${(l.valor / maximo) * 100}%` }}
-                          />
-                        </div>
-                        <span className="w-20 text-right font-medium tabular-nums">
-                          {l.valor.toLocaleString("pt-BR")}
-                          {percentual ? "%" : ""}
-                        </span>
-                      </div>
-                      {l.base !== undefined && (
-                        <p className="text-xs text-texto-suave">
-                          {l.numerador !== undefined
-                            ? `${l.numerador.toLocaleString("pt-BR")} de ${l.base.toLocaleString("pt-BR")} ${baseRotulo}`
-                            : `base: ${l.base} ${baseRotulo}`}
-                        </p>
-                      )}
-                    </Td>
-                  </Linha>
-                ))}
-              </tbody>
-              {dados!.total != null && (
-                <tfoot>
+            <div className={evolucao ? "grid gap-6 lg:grid-cols-2" : undefined}>
+              <Tabela>
+                <thead>
                   <tr>
-                    <Td className="font-semibold">Total</Td>
-                    <Td className="text-right font-semibold tabular-nums">
-                      {dados!.total.toLocaleString("pt-BR")}
-                    </Td>
+                    <Th>Item</Th>
+                    <Th className="w-1/2">Valor</Th>
                   </tr>
-                </tfoot>
+                </thead>
+                <tbody>
+                  {linhas.map((l) => (
+                    <Linha key={l.rotulo}>
+                      <Td>{l.rotulo}</Td>
+                      <Td>
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 flex-1 rounded bg-neutro-clara" aria-hidden>
+                            <div
+                              className="h-2 rounded bg-marca"
+                              style={{ width: `${(l.valor / maximo) * 100}%` }}
+                            />
+                          </div>
+                          <span className="w-20 text-right font-medium tabular-nums">
+                            {l.valor.toLocaleString("pt-BR")}
+                            {percentual ? "%" : ""}
+                          </span>
+                        </div>
+                        {l.base !== undefined && (
+                          <p className="text-xs text-texto-suave">
+                            {l.numerador !== undefined
+                              ? `${l.numerador.toLocaleString("pt-BR")} de ${l.base.toLocaleString("pt-BR")} ${baseRotulo}`
+                              : `base: ${l.base} ${baseRotulo}`}
+                          </p>
+                        )}
+                      </Td>
+                    </Linha>
+                  ))}
+                </tbody>
+                {dados!.total != null && (
+                  <tfoot>
+                    <tr>
+                      <Td className="font-semibold">Total</Td>
+                      <Td className="text-right font-semibold tabular-nums">
+                        {dados!.total.toLocaleString("pt-BR")}
+                      </Td>
+                    </tr>
+                  </tfoot>
+                )}
+              </Tabela>
+              {evolucao && (
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold">Evolução mensal</h3>
+                  <GraficoMensal meses={evolucao.meses} series={evolucao.series} />
+                </div>
               )}
-            </Tabela>
+            </div>
           )}
         </section>
       )}

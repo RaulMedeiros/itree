@@ -13,6 +13,7 @@ export * from './alertasListarParams';
 export * from './analise';
 export * from './analiseLinhasItem';
 export * from './analisePeriodo';
+export * from './analiseSerieMensal';
 export * from './aplicarEnum';
 export * from './areasVerdesListar200';
 export * from './areasVerdesListarParams';

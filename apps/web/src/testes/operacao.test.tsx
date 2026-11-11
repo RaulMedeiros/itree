@@ -282,4 +282,43 @@ describe("análises", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByRole("menuitem")).toHaveLength(9);
   });
+
+  it("mostra a evolução mensal ao lado da tabela, com legenda e tabela equivalente", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/relatorios/analise`, () =>
+        HttpResponse.json({
+          id: "inspecoes_por_mes",
+          titulo: "Inspeções por mês",
+          definicao: "d",
+          fonte: "Registros da plataforma",
+          periodo: { inicio: "2026-09-01", fim: "2026-11-10" },
+          calculado_em: "2026-11-10T12:00:00Z",
+          por_bairro: false,
+          linhas: [{ rotulo: "10/2026", valor: 4 }],
+          total: 4,
+          serie_mensal: {
+            meses: ["2026-09", "2026-10", "2026-11"],
+            series: [{ id: "inspecoes", rotulo: "Inspeções", valores: [0, 4, 1] }],
+          },
+        }),
+      ),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/analises");
+    expect(await screen.findByRole("heading", { name: "Evolução mensal" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /Evolução mensal: Inspeções, de set\/26 a nov\/26/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list", { name: "Legenda" })).getByText("Inspeções"),
+    ).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Ver em tabela" }));
+    expect(screen.getByRole("cell", { name: "out/26" })).toBeInTheDocument();
+  });
+
+  it("sem série mensal (análise sem dimensão temporal) não desenha o gráfico", async () => {
+    await abrir("/analises");
+    await screen.findByText("Total");
+    expect(screen.queryByRole("heading", { name: "Evolução mensal" })).toBeNull();
+  });
 });
