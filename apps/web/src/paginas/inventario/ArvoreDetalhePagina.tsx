@@ -45,7 +45,9 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
 import { CartaoEspecie } from "../../componentes/especies";
+import { FotoPrincipalArvore } from "../../componentes/FotoPrincipalArvore";
 import { LinhaDoTempo } from "../../componentes/Historico";
+import { MiniMapaArvore } from "../../componentes/MiniMapaArvore";
 import { SeletorLocalizacao, type Ponto } from "../../componentes/SeletorLocalizacao";
 import {
   SeloEspecie,
@@ -323,6 +325,10 @@ function Resumo({ arvore }: { arvore: Arvore }) {
           </Item>
           <Item rotulo="Observações">{arvore.observacoes || "—"}</Item>
         </dl>
+        <div className="mt-4 grid gap-3 border-t border-borda pt-4 md:grid-cols-2">
+          <MiniMapaArvore arvore={arvore} />
+          <FotoPrincipalArvore arvoreId={arvore.id} />
+        </div>
       </section>
       <div className="flex flex-col gap-4">
         {arvore.especie_cartao && <CartaoEspecie especie={arvore.especie_cartao} />}

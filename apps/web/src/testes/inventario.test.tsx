@@ -9,6 +9,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 import { camposDiferentes } from "../paginas/inventario/duplicidades";
 import { ordenarPendencias, type Pendencia } from "../paginas/inventario/qualidade";
+import { mapasCriados } from "./mapaFalso";
 
 vi.mock("react-oidc-context", () => ({
   useAuth: () => ({
@@ -21,6 +22,10 @@ vi.mock("react-oidc-context", () => ({
 }));
 vi.mock("../autenticacao/gerenciador", () => ({ gerenciadorUsuario: {} }));
 vi.mock("maplibre-gl", () => ({ setWorkerUrl: () => undefined }));
+// O MapLibre precisa de WebGL, ausente no jsdom: o mini-mapa da ficha usa um mapa falso.
+vi.mock("../mapa/Mapa", async () => ({
+  Mapa: (await import("./MapaFalsoComponente")).MapaFalsoComponente,
+}));
 
 const API = "http://api.teste";
 
@@ -104,6 +109,26 @@ const servidor = setupServer(
         enviada_por_nome: "Tiago",
         criado_em: "2026-11-10T12:00:00Z",
         capturada_em: "2026-11-07T12:00:00Z",
+      },
+      {
+        id: "e-2",
+        nome_original: "antiga.jpg",
+        descricao: "Foto antiga do tronco",
+        eh_imagem: true,
+        url: "http://armazenamento.teste/antiga.jpg",
+        enviada_por_nome: "Bia",
+        criado_em: "2026-11-09T12:00:00Z",
+        capturada_em: "2026-10-01T12:00:00Z",
+      },
+      {
+        id: "e-3",
+        nome_original: "recente.jpg",
+        descricao: "Copa vista da calçada",
+        eh_imagem: true,
+        url: "http://armazenamento.teste/recente.jpg",
+        enviada_por_nome: "Marta",
+        criado_em: "2026-11-10T12:00:00Z",
+        capturada_em: "2026-11-08T12:00:00Z",
       },
     ]),
   ),
@@ -202,6 +227,7 @@ afterEach(() => {
   servidor.resetHandlers();
   consultas.length = 0;
   decisoes.length = 0;
+  mapasCriados.length = 0;
 });
 afterAll(() => servidor.close());
 
@@ -268,6 +294,38 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
     expect(screen.getByText("(Praça)")).toBeInTheDocument();
   });
 
+  it("mostra o mini-mapa somente leitura com a cor da condição e o selo de origem", async () => {
+    await abrir("/inventario/arvores/a-1");
+    const regiao = await screen.findByRole("region", {
+      name: "Localização de ARV-000001 no mapa (somente leitura)",
+    });
+    await vi.waitFor(() => expect(mapasCriados).toHaveLength(1));
+    const mapa = mapasCriados[0]!;
+    expect(mapa.opcoes).toMatchObject({
+      somenteLeitura: true,
+      centro: [-38.540452, -3.746602],
+    });
+    // A mesma pintura do mapa principal, alimentada com a condição e a origem da árvore.
+    expect(mapa.camadaDe("arvore")?.type).toBe("circle");
+    expect(mapa.dadosDe("arvore").features).toEqual([
+      expect.objectContaining({
+        geometry: { type: "Point", coordinates: [-38.540452, -3.746602] },
+        properties: expect.objectContaining({ condicao: "ruim", localizacao_origem: "importada" }),
+      }),
+    ]);
+    // Cor nunca sozinha: a condição e a origem aparecem em texto.
+    expect(within(regiao.parentElement!).getByText("Ruim")).toBeInTheDocument();
+    expect(within(regiao.parentElement!).getByText("Importada")).toBeInTheDocument();
+  });
+
+  it("mostra como foto principal a evidência mais recente que é imagem", async () => {
+    await abrir("/inventario/arvores/a-1");
+    const foto = await screen.findByRole("img", { name: "Copa vista da calçada" });
+    expect(foto).toHaveAttribute("src", "http://armazenamento.teste/recente.jpg");
+    expect(screen.getByText(/Foto enviada por Marta em/)).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Foto antiga do tronco" })).toBeNull();
+  });
+
   it("evidência mostra a legenda inteira e quem enviou", async () => {
     const usuario = userEvent.setup();
     await abrir("/inventario/arvores/a-1");
@@ -276,7 +334,7 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
       await screen.findByText("Copa e tronco vistos da calçada, com a fachada ao fundo"),
     ).toBeInTheDocument();
     expect(screen.getByText(/Enviada por Tiago/)).toBeInTheDocument();
-    expect(screen.getByText(/Capturada em/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Capturada em/).length).toBeGreaterThan(0);
   });
 
   it("evidência de demonstração leva o selo Ilustração; a real não", async () => {
