@@ -16,7 +16,7 @@ export interface ContextoEvento {
 }
 
 const EVENTOS: Record<string, string> = {
-  vinculo_oidc: "Primeiro acesso (provedor de login)",
+  vinculo_oidc: "Sistema: vínculo da conta no primeiro acesso",
   importacao_territorios: "Importação de territórios",
   criar_administrador: "Comando criar_administrador",
   importacao_inventario: "Importação de inventário",

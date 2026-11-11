@@ -6,6 +6,7 @@ import {
   COR_ALERTA,
   CORES_CONDICAO,
   iconeGrupo,
+  layoutGrupo,
   registrarIcones,
   TAM_ICONE,
 } from "./simbologia";
@@ -102,5 +103,31 @@ describe("alerta ambiental e ícones (C-12, C-28)", () => {
     expect(TAM_ICONE).toBe(Math.round(22 * 1.2));
     expect(tamanhos.has("tarefa-atrasada")).toBe(true);
     expect(preenchimentos).toContain("#ffffff");
+  });
+});
+
+describe("layout dos grupos (R2-07)", () => {
+  it("grupos de árvores não se sobrepõem e vence o de maior quantidade", () => {
+    const l = layoutGrupo("arvores");
+    expect(l["icon-allow-overlap"]).toBe(false);
+    expect(l["symbol-sort-key"]).toEqual(["-", ["get", "quantidade"]]);
+  });
+
+  it("grupos de ocorrências nunca são escondidos", () => {
+    expect(layoutGrupo("ocorrencias")["icon-allow-overlap"]).toBe(true);
+  });
+
+  it("o ícone encolhe em zoom baixo", () => {
+    const [, , , z1, t1, z2, t2] = layoutGrupo("arvores")["icon-size"] as unknown as [
+      string,
+      unknown,
+      unknown,
+      number,
+      number,
+      number,
+      number,
+    ];
+    expect(z1).toBeLessThan(z2);
+    expect(t1).toBeLessThan(t2);
   });
 });

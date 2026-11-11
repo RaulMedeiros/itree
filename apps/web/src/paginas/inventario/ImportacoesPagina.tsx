@@ -186,9 +186,10 @@ export function ImportacoesPagina() {
   );
 }
 
-const ETAPAS = ["Arquivo", "Fonte e colunas", "Pré-visualização"];
+/** Passos do assistente (R2-20): cada um corresponde a uma tela. */
+const ETAPAS = ["Arquivo e fonte", "Colunas", "Revisão"];
 
-/** Indicador 1-2-3 do assistente; a etapa 3 abre depois de “Pré-visualizar”. */
+/** Indicador 1-2-3: arquivo e fonte, correspondência de colunas e a revisão do lote. */
 function Etapas({ atual }: { atual: number }) {
   return (
     <ol aria-label="Etapas da importação" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -228,6 +229,7 @@ function AssistenteImportacao({
 
   const escolher = async (f: File | null) => {
     setArquivo(f);
+    setPasso(1);
     setLeitura(null);
     setErroLeitura(null);
     if (!f) return;
@@ -253,7 +255,8 @@ function AssistenteImportacao({
       : !fonte.trim()
         ? "Preencha a fonte dos dados para continuar."
         : null;
-  const etapa = !leitura ? 1 : 2;
+  const [passo, setPasso] = useState<1 | 2>(1);
+  const etapa = leitura ? passo : 1;
 
   const enviar = () => {
     if (!arquivo) return;
@@ -286,32 +289,47 @@ function AssistenteImportacao({
       largura="max-w-3xl"
       rodape={
         <>
-          {faltando && <p className="mr-auto self-center text-sm text-texto-suave">{faltando}</p>}
+          {etapa === 1 && faltando && (
+            <p className="mr-auto self-center text-sm text-texto-suave">{faltando}</p>
+          )}
+          {etapa === 2 && (
+            <Botao variante="secundario" className="mr-auto" onClick={() => setPasso(1)}>
+              Voltar
+            </Botao>
+          )}
           <Botao variante="secundario" onClick={aoFechar}>
             Cancelar
           </Botao>
-          <Botao onClick={enviar} disabled={!leitura || !fonte.trim() || criar.isPending}>
-            {criar.isPending ? "Validando…" : "Pré-visualizar"}
-          </Botao>
+          {etapa === 1 ? (
+            <Botao onClick={() => setPasso(2)} disabled={!leitura || !fonte.trim()}>
+              Próximo
+            </Botao>
+          ) : (
+            <Botao onClick={enviar} disabled={!leitura || !fonte.trim() || criar.isPending}>
+              {criar.isPending ? "Validando…" : "Pré-visualizar"}
+            </Botao>
+          )}
         </>
       }
     >
       <div className="flex flex-col gap-4">
         <Etapas atual={etapa} />
-        <Campo
-          rotulo="Arquivo (.csv ou .geojson)"
-          obrigatorio
-          erros={erroLeitura ? [erroLeitura] : erros.arquivo}
-        >
-          {(p) => (
-            <EntradaArquivo
-              {...p}
-              accept=".csv,.txt,.geojson,.json"
-              onChange={(arquivo) => void escolher(arquivo)}
-            />
-          )}
-        </Campo>
-        {leitura && (
+        <div hidden={etapa === 2}>
+          <Campo
+            rotulo="Arquivo (.csv ou .geojson)"
+            obrigatorio
+            erros={erroLeitura ? [erroLeitura] : erros.arquivo}
+          >
+            {(p) => (
+              <EntradaArquivo
+                {...p}
+                accept=".csv,.txt,.geojson,.json"
+                onChange={(arquivo) => void escolher(arquivo)}
+              />
+            )}
+          </Campo>
+        </div>
+        {leitura && etapa === 1 && (
           <>
             <p className="text-sm text-texto-suave">
               {leitura.total_linhas} linhas · formato {leitura.formato.toUpperCase()}
@@ -357,6 +375,20 @@ function AssistenteImportacao({
                 )}
               </Campo>
             </div>
+          </>
+        )}
+        {leitura && etapa === 2 && (
+          <>
+            {["arquivo", "fonte", "fonte_url", "data_referencia", "srid"].some(
+              (c) => erros[c]?.length,
+            ) && (
+              <p role="alert" className="rounded-md bg-perigo-clara px-3 py-2 text-sm text-perigo">
+                Corrija no passo 1:{" "}
+                {["arquivo", "fonte", "fonte_url", "data_referencia", "srid"]
+                  .flatMap((c) => erros[c] ?? [])
+                  .join(" ")}
+              </p>
+            )}
             <fieldset>
               <legend className="mb-2 text-sm font-medium">Correspondência de colunas</legend>
               <div className="grid grid-cols-2 gap-3">
@@ -446,6 +478,7 @@ function PreVisualizacao({ id, aoFechar }: { id: string; aoFechar: () => void })
         <Erro erro={consulta.error} />
       ) : (
         <div className="flex flex-col gap-3">
+          <Etapas atual={3} />
           {confirmar.error && <p className="text-sm text-perigo">{confirmar.error.message}</p>}
           <p className="text-sm">
             <strong>{lote!.linhas_validas}</strong> de {lote!.total_linhas} linhas serão importadas.

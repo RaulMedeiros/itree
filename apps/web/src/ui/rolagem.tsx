@@ -5,8 +5,9 @@ import { cn } from "../util/cn";
 
 /**
  * Área com rolagem vertical que avisa quando há conteúdo escondido abaixo
- * (degradê e indicação), para controles cortados pela borda não passarem
- * por "fim do painel" (C-09).
+ * (sombra e indicação), para controles cortados pela borda não passarem
+ * por "fim do painel" (C-09). A indicação ocupa uma faixa própria sob a área,
+ * sem se sobrepor ao título da seção que estiver na borda (R2-06).
  */
 export function AreaRolavel({ className, children }: { className?: string; children: ReactNode }) {
   const area = useRef<HTMLDivElement>(null);
@@ -36,11 +37,9 @@ export function AreaRolavel({ className, children }: { className?: string; child
       {maisAbaixo && (
         <div
           data-testid="mais-conteudo"
-          className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-center bg-gradient-to-t from-superficie via-superficie/80 to-transparent pt-8 pb-1 text-xs text-texto-suave"
+          className="pointer-events-none flex shrink-0 items-center justify-center gap-1 border-t border-borda/60 bg-superficie py-1 text-xs text-texto-suave shadow-[0_-6px_8px_-6px_rgb(0_0_0/0.18)]"
         >
-          <span className="inline-flex items-center gap-1">
-            <ChevronDown className="size-3.5" aria-hidden /> Role para ver mais
-          </span>
+          <ChevronDown className="size-3.5" aria-hidden /> Role para ver mais
         </div>
       )}
     </div>

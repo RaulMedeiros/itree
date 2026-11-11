@@ -26,15 +26,19 @@ ZOOM_INDIVIDUAL = 16
 CIRCUNFERENCIA_3857 = 40075016.68557849
 # Zoom até o qual as células de agrupamento são maiores (menos agrupamentos amontoados).
 ZOOM_MUNICIPIO = 11
-DIVISOES_MUNICIPIO = 16
-DIVISOES_BAIRRO = 64
+# O MapLibre desenha tiles vetoriais de 512 px. A célula é dimensionada em pixels de tela,
+# acima do maior ícone de grupo (46 px, em `simbologia.ts`), para as bolhas não se tocarem.
+TILE_PX = 512
+CELULA_PX_MUNICIPIO = 72
+CELULA_PX_BAIRRO = 56
 
 
 def tamanho_da_celula(z: int) -> float:
-    """Lado da célula de agrupamento (m, EPSG:3857). Em zoom de município, a célula é
-    quatro vezes maior, para os números dos grupos não se sobreporem na tela."""
-    divisoes = DIVISOES_MUNICIPIO if z <= ZOOM_MUNICIPIO else DIVISOES_BAIRRO
-    return CIRCUNFERENCIA_3857 / 2**z / divisoes
+    """Lado da célula de agrupamento (m, EPSG:3857). O lado em pixels de tela é fixo por faixa
+    de zoom e maior que o ícone do grupo; em zoom de município a célula é ainda maior, porque
+    ali as contagens são altas e os ícones, grandes (R2-07, C-08)."""
+    px = CELULA_PX_MUNICIPIO if z <= ZOOM_MUNICIPIO else CELULA_PX_BAIRRO
+    return CIRCUNFERENCIA_3857 / 2**z * px / TILE_PX
 
 
 def _filtros_arvores(params) -> tuple[str, dict]:
@@ -247,6 +251,15 @@ ResultadoBusca = inline_serializer(
 COORDENADA = re.compile(r"^\s*(-?\d{1,3}(?:[.,]\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*$")
 
 
+def _rotulo_coordenada(lat: float, lon: float) -> str:
+    """Mesmo formato da interface web: "lat −3,746602 · lon −38,540452"."""
+
+    def parte(v: float) -> str:
+        return f"{v:.6f}".replace(".", ",").replace("-", "\u2212")
+
+    return f"lat {parte(lat)} \u00b7 lon {parte(lon)}"
+
+
 @extend_schema(
     operation_id="mapa_busca",
     parameters=[OpenApiParameter("q", str, required=True)],
@@ -268,7 +281,7 @@ def busca(request: Request):
                 {
                     "tipo": "coordenada",
                     "id": None,
-                    "rotulo": f"{lat:.6f}, {lon:.6f}",
+                    "rotulo": _rotulo_coordenada(lat, lon),
                     "descricao": "Coordenada (latitude, longitude)",
                     "localizacao": {"longitude": lon, "latitude": lat},
                     "limites": None,

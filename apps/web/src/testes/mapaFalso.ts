@@ -14,6 +14,7 @@ export class MapaFalso {
     source?: string;
     antesDe?: string;
     paint?: Record<string, unknown>;
+    layout?: Record<string, unknown>;
   }[] = [];
   /** Propriedades com que a tela pediu o mapa (centro, zoom, somente leitura...). */
   opcoes: { centro?: [number, number]; zoom?: number; somenteLeitura?: boolean } = {};
@@ -38,7 +39,13 @@ export class MapaFalso {
     };
   }
   addLayer(
-    camada: { id: string; type: string; source?: string; paint?: Record<string, unknown> },
+    camada: {
+      id: string;
+      type: string;
+      source?: string;
+      paint?: Record<string, unknown>;
+      layout?: Record<string, unknown>;
+    },
     antesDe?: string,
   ) {
     this.camadas.push({ ...camada, antesDe });

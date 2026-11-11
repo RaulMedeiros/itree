@@ -208,7 +208,10 @@ def test_busca_global(cliente, revisor):
     assert ("arvore", arvore["codigo"]) in tipos(arvore["codigo"])
     assert ("arvore", arvore["codigo"]) in tipos("beira mar")
     assert ("territorio", "Bairro A") in tipos("bairro a")
-    assert tipos("-3.755, -38.555")[0] == ("coordenada", "-3.755000, -38.555000")
+    assert tipos("-3.755, -38.555")[0] == (
+        "coordenada",
+        "lat \u22123,755000 \u00b7 lon \u221238,555000",
+    )
 
 
 def test_camadas_informam_fonte(cliente, revisor):

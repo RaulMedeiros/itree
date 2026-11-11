@@ -58,8 +58,6 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [removendo, setRemovendo] = useState<string | null>(null);
-  const [motivo, setMotivo] = useState("");
-  const remover = useEvidenciasRemover<ErroApi>();
 
   const atualizar = () =>
     cliente.invalidateQueries({ queryKey: getEvidenciasListarQueryKey(alvo) });
@@ -208,42 +206,66 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
         </Campo>
       </Dialogo>
 
-      <Dialogo
-        aberto={removendo !== null}
-        aoMudar={(v) => !v && setRemovendo(null)}
-        titulo="Remover evidência"
-        descricao="A evidência deixa de aparecer, mas o arquivo é preservado para rastreabilidade."
-        rodape={
-          <>
-            <Botao variante="secundario" onClick={() => setRemovendo(null)}>
-              Cancelar
-            </Botao>
-            <Botao
-              variante="perigo"
-              disabled={!motivo.trim() || remover.isPending}
-              onClick={() =>
-                removendo &&
-                remover.mutate(
-                  { id: removendo, data: { motivo: motivo.trim() } },
-                  {
-                    onSuccess: () => {
-                      setRemovendo(null);
-                      setMotivo("");
-                      void atualizar();
-                    },
-                  },
-                )
-              }
-            >
-              Remover
-            </Botao>
-          </>
-        }
-      >
-        <Campo rotulo="Justificativa" obrigatorio>
-          {(p) => <AreaTexto {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
-        </Campo>
-      </Dialogo>
+      <RemoverEvidenciaDialogo
+        evidenciaId={removendo}
+        aoFechar={() => setRemovendo(null)}
+        aoRemover={() => void atualizar()}
+      />
     </div>
+  );
+}
+
+/**
+ * Remoção de evidência com justificativa obrigatória. O arquivo é preservado para
+ * rastreabilidade. Aberto quando `evidenciaId` está preenchido.
+ */
+export function RemoverEvidenciaDialogo({
+  evidenciaId,
+  aoFechar,
+  aoRemover,
+}: {
+  evidenciaId: string | null;
+  aoFechar: () => void;
+  aoRemover: () => void;
+}) {
+  const [motivo, setMotivo] = useState("");
+  const remover = useEvidenciasRemover<ErroApi>();
+  return (
+    <Dialogo
+      aberto={evidenciaId !== null}
+      aoMudar={(v) => !v && aoFechar()}
+      titulo="Remover evidência"
+      descricao="A evidência deixa de aparecer, mas o arquivo é preservado para rastreabilidade."
+      rodape={
+        <>
+          <Botao variante="secundario" onClick={aoFechar}>
+            Cancelar
+          </Botao>
+          <Botao
+            variante="perigo"
+            disabled={!motivo.trim() || remover.isPending}
+            onClick={() =>
+              evidenciaId &&
+              remover.mutate(
+                { id: evidenciaId, data: { motivo: motivo.trim() } },
+                {
+                  onSuccess: () => {
+                    aoFechar();
+                    setMotivo("");
+                    aoRemover();
+                  },
+                },
+              )
+            }
+          >
+            Remover
+          </Botao>
+        </>
+      }
+    >
+      <Campo rotulo="Justificativa" obrigatorio>
+        {(p) => <AreaTexto {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
+      </Campo>
+    </Dialogo>
   );
 }

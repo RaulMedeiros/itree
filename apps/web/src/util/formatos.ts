@@ -101,6 +101,15 @@ export function formatarCoordenada(valor: number): string {
   return valor.toLocaleString("pt-BR", { minimumFractionDigits: 6, maximumFractionDigits: 6 });
 }
 
+/**
+ * Ponto geográfico num único formato, sem ambiguidade com a vírgula decimal:
+ * "lat −3,746602 · lon −38,540452" (sinal de menos tipográfico, separador "·").
+ */
+export function formatarPontoGeografico(latitude: number, longitude: number): string {
+  const sinal = (v: number) => formatarCoordenada(v).replace("-", "\u2212");
+  return `lat ${sinal(latitude)} \u00b7 lon ${sinal(longitude)}`;
+}
+
 /** "1 sinal", "3 sinais": singular e plural sem o "(s)" de máquina. */
 export function contar(n: number, singular: string, plural: string): string {
   return `${n} ${n === 1 ? singular : plural}`;

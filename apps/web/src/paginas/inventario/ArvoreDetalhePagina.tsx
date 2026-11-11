@@ -66,7 +66,12 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarCoordenada, formatarData, formatarDataHora, plural } from "../../util/formatos";
+import {
+  formatarData,
+  formatarDataHora,
+  formatarPontoGeografico,
+  plural,
+} from "../../util/formatos";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { invalidarCaminhos } from "../../util/cache";
@@ -271,6 +276,7 @@ function Item({ rotulo, children }: { rotulo: string; children: ReactNode }) {
 }
 
 function Resumo({ arvore }: { arvore: Arvore }) {
+  const podeEditar = usePermissao("inventario.editar") && arvore.situacao === "ativa";
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <section className="self-start rounded-lg border border-borda bg-superficie p-4 lg:col-span-2">
@@ -288,8 +294,7 @@ function Resumo({ arvore }: { arvore: Arvore }) {
           <Item rotulo="Localização">
             {arvore.localizacao ? (
               <span className="font-mono text-xs">
-                {formatarCoordenada(arvore.localizacao.latitude)},{" "}
-                {formatarCoordenada(arvore.localizacao.longitude)}
+                {formatarPontoGeografico(arvore.localizacao.latitude, arvore.localizacao.longitude)}
               </span>
             ) : (
               "Sem localização"
@@ -331,7 +336,7 @@ function Resumo({ arvore }: { arvore: Arvore }) {
         </dl>
         <div className="mt-4 grid gap-3 border-t border-borda pt-4 md:grid-cols-2">
           <MiniMapaArvore arvore={arvore} />
-          <FotoPrincipalArvore arvoreId={arvore.id} />
+          <FotoPrincipalArvore arvoreId={arvore.id} podeEditar={podeEditar} />
         </div>
       </section>
       <div className="flex flex-col gap-4">

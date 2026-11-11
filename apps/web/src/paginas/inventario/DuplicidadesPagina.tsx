@@ -18,7 +18,7 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { cn } from "../../util/cn";
 import { nomeEspecie } from "../../componentes/selos";
-import { formatarCoordenada } from "../../util/formatos";
+import { formatarPontoGeografico } from "../../util/formatos";
 import {
   ROTULOS_CAMPO,
   VALORES,
@@ -134,7 +134,7 @@ const CAMPOS = [
     rotulo: "Localização",
     valor: (a: ArvoreResumo) =>
       a.localizacao
-        ? `${formatarCoordenada(a.localizacao.latitude)}, ${formatarCoordenada(a.localizacao.longitude)} (${rotuloLocalizacao(a)})`
+        ? `${formatarPontoGeografico(a.localizacao.latitude, a.localizacao.longitude)} (${rotuloLocalizacao(a)})`
         : "—",
   },
   { id: "endereco", rotulo: "Endereço", valor: (a: ArvoreResumo) => a.endereco || "—" },
