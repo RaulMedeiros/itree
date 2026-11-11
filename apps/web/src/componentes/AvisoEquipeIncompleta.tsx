@@ -1,7 +1,7 @@
 import type { Equipe } from "@itree/api-client";
 
 /** Motivos pelos quais a equipe está incompleta (vazio quando está completa). */
-export function pendenciasDaEquipe(equipe?: Pick<Equipe, "membros" | "territorios">): string[] {
+function pendenciasDaEquipe(equipe?: Pick<Equipe, "membros" | "territorios">): string[] {
   if (!equipe) return [];
   return [
     ...(equipe.membros.length === 0 ? ["sem membros"] : []),

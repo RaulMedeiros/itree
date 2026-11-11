@@ -10,6 +10,7 @@ const ev = (id: string, parcial: Partial<EventoAuditoria> = {}): EventoAuditoria
   entidade_modelo: "qualidade.InferenciaIAEvent",
   objeto_id: id,
   registro: null,
+  pai: null,
   acao: "criacao",
   diferencas: null,
   dados: {},
