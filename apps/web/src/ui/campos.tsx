@@ -69,6 +69,10 @@ interface OpcaoMarcavel {
   valor: string;
   rotulo: string;
   descricao?: string;
+  /** Recuo visual (0 = raiz), para listas hierárquicas. */
+  nivel?: number;
+  /** Aviso curto sob a descrição (ex.: opção já coberta por outra marcada). */
+  nota?: string;
 }
 
 /** Lista de caixas de seleção (papéis, territórios, membros). */
@@ -105,6 +109,7 @@ export function ListaMarcavel({
           <label
             key={opcao.valor}
             className="flex cursor-pointer items-start gap-2.5 px-3 py-2 hover:bg-fundo"
+            style={opcao.nivel ? { paddingLeft: `${0.75 + opcao.nivel * 1.5}rem` } : undefined}
           >
             <input
               type="checkbox"
@@ -117,6 +122,7 @@ export function ListaMarcavel({
               {opcao.descricao && (
                 <span className="text-xs text-texto-suave">{opcao.descricao}</span>
               )}
+              {opcao.nota && <span className="text-xs text-info">{opcao.nota}</span>}
             </span>
           </label>
         ))}

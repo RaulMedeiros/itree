@@ -154,7 +154,7 @@ export function UsuariosPagina() {
                       )}
                     </div>
                   </Td>
-                  <Td>
+                  <Td className="min-w-44">
                     {u.territorios.length ? (
                       u.territorios.map((t) => t.nome).join(", ")
                     ) : (
@@ -169,14 +169,13 @@ export function UsuariosPagina() {
                     )}
                   </Td>
                   <Td>
-                    <div className="flex flex-col items-start gap-1">
-                      {u.ativo ? (
-                        <Selo tom="sucesso">Ativo</Selo>
-                      ) : (
-                        <Selo tom="perigo">Desativado</Selo>
-                      )}
-                      {!u.vinculado && <Selo tom="info">Aguardando primeiro acesso</Selo>}
-                    </div>
+                    {!u.ativo ? (
+                      <Selo tom="perigo">Desativado</Selo>
+                    ) : !u.vinculado ? (
+                      <Selo tom="info">Aguardando primeiro acesso</Selo>
+                    ) : (
+                      <Selo tom="sucesso">Ativo</Selo>
+                    )}
                   </Td>
                   <Td className="whitespace-nowrap">
                     {formatarDataHora(u.last_login) ?? (

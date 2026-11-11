@@ -22,7 +22,7 @@ import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { formatarDataHora } from "../../util/formatos";
-import { useOpcoesTerritorio } from "./dados";
+import { organizarTerritorios, useOpcoesTerritorio } from "./dados";
 
 export function UsuarioDetalhePagina() {
   const { id } = useParams({ from: "/autenticado/administracao/usuarios/$id" });
@@ -89,6 +89,7 @@ function FormularioUsuario({ usuario }: { usuario: UsuarioAdmin }) {
     territorio_ids: territorios,
     ativo,
   };
+  const opcoesTerritorio = organizarTerritorios(territoriosOpcoes.territorios, territorios);
   const alterado = nome !== (usuario.nome ?? "") || exigeConfirmacao(usuario, mudancas);
 
   const salvar = (comMotivo?: string) => {
@@ -163,7 +164,11 @@ function FormularioUsuario({ usuario }: { usuario: UsuarioAdmin }) {
           </Campo>
           <Campo
             rotulo="Registro profissional"
-            ajuda="Ex.: CREA. Necessário, junto do papel de revisor, para registrar risco confirmado."
+            ajuda={
+              papeis.includes("revisor")
+                ? "Ex.: CREA. Necessário, junto do papel de revisor, para registrar risco confirmado."
+                : "Ex.: CREA. Só é exigido de quem tem o papel de técnico revisor."
+            }
             erros={erros.registro_profissional}
           >
             {(p) => (
@@ -192,7 +197,7 @@ function FormularioUsuario({ usuario }: { usuario: UsuarioAdmin }) {
           </fieldset>
           <ListaMarcavel
             legenda="Escopo territorial"
-            opcoes={territoriosOpcoes.opcoes}
+            opcoes={opcoesTerritorio}
             selecionados={territorios}
             aoAlterar={setTerritorios}
             erros={erros.territorio_ids}
@@ -215,6 +220,9 @@ function FormularioUsuario({ usuario }: { usuario: UsuarioAdmin }) {
           <Botao type="submit" disabled={!alterado || atualizar.isPending}>
             {atualizar.isPending ? "Salvando…" : "Salvar alterações"}
           </Botao>
+          {!alterado && !atualizar.isPending && (
+            <span className="self-center text-sm text-texto-suave">Sem alterações</span>
+          )}
         </div>
       </form>
 
