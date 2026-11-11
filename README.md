@@ -85,7 +85,7 @@ produção em [`infra/README.md`](infra/README.md).
 
 ## Rodando localmente (desenvolvimento)
 
-Requisitos: Docker, Node 22 + pnpm 10, Python 3.13 + [uv](https://docs.astral.sh/uv/)
+Requisitos: Docker, Node 24 + pnpm 10, Python 3.14 + [uv](https://docs.astral.sh/uv/)
 e GDAL (`apt install gdal-bin libgdal-dev` ou `brew install gdal`).
 
 1. Serviços de apoio (PostGIS, Redis, Keycloak com o realm `itree` e armazenamento S3):
