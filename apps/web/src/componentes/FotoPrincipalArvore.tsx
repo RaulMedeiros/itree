@@ -1,7 +1,16 @@
-import { useEvidenciasListar, type Evidencia } from "@itree/api-client";
+import {
+  getEvidenciasListarQueryKey,
+  useEvidenciasListar,
+  type Evidencia,
+} from "@itree/api-client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Leaf } from "lucide-react";
+import { useState } from "react";
 
+import { Dialogo } from "../ui/dialogo";
+import { MenuAcoes } from "../ui/menu";
 import { formatarData } from "../util/formatos";
+import { RemoverEvidenciaDialogo } from "./Evidencias";
 
 /** Foto principal: a evidência mais recente que é imagem (pela captura, ou pelo envio). */
 function fotoPrincipal(evidencias: readonly Evidencia[]): Evidencia | undefined {
@@ -11,9 +20,22 @@ function fotoPrincipal(evidencias: readonly Evidencia[]): Evidencia | undefined 
     .reduce<Evidencia | undefined>((a, e) => (!a || quando(e) > quando(a) ? e : a), undefined);
 }
 
-/** Foto principal da árvore na ficha, com legenda de autoria e data. Sem foto, um aviso, não uma imagem de mentira. */
-export function FotoPrincipalArvore({ arvoreId }: { arvoreId: string }) {
+/**
+ * Foto principal da árvore na ficha, com legenda de autoria e data. Sem foto, um aviso, não
+ * uma imagem de mentira. Clicar amplia a foto com a legenda completa; o menu "⋯" (para quem
+ * pode editar) remove a evidência, com justificativa (R2-17).
+ */
+export function FotoPrincipalArvore({
+  arvoreId,
+  podeEditar = false,
+}: {
+  arvoreId: string;
+  podeEditar?: boolean;
+}) {
   const consulta = useEvidenciasListar({ arvore: arvoreId });
+  const cliente = useQueryClient();
+  const [ampliada, setAmpliada] = useState(false);
+  const [removendo, setRemovendo] = useState<string | null>(null);
   if (consulta.isPending) return <div className="min-h-40 animate-pulse rounded-lg bg-fundo" />;
   const foto = consulta.isSuccess ? fotoPrincipal(consulta.data.data) : undefined;
   if (!foto?.url)
@@ -28,17 +50,57 @@ export function FotoPrincipalArvore({ arvoreId }: { arvoreId: string }) {
       </div>
     );
   const data = foto.capturada_em ?? foto.criado_em;
+  const legenda = `Foto enviada por ${foto.enviada_por_nome || "autor não informado"} em ${formatarData(data)}`;
+  const alt = foto.descricao || `Foto de ${foto.nome_original}`;
   return (
-    <figure className="overflow-hidden rounded-lg border border-borda">
-      <img
-        src={foto.url}
-        alt={foto.descricao || `Foto de ${foto.nome_original}`}
-        className="h-56 w-full object-cover"
-      />
+    <figure className="relative overflow-hidden rounded-lg border border-borda">
+      <button
+        type="button"
+        className="block w-full cursor-zoom-in"
+        aria-label="Ampliar foto"
+        onClick={() => setAmpliada(true)}
+      >
+        <img src={foto.url} alt={alt} className="h-56 w-full object-cover" />
+      </button>
+      {podeEditar && (
+        <div className="absolute top-2 right-2">
+          <MenuAcoes
+            rotulo="Ações da foto"
+            itens={[{ rotulo: "Remover", perigo: true, aoEscolher: () => setRemovendo(foto.id) }]}
+          />
+        </div>
+      )}
       <figcaption className="px-3 py-1.5 text-xs text-texto-suave">
         {foto.descricao && <span className="block text-texto">{foto.descricao}</span>}
-        Foto enviada por {foto.enviada_por_nome || "autor não informado"} em {formatarData(data)}
+        {legenda}
       </figcaption>
+
+      <Dialogo
+        aberto={ampliada}
+        aoMudar={setAmpliada}
+        titulo={foto.descricao || foto.nome_original}
+        largura="max-w-4xl"
+      >
+        <img src={foto.url} alt={alt} className="max-h-[70vh] w-full rounded object-contain" />
+        <p className="mt-3 text-sm">{foto.descricao || "Sem descrição."}</p>
+        <p className="text-xs text-texto-suave">
+          {legenda}. Arquivo: {foto.nome_original}.
+        </p>
+        {foto.capturada_em && (
+          <p className="text-xs text-texto-suave">
+            Capturada em {formatarData(foto.capturada_em)}.
+          </p>
+        )}
+      </Dialogo>
+      <RemoverEvidenciaDialogo
+        evidenciaId={removendo}
+        aoFechar={() => setRemovendo(null)}
+        aoRemover={() =>
+          void cliente.invalidateQueries({
+            queryKey: getEvidenciasListarQueryKey({ arvore: arvoreId }),
+          })
+        }
+      />
     </figure>
   );
 }

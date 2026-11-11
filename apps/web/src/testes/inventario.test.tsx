@@ -683,6 +683,41 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
     expect(within(cartao).getByText("Ilustração")).toBeInTheDocument();
   });
 
+  it("clicar na foto da ficha a amplia num diálogo com a legenda completa (R2-17)", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("button", { name: "Ampliar foto" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByRole("img")).toHaveAttribute(
+      "src",
+      "http://armazenamento.teste/recente.jpg",
+    );
+    expect(within(dialogo).getByText(/Foto enviada por .* em /)).toBeInTheDocument();
+    expect(within(dialogo).getByText(/Arquivo: recente\.jpg/)).toBeInTheDocument();
+  });
+
+  it('o menu "⋯" da foto remove com a justificativa obrigatória (R2-17)', async () => {
+    const usuario = userEvent.setup();
+    const remocoes: unknown[] = [];
+    servidor.use(
+      http.post(`${API}/api/v1/evidencias/:id/remover`, async ({ request, params }) => {
+        remocoes.push({ id: params.id, corpo: await request.json() });
+        return HttpResponse.json({});
+      }),
+    );
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("button", { name: "Ações da foto" }));
+    await usuario.click(await screen.findByRole("menuitem", { name: "Remover" }));
+    const dialogo = await screen.findByRole("dialog", { name: "Remover evidência" });
+    const remover = within(dialogo).getByRole("button", { name: "Remover" });
+    expect(remover).toBeDisabled();
+    await usuario.type(within(dialogo).getByLabelText(/Justificativa/), "Foto de outra árvore");
+    await usuario.click(remover);
+    await vi.waitFor(() =>
+      expect(remocoes).toEqual([{ id: "e-3", corpo: { motivo: "Foto de outra árvore" } }]),
+    );
+  });
+
   it("sugestão de IA não vem pré-selecionada e só confirma após a escolha", async () => {
     const usuario = userEvent.setup();
     await abrir("/inventario/arvores/a-1");
