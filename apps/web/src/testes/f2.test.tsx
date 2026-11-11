@@ -232,6 +232,81 @@ describe("visão geral", () => {
   });
 });
 
+describe("visão geral: período e comparação (C-06, C-07)", () => {
+  it("preenche De/até com o período vigente e oferece atalhos", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/visao-geral");
+    await screen.findByText("Espécie confirmada");
+    const br = /^\d{2}\/\d{2}\/\d{4}$/;
+    const iso = (v: string) => v.split("/").reverse().join("-");
+    const [de, ate] = screen.getAllByDisplayValue(br) as HTMLInputElement[];
+    expect(de!.value).toMatch(br);
+    expect(ate!.value).toMatch(br);
+    const grupo = screen.getByRole("group", { name: "Atalhos de período" });
+    await usuario.click(within(grupo).getByRole("button", { name: "12 meses" }));
+    await vi.waitFor(() => {
+      const [inicio, fim] = screen.getAllByDisplayValue(br) as HTMLInputElement[];
+      const dias = (Date.parse(iso(fim!.value)) - Date.parse(iso(inicio!.value))) / 86_400_000;
+      expect(dias).toBe(365);
+    });
+  });
+
+  it("a comparação diz, em texto, se melhorou ou piorou e qual é a data-base", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/indicadores/painel`, () =>
+        HttpResponse.json({
+          periodo: { inicio: "2026-10-01", fim: "2026-10-31" },
+          filtros: { bairro: null, equipe: null },
+          calculado_em: "2026-10-31T12:00:00Z",
+          indicadores: [
+            {
+              id: "tempo_atendimento",
+              nome: "Tempo médio de atendimento",
+              definicao: "d",
+              formula: "f",
+              valor: 7,
+              base: null,
+              unidade: "dias",
+              periodo: "selecionado",
+              fonte: "Registros da plataforma",
+              link: null,
+              anterior: 5,
+              anterior_em: "2026-09-01",
+              serie: [],
+            },
+            {
+              id: "cobertura_inspecao",
+              nome: "Inspecionadas nos últimos 12 meses",
+              definicao: "d",
+              formula: "f",
+              valor: 10,
+              base: 100,
+              unidade: "%",
+              periodo: "instantâneo",
+              fonte: "Registros da plataforma",
+              link: null,
+              anterior: null,
+              anterior_em: null,
+              serie: [],
+            },
+          ],
+          distribuicoes: {},
+          series_mensais: { meses: [], definicao: "", series: [] },
+          pendencias: [],
+          equipes: [],
+          atividades: [],
+        }),
+      ),
+    );
+    await abrir("/visao-geral");
+    expect(
+      await screen.findByText(/vs\. 01\/09\/26 \(período anterior\) · piorou/),
+    ).toBeInTheDocument();
+    // Janela fixa declarada na face do cartão que ignora o filtro.
+    expect(screen.getByText("Janela fixa de 12 meses (ignora o período)")).toBeInTheDocument();
+  });
+});
+
 describe("tendência dos instantâneos", () => {
   it("mostra variação desde o registro anterior e sparkline acessível", async () => {
     servidor.use(
@@ -286,7 +361,11 @@ describe("tendência dos instantâneos", () => {
     );
     await abrir("/visao-geral");
     const cartao = (await screen.findByText("Espécie confirmada")).closest(".rounded-xl")!;
-    expect(within(cartao as HTMLElement).getByText("+7,5 p.p. desde 30/09/26")).toBeInTheDocument();
+    expect(
+      within(cartao as HTMLElement).getByText(
+        "+7,5 p.p. vs. 30/09/26 (registro anterior) · melhorou",
+      ),
+    ).toBeInTheDocument();
     expect(
       within(cartao as HTMLElement).getByRole("img", {
         name: "Tendência: 30% em 31/08/26 a 40% em 30/10/26",
@@ -295,7 +374,7 @@ describe("tendência dos instantâneos", () => {
     // Sem série, nada muda: sem variação nem sparkline.
     const outro = screen.getByText("Árvores com registro válido").closest(".rounded-xl")!;
     expect(within(outro as HTMLElement).queryByRole("img")).toBeNull();
-    expect(within(outro as HTMLElement).queryByText(/desde/)).toBeNull();
+    expect(within(outro as HTMLElement).queryByText(/vs. \d/)).toBeNull();
   });
 });
 

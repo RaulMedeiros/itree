@@ -24,7 +24,7 @@ import type {
   Marker,
   VectorTileSource,
 } from "maplibre-gl";
-import { ChevronDown, Layers, List, X } from "lucide-react";
+import { ChevronDown, ClipboardList, Layers, Leaf, List, TriangleAlert, X } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
@@ -37,6 +37,7 @@ import {
 } from "../../componentes/selos";
 import { config } from "../../config";
 import { Mapa } from "../../mapa/Mapa";
+import { AreaRolavel } from "../../ui/rolagem";
 import { maplibregl } from "../../mapa/maplibre";
 import {
   adicionarRealce,
@@ -44,6 +45,7 @@ import {
   limitesDaGeometria,
   type FeicaoTerritorio,
 } from "../../mapa/realce";
+import { rotulosVisiveis } from "../../mapa/rotulos";
 import {
   adicionarCamadasArea,
   definirArea,
@@ -74,6 +76,8 @@ import { useTituloDocumento } from "../../util/titulo";
 import { Carregando } from "../../ui/estados";
 import { formatarData, formatarDataHora } from "../../util/formatos";
 import { BarraSelecaoArea, PainelSelecaoArea } from "./SelecaoArea";
+import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
+import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 
 export interface BuscaMapa {
   lon?: number;
@@ -125,6 +129,7 @@ export function MapaPagina() {
   const camadas = useMapaCamadas();
   const mapa = useRef<MapaMapLibre | null>(null);
   const rotulos = useRef<Marker[]>([]);
+  const limitesRotulos = useRef<([number, number, number, number] | null)[]>([]);
   const [pronto, setPronto] = useState(false);
   useTituloDocumento("Mapa");
   const [painel, setPainel] = useState(true);
@@ -183,6 +188,37 @@ export function MapaPagina() {
 
   const atualizarBusca = (parcial: Partial<BuscaMapa>) =>
     void navegar({ search: (s: BuscaMapa) => ({ ...s, ...parcial }), replace: true });
+
+  // Nomes dos bairros: só os que cabem no polígono e não colidem (C-08).
+  const atualizarRotulos = (m: MapaMapLibre) => {
+    if (m.getZoom() < ZOOM_ROTULOS) {
+      for (const r of rotulos.current) r.getElement().hidden = true;
+      return;
+    }
+    const medidos = rotulos.current.map((r, i) => {
+      const el = r.getElement();
+      const limites = limitesRotulos.current[i];
+      const p = m.project(r.getLngLat());
+      let larguraBairro = Infinity;
+      if (limites) {
+        const oeste = m.project([limites[0], limites[1]]);
+        const leste = m.project([limites[2], limites[1]]);
+        larguraBairro = Math.abs(leste.x - oeste.x);
+      }
+      // Medido com o rótulo exibido, para ter largura real.
+      el.hidden = false;
+      return {
+        id: String(i),
+        x: p.x,
+        y: p.y,
+        largura: el.offsetWidth,
+        altura: el.offsetHeight,
+        larguraBairro,
+      };
+    });
+    const visiveis = rotulosVisiveis(medidos);
+    rotulos.current.forEach((r, i) => (r.getElement().hidden = !visiveis.has(String(i))));
+  };
 
   const aoCarregar = (m: MapaMapLibre) => {
     mapa.current = m;
@@ -330,8 +366,9 @@ export function MapaPagina() {
         "circle-stroke-width": 3,
       },
     });
-    // Realce do bairro buscado: acima das árvores, translúcido, abaixo do anel da seleção.
-    adicionarRealce(m, "selecao");
+    // Realce do bairro buscado: máscara clara no exterior (abaixo das árvores, que
+    // mantêm a cor) e contorno grosso neutro, abaixo do anel da seleção.
+    adicionarRealce(m, "selecao", "arvores-pontos");
     // Área da seleção por área e seu rascunho, também abaixo do anel.
     adicionarCamadasArea(m, "selecao");
 
@@ -383,10 +420,8 @@ export function MapaPagina() {
     m.on("mousemove", (e) => setCursor({ lon: e.lngLat.lng, lat: e.lngLat.lat }));
     m.on("mouseout", () => setCursor(null));
     // Nomes dos bairros só quando há espaço para lê-los.
-    m.on("zoomend", () => {
-      const visivel = m.getZoom() >= ZOOM_ROTULOS;
-      for (const r of rotulos.current) r.getElement().hidden = !visivel;
-    });
+    m.on("zoomend", () => atualizarRotulos(m));
+    m.on("moveend", () => atualizarRotulos(m));
     m.on("moveend", () => {
       const c = m.getCenter();
       atualizarBusca({
@@ -421,18 +456,21 @@ export function MapaPagina() {
       const feicoes = (data as { features?: { properties: { nome: string; rotulo?: number[] } }[] })
         .features;
       setFeicoesBairros((feicoes ?? []) as unknown as FeicaoTerritorio[]);
-      rotulos.current = (feicoes ?? [])
-        .filter((f) => f.properties.rotulo?.length === 2)
-        .map((f) => {
-          const el = document.createElement("div");
-          el.className = "rotulo-bairro";
-          el.textContent = f.properties.nome;
-          el.setAttribute("aria-hidden", "true");
-          el.hidden = m.getZoom() < ZOOM_ROTULOS;
-          return new maplibregl.Marker({ element: el, anchor: "center" })
-            .setLngLat(f.properties.rotulo as [number, number])
-            .addTo(m);
-        });
+      const comRotulo = (feicoes ?? []).filter((f) => f.properties.rotulo?.length === 2);
+      limitesRotulos.current = comRotulo.map((f) =>
+        limitesDaGeometria((f as unknown as FeicaoTerritorio).geometry),
+      );
+      rotulos.current = comRotulo.map((f) => {
+        const el = document.createElement("div");
+        el.className = "rotulo-bairro";
+        el.textContent = f.properties.nome;
+        el.setAttribute("aria-hidden", "true");
+        el.hidden = m.getZoom() < ZOOM_ROTULOS;
+        return new maplibregl.Marker({ element: el, anchor: "center" })
+          .setLngLat(f.properties.rotulo as [number, number])
+          .addTo(m);
+      });
+      atualizarRotulos(m);
     });
   }, [pronto]);
 
@@ -596,7 +634,7 @@ export function MapaPagina() {
                 </button>
               </div>
 
-              <div className="flex flex-col gap-1 overflow-y-auto px-4 py-2">
+              <AreaRolavel className="flex flex-col gap-1 px-4 py-2">
                 <Grupo titulo="Operacionais" aberto>
                   <Camada
                     rotulo="Árvores"
@@ -809,7 +847,7 @@ export function MapaPagina() {
                     )}
                   </div>
                 </Grupo>
-              </div>
+              </AreaRolavel>
 
               <nav
                 aria-label="Mesmos dados em lista"
@@ -862,6 +900,7 @@ export function MapaPagina() {
             ocorrencias={mostrarOcorrencias}
             tarefas={mostrarTarefas}
             alertas={mostrarAlertas}
+            recolhidaPorPadrao={painel}
           />
         </div>
 
@@ -985,7 +1024,12 @@ function Camada({
         {marcador}
       </span>
       {rotulo}
-      {contagem && <span className="ml-auto text-xs text-texto-suave">{contagem}</span>}
+      {contagem && (
+        <span className="ml-auto text-xs text-texto-suave">
+          {contagem}
+          {!ativa && " · oculta no mapa"}
+        </span>
+      )}
     </label>
   );
 }
@@ -1048,14 +1092,17 @@ function Legenda({
   ocorrencias,
   tarefas,
   alertas,
+  recolhidaPorPadrao,
 }: {
   modoCor: ModoCor;
   arvores: boolean;
   ocorrencias: boolean;
   tarefas: boolean;
   alertas: boolean;
+  /** Com o painel de camadas aberto, a legenda começa recolhida para não cobrir o mapa (C-09). */
+  recolhidaPorPadrao: boolean;
 }) {
-  const [aberta, setAberta] = useState(true);
+  const [aberta, setAberta] = useState(!recolhidaPorPadrao);
   if (!arvores && !ocorrencias && !tarefas && !alertas) return null;
   return (
     <section
@@ -1185,18 +1232,61 @@ function PainelContextual({
 function FotoDaArvore({ id }: { id: string }) {
   const consulta = useEvidenciasListar({ arvore: id });
   const foto = consulta.data?.data.find((e) => e.eh_imagem && e.url);
-  if (!foto?.url) return null;
+  if (consulta.isPending) return null;
+  // Sem foto: placeholder de folha, para não sugerir uma imagem real que não existe (C-10).
+  if (!foto?.url)
+    return (
+      <div
+        role="img"
+        aria-label="Árvore sem foto"
+        className="-mx-4 -mt-4 flex aspect-[16/9] w-[calc(100%+2rem)] max-w-none flex-col items-center justify-center gap-1 rounded-t-xl bg-marca-clara text-marca"
+      >
+        <Leaf className="size-8" aria-hidden />
+        <span className="text-xs">Sem foto</span>
+      </div>
+    );
+  // A legenda diz de onde vem a imagem: autoria e data do envio, não só a figura.
+  const data = foto.capturada_em ?? foto.criado_em;
   return (
-    <img
-      src={foto.url}
-      alt={foto.descricao || `Foto de ${foto.nome_original}`}
-      className="-mx-4 -mt-4 aspect-[16/9] w-[calc(100%+2rem)] max-w-none rounded-t-xl object-cover"
-    />
+    <figure className="-mx-4 -mt-4 w-[calc(100%+2rem)] max-w-none">
+      <img
+        src={foto.url}
+        alt={foto.descricao || `Foto de ${foto.nome_original}`}
+        className="aspect-[16/9] w-full rounded-t-xl object-cover"
+      />
+      <figcaption className="px-4 pt-1 text-xs text-texto-suave">
+        Foto enviada por {foto.enviada_por_nome || "autor não informado"} em {formatarData(data)}
+      </figcaption>
+    </figure>
+  );
+}
+
+/** Condição aparente validada com o mesmo ponto colorido do mapa; sem avaliação, selo cinza. */
+function SeloCondicaoMapa({ condicao, em }: { condicao?: string | null; em?: string | null }) {
+  const chave = (condicao || "nao_avaliada") as CondicaoAparenteEnum;
+  const avaliada = chave !== "nao_avaliada";
+  return (
+    <p className="flex flex-wrap items-center gap-1.5">
+      <Bolinha cor={CORES_CONDICAO[chave] ?? CORES_CONDICAO.nao_avaliada} />
+      <span
+        className={avaliada ? "font-medium" : "rounded bg-neutro-clara px-1.5 text-texto-suave"}
+      >
+        {avaliada ? ROTULOS_CONDICAO[chave] : "Não avaliada"}
+      </span>
+      {avaliada && em && (
+        <span className="text-xs text-texto-suave">validada em {formatarData(em)}</span>
+      )}
+      {!avaliada && <span className="text-xs text-texto-suave">Sem avaliação registrada.</span>}
+    </p>
   );
 }
 
 function ResumoArvore({ id }: { id: string }) {
   const consulta = useArvoresObter(id);
+  const podeOcorrencia = usePermissao("ocorrencias.editar");
+  const podeTarefa = usePermissao("tarefas.editar");
+  const [ocorrencia, setOcorrencia] = useState(false);
+  const [criandoTarefa, setCriandoTarefa] = useState(false);
   if (consulta.isPending) return <Carregando linhas={4} />;
   if (consulta.isError)
     return <p className="text-sm text-perigo">Não foi possível carregar a árvore.</p>;
@@ -1236,7 +1326,7 @@ function ResumoArvore({ id }: { id: string }) {
       </div>
       <div>
         <p className="text-xs font-medium text-texto-suave uppercase">Condição aparente</p>
-        <p className="text-texto-suave">Sem avaliação registrada.</p>
+        <SeloCondicaoMapa condicao={a.condicao_aparente} em={a.condicao_aparente_em} />
       </div>
       <p>Ocorrências abertas: {a.ocorrencias_abertas ?? 0}</p>
       <Botao asChild>
@@ -1244,6 +1334,32 @@ function ResumoArvore({ id }: { id: string }) {
           Abrir cadastro completo
         </Link>
       </Botao>
+      {(podeOcorrencia || podeTarefa) && a.situacao === "ativa" && a.localizacao && (
+        <div className="flex flex-wrap gap-2">
+          {podeOcorrencia && (
+            <Botao variante="secundario" tamanho="pequeno" onClick={() => setOcorrencia(true)}>
+              <TriangleAlert aria-hidden /> Registrar ocorrência
+            </Botao>
+          )}
+          {podeTarefa && (
+            <Botao variante="secundario" tamanho="pequeno" onClick={() => setCriandoTarefa(true)}>
+              <ClipboardList aria-hidden /> Pedir inspeção
+            </Botao>
+          )}
+        </div>
+      )}
+      {criandoTarefa && (
+        <CriarTarefasDialogo
+          alvo={{ tipo: "arvore", id: a.id, codigo: a.codigo }}
+          aoFechar={() => setCriandoTarefa(false)}
+        />
+      )}
+      {ocorrencia && (
+        <NovaOcorrenciaDialogo
+          arvore={{ id: a.id, codigo: a.codigo }}
+          aoFechar={() => setOcorrencia(false)}
+        />
+      )}
     </div>
   );
 }

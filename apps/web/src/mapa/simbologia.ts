@@ -106,6 +106,9 @@ export const pinturaArvores = (modo: ModoCor) => ({
 // Ícones desenhados em canvas.
 
 const ESCALA = 2;
+/** Tamanho (px) dos ícones de ocorrência, tarefa e alerta: 20% maiores que antes (C-12). */
+export const TAM_ICONE = 26;
+export const TAM_ICONE_RISCO = 31;
 
 function desenhar(
   m: MapaMapLibre,
@@ -147,28 +150,35 @@ function triangulo(c: CanvasRenderingContext2D, t: number, cor: string, borda: s
 /** Registra os ícones fixos (ocorrências, tarefas, alertas). */
 export function registrarIcones(m: MapaMapLibre) {
   for (const [prioridade, cor] of Object.entries(CORES_PRIORIDADE)) {
-    desenhar(m, `oco-${prioridade}`, 22, (c, t) => triangulo(c, t, cor, "#ffffff", t * 0.08));
+    desenhar(m, `oco-${prioridade}`, TAM_ICONE, (c, t) =>
+      triangulo(c, t, cor, "#ffffff", t * 0.08),
+    );
     // Risco confirmado: contorno escuro grosso.
-    desenhar(m, `oco-${prioridade}-risco`, 26, (c, t) => triangulo(c, t, cor, "#3b0d0c", t * 0.12));
+    desenhar(m, `oco-${prioridade}-risco`, TAM_ICONE_RISCO, (c, t) =>
+      triangulo(c, t, cor, "#3b0d0c", t * 0.12),
+    );
   }
   for (const [nome, cor] of [
     ["tarefa", COR_TAREFA],
     ["tarefa-atrasada", COR_TAREFA_ATRASADA],
   ] as const) {
-    desenhar(m, nome, 22, (c, t) => {
-      const b = t * 0.1;
-      c.fillStyle = "rgba(255,255,255,0.85)";
+    desenhar(m, nome, TAM_ICONE, (c, t) => {
+      // Contorno branco externo (contraste sobre o mapa), moldura colorida e miolo claro.
+      const b = t * 0.12;
+      c.fillStyle = "#ffffff";
+      c.fillRect(0, 0, t, t);
+      c.fillStyle = `${cor}26`;
       c.fillRect(b, b, t - 2 * b, t - 2 * b);
-      c.lineWidth = b;
+      c.lineWidth = b * 1.4;
       c.strokeStyle = cor;
-      c.strokeRect(b, b, t - 2 * b, t - 2 * b);
+      c.strokeRect(b * 1.7, b * 1.7, t - 3.4 * b, t - 3.4 * b);
       // Prancheta: duas linhas.
       c.fillStyle = cor;
       c.fillRect(t * 0.3, t * 0.38, t * 0.4, t * 0.08);
       c.fillRect(t * 0.3, t * 0.56, t * 0.4, t * 0.08);
     });
   }
-  desenhar(m, "alerta", 22, (c, t) => {
+  desenhar(m, "alerta", TAM_ICONE, (c, t) => {
     const b = t * 0.1;
     c.beginPath();
     c.moveTo(t / 2, b);
@@ -178,7 +188,7 @@ export function registrarIcones(m: MapaMapLibre) {
     c.closePath();
     c.fillStyle = COR_ALERTA;
     c.fill();
-    c.lineWidth = b * 0.8;
+    c.lineWidth = b * 1.2;
     c.strokeStyle = "#ffffff";
     c.stroke();
   });
@@ -190,6 +200,37 @@ export function registrarIcones(m: MapaMapLibre) {
     c.lineTo(t, 0);
     c.stroke();
   });
+}
+
+/**
+ * Camadas do alerta ambiental isolado (página de detalhe): o mesmo losango roxo e a
+ * mesma hachura do mapa principal, nunca a cor laranja da condição "Ruim" (C-28).
+ * Exige `registrarIcones` antes.
+ */
+export function camadasDoAlerta(fonte: string, pontual: boolean) {
+  return pontual
+    ? [
+        {
+          id: "alerta",
+          type: "symbol",
+          source: fonte,
+          layout: { "icon-image": "alerta", "icon-allow-overlap": true, "icon-size": 1.3 },
+        },
+      ]
+    : [
+        {
+          id: "alerta-area",
+          type: "fill",
+          source: fonte,
+          paint: { "fill-pattern": "hachura-alerta", "fill-opacity": 0.6 },
+        },
+        {
+          id: "alerta-borda",
+          type: "line",
+          source: fonte,
+          paint: { "line-color": COR_ALERTA, "line-width": 2, "line-dasharray": [3, 1.5] },
+        },
+      ];
 }
 
 /** Condições na ordem de gravidade usada pelo backend em `pior_condicao`. */

@@ -369,3 +369,76 @@ describe("seleção por área no mapa (RF-MAPA-022)", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("painel da árvore e controles do mapa (C-09, C-10, C-11, C-12)", () => {
+  const ARVORE = {
+    id: "a-1",
+    codigo: "ARV-000001",
+    especie: null,
+    especie_texto_original: "",
+    especie_estado: "nao_identificada",
+    localizacao_origem: "importada",
+    precisao_m: null,
+    endereco: "Rua 1",
+    bairro: null,
+    medidas_atuais: [],
+    ocorrencias_abertas: 0,
+    situacao: "ativa",
+    localizacao: { longitude: -38.5, latitude: -3.7 },
+    condicao_aparente: "ruim",
+    condicao_aparente_em: "2026-10-01",
+  };
+  const comArvore = (evidencias: unknown[]) =>
+    servidor.use(
+      http.get(`${API}/api/v1/arvores/a-1`, () => HttpResponse.json(ARVORE)),
+      http.get(`${API}/api/v1/evidencias`, () => HttpResponse.json(evidencias)),
+    );
+
+  it("mostra a condição validada, o placeholder sem foto e os atalhos de ação", async () => {
+    eu = { ...COORDENADOR, permissoes: [...COORDENADOR.permissoes, "ocorrencias.editar"] };
+    comArvore([]);
+    await abrirMapa("/mapa?selecao=arvore:a-1");
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da seleção" });
+    expect(await within(painel).findByText("ARV-000001")).toBeInTheDocument();
+    // Não diz mais "sem avaliação" para uma árvore com condição validada.
+    expect(within(painel).getByText("Ruim")).toBeInTheDocument();
+    expect(within(painel).queryByText("Sem avaliação registrada.")).toBeNull();
+    expect(await within(painel).findByRole("img", { name: "Árvore sem foto" })).toBeInTheDocument();
+    expect(
+      within(painel).getByRole("button", { name: /Registrar ocorrência/ }),
+    ).toBeInTheDocument();
+    await userEvent.click(within(painel).getByRole("button", { name: /Pedir inspeção/ }));
+    expect(
+      await screen.findByRole("dialog", { name: /Tarefa de inspeção para ARV-000001/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("a foto traz legenda com autoria e data; leitor não vê os atalhos de ação", async () => {
+    comArvore([
+      {
+        id: "e-1",
+        nome_original: "arvore.png",
+        eh_imagem: true,
+        url: "http://x/foto.png",
+        descricao: "",
+        enviada_por_nome: "Ana Campo",
+        capturada_em: null,
+        criado_em: "2026-10-05T12:00:00Z",
+      },
+    ]);
+    await abrirMapa("/mapa?selecao=arvore:a-1");
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da seleção" });
+    expect(await within(painel).findByText(/Foto enviada por Ana Campo em/)).toBeInTheDocument();
+    expect(within(painel).queryByRole("button", { name: /Pedir inspeção/ })).toBeNull();
+  });
+
+  it("legenda começa recolhida com o painel aberto e camada desligada avisa que está oculta", async () => {
+    const usuario = userEvent.setup();
+    await abrirMapa("/mapa?ocorrencias=0");
+    const legenda = await screen.findByRole("button", { name: "Legenda" });
+    expect(legenda).toHaveAttribute("aria-expanded", "false");
+    expect(await screen.findByText(/1 abertas · oculta no mapa/)).toBeInTheDocument();
+    await usuario.click(legenda);
+    expect(legenda).toHaveAttribute("aria-expanded", "true");
+  });
+});

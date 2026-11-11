@@ -23,6 +23,17 @@ from itree.territorio.models import Territorio
 TIPO_MVT = "application/vnd.mapbox-vector-tile"
 ZOOM_INDIVIDUAL = 16
 CIRCUNFERENCIA_3857 = 40075016.68557849
+# Zoom até o qual as células de agrupamento são maiores (menos agrupamentos amontoados).
+ZOOM_MUNICIPIO = 11
+DIVISOES_MUNICIPIO = 16
+DIVISOES_BAIRRO = 64
+
+
+def tamanho_da_celula(z: int) -> float:
+    """Lado da célula de agrupamento (m, EPSG:3857). Em zoom de município, a célula é
+    quatro vezes maior, para os números dos grupos não se sobreporem na tela."""
+    divisoes = DIVISOES_MUNICIPIO if z <= ZOOM_MUNICIPIO else DIVISOES_BAIRRO
+    return CIRCUNFERENCIA_3857 / 2**z / divisoes
 
 
 def _filtros_arvores(params) -> tuple[str, dict]:
@@ -170,7 +181,7 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
               FROM base, env
         """
     else:
-        parametros["celula"] = CIRCUNFERENCIA_3857 / 2**z / 64
+        parametros["celula"] = tamanho_da_celula(z)
         # Célula com um único registro leva as mesmas propriedades da feição
         # individual, para a simbologia não depender do zoom.
         individuais = ",\n                   ".join(

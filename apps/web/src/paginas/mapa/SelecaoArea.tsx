@@ -139,7 +139,8 @@ function Lista<T extends { id: string }>({
           variante="secundario"
           onClick={() => setMostrando((n) => n + TAMANHO_PAGINA)}
         >
-          Mostrar mais ({itens.length - mostrando} restantes)
+          Mostrar mais ({itens.length - mostrando}{" "}
+          {itens.length - mostrando === 1 ? "restante" : "restantes"})
         </Botao>
       )}
     </div>
