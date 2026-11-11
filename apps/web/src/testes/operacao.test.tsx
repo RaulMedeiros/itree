@@ -367,3 +367,25 @@ describe("auditoria", () => {
     );
   });
 });
+
+describe("atribuição a equipe incompleta", () => {
+  it("avisa antes de confirmar, sem bloquear a reatribuição", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/equipes-tarefas");
+    const linha = (await screen.findByText("TAR-000001")).closest("tr")!;
+    await usuario.click(within(linha).getByRole("button", { name: /Mais ações de TAR-000001/ }));
+    await usuario.click(await screen.findByRole("menuitem", { name: "Reatribuir" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).queryByRole("note")).toBeNull();
+
+    await usuario.selectOptions(within(dialogo).getByLabelText("Equipe"), "e-2");
+    expect(await within(dialogo).findByRole("note")).toHaveTextContent(
+      /Equipe de Poda Oeste está incompleta \(sem membros e sem território\)/,
+    );
+    await usuario.type(within(dialogo).getByLabelText(/Motivo/), "Reforço");
+    expect(within(dialogo).getByRole("button", { name: "Salvar" })).toBeEnabled();
+
+    await usuario.selectOptions(within(dialogo).getByLabelText("Equipe"), "e-1");
+    expect(within(dialogo).queryByRole("note")).toBeNull();
+  });
+});

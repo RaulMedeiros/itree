@@ -8,6 +8,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -133,6 +134,7 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
               {Object.values(erro.errosDeCampo).flat()[0] ?? erro.message}
             </p>
           )}
+          <AvisoEquipeIncompleta equipe={equipes.data?.data.results.find((e) => e.id === equipe)} />
           <div className="grid grid-cols-2 gap-3">
             <Campo rotulo="Equipe">
               {(p) => (
