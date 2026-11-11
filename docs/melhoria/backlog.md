@@ -12,11 +12,12 @@ quando houver espaço ou decisão.
 | --- | --- | --- | --- | --- |
 | M-04 | P2 | Mapa: círculo de incerteza (RN-MAPA-001) | Não sugerir precisão maior que a real. | Ao aproximar, pontos com precisão pior que o limiar mostram o raio. Depende do limiar (DP-06). |
 | M-06 | P2 | Mapa base em vector tiles próprios (dados OSM) | O OSM raster é carregado, e o servidor público tem política de uso restrita para produção. | Estilo claro próprio (Protomaps/PMTiles hospedado ou provedor), com glifos para rótulos nativos. Depende da DP-21 (hospedagem). |
-| M-12 | P3 | Seleção por área: persistência e toque | A área não vai para a URL (abrir um item perde a seleção) e o retângulo não funciona com toque. | Área codificada na URL e restaurada; arrasto por toque; clicar numa árvore com área ativa abre o painel da árvore. |
 | M-14 | P3 | Preferências de notificação e e-mail | O sino cobre o uso diário, mas não há como silenciar um tipo nem receber por e-mail. | Preferências por tipo de notificação e canal de e-mail opcional, com teste. |
 | M-15 | P3 | Lista de árvores: "nunca inspecionadas primeiro" | Hoje as nunca inspecionadas ficam sempre no fim da ordenação por última inspeção. | Opção de ordenação que prioriza atraso, incluindo as nunca inspecionadas no topo. |
 | M-16 | P3 | Papéis incomuns no mesmo usuário | Acúmulo de papéis (ex.: técnico e revisor) pode exigir atenção. Depende da matriz de perfis (DP-01). | Aviso na administração de usuários quando a combinação for marcada como incomum na DP-01. |
 | M-17 | P3 | Definição oficial de "registro válido" | O cartão marca o critério como provisório. Depende da DP-14. | Texto e cálculo atualizados quando a DP-14 for fechada. |
+| M-18 | P3 | Arborização do entorno: ficha do bairro e cruzamento com o inventário | A camada coroplética mostra só o percentual do Censo 2022, em dica ao passar o cursor. Não há onde ver base, definição e método por bairro, nem a comparação com as árvores cadastradas. | Clique no bairro abre ficha com proveniência completa (método, licença, ingestão). Cruzamento com a densidade do inventário só depois das fórmulas da DP-14. |
+| M-19 | P3 | Área na URL: limite e simplificação de polígonos | O parâmetro `area` aceita até 200 vértices; um polígono desenhado à mão com mais pontos é descartado ao abrir o link. | Polígono simplificado antes de ir para a URL (tolerância documentada), com aviso quando perder detalhe. |
 
 ## Áreas verdes
 

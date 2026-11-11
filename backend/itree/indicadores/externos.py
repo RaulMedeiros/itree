@@ -19,6 +19,7 @@ V05431, V05432 e V05433; o denominador é V05400, que inclui as faces saltadas
 
 import csv
 import io
+import json
 import zipfile
 from dataclasses import dataclass, field
 from datetime import date
@@ -26,7 +27,7 @@ from decimal import Decimal
 
 import requests
 from django.conf import settings
-from django.contrib.gis.db.models.functions import PointOnSurface
+from django.contrib.gis.db.models.functions import AsGeoJSON, PointOnSurface
 from django.db import transaction
 from django.utils import timezone
 
@@ -230,6 +231,56 @@ def contexto_externo(usuario: Usuario, bairro: Territorio | None = None) -> list
             }
         )
     return itens
+
+
+def arborizacao_geojson(usuario: Usuario, precisao: int = 5) -> dict:
+    """Arborização do entorno por bairro como FeatureCollection, para pintar o mapa.
+
+    Reutiliza a geometria dos bairros do escopo (a mesma de ``territorios/geojson``,
+    com poucas casas decimais) e leva só o necessário por feição: nome e o indicador.
+    Bairro sem dado do Censo (código não casa ou valor omitido pelo IBGE) vem com
+    ``valor`` nulo, nunca zero. A proveniência fica uma vez, em ``proveniencia``;
+    sem nenhum dado importado, ela é nula."""
+    bairros = bairros_do_escopo(usuario).annotate(geometria=AsGeoJSON("geom", precision=precisao))
+    bairros = bairros.order_by("nome")
+    indicadores = {
+        i.territorio_id: i
+        for i in IndicadorTerritorialExterno.objects.filter(
+            indicador=ARBORIZACAO_FACES, territorio_id__in=[b.pk for b in bairros]
+        )
+    }
+    feicoes = []
+    for b in bairros:
+        i = indicadores.get(b.pk)
+        feicoes.append(
+            {
+                "type": "Feature",
+                "id": str(b.pk),
+                "geometry": json.loads(b.geometria),
+                "properties": {
+                    "nome": b.nome,
+                    "valor": float(i.valor) if i and i.valor is not None else None,
+                    "faces_com_arvore": i.numerador if i else None,
+                    "faces": i.denominador if i else None,
+                },
+            }
+        )
+    modelo = next(iter(indicadores.values()), None)
+    proveniencia = None
+    if modelo is not None:
+        proveniencia = {
+            "id": ARBORIZACAO_FACES,
+            "nome": NOME_ARBORIZACAO,
+            "unidade": modelo.unidade,
+            "fonte": modelo.fonte,
+            "fonte_url": modelo.fonte_url,
+            "licenca": modelo.licenca,
+            "data_referencia": modelo.data_referencia,
+            "ingerido_em": max(i.ingerido_em for i in indicadores.values()),
+            "definicao": modelo.definicao,
+            "metodo": modelo.metodo,
+        }
+    return {"type": "FeatureCollection", "features": feicoes, "proveniencia": proveniencia}
 
 
 NOMES = {ARBORIZACAO_FACES: NOME_ARBORIZACAO}

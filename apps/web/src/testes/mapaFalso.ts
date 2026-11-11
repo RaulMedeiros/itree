@@ -54,6 +54,26 @@ export class MapaFalso {
   setLayoutProperty = vi.fn();
   addImage = vi.fn();
   hasImage = () => true;
+  /** Pixel → coordenada: (10,10) é (-38.56,-3.76) e cada pixel vale 0,0002 grau. */
+  unproject([x, y]: [number, number]) {
+    const grau = (base: number, px: number) => +(base + (px - 10) * 0.0002).toFixed(6);
+    return { lng: grau(-38.56, x), lat: grau(-3.76, y) };
+  }
+  /** Dispara um evento de ponteiro (mouse, toque ou caneta) no canvas do mapa. */
+  ponteiro(
+    tipo: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
+    x: number,
+    y: number,
+    { pointerType = "mouse", pointerId = 1, isPrimary = true, button = 0 } = {},
+  ) {
+    const e = new MouseEvent(tipo, { clientX: x, clientY: y, button, bubbles: true });
+    Object.defineProperties(e, {
+      pointerId: { value: pointerId },
+      pointerType: { value: pointerType },
+      isPrimary: { value: isPrimary },
+    });
+    this.canvas.dispatchEvent(e);
+  }
   getCanvas() {
     return this.canvas;
   }

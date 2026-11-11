@@ -1,5 +1,6 @@
 import {
   areasVerdesListar,
+  indicadoresArborizacaoEntornoGeojson,
   mapaAlertas,
   territoriosGeojson,
   useArvoresObter,
@@ -27,7 +28,7 @@ import type {
   VectorTileSource,
 } from "maplibre-gl";
 import { ChevronDown, ClipboardList, Layers, Leaf, List, TriangleAlert, X } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import {
@@ -58,6 +59,20 @@ import {
   type FormaArea,
   type PoligonoGeoJson,
 } from "../../mapa/desenho";
+import { codificarArea, decodificarArea } from "../../mapa/areaUrl";
+import {
+  CAMADAS_ARBORIZACAO,
+  COR_POR_VALOR,
+  COR_SEM_DADO,
+  CORES_ARBORIZACAO,
+  FILTRO_COM_DADO,
+  FILTRO_SEM_DADO,
+  FONTE_ARBORIZACAO,
+  IMAGEM_SEM_DADO,
+  OPACIDADE_ARBORIZACAO,
+  ROTULOS_CLASSES_ARBORIZACAO,
+  registrarHachuraSemDado,
+} from "../../mapa/coropletica";
 import { urlApi } from "../../mapa/url";
 import type { TipoBase } from "../../mapa/estilo";
 import {
@@ -96,6 +111,8 @@ export interface BuscaMapa {
   ocorrencias?: "0";
   bairros?: "0";
   areas_verdes?: "1";
+  /** Camada coroplética "Arborização do entorno (Censo 2022)"; desligada por padrão. */
+  arborizacao_entorno?: "1";
   tarefas?: "1";
   alertas?: "1";
   sem_inspecao_dias?: number;
@@ -107,7 +124,25 @@ export interface BuscaMapa {
   selecao?: string;
   /** Território (bairro) buscado, realçado até a próxima interação. */
   destaque?: string;
+  /** Área da seleção por área, codificada por `codificarArea`. */
+  area?: string;
 }
+
+/** Proveniência da camada "Arborização do entorno", como a API a devolve. */
+interface ProvenienciaIndicador {
+  nome: string;
+  fonte: string;
+  fonte_url?: string;
+  licenca?: string;
+  data_referencia?: string | null;
+  ingerido_em?: string;
+  definicao: string;
+  metodo?: string;
+}
+
+/** Texto curto da definição, enquanto a camada ainda não trouxe a proveniência da API. */
+const DEFINICAO_ARBORIZACAO =
+  "Percentual das faces de quadra do bairro em que o Censo 2022 registrou ao menos uma árvore no entorno dos domicílios. Não mede copa nem cobertura vegetal.";
 
 function urlTiles(
   camada: "arvores" | "ocorrencias" | "tarefas",
@@ -188,19 +223,28 @@ export function MapaPagina() {
   // Feições dos bairros, para realçar o buscado, e o destaque vigente (lido nos eventos do mapa).
   const [feicoesBairros, setFeicoesBairros] = useState<FeicaoTerritorio[]>([]);
   const destaqueAtual = useRef<string | undefined>(undefined);
-  // Seleção por área (RF-MAPA-022): forma em desenho e área concluída (abre o painel).
+  // Seleção por área (RF-MAPA-022): forma em desenho e área concluída (abre o painel). A área
+  // concluída mora na URL (M-12): abrir um item da lista e voltar, ou recarregar, a restaura.
   const [formaArea, setFormaArea] = useState<FormaArea | null>(null);
-  const [area, setArea] = useState<PoligonoGeoJson | null>(null);
+  const area = useMemo(() => decodificarArea(busca.area), [busca.area]);
   const botaoSelecionarArea = useRef<HTMLButtonElement>(null);
   const devolverFocoAoBotao = useRef(false);
-  // Cliques nas árvores não abrem o painel contextual enquanto se desenha ou há área.
-  const selecaoPorAreaAtiva = useRef(false);
+  // Enquanto se desenha, cliques no mapa são do desenho; com a área pronta, clicar numa árvore
+  // abre o painel dela e mantém a área.
+  const desenhando = useRef(false);
+  const areaAtiva = useRef(false);
   // Áreas verdes: carregadas na primeira vez que a camada é ligada; a feição clicada abre o painel.
   const [estadoAreasVerdes, setEstadoAreasVerdes] = useState<"inicial" | "pronto" | "erro">(
     "inicial",
   );
   const areasVerdesIniciadas = useRef(false);
   const [areaVerde, setAreaVerde] = useState<AreaVerdeSelecionada | null>(null);
+  // Arborização do entorno (Censo 2022): carregada na primeira vez que a camada é ligada.
+  const [estadoArborizacao, setEstadoArborizacao] = useState<"inicial" | "pronto" | "erro">(
+    "inicial",
+  );
+  const [proveniencia, setProveniencia] = useState<ProvenienciaIndicador | null>(null);
+  const arborizacaoIniciada = useRef(false);
   const [dica, setDica] = useState<{ x: number; y: number; texto: string } | null>(null);
   const [cursor, setCursor] = useState<{ lon: number; lat: number } | null>(null);
 
@@ -210,6 +254,7 @@ export function MapaPagina() {
   const mostrarOcorrencias = podeOcorrencias && busca.ocorrencias !== "0";
   const mostrarBairros = busca.bairros !== "0";
   const mostrarAreasVerdes = podeMapa && busca.areas_verdes === "1";
+  const mostrarArborizacao = podeMapa && busca.arborizacao_entorno === "1";
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
   const mostrarAlertas = podeAlertas && busca.alertas === "1";
   const filtrosArvores = {
@@ -229,8 +274,11 @@ export function MapaPagina() {
     destaqueAtual.current = busca.destaque;
   }, [busca.destaque]);
   useEffect(() => {
-    selecaoPorAreaAtiva.current = formaArea !== null || area !== null;
-  }, [formaArea, area]);
+    desenhando.current = formaArea !== null;
+  }, [formaArea]);
+  useEffect(() => {
+    areaAtiva.current = area !== null;
+  }, [area]);
 
   const atualizarBusca = (parcial: Partial<BuscaMapa>) =>
     void navegar({ search: (s: BuscaMapa) => ({ ...s, ...parcial }), replace: true });
@@ -288,6 +336,51 @@ export function MapaPagina() {
         "line-opacity": 0.75,
       },
     });
+
+    // Arborização do entorno (Censo 2022): preenchimento por classe e hachura para bairros sem
+    // dado, abaixo do contorno dos bairros e das demais camadas; desligada até o usuário pedir.
+    registrarHachuraSemDado(m);
+    m.addSource(FONTE_ARBORIZACAO, {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+    m.addLayer(
+      {
+        id: "arborizacao-entorno-preenchimento",
+        type: "fill",
+        source: FONTE_ARBORIZACAO,
+        filter: FILTRO_COM_DADO,
+        layout: { visibility: "none" },
+        paint: { "fill-color": COR_POR_VALOR, "fill-opacity": OPACIDADE_ARBORIZACAO },
+      },
+      "bairros-contorno",
+    );
+    m.addLayer(
+      {
+        id: "arborizacao-entorno-sem-dado",
+        type: "fill",
+        source: FONTE_ARBORIZACAO,
+        filter: FILTRO_SEM_DADO,
+        layout: { visibility: "none" },
+        paint: { "fill-pattern": IMAGEM_SEM_DADO, "fill-opacity": 0.7 },
+      },
+      "bairros-contorno",
+    );
+    for (const camada of ["arborizacao-entorno-preenchimento", "arborizacao-entorno-sem-dado"]) {
+      m.on("mousemove", camada, (e: MapLayerMouseEvent) => {
+        // Árvores e ocorrências sob o cursor têm a própria dica.
+        const operacionais = CAMADAS_COM_CLIQUE.filter((id) => m.getLayer(id));
+        if (
+          desenhando.current ||
+          (operacionais.length && m.queryRenderedFeatures(e.point, { layers: operacionais }).length)
+        )
+          return;
+        const p = e.features?.[0]?.properties ?? {};
+        const texto = textoDicaArborizacao(p as DicaArborizacao);
+        setDica({ x: e.point.x, y: e.point.y, texto });
+      });
+      m.on("mouseleave", camada, () => setDica(null));
+    }
 
     // Áreas verdes: abaixo das árvores e dos alertas, desligadas até o usuário pedir.
     // Cor própria de cada tipo (ver CORES_AREA_VERDE), translúcida e com contorno.
@@ -499,7 +592,7 @@ export function MapaPagina() {
           m.easeTo({ center: e.lngLat, zoom: Math.min(m.getZoom() + 2.5, 18) });
           return;
         }
-        if (selecaoPorAreaAtiva.current) return;
+        if (desenhando.current) return;
         atualizarBusca({
           selecao: `${camada.startsWith("arvores") ? "arvore" : "ocorrencia"}:${p.id}`,
         });
@@ -507,11 +600,11 @@ export function MapaPagina() {
     }
     // Clique numa área verde: nome, tipo e fonte. Árvores e ocorrências têm prioridade.
     m.on("mouseenter", "areas-verdes-preenchimento", () => {
-      if (!selecaoPorAreaAtiva.current) m.getCanvas().style.cursor = "pointer";
+      if (!desenhando.current && !areaAtiva.current) m.getCanvas().style.cursor = "pointer";
     });
     m.on("mouseleave", "areas-verdes-preenchimento", () => (m.getCanvas().style.cursor = ""));
     m.on("click", "areas-verdes-preenchimento", (e: MapLayerMouseEvent) => {
-      if (selecaoPorAreaAtiva.current) return;
+      if (desenhando.current || areaAtiva.current) return;
       const operacionais = CAMADAS_COM_CLIQUE.filter((id) => m.getLayer(id));
       if (operacionais.length && m.queryRenderedFeatures(e.point, { layers: operacionais }).length)
         return;
@@ -565,6 +658,24 @@ export function MapaPagina() {
       .catch(() => setEstadoAreasVerdes("erro"));
   }, [pronto, mostrarAreasVerdes]);
 
+  // Arborização do entorno: busca única, na primeira vez que a camada é ligada.
+  useEffect(() => {
+    if (!pronto || !mostrarArborizacao || arborizacaoIniciada.current) return;
+    arborizacaoIniciada.current = true;
+    void indicadoresArborizacaoEntornoGeojson({ precisao: 5 })
+      .then(({ data }) => {
+        const { proveniencia: prov, ...colecao } = data as unknown as {
+          proveniencia: ProvenienciaIndicador | null;
+        };
+        (mapa.current?.getSource(FONTE_ARBORIZACAO) as GeoJSONSource | undefined)?.setData(
+          colecao as unknown as Parameters<GeoJSONSource["setData"]>[0],
+        );
+        setProveniencia(prov);
+        setEstadoArborizacao("pronto");
+      })
+      .catch(() => setEstadoArborizacao("erro"));
+  }, [pronto, mostrarArborizacao]);
+
   // Desligar a camada ou selecionar uma árvore/ocorrência fecha o painel da área verde.
   if (areaVerde && (!mostrarAreasVerdes || tipoSelecao)) setAreaVerde(null);
 
@@ -612,17 +723,21 @@ export function MapaPagina() {
     if (limites) m.fitBounds(limites, { padding: 60, maxZoom: 16 });
   }, [pronto, feicaoDestaque]);
 
+  const definirAreaNaUrl = (nova: PoligonoGeoJson | null) =>
+    atualizarBusca({ area: nova ? codificarArea(nova) : undefined });
   // Modo de desenho da área: ativo enquanto houver forma escolhida.
   useEffect(() => {
     const m = mapa.current;
     if (!pronto || !m || !formaArea) return;
     return iniciarDesenho(m, formaArea, {
       aoConcluir: (concluida) => {
-        setArea(concluida);
+        definirAreaNaUrl(concluida);
         setFormaArea(null);
       },
       aoCancelar: () => setFormaArea(null),
     });
+    // `definirAreaNaUrl` muda a cada render; o desenho só reinicia com a forma.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pronto, formaArea]);
 
   // A área desenhada fica visível, tracejada, enquanto o painel está aberto.
@@ -639,18 +754,18 @@ export function MapaPagina() {
   }, [formaArea, area]);
 
   const iniciarSelecaoPorArea = (forma: FormaArea) => {
-    setArea(null);
+    definirAreaNaUrl(null);
     setFormaArea(forma);
   };
   const fecharSelecaoPorArea = () => {
     devolverFocoAoBotao.current = true;
-    setArea(null);
+    definirAreaNaUrl(null);
     setFormaArea(null);
   };
   const usarAreaVisivel = () => {
     const limites = mapa.current?.getBounds();
     if (!limites) return;
-    setArea(
+    definirAreaNaUrl(
       poligonoDeLimites([
         limites.getWest(),
         limites.getSouth(),
@@ -672,6 +787,19 @@ export function MapaPagina() {
     // Só na abertura.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pronto, limites]);
+
+  // Escolher outro território no cabeçalho enquadra o bairro, como na busca; voltar a "todo o
+  // escopo" limpa o realce e enquadra o escopo. A abertura da tela não mexe na câmera.
+  const territorioAnterior = useRef(territorioAtivo.id);
+  useEffect(() => {
+    if (territorioAnterior.current === territorioAtivo.id) return;
+    territorioAnterior.current = territorioAtivo.id;
+    atualizarBusca({ destaque: territorioAtivo.id });
+    if (!territorioAtivo.id && limites)
+      mapa.current?.fitBounds(limites as [number, number, number, number], { padding: 40 });
+    // `atualizarBusca` e `limites` mudam a cada render; só a escolha do território dispara.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [territorioAtivo.id]);
 
   // Filtros → URLs dos tiles.
   const chaveArvores = JSON.stringify(filtrosArvores);
@@ -710,6 +838,7 @@ export function MapaPagina() {
     definir(["ocorrencias-grupos", "ocorrencias-pontos"], mostrarOcorrencias);
     definir(["alertas-area", "alertas-borda", "alertas-pontos"], mostrarAlertas);
     definir(["tarefas-pontos"], mostrarTarefas);
+    definir(CAMADAS_ARBORIZACAO, mostrarArborizacao);
     definir(["bairros-preenchimento", "bairros-contorno"], mostrarBairros);
     definir(
       ["areas-verdes-preenchimento", "areas-verdes-contorno", "areas-verdes-contorno-uc"],
@@ -722,6 +851,7 @@ export function MapaPagina() {
     mostrarOcorrencias,
     mostrarBairros,
     mostrarAreasVerdes,
+    mostrarArborizacao,
     mostrarTarefas,
     mostrarAlertas,
   ]);
@@ -835,6 +965,31 @@ export function MapaPagina() {
                     </>
                   )}
                 </Grupo>
+
+                {podeMapa && (
+                  <Grupo titulo="Contexto (fontes externas)" aberto>
+                    <Camada
+                      rotulo="Arborização do entorno (Censo 2022)"
+                      marcador={<AmostraArborizacao />}
+                      ativa={mostrarArborizacao}
+                      aoMudar={(v) => atualizarBusca({ arborizacao_entorno: v ? "1" : undefined })}
+                    />
+                    <p className="text-xs text-texto-suave">
+                      Faces de quadra com árvore, por bairro. Fonte: IBGE, Censo 2022. Não mede copa
+                      nem cobertura vegetal.
+                    </p>
+                    {mostrarArborizacao && pronto && estadoArborizacao === "inicial" && (
+                      <p role="status" className="text-xs text-texto-suave">
+                        Carregando arborização do entorno…
+                      </p>
+                    )}
+                    {mostrarArborizacao && estadoArborizacao === "erro" && (
+                      <p role="alert" className="text-xs text-perigo">
+                        Não foi possível carregar a arborização do entorno.
+                      </p>
+                    )}
+                  </Grupo>
+                )}
 
                 {podeAlertas && (
                   <Grupo titulo="Ambientais — sinais externos" aberto>
@@ -1011,6 +1166,16 @@ export function MapaPagina() {
                             : " · data dos dados não informada"}
                         </p>
                       ))}
+                    {mostrarArborizacao && proveniencia && (
+                      <p>
+                        {proveniencia.nome}: {proveniencia.fonte}
+                        {proveniencia.licenca ? ` · ${proveniencia.licenca}` : ""} · ingerido em{" "}
+                        {formatarDataHora(proveniencia.ingerido_em)}
+                        {proveniencia.data_referencia
+                          ? ` · dados de ${anoDaData(proveniencia.data_referencia)}`
+                          : " · data dos dados não informada"}
+                      </p>
+                    )}
                     {base === "ruas" && config.mapaRuas && <p>{config.mapaRuas.atribuicao}</p>}
                     {info?.arvores && Number(info.arvores.sem_localizacao) > 0 && (
                       <p className="mt-1 text-atencao">
@@ -1075,6 +1240,8 @@ export function MapaPagina() {
             alertas={mostrarAlertas}
             recolhidaPorPadrao={painel}
             areasVerdes={mostrarAreasVerdes}
+            arborizacao={mostrarArborizacao}
+            definicaoArborizacao={proveniencia?.definicao ?? DEFINICAO_ARBORIZACAO}
           />
         </div>
 
@@ -1122,7 +1289,7 @@ export function MapaPagina() {
             {dica.texto}
           </div>
         )}
-        {area && (
+        {area && !tipoSelecao && (
           <PainelSelecaoArea
             area={area}
             filtros={{
@@ -1142,7 +1309,7 @@ export function MapaPagina() {
         {areaVerde && !area && !tipoSelecao && (
           <PainelAreaVerde area={areaVerde} aoFechar={() => setAreaVerde(null)} />
         )}
-        {tipoSelecao && idSelecao && !area && (
+        {tipoSelecao && idSelecao && (
           <PainelContextual
             tipo={tipoSelecao}
             id={idSelecao}
@@ -1262,6 +1429,36 @@ function Losango({ cor }: { cor: string }) {
   return <span className="inline-block size-2.5 rotate-45" style={{ background: cor }} />;
 }
 
+/** Amostra da rampa da arborização do entorno: as cinco classes lado a lado, do claro ao escuro. */
+function AmostraArborizacao() {
+  return (
+    <span aria-hidden className="inline-flex h-3 w-4 overflow-hidden rounded-[2px]">
+      {CORES_ARBORIZACAO.map((c) => (
+        <span key={c} className="h-full flex-1" style={{ background: c }} />
+      ))}
+    </span>
+  );
+}
+
+interface DicaArborizacao {
+  nome?: string;
+  valor?: number | null;
+  faces_com_arvore?: number | null;
+  faces?: number | null;
+}
+
+/** Dica do bairro sob o cursor: percentual e base, ou "sem dado" (nunca zero). */
+function textoDicaArborizacao(p: DicaArborizacao): string {
+  if (p.valor === null || p.valor === undefined)
+    return `${p.nome ?? "Bairro"} · sem dado do Censo 2022`;
+  const pct = Number(p.valor).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  const base =
+    p.faces && p.faces_com_arvore !== null && p.faces_com_arvore !== undefined
+      ? ` (${p.faces_com_arvore.toLocaleString("pt-BR")} de ${p.faces.toLocaleString("pt-BR")} faces)`
+      : "";
+  return `${p.nome} · ${pct}% das faces com árvore${base}`;
+}
+
 /** Amostra de área verde: preenchimento translúcido e contorno (tracejado nas unidades). */
 function AmostraAreaVerde({ tipo }: { tipo: string }) {
   const cor = CORES_AREA_VERDE[tipo] ?? CORES_AREA_VERDE.parque!;
@@ -1291,6 +1488,8 @@ function Legenda({
   alertas,
   recolhidaPorPadrao,
   areasVerdes,
+  arborizacao,
+  definicaoArborizacao,
 }: {
   modoCor: ModoCor;
   arvores: boolean;
@@ -1300,9 +1499,11 @@ function Legenda({
   /** Com o painel de camadas aberto, a legenda começa recolhida para não cobrir o mapa (C-09). */
   recolhidaPorPadrao: boolean;
   areasVerdes: boolean;
+  arborizacao: boolean;
+  definicaoArborizacao: string;
 }) {
   const [aberta, setAberta] = useState(!recolhidaPorPadrao);
-  if (!arvores && !ocorrencias && !tarefas && !alertas && !areasVerdes) return null;
+  if (!arvores && !ocorrencias && !tarefas && !alertas && !areasVerdes && !arborizacao) return null;
   return (
     <section
       aria-label="Legenda"
@@ -1400,6 +1601,38 @@ function Legenda({
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+          {arborizacao && (
+            <div>
+              <p className="mb-1 text-texto-suave">
+                Arborização do entorno — faces de quadra com árvore
+              </p>
+              <ul className="flex flex-col gap-1">
+                {ROTULOS_CLASSES_ARBORIZACAO.map((r, i) => (
+                  <li key={r} className="flex items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className="inline-block h-3 w-5 shrink-0 rounded-[2px] border border-black/20"
+                      style={{ background: CORES_ARBORIZACAO[i] }}
+                    />{" "}
+                    {r}
+                  </li>
+                ))}
+                <li className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden
+                    data-testid="amostra-sem-dado"
+                    className="inline-block h-3 w-5 shrink-0 rounded-[2px] border border-black/20"
+                    style={{
+                      background: `repeating-linear-gradient(135deg, ${COR_SEM_DADO} 0 2px, #ffffff 2px 5px)`,
+                    }}
+                  />{" "}
+                  Sem dado
+                </li>
+              </ul>
+              <p className="mt-1.5 text-texto-suave">Fonte: IBGE, Censo 2022.</p>
+              <p className="mt-0.5 max-w-64 text-texto-suave">{definicaoArborizacao}</p>
             </div>
           )}
           {alertas && (

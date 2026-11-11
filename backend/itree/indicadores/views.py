@@ -6,17 +6,18 @@ from datetime import date, timedelta
 from django.db.models import Avg, Count, F, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from pghistory.models import Events
 from rest_framework import serializers
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from itree.alertas.models import AlertaAmbiental, StatusAlerta
 from itree.auditoria.views import ENTIDADES, EventoAuditoriaSerializer
-from itree.contas.acesso import filtrar_por_escopo
+from itree.contas.acesso import filtrar_por_escopo, requer
 from itree.contas.models import Equipe
 from itree.core.parametros import uuid_do_parametro
 from itree.indicadores import externos, instantaneos
@@ -520,3 +521,20 @@ def painel(request: Request):
             else [],
         }
     )
+
+
+@extend_schema(
+    operation_id="indicadores_arborizacao_entorno_geojson",
+    parameters=[OpenApiParameter("precisao", int, description="Casas decimais (padrão 5).")],
+    responses={(200, "application/geo+json"): OpenApiTypes.OBJECT},
+)
+@api_view(["GET"])
+@permission_classes([requer("mapa.ler")])
+def arborizacao_entorno_geojson(request: Request):
+    """Camada coroplética "Arborização do entorno (Censo 2022)": bairros do escopo
+    com o percentual de faces de quadra com árvore e a proveniência do dado."""
+    try:
+        precisao = min(max(int(request.query_params.get("precisao", 5)), 1), 8)
+    except ValueError:
+        precisao = 5
+    return Response(externos.arborizacao_geojson(request.user, precisao))

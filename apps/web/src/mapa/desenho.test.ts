@@ -56,10 +56,10 @@ describe("retângulo por arrasto", () => {
     expect(mapa.dragPan.disable).toHaveBeenCalled();
     expect(mapa.canvas.style.cursor).toBe("crosshair");
 
-    mapa.emitir("mousedown", evento(-38.56, -3.76, 10, 10));
-    mapa.emitir("mousemove", evento(-38.55, -3.75, 60, 60));
+    mapa.ponteiro("pointerdown", 10, 10);
+    mapa.ponteiro("pointermove", 60, 60);
     expect(mapa.dadosDe("area-rascunho").features).toHaveLength(1);
-    mapa.emitir("mouseup", evento(-38.55, -3.75, 60, 60));
+    mapa.ponteiro("pointerup", 60, 60);
 
     expect(aoConcluir).toHaveBeenCalledOnce();
     expect(aoConcluir.mock.calls[0]![0].coordinates[0]).toEqual([
@@ -75,13 +75,45 @@ describe("retângulo por arrasto", () => {
     expect(mapa.dragPan.enable).toHaveBeenCalled();
     expect(mapa.doubleClickZoom.enable).toHaveBeenCalled();
     expect(mapa.canvas.style.cursor).toBe("");
-    expect(mapa.manipuladores).toEqual([]);
+    expect(mapa.canvas.style.touchAction).toBe("");
+    // Encerrado o modo, o ponteiro não desenha mais.
+    mapa.ponteiro("pointerdown", 10, 10);
+    mapa.ponteiro("pointerup", 60, 60);
+    expect(aoConcluir).toHaveBeenCalledOnce();
   });
 
   it("um clique sem arrastar não cria área", () => {
     const { mapa, aoConcluir } = preparar("retangulo");
-    mapa.emitir("mousedown", evento(-38.56, -3.76, 10, 10));
-    mapa.emitir("mouseup", evento(-38.56, -3.76, 11, 11));
+    mapa.ponteiro("pointerdown", 10, 10);
+    mapa.ponteiro("pointerup", 11, 11);
+    expect(aoConcluir).not.toHaveBeenCalled();
+  });
+
+  it("funciona com toque, sem deixar a página rolar", () => {
+    const { mapa, aoConcluir } = preparar("retangulo");
+    expect(mapa.canvas.style.touchAction).toBe("none");
+    const dedo = { pointerType: "touch", pointerId: 7 };
+    mapa.ponteiro("pointerdown", 10, 10, dedo);
+    mapa.ponteiro("pointermove", 60, 60, dedo);
+    expect(mapa.dadosDe("area-rascunho").features).toHaveLength(1);
+    mapa.ponteiro("pointerup", 60, 60, dedo);
+    expect(aoConcluir).toHaveBeenCalledOnce();
+  });
+
+  it("ignora o segundo dedo, o botão secundário do mouse e o toque cancelado", () => {
+    const { mapa, aoConcluir } = preparar("retangulo");
+    mapa.ponteiro("pointerdown", 10, 10, { pointerType: "touch", pointerId: 2, isPrimary: false });
+    mapa.ponteiro("pointerup", 60, 60, { pointerType: "touch", pointerId: 2, isPrimary: false });
+    mapa.ponteiro("pointerdown", 10, 10, { button: 2 });
+    mapa.ponteiro("pointerup", 60, 60, { button: 2 });
+    expect(aoConcluir).not.toHaveBeenCalled();
+
+    const dedo = { pointerType: "touch", pointerId: 3 };
+    mapa.ponteiro("pointerdown", 10, 10, dedo);
+    mapa.ponteiro("pointermove", 40, 40, dedo);
+    mapa.ponteiro("pointercancel", 40, 40, dedo);
+    expect(mapa.dadosDe("area-rascunho").features).toEqual([]);
+    mapa.ponteiro("pointerup", 60, 60, dedo);
     expect(aoConcluir).not.toHaveBeenCalled();
   });
 });

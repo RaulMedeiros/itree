@@ -2,7 +2,7 @@
  * Desenho da área de seleção (RF-MAPA-022) com camadas GeoJSON do próprio
  * MapLibre, sem biblioteca de desenho.
  *
- * - Retângulo: arrastar no mapa.
+ * - Retângulo: arrastar no mapa, com mouse, toque ou caneta (eventos de ponteiro).
  * - Polígono: um clique por vértice; duplo clique ou Enter fecha; Backspace
  *   desfaz o último vértice.
  * - Esc cancela. A área concluída fica com contorno tracejado enquanto o painel
@@ -170,21 +170,50 @@ export function iniciarDesenho(
   m.doubleClickZoom.disable();
 
   if (forma === "retangulo") {
-    let inicio: { ponto: Ponto; tela: { x: number; y: number } } | null = null;
+    // Eventos de ponteiro, e não do mapa: cobrem mouse, toque e caneta do mesmo jeito.
+    // `touch-action: none` impede o navegador de rolar a página durante o arrasto.
+    const tela = m.getCanvas();
+    tela.style.touchAction = "none";
+    let inicio: { id: number; ponto: Ponto; tela: { x: number; y: number } } | null = null;
+    const emTela = (e: PointerEvent) => {
+      const r = tela.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    const noMapa = (p: { x: number; y: number }): Ponto => {
+      const l = m.unproject([p.x, p.y]);
+      return [l.lng, l.lat];
+    };
+    const ouvirPonteiro = (evento: string, fn: (e: PointerEvent) => void) => {
+      const ouvinte = fn as EventListener;
+      tela.addEventListener(evento, ouvinte);
+      desfazer.push(() => tela.removeEventListener(evento, ouvinte));
+    };
+    desfazer.push(() => (tela.style.touchAction = ""));
     m.dragPan.disable();
-    ouvir("mousedown", (e) => {
-      if (e.originalEvent?.button) return;
-      inicio = { ponto: ponto(e), tela: e.point };
+    ouvirPonteiro("pointerdown", (e) => {
+      // Só o botão principal do mouse e o primeiro dedo; o segundo dedo é gesto de zoom.
+      if (!e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
+      const t = emTela(e);
+      inicio = { id: e.pointerId, ponto: noMapa(t), tela: t };
+      tela.setPointerCapture?.(e.pointerId);
+      e.preventDefault();
     });
-    ouvir("mousemove", (e) => {
-      if (inicio) definirRascunho(m, [feicao(poligonoDeCantos(inicio.ponto, ponto(e)))]);
+    ouvirPonteiro("pointermove", (e) => {
+      if (inicio && e.pointerId === inicio.id)
+        definirRascunho(m, [feicao(poligonoDeCantos(inicio.ponto, noMapa(emTela(e))))]);
     });
-    ouvir("mouseup", (e) => {
-      if (!inicio) return;
-      const { ponto: a, tela } = inicio;
+    ouvirPonteiro("pointerup", (e) => {
+      if (!inicio || e.pointerId !== inicio.id) return;
+      const { ponto: a, tela: origem } = inicio;
       inicio = null;
       definirRascunho(m, []);
-      if (distancia(tela, e.point) >= ARRASTO_MINIMO_PX) aoConcluir(poligonoDeCantos(a, ponto(e)));
+      const fim = emTela(e);
+      if (distancia(origem, fim) >= ARRASTO_MINIMO_PX) aoConcluir(poligonoDeCantos(a, noMapa(fim)));
+    });
+    // O sistema tomou o toque (ex.: gesto de borda): descarta o retângulo em curso.
+    ouvirPonteiro("pointercancel", () => {
+      inicio = null;
+      definirRascunho(m, []);
     });
   } else {
     const vertices: { ponto: Ponto; tela: { x: number; y: number } }[] = [];

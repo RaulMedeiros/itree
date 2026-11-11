@@ -89,6 +89,8 @@ export * from './fusaoRequest';
 export * from './identificadorExterno';
 export * from './identificadorExternoRequest';
 export * from './importacoesListarParams';
+export * from './indicadoresArborizacaoEntornoGeojson200';
+export * from './indicadoresArborizacaoEntornoGeojsonParams';
 export * from './indicadoresPainelParams';
 export * from './inferencia';
 export * from './inferenciasListarParams';

@@ -40,7 +40,7 @@ comando ou ingestão no código.
 | PRODES Caatinga | INPE | camada `prodes-caatinga-nb:yearly_deforestation` | WFS, EPSG:4674 | idem | Anual | V | Backlog (exige a chave `image_date` em `CHAVES_GEOJSON`) |
 | DETER Amazônia e Cerrado | INPE | `deter-amz`, `deter-cerrado-nb` | WFS | idem | Diária | A (não cobre Fortaleza) | Descartada |
 | CNUC, tabela e polígonos | MMA | `dados.mma.gov.br`, dataset do CNUC | CSV e Shapefile | `cc-by` | 2026-08 (tabela) | V | Backlog (conferir UCs) |
-| Censo 2022, entorno por bairro | IBGE | `ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/` | ZIP com CSV, 121 bairros de Fortaleza | Não declarada na listagem | 2025-04 | V | Backlog (arborização do entorno por bairro) |
+| Censo 2022, entorno por bairro | IBGE | `ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/` | ZIP com CSV, 121 bairros de Fortaleza | Não declarada na listagem | 2025-04 | V | Implementada: importação, indicador na visão geral e camada coroplética no mapa |
 | Malha de bairros do Censo 2022, CE | IBGE | `ftp.ibge.gov.br/.../malha_com_atributos/bairros/shp/UF/CE/` | Shapefile em ZIP | Não declarada | 2024-11 | A | Não implementada |
 | IBGE API de malhas (servicodados) | IBGE | `servicodados.ibge.gov.br/api/v3/` | JSON | n/a | n/a | I (TLS não completa) | Usar o FTP |
 | GBIF | GBIF | `api.gbif.org/v1/` | JSON | Por registro (CC0, CC BY, CC BY-NC) | Contínua | V | Backlog (nomes de espécies) |

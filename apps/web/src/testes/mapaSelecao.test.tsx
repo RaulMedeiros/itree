@@ -148,13 +148,16 @@ afterEach(() => {
 });
 afterAll(() => servidor.close());
 
+let historico = createMemoryHistory();
+
 async function abrirMapa(caminho = "/mapa") {
   const { criarRoteador } = await import("../rotas");
+  historico = createMemoryHistory({ initialEntries: [caminho] });
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
-      <RouterProvider router={criarRoteador(createMemoryHistory({ initialEntries: [caminho] }))} />
+      <RouterProvider router={criarRoteador(historico)} />
     </QueryClientProvider>,
   );
   await screen.findByRole("region", { name: "Mapa de árvores e ocorrências" }, { timeout: 3000 });
@@ -164,18 +167,12 @@ async function abrirMapa(caminho = "/mapa") {
   });
 }
 
-const ev = (lng: number, lat: number, x: number, y: number) => ({
-  lngLat: { lng, lat },
-  point: { x, y },
-  originalEvent: { button: 0 },
-});
-
 /** Arrasta um retângulo no mapa. */
 function desenharRetangulo(mapa: MapaFalso) {
   act(() => {
-    mapa.emitir("mousedown", ev(-38.56, -3.76, 10, 10));
-    mapa.emitir("mousemove", ev(-38.55, -3.75, 80, 80));
-    mapa.emitir("mouseup", ev(-38.55, -3.75, 80, 80));
+    mapa.ponteiro("pointerdown", 10, 10);
+    mapa.ponteiro("pointermove", 80, 80);
+    mapa.ponteiro("pointerup", 80, 80);
   });
 }
 
@@ -367,6 +364,128 @@ describe("seleção por área no mapa (RF-MAPA-022)", () => {
     expect(
       within(painel).getByRole("button", { name: "Exportar ocorrências da seleção em GeoJSON" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("área na URL e árvore com área ativa (M-12)", () => {
+  // O mapa falso converte o pixel (10,10) em (-38,56; -3,76) e (80,80) em (-38,546; -3,746).
+  const RETANGULO = [
+    [-38.56, -3.76],
+    [-38.546, -3.76],
+    [-38.546, -3.746],
+    [-38.56, -3.746],
+    [-38.56, -3.76],
+  ];
+  const areaDaUrl = () => new URLSearchParams(historico.location.search).get("area");
+  const ARVORE = {
+    id: "a-1",
+    codigo: "ARV-000001",
+    especie: null,
+    especie_texto_original: "",
+    especie_estado: "nao_identificada",
+    localizacao_origem: "importada",
+    precisao_m: null,
+    endereco: "Rua 1",
+    bairro: null,
+    medidas_atuais: [],
+    ocorrencias_abertas: 0,
+    situacao: "ativa",
+    localizacao: { longitude: -38.5, latitude: -3.7 },
+    condicao_aparente: "ruim",
+    condicao_aparente_em: "2026-10-01",
+  };
+
+  it("grava a área concluída na URL, com 6 casas, e a remove ao fechar", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    const painel = await selecionarArea(usuario, mapa);
+    const { decodificarArea } = await import("../mapa/areaUrl");
+    expect(areaDaUrl()).toBeTruthy();
+    expect(areaDaUrl()!.length).toBeLessThan(60);
+    expect(decodificarArea(areaDaUrl()!)!.coordinates[0]).toEqual(RETANGULO);
+
+    await usuario.click(within(painel).getByRole("button", { name: "Fechar seleção por área" }));
+    expect(areaDaUrl()).toBeNull();
+  });
+
+  it("restaura a área da URL: painel, contorno no mapa e o mesmo pedido à API", async () => {
+    const { codificarArea } = await import("../mapa/areaUrl");
+    const { poligonoDeVertices } = await import("../mapa/desenho");
+    const area = poligonoDeVertices(RETANGULO.slice(0, 4) as [number, number][])!;
+    const mapa = await abrirMapa(`/mapa?area=${codificarArea(area)}`);
+    const painel = await screen.findByRole("complementary", { name: "Seleção por área" });
+    expect(await within(painel).findByText("ARV-000001")).toBeInTheDocument();
+    expect(mapa.dadosDe("area-selecao").features).toHaveLength(1);
+    expect(pedidosSelecao[0]!.geometria).toEqual({ type: "Polygon", coordinates: [RETANGULO] });
+  });
+
+  it("uma área inválida na URL é ignorada", async () => {
+    await abrirMapa("/mapa?area=lixo");
+    await screen.findByRole("button", { name: "Selecionar área" });
+    expect(screen.queryByRole("complementary", { name: "Seleção por área" })).toBeNull();
+    expect(pedidosSelecao).toEqual([]);
+  });
+
+  it("abrir um item da lista e voltar mantém a seleção", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/arvores/a-2`, () => HttpResponse.json({}, { status: 404 })),
+      http.get(`${API}/api/v1/evidencias`, () => HttpResponse.json([])),
+    );
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    const painel = await selecionarArea(usuario, mapa);
+    const antes = areaDaUrl();
+    await usuario.click(await within(painel).findByRole("link", { name: /ARV-000002/ }));
+    await vi.waitFor(() => expect(historico.location.pathname).toBe("/inventario/arvores/a-2"));
+
+    act(() => historico.back());
+    await vi.waitFor(() => expect(historico.location.pathname).toBe("/mapa"));
+    expect(areaDaUrl()).toBe(antes);
+    expect(await screen.findByRole("complementary", { name: "Seleção por área" })).toBeVisible();
+  });
+
+  it("com área ativa, clicar numa árvore abre o painel dela e mantém a área", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/arvores/a-1`, () => HttpResponse.json(ARVORE)),
+      http.get(`${API}/api/v1/evidencias`, () => HttpResponse.json([])),
+    );
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await selecionarArea(usuario, mapa);
+    const antes = areaDaUrl();
+
+    act(() =>
+      mapa.emitir(
+        "click",
+        { features: [{ properties: { id: "a-1", quantidade: 1 } }], lngLat: {}, point: {} },
+        "arvores-pontos",
+      ),
+    );
+
+    const detalhes = await screen.findByRole("complementary", { name: "Detalhes da seleção" });
+    expect(await within(detalhes).findByText("ARV-000001")).toBeInTheDocument();
+    expect(new URLSearchParams(historico.location.search).get("selecao")).toBe("arvore:a-1");
+    expect(areaDaUrl()).toBe(antes);
+    expect(mapa.dadosDe("area-selecao").features).toHaveLength(1);
+
+    // Fechar os detalhes devolve o painel da área, ainda com a seleção.
+    await usuario.click(within(detalhes).getByRole("button", { name: "Fechar detalhes" }));
+    expect(await screen.findByRole("complementary", { name: "Seleção por área" })).toBeVisible();
+    expect(areaDaUrl()).toBe(antes);
+  });
+
+  it("enquanto desenha, o clique numa árvore não abre o painel dela", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await usuario.click(await screen.findByRole("button", { name: "Selecionar área" }));
+    act(() =>
+      mapa.emitir(
+        "click",
+        { features: [{ properties: { id: "a-1", quantidade: 1 } }], lngLat: {}, point: {} },
+        "arvores-pontos",
+      ),
+    );
+    expect(new URLSearchParams(historico.location.search).get("selecao")).toBeNull();
   });
 });
 

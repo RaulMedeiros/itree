@@ -7,6 +7,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { COR_POR_VALOR, ROTULOS_CLASSES_ARBORIZACAO } from "../mapa/coropletica";
 import { mapasCriados } from "./mapaFalso";
 
 vi.mock("react-oidc-context", () => ({
@@ -250,6 +251,205 @@ describe("realce do bairro buscado (RF-MAPA-011)", () => {
     await usuario.type(screen.getByRole("combobox", { name: "Busca global" }), "-3.7, -38.5");
     await usuario.click(await screen.findByRole("option", { name: /Coordenada/ }));
     await vi.waitFor(() => expect(feicoesRealcadas(mapa)).toEqual([]));
+  });
+});
+
+describe("seletor de território no cabeçalho", () => {
+  const MEIRELES = { id: "b-1", nome: "Meireles", tipo: "bairro" } as const;
+  const ALDEOTA = { id: "b-2", nome: "Aldeota", tipo: "bairro" } as const;
+  const LIMITES_ESCOPO = [-38.7, -3.9, -38.4, -3.6];
+
+  beforeEach(() => {
+    localStorage.clear();
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, territorios: [MEIRELES, ALDEOTA] }),
+      ),
+      http.get(`${API}/api/v1/mapa/camadas`, () =>
+        HttpResponse.json({
+          territorios: [],
+          arvores: { total: 3, sem_localizacao: 0, atualizado_em: null },
+          ocorrencias: null,
+          limites_escopo: LIMITES_ESCOPO,
+        }),
+      ),
+    );
+  });
+  afterEach(() => localStorage.clear());
+
+  it("enquadra e realça o bairro escolhido, como na busca", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?lon=-38.5&lat=-3.7&zoom=12");
+    mapa.fitBounds.mockClear();
+    expect(feicoesRealcadas(mapa)).toEqual([]);
+
+    await usuario.selectOptions(await screen.findByRole("combobox", { name: "Território" }), "b-1");
+
+    expect(await screen.findByText("Bairro em destaque:")).toBeInTheDocument();
+    expect(feicoesRealcadas(mapa)[0]!.properties.nome).toBe("Meireles");
+    expect(mapa.fitBounds).toHaveBeenCalledWith([-38.56, -3.76, -38.55, -3.75], expect.anything());
+  });
+
+  it("voltar a todo o escopo limpa o realce e enquadra o escopo", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?lon=-38.5&lat=-3.7&zoom=12");
+    const seletor = await screen.findByRole("combobox", { name: "Território" });
+    await usuario.selectOptions(seletor, "b-1");
+    await vi.waitFor(() => expect(feicoesRealcadas(mapa)).toHaveLength(1));
+    mapa.fitBounds.mockClear();
+
+    await usuario.selectOptions(seletor, "");
+
+    await vi.waitFor(() => expect(feicoesRealcadas(mapa)).toEqual([]));
+    expect(mapa.fitBounds).toHaveBeenCalledWith(LIMITES_ESCOPO, expect.anything());
+  });
+
+  it("abrir o mapa com um território já escolhido não mexe na câmera", async () => {
+    localStorage.setItem("itree:territorio-ativo:u-g", "b-1");
+    const mapa = await abrirMapa("/mapa?lon=-38.5&lat=-3.7&zoom=12");
+    await screen.findByRole("combobox", { name: "Território" });
+    expect(mapa.fitBounds).not.toHaveBeenCalled();
+    expect(feicoesRealcadas(mapa)).toEqual([]);
+  });
+});
+
+describe("arborização do entorno (Censo 2022)", () => {
+  const CAMADAS = ["arborizacao-entorno-preenchimento", "arborizacao-entorno-sem-dado"];
+  const DADOS = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        id: "b-1",
+        geometry: BAIRRO.geometry,
+        properties: { nome: "Aldeota", valor: 64.73, faces_com_arvore: 938, faces: 1449 },
+      },
+      {
+        type: "Feature",
+        id: "b-3",
+        geometry: BAIRRO.geometry,
+        properties: { nome: "Sem Censo", valor: null, faces_com_arvore: null, faces: null },
+      },
+    ],
+    proveniencia: {
+      id: "arborizacao_faces_com_arvore",
+      nome: "Faces de quadra com árvores (Censo 2022)",
+      fonte: "IBGE, Censo Demográfico 2022",
+      licenca: "Não declarada no FTP do IBGE",
+      data_referencia: "2022-07-31",
+      ingerido_em: "2026-11-11T12:00:00Z",
+      definicao: "Definição vinda da API: faces de quadra com ao menos uma árvore.",
+    },
+  };
+  const pedidos: URL[] = [];
+
+  beforeEach(() => {
+    pedidos.length = 0;
+    servidor.use(
+      http.get(`${API}/api/v1/indicadores/externos/arborizacao-entorno`, ({ request }) => {
+        pedidos.push(new URL(request.url));
+        return HttpResponse.json(DADOS);
+      }),
+    );
+  });
+
+  it("fica no grupo Contexto (fontes externas), desligada por padrão e sem baixar nada", async () => {
+    const mapa = await abrirMapa();
+    const grupo = (await screen.findByText("Contexto (fontes externas)")).closest("details")!;
+    const caixa = within(grupo).getByRole("checkbox", {
+      name: /Arborização do entorno \(Censo 2022\)/,
+    });
+    expect(caixa).not.toBeChecked();
+    expect(within(grupo).getByText(/Fonte: IBGE, Censo 2022/)).toBeInTheDocument();
+    expect(pedidos).toHaveLength(0);
+    for (const id of CAMADAS)
+      expect(mapa.setLayoutProperty).not.toHaveBeenCalledWith(id, "visibility", "visible");
+    expect(screen.queryByText("Sem dado")).not.toBeInTheDocument();
+  });
+
+  it("pinta por classe com um só matiz e põe o bairro sem dado em hachura própria", async () => {
+    const mapa = await abrirMapa();
+    const pintura = mapa.camadaDe("arborizacao-entorno-preenchimento")!;
+    // Abaixo do contorno dos bairros, que continua por cima.
+    expect(pintura.antesDe).toBe("bairros-contorno");
+    expect(pintura.paint!["fill-color"]).toEqual(COR_POR_VALOR);
+    expect(mapa.camadaDe("arborizacao-entorno-sem-dado")!.paint!["fill-pattern"]).toBe(
+      "hachura-sem-dado",
+    );
+  });
+
+  it("ao ligar, carrega uma vez, mostra a camada e a legenda com fonte e definição", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await usuario.click(
+      await screen.findByRole("checkbox", { name: /Arborização do entorno \(Censo 2022\)/ }),
+    );
+
+    await vi.waitFor(() => expect(mapa.dadosDe("arborizacao-entorno").features).toHaveLength(2));
+    expect(pedidos).toHaveLength(1);
+    // A proveniência não vira feição do mapa.
+    expect(
+      (mapa.dadosDe("arborizacao-entorno") as unknown as Record<string, unknown>).proveniencia,
+    ).toBeUndefined();
+    for (const id of CAMADAS)
+      expect(mapa.setLayoutProperty).toHaveBeenCalledWith(id, "visibility", "visible");
+
+    const legenda = await screen.findByRole("region", { name: "Legenda" });
+    await usuario.click(within(legenda).getByRole("button", { name: "Legenda" }));
+    for (const rotulo of ROTULOS_CLASSES_ARBORIZACAO)
+      expect(within(legenda).getByText(rotulo)).toBeInTheDocument();
+    expect(within(legenda).getByText("Sem dado")).toBeInTheDocument();
+    expect(within(legenda).getByText("Fonte: IBGE, Censo 2022.")).toBeInTheDocument();
+    expect(await within(legenda).findByText(/Definição vinda da API/)).toBeInTheDocument();
+
+    // Fontes dos dados: órgão, licença, ingestão e ano de referência.
+    expect(
+      screen.getByText(
+        /IBGE, Censo Demográfico 2022 · Não declarada no FTP do IBGE.*dados de 2022/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("desligar esconde a camada e a legenda, sem nova consulta ao religar", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?arborizacao_entorno=1");
+    await vi.waitFor(() => expect(pedidos).toHaveLength(1));
+    const caixa = await screen.findByRole("checkbox", {
+      name: /Arborização do entorno \(Censo 2022\)/,
+    });
+    expect(caixa).toBeChecked();
+    await usuario.click(caixa);
+    const visibilidade = () =>
+      mapa.setLayoutProperty.mock.calls
+        .filter(([id]) => id === "arborizacao-entorno-preenchimento")
+        .at(-1)?.[2];
+    await vi.waitFor(() => expect(visibilidade()).toBe("none"));
+    await usuario.click(caixa);
+    await vi.waitFor(() => expect(visibilidade()).toBe("visible"));
+    expect(pedidos).toHaveLength(1);
+  });
+
+  it("a dica do bairro mostra o percentual e a base, ou diz que não há dado", async () => {
+    const mapa = await abrirMapa("/mapa?arborizacao_entorno=1");
+    await vi.waitFor(() => expect(pedidos).toHaveLength(1));
+    act(() =>
+      mapa.emitir(
+        "mousemove",
+        { point: { x: 5, y: 5 }, features: [{ properties: DADOS.features[0]!.properties }] },
+        "arborizacao-entorno-preenchimento",
+      ),
+    );
+    expect(
+      await screen.findByText("Aldeota · 64,7% das faces com árvore (938 de 1.449 faces)"),
+    ).toBeInTheDocument();
+    act(() =>
+      mapa.emitir(
+        "mousemove",
+        { point: { x: 5, y: 5 }, features: [{ properties: DADOS.features[1]!.properties }] },
+        "arborizacao-entorno-sem-dado",
+      ),
+    );
+    expect(await screen.findByText("Sem Censo · sem dado do Censo 2022")).toBeInTheDocument();
   });
 });
 

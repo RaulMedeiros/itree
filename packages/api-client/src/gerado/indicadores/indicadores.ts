@@ -21,6 +21,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  IndicadoresArborizacaoEntornoGeojson200,
+  IndicadoresArborizacaoEntornoGeojsonParams,
   IndicadoresPainelParams,
   PainelIndicadores
 } from '../modelos';
@@ -46,6 +48,123 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export type indicadoresArborizacaoEntornoGeojsonResponse200 = {
+  data: IndicadoresArborizacaoEntornoGeojson200
+  status: 200
+}
+
+export type indicadoresArborizacaoEntornoGeojsonResponseSuccess = (indicadoresArborizacaoEntornoGeojsonResponse200) & {
+  headers: Headers;
+};
+;
+
+export type indicadoresArborizacaoEntornoGeojsonResponse = (indicadoresArborizacaoEntornoGeojsonResponseSuccess)
+
+export const getIndicadoresArborizacaoEntornoGeojsonUrl = (params?: IndicadoresArborizacaoEntornoGeojsonParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/indicadores/externos/arborizacao-entorno?${stringifiedParams}` : `/api/v1/indicadores/externos/arborizacao-entorno`
+}
+
+/**
+ * Camada coroplética "Arborização do entorno (Censo 2022)": bairros do escopo
+ * com o percentual de faces de quadra com árvore e a proveniência do dado.
+ */
+export const indicadoresArborizacaoEntornoGeojson = async (params?: IndicadoresArborizacaoEntornoGeojsonParams, options?: Parameters<typeof requisicao>[1]): Promise<indicadoresArborizacaoEntornoGeojsonResponse> => {
+
+  return requisicao<indicadoresArborizacaoEntornoGeojsonResponse>(getIndicadoresArborizacaoEntornoGeojsonUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getIndicadoresArborizacaoEntornoGeojsonQueryKey = (params?: IndicadoresArborizacaoEntornoGeojsonParams,) => {
+    return [
+    `/api/v1/indicadores/externos/arborizacao-entorno`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getIndicadoresArborizacaoEntornoGeojsonQueryOptions = <TData = Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError = unknown>(params?: IndicadoresArborizacaoEntornoGeojsonParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getIndicadoresArborizacaoEntornoGeojsonQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>> = ({ signal }) => indicadoresArborizacaoEntornoGeojson(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type IndicadoresArborizacaoEntornoGeojsonQueryResult = NonNullable<Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>>
+export type IndicadoresArborizacaoEntornoGeojsonQueryError = unknown
+
+
+export function useIndicadoresArborizacaoEntornoGeojson<TData = Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError = unknown>(
+ params: undefined |  IndicadoresArborizacaoEntornoGeojsonParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>,
+          TError,
+          Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useIndicadoresArborizacaoEntornoGeojson<TData = Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError = unknown>(
+ params?: IndicadoresArborizacaoEntornoGeojsonParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>,
+          TError,
+          Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useIndicadoresArborizacaoEntornoGeojson<TData = Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError = unknown>(
+ params?: IndicadoresArborizacaoEntornoGeojsonParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useIndicadoresArborizacaoEntornoGeojson<TData = Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError = unknown>(
+ params?: IndicadoresArborizacaoEntornoGeojsonParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresArborizacaoEntornoGeojson>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getIndicadoresArborizacaoEntornoGeojsonQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
 
 export type indicadoresPainelResponse200 = {
   data: PainelIndicadores
