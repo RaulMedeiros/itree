@@ -25,6 +25,7 @@ import {
   ROTULOS_ORIGEM_REGISTRO,
   ROTULOS_ORIGEM_VALOR,
   ROTULOS_SITUACAO_ARVORE,
+  ROTULOS_TIPO_AREA_VERDE,
   ROTULOS_TIPO_MEDIDA,
   UNIDADES_MEDIDA,
 } from "@itree/domain";
@@ -297,6 +298,14 @@ function Resumo({ arvore }: { arvore: Arvore }) {
           </Item>
           <Item rotulo="Endereço">{arvore.endereco || "—"}</Item>
           <Item rotulo="Bairro">{arvore.bairro?.nome ?? "Fora dos bairros cadastrados"}</Item>
+          {arvore.em_area_verde && (
+            <Item rotulo="Em área verde">
+              {arvore.em_area_verde.nome}{" "}
+              <span className="text-texto-suave">
+                ({ROTULOS_TIPO_AREA_VERDE[arvore.em_area_verde.tipo]})
+              </span>
+            </Item>
+          )}
           <Item rotulo="Identificadores externos">
             {arvore.identificadores.length
               ? arvore.identificadores.map((i) => (

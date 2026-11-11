@@ -13,7 +13,7 @@ export type AuditoriaListarParams = {
   codigo?: string;
   /** ISO 8601 */
   desde?: string;
-  /** Um de: contas.UsuarioEvent, contas.EscopoUsuarioEvent, contas.EquipeEvent, contas.MembroEquipeEvent, contas.TerritorioEquipeEvent, territorio.TerritorioEvent, inventario.EspecieEvent, inventario.ArvoreEvent, inventario.IdentificadorExternoEvent, inventario.MedidaEvent, inventario.LoteImportacaoEvent, inventario.ParNaoDuplicadoEvent, ocorrencias.TipoOcorrenciaEvent, ocorrencias.OcorrenciaEvent, evidencias.EvidenciaEvent, inspecoes.InspecaoEvent, tarefas.TarefaEvent, alertas.AlertaAmbientalEvent, relatorios.ExportacaoEvent, qualidade.InferenciaIAEvent */
+  /** Um de: contas.UsuarioEvent, contas.EscopoUsuarioEvent, contas.EquipeEvent, contas.MembroEquipeEvent, contas.TerritorioEquipeEvent, territorio.TerritorioEvent, areas_verdes.AreaVerdeEvent, inventario.EspecieEvent, inventario.ArvoreEvent, inventario.IdentificadorExternoEvent, inventario.MedidaEvent, inventario.LoteImportacaoEvent, inventario.ParNaoDuplicadoEvent, ocorrencias.TipoOcorrenciaEvent, ocorrencias.OcorrenciaEvent, evidencias.EvidenciaEvent, inspecoes.InspecaoEvent, tarefas.TarefaEvent, alertas.AlertaAmbientalEvent, relatorios.ExportacaoEvent, qualidade.InferenciaIAEvent */
   entidade?: string;
   /** ID do objeto auditado. */
   objeto?: string;

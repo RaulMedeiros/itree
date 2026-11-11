@@ -22,6 +22,7 @@ ENTIDADES = {
     "contas.MembroEquipeEvent": "Membro de equipe",
     "contas.TerritorioEquipeEvent": "Território de equipe",
     "territorio.TerritorioEvent": "Território",
+    "areas_verdes.AreaVerdeEvent": "Área verde",
     "inventario.EspecieEvent": "Espécie",
     "inventario.ArvoreEvent": "Árvore",
     "inventario.IdentificadorExternoEvent": "Identificador externo",

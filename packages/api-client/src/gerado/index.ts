@@ -1,4 +1,5 @@
 export * from './alertas/alertas';
+export * from './areas-verdes/areas-verdes';
 export * from './arvores/arvores';
 export * from './auditoria/auditoria';
 export * from './equipes/equipes';

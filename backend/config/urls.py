@@ -5,6 +5,7 @@ from drf_spectacular.views import SpectacularAPIView
 from rest_framework.routers import DefaultRouter
 
 from itree.alertas.views import AlertaViewSet
+from itree.areas_verdes.views import AreaVerdeViewSet
 from itree.auditoria.views import AuditoriaListView
 from itree.contas.views import EquipeViewSet, UsuarioAdminViewSet, eu
 from itree.core.views import saude
@@ -23,6 +24,7 @@ from itree.territorio.views import TerritorioViewSet
 roteador = DefaultRouter(trailing_slash=False)
 roteador.include_root_view = False
 roteador.register("territorios", TerritorioViewSet, basename="territorio")
+roteador.register("areas-verdes", AreaVerdeViewSet, basename="area-verde")
 roteador.register("equipes", EquipeViewSet, basename="equipe")
 roteador.register("admin/usuarios", UsuarioAdminViewSet, basename="usuario-admin")
 roteador.register("especies", EspecieViewSet, basename="especie")

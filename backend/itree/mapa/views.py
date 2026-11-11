@@ -13,6 +13,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from itree.areas_verdes.models import AreaVerde
 from itree.contas.acesso import area_do_escopo, filtrar_por_escopo
 from itree.core.parametros import uuid_do_parametro
 from itree.inventario.models import Arvore, SituacaoArvore
@@ -326,6 +327,7 @@ def busca(request: Request):
         "Camadas",
         {
             "territorios": serializers.ListField(child=serializers.DictField()),
+            "areas_verdes": serializers.ListField(child=serializers.DictField()),
             "arvores": serializers.DictField(allow_null=True),
             "ocorrencias": serializers.DictField(allow_null=True),
             "limites_escopo": serializers.ListField(
@@ -352,6 +354,26 @@ def camadas(request: Request):
             quantidade=Count("id"), referencia=Min("data_referencia"), ingerido=Max("ingerido_em")
         )
     ]
+    areas_verdes = [
+        {
+            "tipo": linha["tipo"],
+            "quantidade": linha["quantidade"],
+            "fontes": sorted(
+                set(AreaVerde.objects.filter(tipo=linha["tipo"]).values_list("fonte", flat=True))
+            ),
+            "licencas": sorted(
+                set(AreaVerde.objects.filter(tipo=linha["tipo"]).values_list("licenca", flat=True))
+                - {""}
+            ),
+            "data_referencia_mais_antiga": linha["referencia"],
+            "ingerido_em": linha["ingerido"],
+        }
+        for linha in AreaVerde.objects.order_by()
+        .values("tipo")
+        .annotate(
+            quantidade=Count("id"), referencia=Min("data_referencia"), ingerido=Max("ingerido_em")
+        )
+    ]
     arvores = ocorrencias = None
     if usuario.tem_permissao("mapa.ler"):
         visiveis = filtrar_por_escopo(
@@ -371,6 +393,7 @@ def camadas(request: Request):
     return Response(
         {
             "territorios": territorios,
+            "areas_verdes": areas_verdes,
             "arvores": arvores,
             "ocorrencias": ocorrencias,
             "limites_escopo": list(area.extent) if area else None,

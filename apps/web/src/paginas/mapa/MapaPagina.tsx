@@ -1,4 +1,5 @@
 import {
+  areasVerdesListar,
   mapaAlertas,
   territoriosGeojson,
   useArvoresObter,
@@ -14,6 +15,7 @@ import {
   ROTULOS_CONDICAO,
   ROTULOS_ESTADO_ESPECIE,
   ROTULOS_ORIGEM_LOCALIZACAO,
+  ROTULOS_TIPO_AREA_VERDE,
   ROTULOS_TIPO_TERRITORIO,
 } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
@@ -61,9 +63,12 @@ import {
   COR_SELECAO,
   COR_TAREFA,
   COR_TAREFA_ATRASADA,
+  CORES_AREA_VERDE,
   CORES_CONDICAO,
   CORES_ORIGEM,
   CORES_PRIORIDADE,
+  OPACIDADE_AREA_VERDE,
+  OPACIDADE_AREA_VERDE_UC,
   aoFaltarImagem,
   iconeGrupo,
   pinturaArvores,
@@ -88,6 +93,7 @@ export interface BuscaMapa {
   arvores?: "0";
   ocorrencias?: "0";
   bairros?: "0";
+  areas_verdes?: "1";
   tarefas?: "1";
   alertas?: "1";
   sem_inspecao_dias?: number;
@@ -113,6 +119,34 @@ function urlTiles(
 
 const ZOOM_ROTULOS = 12.5;
 
+/** Camadas operacionais com clique próprio: o clique nelas não abre a área verde por baixo. */
+const CAMADAS_COM_CLIQUE = [
+  "arvores-grupos",
+  "arvores-pontos",
+  "ocorrencias-grupos",
+  "ocorrencias-pontos",
+];
+
+/** Propriedades de uma feição de `GET /api/v1/areas-verdes`, como chegam do MapLibre. */
+interface AreaVerdeSelecionada {
+  nome: string;
+  nome_popular?: string;
+  tipo: string;
+  tipo_rotulo?: string;
+  orgao_gestor?: string;
+  esfera?: string;
+  ato_legal?: string;
+  area_m2?: number | null;
+  fonte: string;
+  licenca?: string;
+  data_referencia?: string | null;
+  ingerido_em?: string;
+}
+
+const COR_AREA_VERDE_POR_TIPO = ["match", ["get", "tipo"]] as unknown[];
+for (const [tipo, cor] of Object.entries(CORES_AREA_VERDE)) COR_AREA_VERDE_POR_TIPO.push(tipo, cor);
+COR_AREA_VERDE_POR_TIPO.push("#4b6b3a");
+
 const ID_OCORRENCIA: unknown = [
   "case",
   ["==", ["get", "risco_confirmado"], true],
@@ -126,6 +160,7 @@ export function MapaPagina() {
   const podeOcorrencias = usePermissao("ocorrencias.ler");
   const podeTarefas = usePermissao("tarefas.ler");
   const podeAlertas = usePermissao("alertas.ler");
+  const podeMapa = usePermissao("mapa.ler");
   const camadas = useMapaCamadas();
   const mapa = useRef<MapaMapLibre | null>(null);
   const rotulos = useRef<Marker[]>([]);
@@ -157,6 +192,12 @@ export function MapaPagina() {
   const devolverFocoAoBotao = useRef(false);
   // Cliques nas árvores não abrem o painel contextual enquanto se desenha ou há área.
   const selecaoPorAreaAtiva = useRef(false);
+  // Áreas verdes: carregadas na primeira vez que a camada é ligada; a feição clicada abre o painel.
+  const [estadoAreasVerdes, setEstadoAreasVerdes] = useState<"inicial" | "pronto" | "erro">(
+    "inicial",
+  );
+  const areasVerdesIniciadas = useRef(false);
+  const [areaVerde, setAreaVerde] = useState<AreaVerdeSelecionada | null>(null);
   const [dica, setDica] = useState<{ x: number; y: number; texto: string } | null>(null);
   const [cursor, setCursor] = useState<{ lon: number; lat: number } | null>(null);
 
@@ -165,6 +206,7 @@ export function MapaPagina() {
   const mostrarArvores = busca.arvores !== "0";
   const mostrarOcorrencias = podeOcorrencias && busca.ocorrencias !== "0";
   const mostrarBairros = busca.bairros !== "0";
+  const mostrarAreasVerdes = podeMapa && busca.areas_verdes === "1";
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
   const mostrarAlertas = podeAlertas && busca.alertas === "1";
   const filtrosArvores = {
@@ -240,6 +282,53 @@ export function MapaPagina() {
         "line-color": "#2b5f45",
         "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.8, 15, 2],
         "line-opacity": 0.75,
+      },
+    });
+
+    // Áreas verdes: abaixo das árvores e dos alertas, desligadas até o usuário pedir.
+    // Cor própria de cada tipo (ver CORES_AREA_VERDE), translúcida e com contorno.
+    m.addSource("areas-verdes", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+    m.addLayer({
+      id: "areas-verdes-preenchimento",
+      type: "fill",
+      source: "areas-verdes",
+      layout: { visibility: "none" },
+      paint: {
+        "fill-color": COR_AREA_VERDE_POR_TIPO as never,
+        "fill-opacity": [
+          "match",
+          ["get", "tipo"],
+          "unidade_conservacao",
+          OPACIDADE_AREA_VERDE_UC,
+          OPACIDADE_AREA_VERDE,
+        ],
+      },
+    });
+    m.addLayer({
+      id: "areas-verdes-contorno",
+      type: "line",
+      source: "areas-verdes",
+      filter: ["!=", ["get", "tipo"], "unidade_conservacao"],
+      layout: { visibility: "none", "line-join": "round" },
+      paint: {
+        "line-color": COR_AREA_VERDE_POR_TIPO as never,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.8, 16, 2],
+        "line-opacity": 0.9,
+      },
+    });
+    m.addLayer({
+      id: "areas-verdes-contorno-uc",
+      type: "line",
+      source: "areas-verdes",
+      filter: ["==", ["get", "tipo"], "unidade_conservacao"],
+      layout: { visibility: "none", "line-join": "round" },
+      paint: {
+        "line-color": CORES_AREA_VERDE.unidade_conservacao!,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1, 16, 2.5],
+        "line-dasharray": [3, 2],
       },
     });
 
@@ -412,6 +501,21 @@ export function MapaPagina() {
         });
       });
     }
+    // Clique numa área verde: nome, tipo e fonte. Árvores e ocorrências têm prioridade.
+    m.on("mouseenter", "areas-verdes-preenchimento", () => {
+      if (!selecaoPorAreaAtiva.current) m.getCanvas().style.cursor = "pointer";
+    });
+    m.on("mouseleave", "areas-verdes-preenchimento", () => (m.getCanvas().style.cursor = ""));
+    m.on("click", "areas-verdes-preenchimento", (e: MapLayerMouseEvent) => {
+      if (selecaoPorAreaAtiva.current) return;
+      const operacionais = CAMADAS_COM_CLIQUE.filter((id) => m.getLayer(id));
+      if (operacionais.length && m.queryRenderedFeatures(e.point, { layers: operacionais }).length)
+        return;
+      const p = e.features?.[0]?.properties;
+      if (!p) return;
+      setAreaVerde(p as unknown as AreaVerdeSelecionada);
+      atualizarBusca({ selecao: undefined });
+    });
     // Qualquer clique no mapa encerra o realce do bairro buscado (RF-MAPA-011).
     m.on("click", () => {
       if (destaqueAtual.current) atualizarBusca({ destaque: undefined });
@@ -442,6 +546,23 @@ export function MapaPagina() {
       );
     });
   }, [pronto, mostrarAlertas]);
+
+  // Áreas verdes: busca única, na primeira vez que a camada é ligada (escopo do usuário).
+  useEffect(() => {
+    if (!pronto || !mostrarAreasVerdes || areasVerdesIniciadas.current) return;
+    areasVerdesIniciadas.current = true;
+    void areasVerdesListar({ precisao: 5 })
+      .then(({ data }) => {
+        (mapa.current?.getSource("areas-verdes") as GeoJSONSource | undefined)?.setData(
+          data as Parameters<GeoJSONSource["setData"]>[0],
+        );
+        setEstadoAreasVerdes("pronto");
+      })
+      .catch(() => setEstadoAreasVerdes("erro"));
+  }, [pronto, mostrarAreasVerdes]);
+
+  // Desligar a camada ou selecionar uma árvore/ocorrência fecha o painel da área verde.
+  if (areaVerde && (!mostrarAreasVerdes || tipoSelecao)) setAreaVerde(null);
 
   // Limites e nomes dos bairros (contexto territorial).
   useEffect(() => {
@@ -586,8 +707,20 @@ export function MapaPagina() {
     definir(["alertas-area", "alertas-borda", "alertas-pontos"], mostrarAlertas);
     definir(["tarefas-pontos"], mostrarTarefas);
     definir(["bairros-preenchimento", "bairros-contorno"], mostrarBairros);
+    definir(
+      ["areas-verdes-preenchimento", "areas-verdes-contorno", "areas-verdes-contorno-uc"],
+      mostrarAreasVerdes,
+    );
     for (const r of rotulos.current) r.getElement().style.display = mostrarBairros ? "" : "none";
-  }, [pronto, mostrarArvores, mostrarOcorrencias, mostrarBairros, mostrarTarefas, mostrarAlertas]);
+  }, [
+    pronto,
+    mostrarArvores,
+    mostrarOcorrencias,
+    mostrarBairros,
+    mostrarAreasVerdes,
+    mostrarTarefas,
+    mostrarAlertas,
+  ]);
 
   useEffect(() => {
     if (!pronto) return;
@@ -677,6 +810,26 @@ export function MapaPagina() {
                     ativa={mostrarBairros}
                     aoMudar={(v) => atualizarBusca({ bairros: v ? undefined : "0" })}
                   />
+                  {podeMapa && (
+                    <>
+                      <Camada
+                        rotulo="Áreas verdes"
+                        marcador={<AmostraAreaVerde tipo="parque" />}
+                        ativa={mostrarAreasVerdes}
+                        aoMudar={(v) => atualizarBusca({ areas_verdes: v ? "1" : undefined })}
+                      />
+                      {mostrarAreasVerdes && pronto && estadoAreasVerdes === "inicial" && (
+                        <p role="status" className="text-xs text-texto-suave">
+                          Carregando áreas verdes…
+                        </p>
+                      )}
+                      {mostrarAreasVerdes && estadoAreasVerdes === "erro" && (
+                        <p role="alert" className="text-xs text-perigo">
+                          Não foi possível carregar as áreas verdes.
+                        </p>
+                      )}
+                    </>
+                  )}
                 </Grupo>
 
                 {podeAlertas && (
@@ -838,6 +991,22 @@ export function MapaPagina() {
                     ) : (
                       <p>Nenhuma camada territorial importada.</p>
                     )}
+                    {mostrarAreasVerdes &&
+                      (info?.areas_verdes ?? []).map((a) => (
+                        <p key={String(a.tipo)}>
+                          {ROTULOS_TIPO_AREA_VERDE[
+                            a.tipo as keyof typeof ROTULOS_TIPO_AREA_VERDE
+                          ] ?? String(a.tipo)}
+                          : {(a.fontes as string[]).join(", ")}
+                          {(a.licencas as string[]).length
+                            ? ` · ${(a.licencas as string[]).join("; ")}`
+                            : " · licença não informada"}{" "}
+                          · ingerido em {formatarDataHora(String(a.ingerido_em))}
+                          {a.data_referencia_mais_antiga
+                            ? ` · dados de ${anoDaData(String(a.data_referencia_mais_antiga))}`
+                            : " · data dos dados não informada"}
+                        </p>
+                      ))}
                     {base === "ruas" && config.mapaRuas && <p>{config.mapaRuas.atribuicao}</p>}
                     {info?.arvores && Number(info.arvores.sem_localizacao) > 0 && (
                       <p className="mt-1 text-atencao">
@@ -901,6 +1070,7 @@ export function MapaPagina() {
             tarefas={mostrarTarefas}
             alertas={mostrarAlertas}
             recolhidaPorPadrao={painel}
+            areasVerdes={mostrarAreasVerdes}
           />
         </div>
 
@@ -964,6 +1134,9 @@ export function MapaPagina() {
             ]}
             aoFechar={fecharSelecaoPorArea}
           />
+        )}
+        {areaVerde && !area && !tipoSelecao && (
+          <PainelAreaVerde area={areaVerde} aoFechar={() => setAreaVerde(null)} />
         )}
         {tipoSelecao && idSelecao && !area && (
           <PainelContextual
@@ -1085,6 +1258,26 @@ function Losango({ cor }: { cor: string }) {
   return <span className="inline-block size-2.5 rotate-45" style={{ background: cor }} />;
 }
 
+/** Amostra de área verde: preenchimento translúcido e contorno (tracejado nas unidades). */
+function AmostraAreaVerde({ tipo }: { tipo: string }) {
+  const cor = CORES_AREA_VERDE[tipo] ?? CORES_AREA_VERDE.parque!;
+  return (
+    <span
+      aria-hidden
+      data-testid={`amostra-area-verde-${tipo}`}
+      className="inline-block size-3.5 shrink-0 rounded-[2px] border-2"
+      style={{
+        borderColor: cor,
+        borderStyle: tipo === "unidade_conservacao" ? "dashed" : "solid",
+        background: `${cor}38`,
+      }}
+    />
+  );
+}
+
+/** Ano de uma data ISO ("2023-01-01"), sem passar por fuso horário. */
+const anoDaData = (iso: string) => iso.slice(0, 4);
+
 /** Legenda só das camadas ativas (RF-MAPA-007). */
 function Legenda({
   modoCor,
@@ -1093,6 +1286,7 @@ function Legenda({
   tarefas,
   alertas,
   recolhidaPorPadrao,
+  areasVerdes,
 }: {
   modoCor: ModoCor;
   arvores: boolean;
@@ -1101,9 +1295,10 @@ function Legenda({
   alertas: boolean;
   /** Com o painel de camadas aberto, a legenda começa recolhida para não cobrir o mapa (C-09). */
   recolhidaPorPadrao: boolean;
+  areasVerdes: boolean;
 }) {
   const [aberta, setAberta] = useState(!recolhidaPorPadrao);
-  if (!arvores && !ocorrencias && !tarefas && !alertas) return null;
+  if (!arvores && !ocorrencias && !tarefas && !alertas && !areasVerdes) return null;
   return (
     <section
       aria-label="Legenda"
@@ -1190,6 +1385,19 @@ function Legenda({
               </li>
             </ul>
           )}
+          {areasVerdes && (
+            <div>
+              <p className="mb-1 text-texto-suave">Áreas verdes — tipo</p>
+              <ul className="flex flex-wrap gap-x-3 gap-y-1">
+                {Object.keys(CORES_AREA_VERDE).map((t) => (
+                  <li key={t} className="flex items-center gap-1.5">
+                    <AmostraAreaVerde tipo={t} />{" "}
+                    {ROTULOS_TIPO_AREA_VERDE[t as keyof typeof ROTULOS_TIPO_AREA_VERDE]}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {alertas && (
             <p className="flex items-center gap-1.5">
               <Losango cor={COR_ALERTA} /> Alerta ambiental — sinal externo, não é confirmação de
@@ -1224,6 +1432,53 @@ function PainelContextual({
         <X className="size-4" />
       </button>
       {tipo === "arvore" ? <ResumoArvore id={id} /> : <ResumoOcorrencia id={id} />}
+    </aside>
+  );
+}
+
+/** Nome, tipo e fonte da área verde clicada, com a proveniência do dado (RN-PROV-003). */
+function PainelAreaVerde({ area, aoFechar }: { area: AreaVerdeSelecionada; aoFechar: () => void }) {
+  const tipo = ROTULOS_TIPO_AREA_VERDE[area.tipo as keyof typeof ROTULOS_TIPO_AREA_VERDE];
+  return (
+    <aside
+      aria-label="Detalhes da área verde"
+      className="absolute top-3 right-3 z-10 flex max-h-[calc(100%-1.5rem)] w-96 flex-col gap-2 overflow-y-auto rounded-xl border border-borda bg-superficie p-4 text-sm shadow-lg"
+    >
+      <button
+        className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo"
+        aria-label="Fechar detalhes"
+        onClick={aoFechar}
+      >
+        <X className="size-4" />
+      </button>
+      <div className="pr-8">
+        <p className="text-lg font-semibold">{area.nome}</p>
+        {area.nome_popular && (
+          <p className="text-texto-suave">Conhecida como {area.nome_popular}</p>
+        )}
+        <p className="mt-1 flex items-center gap-1.5">
+          <AmostraAreaVerde tipo={area.tipo} /> {tipo ?? area.tipo}
+        </p>
+      </div>
+      {area.ato_legal && <p>Ato legal: {area.ato_legal}</p>}
+      {area.area_m2 ? (
+        <p>Área informada: {Math.round(area.area_m2).toLocaleString("pt-BR")} m²</p>
+      ) : null}
+      <div className="border-t border-borda pt-2 text-xs text-texto-suave">
+        <p>
+          <span className="font-medium">Fonte:</span> {area.fonte}
+        </p>
+        {(area.orgao_gestor || area.esfera) && (
+          <p>Órgão: {[area.orgao_gestor, area.esfera].filter(Boolean).join(" · ")}</p>
+        )}
+        {area.licenca && <p>{area.licenca}</p>}
+        <p>
+          {area.data_referencia
+            ? `Dados de ${anoDaData(area.data_referencia)}`
+            : "Data dos dados não informada"}
+          {area.ingerido_em ? ` · ingerido em ${formatarDataHora(area.ingerido_em)}` : ""}
+        </p>
+      </div>
     </aside>
   );
 }
@@ -1308,6 +1563,11 @@ function ResumoArvore({ id }: { id: string }) {
           <p className="text-xs text-texto-suave">Precisão não informada pela origem.</p>
         )}
         <p className="mt-1">{[a.endereco, a.bairro?.nome].filter(Boolean).join(" · ") || "—"}</p>
+        {a.em_area_verde && (
+          <p className="mt-1">
+            Em área verde: <strong>{a.em_area_verde.nome}</strong>
+          </p>
+        )}
       </div>
       <div>
         <p className="text-xs font-medium text-texto-suave uppercase">Medidas mais recentes</p>

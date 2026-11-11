@@ -32,11 +32,11 @@ paths:
           type: string
         description: 'Um de: contas.UsuarioEvent, contas.EscopoUsuarioEvent, contas.EquipeEvent,
           contas.MembroEquipeEvent, contas.TerritorioEquipeEvent, territorio.TerritorioEvent,
-          inventario.EspecieEvent, inventario.ArvoreEvent, inventario.IdentificadorExternoEvent,
-          inventario.MedidaEvent, inventario.LoteImportacaoEvent, inventario.ParNaoDuplicadoEvent,
-          ocorrencias.TipoOcorrenciaEvent, ocorrencias.OcorrenciaEvent, evidencias.EvidenciaEvent,
-          inspecoes.InspecaoEvent, tarefas.TarefaEvent, alertas.AlertaAmbientalEvent,
-          relatorios.ExportacaoEvent, qualidade.InferenciaIAEvent'
+          areas_verdes.AreaVerdeEvent, inventario.EspecieEvent, inventario.ArvoreEvent,
+          inventario.IdentificadorExternoEvent, inventario.MedidaEvent, inventario.LoteImportacaoEvent,
+          inventario.ParNaoDuplicadoEvent, ocorrencias.TipoOcorrenciaEvent, ocorrencias.OcorrenciaEvent,
+          evidencias.EvidenciaEvent, inspecoes.InspecaoEvent, tarefas.TarefaEvent,
+          alertas.AlertaAmbientalEvent, relatorios.ExportacaoEvent, qualidade.InferenciaIAEvent'
       - in: query
         name: objeto
         schema:
@@ -424,6 +424,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Ingestao'
+          description: ''
+  /api/v1/areas-verdes:
+    get:
+      operationId: areas_verdes_listar
+      description: FeatureCollection com fonte, licença e datas em cada feição (RN-PROV-003).
+      parameters:
+      - in: query
+        name: bbox
+        schema:
+          type: string
+        description: Limites oeste,sul,leste,norte em graus (WGS 84).
+      - in: query
+        name: precisao
+        schema:
+          type: integer
+        description: Casas decimais da geometria (padrão 5).
+      - in: query
+        name: tipo
+        schema:
+          type: string
+        description: praca | parque | unidade_conservacao
+      tags:
+      - areas-verdes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/areas-verdes/{id}:
+    get:
+      operationId: areas_verdes_obter
+      description: |-
+        Praças, parques e unidades de conservação em GeoJSON, somente leitura.
+
+        Exige permissão de leitura do mapa e respeita o escopo territorial: só
+        aparece o que intersecta a área do usuário (RF-ACL-003).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este area verde.
+        required: true
+      - in: query
+        name: precisao
+        schema:
+          type: integer
+        description: Casas decimais da geometria (padrão 5).
+      tags:
+      - areas-verdes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/arvores:
     get:
@@ -2912,6 +2977,23 @@ components:
         * `condicao_aparente` - condicao_aparente
         * `medidas` - medidas
         * `localizacao` - localizacao
+    AreaVerdeResumo:
+      type: object
+      description: Identificação mínima, para a ficha e o painel da árvore.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 250
+        tipo:
+          $ref: '#/components/schemas/TipoAreaVerdeEnum'
+      required:
+      - id
+      - nome
+      - tipo
     Arvore:
       type: object
       description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).
@@ -2996,6 +3078,11 @@ components:
           - $ref: '#/components/schemas/EspecieCartao'
           readOnly: true
           nullable: true
+        em_area_verde:
+          allOf:
+          - $ref: '#/components/schemas/AreaVerdeResumo'
+          nullable: true
+          readOnly: true
         identificadores:
           type: array
           items:
@@ -3031,6 +3118,7 @@ components:
       - condicao_aparente_em
       - criado_em
       - criado_por_nome
+      - em_area_verde
       - especie
       - especie_cartao
       - fundida_em
@@ -3240,6 +3328,11 @@ components:
           items:
             type: object
             additionalProperties: {}
+        areas_verdes:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
         arvores:
           type: object
           additionalProperties: {}
@@ -3255,6 +3348,7 @@ components:
             format: double
           nullable: true
       required:
+      - areas_verdes
       - arvores
       - limites_escopo
       - ocorrencias
@@ -6350,6 +6444,16 @@ components:
       description: |-
         * `foco_calor` - Foco de calor
         * `supressao` - Alteração/supressão de vegetação
+    TipoAreaVerdeEnum:
+      enum:
+      - praca
+      - parque
+      - unidade_conservacao
+      type: string
+      description: |-
+        * `praca` - Praça
+        * `parque` - Parque urbano
+        * `unidade_conservacao` - Unidade de conservação
     TipoConteudoEnum:
       enum:
       - application/pdf

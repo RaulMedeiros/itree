@@ -1,7 +1,7 @@
 import { configurarCliente, type Eu } from "@itree/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -88,6 +88,7 @@ const servidor = setupServer(
       observacoes: "",
       criado_por_nome: "Rita",
       motivo_situacao: "",
+      em_area_verde: null,
     }),
   ),
   http.get(`${API}/api/v1/arvores/a-1/historico`, () => HttpResponse.json([])),
@@ -240,6 +241,31 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
     await abrir("/inventario/arvores/a-1");
     expect(await screen.findByText("-3,746602, -38,540452")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Excluir/ }).className).toContain("text-perigo");
+  });
+
+  it("informa a área verde que contém a árvore, só quando há", async () => {
+    await abrir("/inventario/arvores/a-1");
+    await screen.findByText("-3,746602, -38,540452");
+    expect(screen.queryByText("Em área verde")).not.toBeInTheDocument();
+
+    servidor.use(
+      http.get(`${API}/api/v1/arvores/a-1`, () =>
+        HttpResponse.json({
+          ...resumo(),
+          identificadores: [],
+          medidas_atuais: [],
+          observacoes: "",
+          criado_por_nome: "Rita",
+          motivo_situacao: "",
+          em_area_verde: { id: "av-1", nome: "Praça do Ferreira", tipo: "praca" },
+        }),
+      ),
+    );
+    cleanup();
+    await abrir("/inventario/arvores/a-1");
+    expect(await screen.findByText("Em área verde")).toBeInTheDocument();
+    expect(screen.getByText("Praça do Ferreira")).toBeInTheDocument();
+    expect(screen.getByText("(Praça)")).toBeInTheDocument();
   });
 
   it("evidência mostra a legenda inteira e quem enviou", async () => {

@@ -34,6 +34,9 @@ export class MapaFalso {
   getLayer(id: string) {
     return this.camadas.find((c) => c.id === id);
   }
+  /** Feições renderizadas sob o ponto; os testes preenchem quando querem um clique em árvore. */
+  renderizadas: unknown[] = [];
+  queryRenderedFeatures = vi.fn(() => this.renderizadas);
   setFilter = vi.fn();
   setPaintProperty = vi.fn();
   setLayoutProperty = vi.fn();
