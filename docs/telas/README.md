@@ -54,6 +54,27 @@ Tarefas em aberto (quadrados; vermelho = atrasada) e alertas ambientais
 
 ![Mapa com tarefas e alertas](04-mapa-alertas-tarefas.png)
 
+Em zoom afastado, o anel de cada grupo mostra a pior condição contida:
+
+![Mapa com agrupamentos](02b-mapa-grupos.png)
+
+Bairro escolhido na busca, em destaque:
+
+![Bairro em destaque](33-mapa-bairro-destaque.png)
+
+Seleção por área, com resumo por condição, lista, criação de tarefas e exportação:
+
+![Seleção por área](34-mapa-selecao-area.png)
+
+Áreas verdes oficiais (praças, parques e unidades de conservação do Fortaleza em
+Mapas, dado real com fonte) sobre os bairros sintéticos:
+
+![Áreas verdes](35-mapa-areas-verdes.png)
+
+Notificações no cabeçalho:
+
+![Notificações](36-notificacoes.png)
+
 ## Inventário (W-03)
 
 Lista de árvores com proveniência da espécie e da localização:
