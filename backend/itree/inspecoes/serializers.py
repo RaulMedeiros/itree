@@ -12,7 +12,7 @@ from itree.inventario.serializers import (
 )
 from itree.tarefas.models import Tarefa
 
-from .models import CondicaoAparente, Inspecao, SinalObservado
+from .models import CondicaoAparente, EstadoInspecao, Inspecao, SinalObservado
 from .servicos import APLICAVEIS
 
 
@@ -47,6 +47,10 @@ class InspecaoResumoSerializer(serializers.ModelSerializer):
     tecnico = UsuarioResumoSerializer(read_only=True)
     revisor = UsuarioResumoSerializer(read_only=True, allow_null=True)
     especie = EspecieResumoSerializer(read_only=True, allow_null=True)
+    medidas_propostas = serializers.SerializerMethodField(
+        help_text="Medidas da inspeção em revisão que ainda não valem no cadastro da árvore "
+        "(vazio em qualquer outro estado)."
+    )
 
     class Meta:
         model = Inspecao
@@ -67,7 +71,16 @@ class InspecaoResumoSerializer(serializers.ModelSerializer):
             "revisor",
             "validada_em",
             "versao",
+            "medidas_propostas",
         ]
+
+    @extend_schema_field(MedidaSerializer(many=True))
+    def get_medidas_propostas(self, obj):
+        if obj.estado != EstadoInspecao.EM_REVISAO:
+            return []
+        # Filtra em memória para aproveitar o prefetch da listagem.
+        pendentes = [m for m in obj.medidas.all() if not m.aplicada]
+        return MedidaSerializer(pendentes, many=True).data
 
 
 class InspecaoSerializer(InspecaoResumoSerializer):

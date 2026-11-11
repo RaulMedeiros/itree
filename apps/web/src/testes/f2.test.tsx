@@ -76,6 +76,7 @@ const INSPECAO: Inspecao = {
   aplicado_ao_cadastro: [],
   dispositivo: "android-1",
   medidas: [],
+  medidas_propostas: [],
   anterior: null,
   tarefa: null,
 };

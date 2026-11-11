@@ -42,6 +42,8 @@ export interface Inspecao {
      * @maximum 2147483647
      */
   versao?: number;
+  /** Medidas da inspeção em revisão que ainda não valem no cadastro da árvore (vazio em qualquer outro estado). */
+  readonly medidas_propostas: readonly Medida[];
   readonly localizacao: Localizacao | null;
   /** @nullable */
   precisao_m?: number | null;

@@ -16,6 +16,7 @@ import {
   useInspecoesListar,
   useOcorrenciasListar,
   type Arvore,
+  type Medida,
 } from "@itree/api-client";
 import {
   ROTULOS_CONDICAO,
@@ -65,7 +66,7 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarCoordenada, formatarData, formatarDataHora } from "../../util/formatos";
+import { formatarCoordenada, formatarData, formatarDataHora, plural } from "../../util/formatos";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { invalidarCaminhos } from "../../util/cache";
@@ -374,25 +375,52 @@ function Resumo({ arvore }: { arvore: Arvore }) {
   );
 }
 
-/** Avisa que a tabela mostra só o que já foi validado, quando há inspeção aguardando revisão. */
-function AvisoInspecoesEmRevisao({ arvoreId }: { arvoreId: string }) {
+/** "DAP 38 cm" (com "≈" quando estimado). */
+function descreverMedida(m: Medida): string {
+  return `${ROTULOS_TIPO_MEDIDA[m.tipo]} ${m.origem === "estimado" ? "≈ " : ""}${Number(m.valor).toLocaleString("pt-BR")} ${m.unidade}`;
+}
+
+interface MedidaPendente {
+  medida: Medida;
+  inspecao: { id: string; codigo: string };
+}
+
+/** Medidas propostas por inspeções em revisão: ainda não valem no cadastro. */
+function useMedidasPendentes(arvoreId: string): MedidaPendente[] {
   const podeVer = usePermissao("inspecoes.ler");
   const consulta = useInspecoesListar(
     { arvore: arvoreId, estado: "em_revisao", tamanho: 20 },
     { query: { enabled: podeVer } },
   );
-  const pendentes = consulta.data?.data.results ?? [];
-  if (!podeVer || pendentes.length === 0) return null;
+  if (!podeVer) return [];
+  return (consulta.data?.data.results ?? []).flatMap((i) =>
+    i.medidas_propostas.map((medida) => ({ medida, inspecao: { id: i.id, codigo: i.codigo } })),
+  );
+}
+
+function LinkDaRevisao({ inspecao }: { inspecao: { id: string; codigo: string } }) {
+  return (
+    <Link
+      to="/inspecoes/$id"
+      params={{ id: inspecao.id }}
+      className="font-medium text-marca-escura underline"
+    >
+      {inspecao.codigo}
+    </Link>
+  );
+}
+
+/** Avisa que a tabela mostra só o que já foi validado, com cada valor pendente e o link da revisão. */
+function AvisoMedidasPendentes({ pendentes }: { pendentes: MedidaPendente[] }) {
+  if (pendentes.length === 0) return null;
   return (
     <p role="status" className="rounded-md bg-info-clara px-3 py-2 text-sm text-info">
-      Há {pendentes.length === 1 ? "1 inspeção" : `${pendentes.length} inspeções`} em revisão com
-      medidas ainda não aplicadas ao cadastro:{" "}
-      {pendentes.map((i, n) => (
-        <span key={i.id}>
-          {n > 0 && ", "}
-          <Link to="/inspecoes/$id" params={{ id: i.id }} className="font-medium underline">
-            {i.codigo}
-          </Link>
+      Há {plural(pendentes.length, "medida pendente", "medidas pendentes")} de revisão, ainda não
+      aplicadas ao cadastro:{" "}
+      {pendentes.map((p, n) => (
+        <span key={p.medida.id}>
+          {n > 0 && "; "}
+          {descreverMedida(p.medida)} pendente (<LinkDaRevisao inspecao={p.inspecao} />)
         </span>
       ))}
       .
@@ -409,9 +437,34 @@ function Medidas({
   podeMedir: boolean;
   aoMedir: () => void;
 }) {
+  const pendentes = useMedidasPendentes(arvore.id);
+  const tiposComValor = new Set(arvore.medidas_atuais.map((m) => m.tipo));
+  // Tipos que só existem como proposta ainda não têm linha no cadastro.
+  const soPendentes = [...new Set(pendentes.map((p) => p.medida.tipo))].filter(
+    (t) => !tiposComValor.has(t),
+  );
+  const pendentesDe = (tipo: string) => pendentes.filter((p) => p.medida.tipo === tipo);
+  const celulaPendente = (tipo: string) => {
+    const lista = pendentesDe(tipo);
+    return lista.length === 0 ? (
+      "—"
+    ) : (
+      <ul className="flex flex-col gap-0.5">
+        {lista.map((p) => (
+          <li key={p.medida.id} className="whitespace-nowrap">
+            <span className="font-mono">
+              {p.medida.origem === "estimado" ? "≈ " : ""}
+              {Number(p.medida.valor).toLocaleString("pt-BR")} {p.medida.unidade}
+            </span>{" "}
+            pendente · <LinkDaRevisao inspecao={p.inspecao} />
+          </li>
+        ))}
+      </ul>
+    );
+  };
   return (
     <div className="flex flex-col gap-3">
-      <AvisoInspecoesEmRevisao arvoreId={arvore.id} />
+      <AvisoMedidasPendentes pendentes={pendentes} />
       {podeMedir && (
         <div>
           <Botao variante="secundario" onClick={aoMedir}>
@@ -419,7 +472,7 @@ function Medidas({
           </Botao>
         </div>
       )}
-      {arvore.medidas_atuais.length === 0 ? (
+      {arvore.medidas_atuais.length === 0 && soPendentes.length === 0 ? (
         <Vazio titulo="Nenhuma medida registrada" />
       ) : (
         <Tabela>
@@ -427,6 +480,7 @@ function Medidas({
             <tr>
               <Th>Medida (mais recente)</Th>
               <Th>Valor</Th>
+              <Th>Pendente de revisão</Th>
               <Th>Origem</Th>
               <Th>Método</Th>
               <Th>Data</Th>
@@ -441,6 +495,7 @@ function Medidas({
                   {m.origem === "estimado" ? "≈ " : ""}
                   {Number(m.valor).toLocaleString("pt-BR")} {m.unidade}
                 </Td>
+                <Td>{celulaPendente(m.tipo)}</Td>
                 <Td>
                   <SeloOrigemValor origem={m.origem} />
                 </Td>
@@ -449,12 +504,23 @@ function Medidas({
                 <Td>{m.responsavel_nome || "—"}</Td>
               </Linha>
             ))}
+            {soPendentes.map((tipo) => (
+              <Linha key={tipo}>
+                <Td className="font-medium">{ROTULOS_TIPO_MEDIDA[tipo]}</Td>
+                <Td className="text-texto-suave">Sem valor no cadastro</Td>
+                <Td>{celulaPendente(tipo)}</Td>
+                <Td>—</Td>
+                <Td>—</Td>
+                <Td>—</Td>
+                <Td>—</Td>
+              </Linha>
+            ))}
           </tbody>
         </Tabela>
       )}
       <p className="text-xs text-texto-suave">
         Medidas anteriores ficam no histórico. Valores estimados aparecem com “≈” e não substituem
-        medições.
+        medições. Medidas pendentes só entram no cadastro quando a revisão da inspeção as aplica.
       </p>
     </div>
   );

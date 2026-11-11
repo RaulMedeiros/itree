@@ -375,3 +375,31 @@ def test_sem_inspecao_ha_n_dias(cliente, revisor, tecnico_a, arvore_a):
         a["id"] for a in cliente.get("/api/v1/arvores", {"sem_inspecao_dias": 30}).json()["results"]
     ]
     assert ids == [outra["id"]]
+
+
+# --- Medidas propostas ---------------------------------------------------------
+
+
+def test_lista_expoe_medidas_propostas_so_das_inspecoes_em_revisao(
+    cliente, tecnico_a, revisor, arvore_a
+):
+    medidas = [{"tipo": "dap", "valor": "38", "metodo": "fita_diametrica", "origem": "medido"}]
+    em_revisao = enviada(cliente, tecnico_a, arvore_a["id"], medidas=medidas)
+    rascunho = inspecao(arvore_a["id"], medidas=medidas)
+    assert sincronizar(cliente, tecnico_a, rascunho).json()[0]["estado"] == "rascunho"
+
+    r = cliente.como(revisor).get("/api/v1/inspecoes", {"arvore": arvore_a["id"]})
+    assert r.status_code == 200, r.json()
+    por_id = {i["id"]: i for i in r.json()["results"]}
+    proposta = por_id[em_revisao]["medidas_propostas"]
+    assert [(m["tipo"], m["valor"], m["unidade"]) for m in proposta] == [("dap", "38.00", "cm")]
+    assert por_id[rascunho["id"]]["medidas_propostas"] == []
+
+
+def test_medidas_propostas_somem_depois_da_validacao(cliente, tecnico_a, revisor, arvore_a):
+    ins = enviada(cliente, tecnico_a, arvore_a["id"])
+    cliente.como(revisor)
+    assert cliente.get(f"/api/v1/inspecoes/{ins}").json()["medidas_propostas"]
+    r = cliente.post(f"/api/v1/inspecoes/{ins}/validar", {"aplicar": ["medidas"]}, format="json")
+    assert r.status_code == 200, r.json()
+    assert cliente.get(f"/api/v1/inspecoes/{ins}").json()["medidas_propostas"] == []

@@ -9,6 +9,7 @@ import type { ArvoreDaInspecao } from './arvoreDaInspecao';
 import type { CondicaoAparenteEnum } from './condicaoAparenteEnum';
 import type { EspecieResumo } from './especieResumo';
 import type { EstadoInspecaoEnum } from './estadoInspecaoEnum';
+import type { Medida } from './medida';
 import type { OrigemInspecaoEnum } from './origemInspecaoEnum';
 import type { SinalObservadoEnum } from './sinalObservadoEnum';
 import type { UsuarioResumo } from './usuarioResumo';
@@ -38,4 +39,6 @@ export interface InspecaoResumo {
      * @maximum 2147483647
      */
   versao?: number;
+  /** Medidas da inspeção em revisão que ainda não valem no cadastro da árvore (vazio em qualquer outro estado). */
+  readonly medidas_propostas: readonly Medida[];
 }

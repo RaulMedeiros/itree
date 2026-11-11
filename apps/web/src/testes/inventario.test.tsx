@@ -409,6 +409,80 @@ describe("lista de árvores: seleção em lote", () => {
   });
 });
 
+const medida = (extra: Record<string, unknown>) => ({
+  id: "m-1",
+  tipo: "dap",
+  valor: "32.00",
+  unidade: "cm",
+  metodo: "fita_diametrica",
+  origem: "medido",
+  data_medicao: "2025-10-06",
+  responsavel_nome: "Inventário sintético 2024",
+  observacao: "",
+  criado_em: "2025-10-06T12:00:00Z",
+  ...extra,
+});
+
+describe("medidas pendentes na ficha (C-16)", () => {
+  const inspecaoEmRevisao = (propostas: unknown[]) =>
+    http.get(`${API}/api/v1/inspecoes`, () =>
+      HttpResponse.json(
+        pagina([
+          { id: "i-9", codigo: "INS-000006", estado: "em_revisao", medidas_propostas: propostas },
+        ]),
+      ),
+    );
+
+  it("mostra o valor pendente ao lado do cadastro, com o link da revisão", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/arvores/a-1`, () =>
+        HttpResponse.json({
+          ...resumo(),
+          identificadores: [],
+          medidas_atuais: [medida({})],
+          observacoes: "",
+          criado_por_nome: "Rita",
+          motivo_situacao: "",
+        }),
+      ),
+      inspecaoEmRevisao([medida({ id: "m-2", valor: "38.00", data_medicao: "2026-11-05" })]),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("tab", { name: "Medidas" }));
+    const aviso = await screen.findByRole("status");
+    expect(aviso).toHaveTextContent("DAP 38 cm pendente");
+    expect(within(aviso).getByRole("link", { name: "INS-000006" })).toHaveAttribute(
+      "href",
+      "/inspecoes/i-9",
+    );
+    const linha = screen.getByRole("row", { name: /DAP/ });
+    expect(within(linha).getByText("32 cm")).toBeInTheDocument();
+    expect(within(linha).getByText(/38 cm/)).toBeInTheDocument();
+    expect(within(linha).getByRole("link", { name: "INS-000006" })).toBeInTheDocument();
+  });
+
+  it("mostra uma linha para a medida que só existe como proposta", async () => {
+    servidor.use(
+      inspecaoEmRevisao([medida({ id: "m-3", tipo: "altura", valor: "10.20", unidade: "m" })]),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("tab", { name: "Medidas" }));
+    const linha = await screen.findByRole("row", { name: /Altura total/ });
+    expect(within(linha).getByText("Sem valor no cadastro")).toBeInTheDocument();
+    expect(within(linha).getByText(/10,2 m/)).toBeInTheDocument();
+  });
+
+  it("sem medida proposta, não avisa nada", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("tab", { name: "Medidas" }));
+    expect(await screen.findByText("Nenhuma medida registrada")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+});
+
 describe("ficha da árvore (C-15, C-17, C-18)", () => {
   it("formata coordenadas em pt-BR e separa a ação de excluir", async () => {
     await abrir("/inventario/arvores/a-1");
