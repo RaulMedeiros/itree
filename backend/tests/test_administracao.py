@@ -174,3 +174,79 @@ def test_auditoria_identifica_e_busca_o_registro_por_codigo(cliente, admin, tecn
 
     assert cliente.get("/api/v1/admin/auditoria", {"codigo": "XYZ-1"}).json()["count"] == 0
     assert cliente.get("/api/v1/admin/auditoria", {"codigo": "lixo"}).json()["count"] == 0
+
+
+def test_auditoria_mostra_e_busca_pelo_registro_pai(cliente, admin, tecnico_a):
+    from django.utils import timezone
+
+    from itree.evidencias.models import Evidencia
+    from itree.inspecoes.models import Inspecao
+    from itree.inventario.models import Arvore, Medida
+    from itree.qualidade.models import InferenciaIA
+
+    arvore = Arvore.objects.create(origem_registro="importacao", especie_texto_original="Oity")
+    outra = Arvore.objects.create(origem_registro="importacao", especie_texto_original="Ipê")
+    inspecao = Inspecao.objects.create(
+        arvore=arvore, tecnico=tecnico_a, realizada_em=timezone.now()
+    )
+    Medida.objects.create(
+        arvore=arvore, tipo="altura", valor=8, unidade="m", metodo="trena", origem="medido"
+    )
+    Medida.objects.create(
+        arvore=outra, tipo="altura", valor=5, unidade="m", metodo="trena", origem="medido"
+    )
+    Medida.objects.create(
+        arvore=arvore,
+        inspecao=inspecao,
+        tipo="dap",
+        valor=30,
+        unidade="cm",
+        metodo="fita_diametrica",
+        origem="medido",
+    )
+    Evidencia.objects.create(
+        chave="a/1.jpg",
+        nome_original="1.jpg",
+        tipo_conteudo="image/jpeg",
+        tamanho=10,
+        enviada_por=tecnico_a,
+        inspecao=inspecao,
+        arvore=arvore,
+    )
+    InferenciaIA.objects.create(
+        tarefa="especie",
+        arvore=arvore,
+        modelo="m",
+        versao_modelo="1",
+        resultado={},
+        registrada_por=tecnico_a,
+    )
+
+    def pais(codigo):
+        corpo = cliente.como(admin).get("/api/v1/admin/auditoria", {"codigo": codigo}).json()
+        return sorted(
+            (e["entidade"], e["pai"]["codigo"], e["pai"]["tipo"], e["pai"]["id"])
+            for e in corpo["results"]
+            if e["pai"]
+        )
+
+    # Medida e sugestão sem inspeção apontam para a árvore.
+    assert pais(arvore.codigo) == [
+        ("Medida", arvore.codigo, "arvore", str(arvore.pk)),
+        ("Sugestão de IA", arvore.codigo, "arvore", str(arvore.pk)),
+    ]
+    # Medida e evidência de uma inspeção apontam para a inspeção.
+    assert pais(inspecao.codigo) == [
+        ("Evidência", inspecao.codigo, "inspecao", str(inspecao.pk)),
+        ("Medida", inspecao.codigo, "inspecao", str(inspecao.pk)),
+    ]
+    # O próprio registro continua sendo achado, sem pai.
+    achados = cliente.get("/api/v1/admin/auditoria", {"codigo": arvore.codigo}).json()["results"]
+    assert {e["entidade"] for e in achados} == {"Árvore", "Medida", "Sugestão de IA"}
+    # A listagem sem filtro também identifica o pai.
+    todos = cliente.get("/api/v1/admin/auditoria", {"entidade": "inventario.MedidaEvent"}).json()
+    assert {e["pai"]["codigo"] for e in todos["results"]} == {
+        arvore.codigo,
+        outra.codigo,
+        inspecao.codigo,
+    }

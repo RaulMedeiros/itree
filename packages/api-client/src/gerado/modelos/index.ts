@@ -74,6 +74,7 @@ export * from './estadoOcorrenciaEnum';
 export * from './estadoTarefaEnum';
 export * from './eu';
 export * from './eventoAuditoria';
+export * from './eventoAuditoriaPai';
 export * from './evidencia';
 export * from './evidenciasListarParams';
 export * from './fonteAlertaEnum';

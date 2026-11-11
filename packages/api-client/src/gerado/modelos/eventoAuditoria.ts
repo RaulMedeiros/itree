@@ -5,6 +5,7 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { EventoAuditoriaPai } from './eventoAuditoriaPai';
 
 export interface EventoAuditoria {
   id: string;
@@ -18,6 +19,11 @@ export interface EventoAuditoria {
      * @nullable
      */
   readonly registro: string | null;
+  /**
+     * Registro pai (árvore, inspeção ou ocorrência) de medidas, evidências e sugestões de IA: {tipo, id, codigo}.
+     * @nullable
+     */
+  readonly pai: EventoAuditoriaPai;
   readonly acao: string;
   /** Campo -> [valor anterior, valor novo] (alterações). */
   readonly diferencas: unknown;

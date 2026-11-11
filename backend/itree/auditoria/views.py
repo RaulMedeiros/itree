@@ -1,6 +1,8 @@
 import re
 from datetime import datetime
 
+from django.apps import apps
+from django.db.models import Q
 from drf_spectacular.utils import (
     OpenApiParameter,
     extend_schema,
@@ -50,6 +52,51 @@ PREFIXOS_CODIGO = {
 MODELO_PARA_PREFIXO = {modelo: prefixo for prefixo, modelo in PREFIXOS_CODIGO.items()}
 CODIGO_RE = re.compile(r"^\s*([A-Za-z]{3})-?0*(\d+)\s*$")
 
+# Eventos de registros filhos -> campos que os ligam ao registro pai, em ordem
+# de precedência: o primeiro vínculo preenchido é o pai mostrado e buscado.
+PAIS_DOS_FILHOS = {
+    "inventario.MedidaEvent": ("inspecao_id", "arvore_id"),
+    "evidencias.EvidenciaEvent": ("inspecao_id", "arvore_id", "ocorrencia_id"),
+    "qualidade.InferenciaIAEvent": ("inspecao_id", "arvore_id"),
+}
+# Campo de vínculo -> (tipo do pai, prefixo do código).
+TIPOS_DE_PAI = {
+    "inspecao_id": ("inspecao", "INS"),
+    "arvore_id": ("arvore", "ARV"),
+    "ocorrencia_id": ("ocorrencia", "OCO"),
+}
+
+
+MODELOS_DE_PAI = {
+    "inspecao_id": "inspecoes.Inspecao",
+    "arvore_id": "inventario.Arvore",
+    "ocorrencia_id": "ocorrencias.Ocorrencia",
+}
+
+
+def _vinculo_pai(modelo: str, dados: dict | None) -> tuple[str, str] | None:
+    """(campo de vínculo, id do pai) do primeiro vínculo preenchido, se houver."""
+    for campo in PAIS_DOS_FILHOS.get(modelo, ()):
+        if (dados or {}).get(campo):
+            return campo, str(dados[campo])
+    return None
+
+
+def _resolver_pais(eventos) -> dict[tuple[str, str], int]:
+    """Número do registro pai de cada vínculo, em uma consulta por tipo de pai."""
+    ids: dict[str, set[str]] = {}
+    for ev in eventos:
+        if vinculo := _vinculo_pai(ev.pgh_model, ev.pgh_data):
+            ids.setdefault(vinculo[0], set()).add(vinculo[1])
+    return {
+        (campo, str(pk)): numero
+        for campo, conjunto in ids.items()
+        for pk, numero in apps.get_model(MODELOS_DE_PAI[campo])
+        .objects.filter(pk__in=conjunto)
+        .values_list("pk", "numero")
+    }
+
+
 ACOES = {"insert": "criacao", "update": "alteracao", "delete": "exclusao"}
 
 
@@ -74,6 +121,10 @@ class EventoAuditoriaSerializer(serializers.Serializer):
     objeto_id = serializers.CharField(source="pgh_obj_id", allow_null=True)
     registro = serializers.SerializerMethodField(
         help_text="Código legível do registro afetado (ARV-, OCO-, INS-, TAR-, ALR-), se houver."
+    )
+    pai = serializers.SerializerMethodField(
+        help_text="Registro pai (árvore, inspeção ou ocorrência) de medidas, evidências e "
+        "sugestões de IA: {tipo, id, codigo}."
     )
     acao = serializers.SerializerMethodField()
     diferencas = serializers.SerializerMethodField(
@@ -119,6 +170,18 @@ class EventoAuditoriaSerializer(serializers.Serializer):
             return None
         return f"{prefixo}-{int(numero):06d}"
 
+    @extend_schema_field(serializers.DictField(allow_null=True))
+    def get_pai(self, obj):
+        vinculo = _vinculo_pai(obj.pgh_model, obj.pgh_data)
+        if not vinculo:
+            return None
+        campo, pai_id = vinculo
+        numero = self.context.get("pais", {}).get(vinculo)
+        if not numero:
+            return None
+        tipo, prefixo = TIPOS_DE_PAI[campo]
+        return {"tipo": tipo, "id": pai_id, "codigo": f"{prefixo}-{numero:06d}"}
+
     def get_acao(self, obj) -> str:
         return ACOES.get(obj.pgh_label, obj.pgh_label)
 
@@ -153,6 +216,32 @@ class AuditoriaListView(generics.ListAPIView):
     serializer_class = EventoAuditoriaSerializer
     permission_classes = [requer(Permissao.ADMIN_AUDITORIA)]
 
+    @staticmethod
+    def _filtro_codigo(prefixo: str, numero: int) -> Q:
+        """O próprio registro ou os filhos (medidas, evidências, sugestões de IA)
+        cujo registro pai mostrado é o do código."""
+        filtro = Q(pgh_model=PREFIXOS_CODIGO[prefixo], pgh_data__numero=numero)
+        campo = next((c for c, (_, pref) in TIPOS_DE_PAI.items() if pref == prefixo), None)
+        if campo is None:
+            return filtro
+        pai = apps.get_model(MODELOS_DE_PAI[campo]).objects.filter(numero=numero).first()
+        if pai is None:
+            return filtro
+        for modelo, vinculos in PAIS_DOS_FILHOS.items():
+            if campo in vinculos:
+                # O vínculo só vale quando os que o precedem estão vazios.
+                vazios = {f"pgh_data__{v}": None for v in vinculos[: vinculos.index(campo)]}
+                filtro |= Q(pgh_model=modelo, **{f"pgh_data__{campo}": str(pai.pk)}, **vazios)
+        return filtro
+
+    def paginate_queryset(self, queryset):
+        pagina = super().paginate_queryset(queryset)
+        self._pais = _resolver_pais(pagina or [])
+        return pagina
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), "pais": getattr(self, "_pais", {})}
+
     def get_queryset(self):
         p = self.request.query_params
         modelos = [p["entidade"]] if p.get("entidade") in ENTIDADES else list(ENTIDADES)
@@ -160,12 +249,15 @@ class AuditoriaListView(generics.ListAPIView):
         if codigo:
             achado = CODIGO_RE.match(codigo)
             modelo = PREFIXOS_CODIGO.get(achado.group(1).upper()) if achado else None
-            if not modelo or modelo not in modelos:
+            if not modelo:
                 return Events.objects.none()
-            modelos = [modelo]
+            # Além do próprio registro, os filhos que o têm como pai.
+            modelos = [m for m in (modelo, *PAIS_DOS_FILHOS) if m in modelos]
+            if not modelos:
+                return Events.objects.none()
         qs = Events.objects.across(*modelos)
         if codigo:
-            qs = qs.filter(pgh_data__numero=int(achado.group(2)))
+            qs = qs.filter(self._filtro_codigo(achado.group(1).upper(), int(achado.group(2))))
         if objeto := p.get("objeto"):
             qs = qs.filter(pgh_obj_id=objeto)
         if usuario := p.get("usuario"):

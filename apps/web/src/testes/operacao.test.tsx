@@ -322,3 +322,48 @@ describe("análises", () => {
     expect(screen.queryByRole("heading", { name: "Evolução mensal" })).toBeNull();
   });
 });
+
+describe("auditoria", () => {
+  const evento = (id: string, parcial: Record<string, unknown>) => ({
+    id,
+    momento: "2026-11-10T21:17:10Z",
+    entidade: "Medida",
+    entidade_modelo: "inventario.Medida",
+    objeto_id: id,
+    registro: null,
+    pai: null,
+    acao: "criacao",
+    diferencas: null,
+    dados: {},
+    autor_nome: null,
+    contexto: null,
+    ...parcial,
+  });
+
+  it("mostra o registro pai de medida e evidência, com link para a árvore e a inspeção", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "admin.auditoria"] }),
+      ),
+      http.get(`${API}/api/v1/admin/auditoria`, () =>
+        HttpResponse.json(
+          pagina([
+            evento("m-1", { pai: { tipo: "arvore", id: "a-1", codigo: "ARV-000010" } }),
+            evento("e-1", {
+              entidade: "Evidência",
+              entidade_modelo: "evidencias.Evidencia",
+              pai: { tipo: "inspecao", id: "i-1", codigo: "INS-000001" },
+            }),
+          ]),
+        ),
+      ),
+    );
+    await abrir("/administracao/auditoria");
+    const arvoreLink = await screen.findByRole("link", { name: /ARV-000010/ });
+    expect(arvoreLink).toHaveAttribute("href", "/inventario/arvores/a-1");
+    expect(screen.getByRole("link", { name: /INS-000001/ })).toHaveAttribute(
+      "href",
+      "/inspecoes/i-1",
+    );
+  });
+});
