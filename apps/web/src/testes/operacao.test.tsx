@@ -368,6 +368,44 @@ describe("auditoria", () => {
   });
 });
 
+describe("auditoria: lote de filhos", () => {
+  it("rotula o lote com o pai e não junta medidas de árvores diferentes", async () => {
+    const medida = (id: string, pai: string, codigo: string) => ({
+      id,
+      momento: "2026-11-10T21:17:10Z",
+      entidade: "Medida",
+      entidade_modelo: "inventario.Medida",
+      objeto_id: id,
+      registro: null,
+      pai: { tipo: "arvore", id: pai, codigo },
+      acao: "criacao",
+      diferencas: null,
+      dados: {},
+      autor_nome: null,
+      contexto: null,
+    });
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "admin.auditoria"] }),
+      ),
+      http.get(`${API}/api/v1/admin/auditoria`, () =>
+        HttpResponse.json(
+          pagina([
+            medida("m-1", "a-1", "ARV-000010"),
+            medida("m-2", "a-1", "ARV-000010"),
+            medida("m-3", "a-2", "ARV-000011"),
+            medida("m-4", "a-2", "ARV-000011"),
+          ]),
+        ),
+      ),
+    );
+    await abrir("/administracao/auditoria");
+    expect(await screen.findByRole("link", { name: /ARV-000010/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /ARV-000011/ })).toBeInTheDocument();
+    expect(screen.getAllByText(/2 registros/)).toHaveLength(2);
+  });
+});
+
 describe("atribuição a equipe incompleta", () => {
   it("avisa antes de confirmar, sem bloquear a reatribuição", async () => {
     const usuario = userEvent.setup();
