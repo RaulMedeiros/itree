@@ -96,6 +96,7 @@ function Detalhe({ alerta: a }: { alerta: AlertaAmbiental }) {
     <>
       <CabecalhoPagina
         titulo={`${a.codigo} · ${ROTULOS_TIPO_ALERTA[a.tipo]}`}
+        migalhas={[{ rotulo: "Alertas ambientais", para: "/alertas" }, { rotulo: a.codigo }]}
         descricao={
           <span className="flex flex-wrap items-center gap-2">
             <SeloStatusAlerta status={a.status ?? "detectado"} /> {ROTULOS_FONTE_ALERTA[a.fonte]} ·

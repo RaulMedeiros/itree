@@ -15,6 +15,7 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
+import { useBairroDoFiltro } from "../../layout/territorio";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
@@ -62,6 +63,7 @@ export function OcorrenciasPagina() {
   const [busca, setBusca] = useState(filtros.busca ?? "");
   const tipos = useTiposOcorrenciaListar();
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
+  const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
   const equipes = useEquipesListar(
     { ativa: true, tamanho: 200 },
     { query: { enabled: usePermissao("tarefas.ler") } },
@@ -81,6 +83,7 @@ export function OcorrenciasPagina() {
   const estado = filtros.estado ?? "abertas";
   const consulta = useOcorrenciasListar({
     ...filtros,
+    bairro,
     estado,
     atrasadas: filtros.atrasadas === "true" ? true : undefined,
     // Na fila de abertas, o que vence primeiro e é mais urgente vem no topo.
@@ -165,8 +168,11 @@ export function OcorrenciasPagina() {
         </Selecao>
         <Selecao
           aria-label="Bairro"
-          value={filtros.bairro ?? ""}
-          onChange={(e) => filtrar({ bairro: e.target.value || undefined })}
+          value={bairro ?? ""}
+          onChange={(e) => {
+            filtrar({ bairro: e.target.value || undefined });
+            aoEscolherBairro(e.target.value);
+          }}
           className="max-w-48"
         >
           <option value="">Todos os bairros</option>

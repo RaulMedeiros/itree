@@ -48,8 +48,8 @@ class SelecaoEntradaSerializer(serializers.Serializer):
         default=dict,
         help_text=(
             "Mesmos filtros dos vector tiles: especie, especie_estado, localizacao_origem, "
-            "bairro, sem_inspecao_dias, condicao_aparente (árvores); estado, prioridade, tipo "
-            "(ocorrências)."
+            "sem_inspecao_dias, condicao_aparente (árvores); estado, prioridade, tipo "
+            "(ocorrências); bairro (ambas)."
         ),
     )
     camadas = serializers.ListField(

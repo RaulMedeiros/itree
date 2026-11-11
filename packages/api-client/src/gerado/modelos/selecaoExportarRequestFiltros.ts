@@ -7,6 +7,6 @@
  */
 
 /**
- * Mesmos filtros dos vector tiles: especie, especie_estado, localizacao_origem, bairro, sem_inspecao_dias, condicao_aparente (árvores); estado, prioridade, tipo (ocorrências).
+ * Mesmos filtros dos vector tiles: especie, especie_estado, localizacao_origem, sem_inspecao_dias, condicao_aparente (árvores); estado, prioridade, tipo (ocorrências); bairro (ambas).
  */
 export type SelecaoExportarRequestFiltros = {[key: string]: string};

@@ -156,6 +156,7 @@ export function AuditoriaPagina() {
     <>
       <CabecalhoPagina
         titulo="Auditoria"
+        migalhas={[{ rotulo: "Administração", para: "/administracao" }, { rotulo: "Auditoria" }]}
         descricao="Toda alteração em usuários, equipes e territórios, com autor, origem e justificativa. Os registros não podem ser alterados."
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">

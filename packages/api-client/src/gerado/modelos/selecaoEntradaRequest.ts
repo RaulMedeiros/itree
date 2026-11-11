@@ -11,7 +11,7 @@ import type { SelecaoEntradaRequestFiltros } from './selecaoEntradaRequestFiltro
 export interface SelecaoEntradaRequest {
   /** Polígono GeoJSON (EPSG:4326) da área desenhada. */
   geometria: unknown;
-  /** Mesmos filtros dos vector tiles: especie, especie_estado, localizacao_origem, bairro, sem_inspecao_dias, condicao_aparente (árvores); estado, prioridade, tipo (ocorrências). */
+  /** Mesmos filtros dos vector tiles: especie, especie_estado, localizacao_origem, sem_inspecao_dias, condicao_aparente (árvores); estado, prioridade, tipo (ocorrências); bairro (ambas). */
   filtros?: SelecaoEntradaRequestFiltros;
   /** Camadas consultadas (padrão: árvores e ocorrências). */
   camadas?: CamadaSelecaoEnum[];

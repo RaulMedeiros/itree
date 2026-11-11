@@ -123,6 +123,11 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
     <>
       <CabecalhoPagina
         titulo={arvore.codigo}
+        migalhas={[
+          { rotulo: "Inventário", para: "/inventario" },
+          { rotulo: "Árvores", para: "/inventario/arvores" },
+          { rotulo: arvore.codigo },
+        ]}
         descricao={
           <span className="flex flex-wrap items-center gap-2">
             <span className={arvore.especie ? "italic" : ""}>{nomeEspecie(arvore)}</span>

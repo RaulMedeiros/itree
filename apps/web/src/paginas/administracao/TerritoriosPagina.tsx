@@ -13,6 +13,7 @@ export function TerritoriosPagina() {
     <>
       <CabecalhoPagina
         titulo="Territórios"
+        migalhas={[{ rotulo: "Administração", para: "/administracao" }, { rotulo: "Territórios" }]}
         descricao="Limites administrativos usados no escopo de usuários e equipes, com fonte e data de cada dado. A coluna Árvores conta as árvores ativas do território que estão no seu escopo. Esta tela é somente leitura."
       />
       <p className="mb-3 rounded-md bg-info-clara px-3 py-2 text-sm text-info">

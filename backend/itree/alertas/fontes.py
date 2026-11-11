@@ -25,6 +25,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
 from itree.core.geo import SRID_METRICO
+from itree.notificacoes import servicos as notificacoes
 from itree.territorio.models import Territorio, TipoTerritorio
 
 from .models import AlertaAmbiental, FonteAlerta, IngestaoAlertas, TipoAlerta
@@ -211,6 +212,7 @@ def criar_ingestao(fonte: str, origem: str, usuario=None, **extras) -> IngestaoA
 def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoAlertas:
     """Ingere o conteúdo, registrando o resultado mesmo em caso de erro."""
     ingestao = criar_ingestao(fonte, origem, usuario)
+    criados: list[AlertaAmbiental] = []
     try:
         registros, invalidos = ler(conteudo, fonte)
         municipio = (
@@ -247,7 +249,7 @@ def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoA
                 metrica = r.geom.clone()
                 metrica.transform(transformacao)
                 area = round(metrica.area / 10_000, 2)
-            AlertaAmbiental.objects.create(
+            novo = AlertaAmbiental.objects.create(
                 fonte=fonte,
                 id_externo=r.id_externo,
                 tipo=TIPO_POR_FONTE[fonte],
@@ -261,6 +263,7 @@ def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoA
                 ],
             )
             existentes.add(r.id_externo)
+            criados.append(novo)
             ingestao.novos += 1
         ingestao.sucesso = True
     except (ErroFonte, requests.RequestException) as exc:
@@ -269,4 +272,5 @@ def ingerir(fonte: str, conteudo: bytes, origem: str, usuario=None) -> IngestaoA
         ingestao.erro = f"Falha inesperada: {exc.__class__.__name__}: {exc}"
     ingestao.concluida_em = timezone.now()
     ingestao.save()
+    notificacoes.alertas_novos(criados)
     return ingestao

@@ -39,6 +39,7 @@ import {
   nomeEspecie,
 } from "../../componentes/selos";
 import { config } from "../../config";
+import { useTerritorioAtivo } from "../../layout/territorio";
 import { Mapa } from "../../mapa/Mapa";
 import { AreaRolavel } from "../../ui/rolagem";
 import { maplibregl } from "../../mapa/maplibre";
@@ -162,6 +163,7 @@ export function MapaPagina() {
   const podeTarefas = usePermissao("tarefas.ler");
   const podeAlertas = usePermissao("alertas.ler");
   const podeMapa = usePermissao("mapa.ler");
+  const territorioAtivo = useTerritorioAtivo();
   const camadas = useMapaCamadas();
   const mapa = useRef<MapaMapLibre | null>(null);
   const rotulos = useRef<Marker[]>([]);
@@ -211,12 +213,13 @@ export function MapaPagina() {
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
   const mostrarAlertas = podeAlertas && busca.alertas === "1";
   const filtrosArvores = {
+    bairro: territorioAtivo.id,
     especie_estado: busca.especie_estado,
     localizacao_origem: busca.localizacao_origem,
     condicao_aparente: busca.condicao_aparente,
     sem_inspecao_dias: busca.sem_inspecao_dias ? String(busca.sem_inspecao_dias) : undefined,
   };
-  const filtrosOcorrencias = { estado: busca.estado ?? "abertas" };
+  const filtrosOcorrencias = { estado: busca.estado ?? "abertas", bairro: territorioAtivo.id };
   const [tipoSelecao, idSelecao] = (busca.selecao ?? "").split(":") as [
     "arvore" | "ocorrencia" | "",
     string,

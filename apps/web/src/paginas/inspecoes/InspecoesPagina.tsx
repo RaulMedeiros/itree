@@ -5,6 +5,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { SeloEstadoInspecao } from "../../componentes/selos";
 import { CORES_CONDICAO } from "../../mapa/simbologia";
 import { EntradaData, Selecao } from "../../ui/campos";
+import { useBairroDoFiltro } from "../../layout/territorio";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
@@ -31,8 +32,10 @@ export function InspecoesPagina() {
   const filtros = useSearch({ from: "/autenticado/inspecoes/" });
   const navegar = useNavigate({ from: "/inspecoes/" });
   const fila = (filtros.estado ?? "em_revisao") === "em_revisao";
+  const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
   const consulta = useInspecoesListar({
     ...filtros,
+    bairro,
     estado: filtros.estado ?? "em_revisao",
     // A fila é atendida por ordem de chegada; o histórico, do mais recente.
     ordenar: fila ? "realizada_em" : "-realizada_em",
@@ -67,8 +70,11 @@ export function InspecoesPagina() {
         </Selecao>
         <Selecao
           aria-label="Bairro"
-          value={filtros.bairro ?? ""}
-          onChange={(e) => filtrar({ bairro: e.target.value || undefined })}
+          value={bairro ?? ""}
+          onChange={(e) => {
+            filtrar({ bairro: e.target.value || undefined });
+            aoEscolherBairro(e.target.value);
+          }}
           className="max-w-52"
         >
           <option value="">Todos os bairros</option>

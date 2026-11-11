@@ -127,6 +127,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
     <>
       <CabecalhoPagina
         titulo={`${o.codigo} · ${o.tipo.nome}`}
+        migalhas={[{ rotulo: "Ocorrências", para: "/ocorrencias" }, { rotulo: o.codigo }]}
         descricao={
           <span className="flex flex-wrap items-center gap-2">
             <span>

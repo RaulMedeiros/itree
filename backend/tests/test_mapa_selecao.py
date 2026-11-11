@@ -118,6 +118,22 @@ def test_aplica_os_filtros_do_mapa(cliente, gestor_municipal, cenario):
     assert sem["arvores"]["total"] == 0
 
 
+def test_filtro_de_bairro_vale_para_arvores_e_ocorrencias(
+    cliente, gestor_municipal, cenario, territorios
+):
+    bairro_a = str(territorios["a"].id)
+    corpo = _selecionar(
+        cliente, gestor_municipal, filtros={"bairro": bairro_a, "estado": "todas"}
+    ).json()
+    assert corpo["arvores"]["total"] == 2
+    assert {i["codigo"] for i in corpo["arvores"]["itens"]} == {
+        a.codigo for a in cenario["dentro"][:2]
+    }
+    assert [i["codigo"] for i in corpo["ocorrencias"]["itens"]] == [
+        cenario["ocorrencias"][0].codigo
+    ]
+
+
 def test_so_as_camadas_pedidas(cliente, gestor_municipal, cenario):
     corpo = _selecionar(cliente, gestor_municipal, camadas=["ocorrencias"]).json()
     assert corpo["arvores"] is None and corpo["ocorrencias"]["total"] == 2

@@ -1,7 +1,7 @@
 import { configurarCliente, type Eu, type Ingestao } from "@itree/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -203,6 +203,16 @@ describe("cabeçalho", () => {
     expect(await screen.findByText("Ana Admin")).toBeInTheDocument();
     expect(screen.queryByText(/Dados de demonstração/)).not.toBeInTheDocument();
     expect(screen.queryByText(/fonte externa com problema/)).not.toBeInTheDocument();
+  });
+
+  it("mostra as migalhas nas sub-abas, com link de volta ao módulo", async () => {
+    await abrir("/administracao/integracoes");
+    const nav = await screen.findByRole("navigation", { name: "Migalhas" });
+    expect(nav).toHaveTextContent("Administração›Integrações");
+    expect(within(nav).getByRole("link", { name: "Administração" })).toHaveAttribute(
+      "href",
+      "/administracao",
+    );
   });
 
   it("a tecla / leva o foco para a busca global", async () => {

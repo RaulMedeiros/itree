@@ -16,6 +16,7 @@ from itree.inventario.models import (
     OrigemLocalizacao,
     SituacaoArvore,
 )
+from itree.notificacoes import servicos as notificacoes
 from itree.tarefas.acesso import pode_atuar
 from itree.tarefas.models import ESTADOS_FINAIS_TAREFA, EstadoTarefa
 
@@ -123,6 +124,7 @@ def sincronizar_item(dados: dict, usuario, dispositivo: str) -> Resultado:
             _gravar_medidas(inspecao, dados.get("medidas", []), usuario)
             if enviar:
                 _concluir_tarefa(inspecao)
+                notificacoes.inspecao_para_revisao(inspecao)
             return Resultado(ident, "criada", inspecao.versao, inspecao.estado)
 
         if existente.tecnico_id != usuario.pk:
@@ -169,6 +171,7 @@ def sincronizar_item(dados: dict, usuario, dispositivo: str) -> Resultado:
         _gravar_medidas(existente, dados.get("medidas", []), usuario)
         if enviar:
             _concluir_tarefa(existente)
+            notificacoes.inspecao_para_revisao(existente)
         return Resultado(ident, "atualizada", existente.versao, existente.estado)
 
 
@@ -235,4 +238,5 @@ def devolver(inspecao: Inspecao, revisor, motivo: str) -> Inspecao:
         inspecao.revisor = revisor
         inspecao.versao += 1
         inspecao.save()
+        notificacoes.inspecao_devolvida(inspecao, motivo)
     return inspecao

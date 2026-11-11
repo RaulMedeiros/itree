@@ -1,5 +1,5 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { ChevronDown, LogOut, MapPin } from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { ROTULOS_PAPEL } from "@itree/domain";
 import { useAuth } from "react-oidc-context";
@@ -10,6 +10,8 @@ import { config } from "../config";
 import { Selo } from "../ui/selo";
 import { BuscaGlobal } from "./BuscaGlobal";
 import { FontesIndicador } from "./FontesIndicador";
+import { SeletorTerritorio } from "./SeletorTerritorio";
+import { Sino } from "./Sino";
 
 export function Shell() {
   const eu = useUsuario();
@@ -67,28 +69,14 @@ export function Shell() {
 function Cabecalho() {
   const eu = useUsuario();
   const auth = useAuth();
-  const territorio =
-    eu.territorios.find((t) => t.tipo === "municipio")?.nome ??
-    (eu.territorios.length === 1 ? eu.territorios[0]?.nome : undefined);
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-borda bg-superficie px-6">
-      <div className="flex items-center gap-2 text-sm">
-        <MapPin className="size-4 text-marca" aria-hidden />
-        {territorio ? (
-          <span>
-            <span className="text-texto-suave">Território: </span>
-            <span className="font-medium">{territorio}</span>
-          </span>
-        ) : eu.territorios.length > 1 ? (
-          <span className="font-medium">{eu.territorios.length} territórios no seu escopo</span>
-        ) : (
-          <Selo tom="atencao">Sem escopo territorial atribuído</Selo>
-        )}
-      </div>
+      <SeletorTerritorio />
       <BuscaGlobal />
       <div className="flex items-center gap-2">
         <FontesIndicador />
+        <Sino />
         <Menu.Root>
           <Menu.Trigger className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-fundo">
             <span className="flex size-7 items-center justify-center rounded-full bg-marca-clara text-xs font-semibold text-marca-escura">

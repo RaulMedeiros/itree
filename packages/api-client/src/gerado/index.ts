@@ -11,6 +11,7 @@ export * from './indicadores/indicadores';
 export * from './inferencias/inferencias';
 export * from './inspecoes/inspecoes';
 export * from './mapa/mapa';
+export * from './notificacoes/notificacoes';
 export * from './ocorrencias/ocorrencias';
 export * from './qualidade/qualidade';
 export * from './relatorios/relatorios';

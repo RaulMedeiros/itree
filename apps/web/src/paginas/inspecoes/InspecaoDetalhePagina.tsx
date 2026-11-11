@@ -107,6 +107,7 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
     <>
       <CabecalhoPagina
         titulo={`${i.codigo} · ${a.codigo}`}
+        migalhas={[{ rotulo: "Inspeções", para: "/inspecoes" }, { rotulo: i.codigo }]}
         descricao={
           <span className="flex flex-wrap items-center gap-2">
             <SeloEstadoInspecao estado={i.estado ?? "rascunho"} />

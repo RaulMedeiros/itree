@@ -2034,6 +2034,87 @@ paths:
                 type: string
                 format: binary
           description: ''
+  /api/v1/notificacoes:
+    get:
+      operationId: notificacoes_listar
+      description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
+      parameters:
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificacaoList'
+          description: ''
+  /api/v1/notificacoes/{id}/ler:
+    post:
+      operationId: notificacoes_ler
+      description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este notificacao.
+        required: true
+      tags:
+      - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notificacao'
+          description: ''
+  /api/v1/notificacoes/contagem:
+    get:
+      operationId: notificacoes_contar
+      description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
+      tags:
+      - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContagemNaoLidas'
+          description: ''
+  /api/v1/notificacoes/ler-todas:
+    post:
+      operationId: notificacoes_ler_todas
+      description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
+      tags:
+      - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContagemNaoLidas'
+          description: ''
   /api/v1/ocorrencias:
     get:
       operationId: ocorrencias_listar
@@ -3510,6 +3591,13 @@ components:
       required:
       - total
       - validos
+    ContagemNaoLidas:
+      type: object
+      properties:
+        nao_lidas:
+          type: integer
+      required:
+      - nao_lidas
     ConversaoRequest:
       type: object
       properties:
@@ -4963,6 +5051,62 @@ components:
         * `visual` - Estimativa visual
         * `imagem` - Estimativa por imagem
         * `desconhecido` - Não informado pela fonte
+    Notificacao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        tipo:
+          allOf:
+          - $ref: '#/components/schemas/NotificacaoTipoEnum'
+          readOnly: true
+        titulo:
+          type: string
+          readOnly: true
+        texto:
+          type: string
+          readOnly: true
+        link:
+          type: string
+          readOnly: true
+          description: Caminho interno da tela.
+        lida:
+          type: boolean
+          readOnly: true
+        lida_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - criado_em
+      - id
+      - lida
+      - lida_em
+      - link
+      - texto
+      - tipo
+      - titulo
+    NotificacaoTipoEnum:
+      enum:
+      - tarefa_atribuida
+      - risco_confirmado
+      - inspecao_devolvida
+      - inspecao_para_revisao
+      - alerta_novo
+      type: string
+      description: |-
+        * `tarefa_atribuida` - Tarefa atribuída
+        * `risco_confirmado` - Risco confirmado
+        * `inspecao_devolvida` - Inspeção devolvida
+        * `inspecao_para_revisao` - Inspeção para revisão
+        * `alerta_novo` - Alerta ambiental novo
     NovaEvidenciaRequest:
       type: object
       properties:
@@ -5493,6 +5637,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LoteImportacao'
+    PaginatedNotificacaoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notificacao'
     PaginatedOcorrenciaList:
       type: object
       required:
@@ -6163,8 +6330,8 @@ components:
           additionalProperties:
             type: string
           description: 'Mesmos filtros dos vector tiles: especie, especie_estado,
-            localizacao_origem, bairro, sem_inspecao_dias, condicao_aparente (árvores);
-            estado, prioridade, tipo (ocorrências).'
+            localizacao_origem, sem_inspecao_dias, condicao_aparente (árvores); estado,
+            prioridade, tipo (ocorrências); bairro (ambas).'
         camadas:
           type: array
           items:
@@ -6182,8 +6349,8 @@ components:
           additionalProperties:
             type: string
           description: 'Mesmos filtros dos vector tiles: especie, especie_estado,
-            localizacao_origem, bairro, sem_inspecao_dias, condicao_aparente (árvores);
-            estado, prioridade, tipo (ocorrências).'
+            localizacao_origem, sem_inspecao_dias, condicao_aparente (árvores); estado,
+            prioridade, tipo (ocorrências); bairro (ambas).'
         camadas:
           type: array
           items:

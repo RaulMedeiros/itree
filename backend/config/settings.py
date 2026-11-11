@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "itree.alertas",
     "itree.relatorios",
     "itree.qualidade",
+    "itree.notificacoes",
 ]
 
 MIDDLEWARE = [
