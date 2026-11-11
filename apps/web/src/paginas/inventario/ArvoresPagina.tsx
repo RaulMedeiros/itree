@@ -38,7 +38,9 @@ const TAMANHO = 50;
 export interface BuscaArvores {
   busca?: string;
   especie?: string;
-  especie_estado?: EstadoEspecieEnum;
+  /** "nao_confirmada" reúne tudo o que não é "confirmada". */
+  especie_estado?: EstadoEspecieEnum | "nao_confirmada";
+  valida?: true;
   bairro?: string;
   localizacao_origem?: OrigemLocalizacaoEnum;
   situacao?: "ativa" | "excluida" | "fundida" | "todas";
@@ -244,12 +246,13 @@ export function ArvoresPagina() {
           value={filtros.especie_estado ?? ""}
           onChange={(e) =>
             filtrar({
-              especie_estado: (e.target.value || undefined) as EstadoEspecieEnum | undefined,
+              especie_estado: (e.target.value || undefined) as BuscaArvores["especie_estado"],
             })
           }
           className="w-full sm:w-48"
         >
           <option value="">Toda identificação</option>
+          <option value="nao_confirmada">Não confirmada</option>
           {Object.entries(ROTULOS_ESTADO_ESPECIE).map(([v, r]) => (
             <option key={v} value={v}>
               {r}
@@ -315,6 +318,15 @@ export function ArvoresPagina() {
           <option value="todas">Todas</option>
         </Selecao>
       </div>
+      {filtros.valida && (
+        <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-texto-suave">
+          Só registros válidos: ativos, com localização e origem registradas (critério provisório),
+          como na Visão geral.
+          <Botao variante="fantasma" onClick={() => filtrar({ valida: undefined })}>
+            Mostrar todos
+          </Botao>
+        </p>
+      )}
 
       {consulta.isPending ? (
         <Carregando />

@@ -77,7 +77,7 @@ beforeAll(() => {
 afterEach(() => servidor.resetHandlers());
 afterAll(() => servidor.close());
 
-async function abrirComPainel(corpo: unknown) {
+async function abrirComPainel(corpo: object) {
   servidor.use(http.get(`${API}/api/v1/indicadores/painel`, () => HttpResponse.json(corpo)));
   const { criarRoteador } = await import("../rotas");
   render(
@@ -132,5 +132,28 @@ describe("visão geral: comparação sobre base pequena (R2-22)", () => {
     );
     const cartao = await cartaoDe("Inspeções realizadas");
     expect(within(cartao).getByText(/^\+50% vs\. 11\/09\/26/)).toBeInTheDocument();
+  });
+});
+
+describe("visão geral: árvores sem espécie confirmada (R2-09)", () => {
+  it("o link leva à lista de árvores filtrada por espécie não confirmada", async () => {
+    await abrirComPainel(
+      painel({
+        distribuicoes: {
+          especies: {
+            titulo: "Espécies confirmadas (10 mais frequentes)",
+            definicao: "d",
+            nao_confirmadas: 165,
+            itens: [{ rotulo: "Licania tomentosa", quantidade: 3 }],
+          },
+        },
+      }),
+    );
+    const link = await screen.findByRole("link", { name: "Ver 165 árvores" });
+    const destino = new URL(link.getAttribute("href")!, "http://x");
+    expect(destino.pathname).toBe("/inventario/arvores");
+    expect(destino.searchParams.get("especie_estado")).toBe("nao_confirmada");
+    expect(destino.searchParams.get("valida")).toBe("true");
+    expect(screen.queryByRole("link", { name: "Ver catálogo" })).toBeNull();
   });
 });

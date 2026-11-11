@@ -36,6 +36,7 @@ from . import duplicidades, importacao, referencias
 from .models import (
     Arvore,
     Especie,
+    EstadoEspecie,
     EstadoLote,
     LoteImportacao,
     OrigemRegistro,
@@ -166,7 +167,11 @@ FILTROS_ARVORE = [
         "busca", str, description="Código (ARV-000123), identificador externo ou endereço."
     ),
     OpenApiParameter("especie", str),
-    OpenApiParameter("especie_estado", str),
+    OpenApiParameter(
+        "especie_estado",
+        str,
+        description="Estado da espécie. Use 'nao_confirmada' para tudo que não é 'confirmada'.",
+    ),
     OpenApiParameter("bairro", str),
     OpenApiParameter("localizacao_origem", str),
     OpenApiParameter(
@@ -205,6 +210,9 @@ def filtrar_arvores(qs, params):
         ("localizacao_origem", "localizacao_origem"),
     ):
         if valor := params.get(campo):
+            if campo == "especie_estado" and valor == "nao_confirmada":
+                qs = qs.exclude(especie_estado=EstadoEspecie.CONFIRMADA)
+                continue
             if consulta.endswith("_id"):
                 valor = uuid_do_parametro(valor, campo)
             qs = qs.filter(**{consulta: valor})

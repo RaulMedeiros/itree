@@ -567,6 +567,7 @@ paths:
         name: especie_estado
         schema:
           type: string
+        description: Estado da espécie. Use 'nao_confirmada' para tudo que não é 'confirmada'.
       - in: query
         name: localizacao_origem
         schema:
@@ -858,6 +859,7 @@ paths:
         name: especie_estado
         schema:
           type: string
+        description: Estado da espécie. Use 'nao_confirmada' para tudo que não é 'confirmada'.
       - in: query
         name: localizacao_origem
         schema:

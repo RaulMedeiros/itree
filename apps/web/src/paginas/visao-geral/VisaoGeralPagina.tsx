@@ -40,6 +40,7 @@ import {
   formatarData,
   formatarDataCurta,
   formatarDataHora,
+  plural,
 } from "../../util/formatos";
 import {
   BarraSegmentada,
@@ -687,10 +688,16 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
             />
             {distribuicoes.especies.nao_confirmadas ? (
               <p className="mt-3 text-xs text-texto-suave">
-                {distribuicoes.especies.nao_confirmadas.toLocaleString("pt-BR")} árvores válidas
-                ainda sem espécie confirmada não entram nesta distribuição.{" "}
-                <Link to="/inventario/especies" className="text-marca-escura underline">
-                  Ver catálogo
+                {plural(distribuicoes.especies.nao_confirmadas, "árvore válida", "árvores válidas")}{" "}
+                ainda sem espécie confirmada{" "}
+                {distribuicoes.especies.nao_confirmadas === 1 ? "não entra" : "não entram"} nesta
+                distribuição.{" "}
+                <Link
+                  to="/inventario/arvores"
+                  search={{ especie_estado: "nao_confirmada", valida: true }}
+                  className="text-marca-escura underline"
+                >
+                  Ver {plural(distribuicoes.especies.nao_confirmadas, "árvore", "árvores")}
                 </Link>
               </p>
             ) : null}
