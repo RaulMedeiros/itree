@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { aoFaltarImagem, CORES_CONDICAO, iconeGrupo } from "./simbologia";
+import {
+  aoFaltarImagem,
+  camadasDoAlerta,
+  COR_ALERTA,
+  CORES_CONDICAO,
+  iconeGrupo,
+  registrarIcones,
+  TAM_ICONE,
+} from "./simbologia";
 
 describe("ícone de grupo", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -54,5 +62,45 @@ describe("ícone de grupo", () => {
   it("ignora ids fora do padrão", () => {
     expect(desenhar("grupo-arvores-37").addImage).not.toHaveBeenCalled();
     expect(desenhar("grupo-ocorrencias-5").addImage).toHaveBeenCalled();
+  });
+});
+
+describe("alerta ambiental e ícones (C-12, C-28)", () => {
+  it("o detalhe do alerta usa o losango do mapa principal, não a cor de condição", () => {
+    const [ponto] = camadasDoAlerta("alerta", true);
+    expect(ponto).toMatchObject({ type: "symbol", layout: { "icon-image": "alerta" } });
+    const cores = JSON.stringify(camadasDoAlerta("alerta", false));
+    expect(cores).toContain(COR_ALERTA);
+    expect(cores).toContain("hachura-alerta");
+    expect(cores).not.toContain(CORES_CONDICAO.ruim);
+  });
+
+  it("ícones de ocorrência, tarefa e alerta são 20% maiores e a tarefa tem contorno branco", () => {
+    const larguras: number[] = [];
+    const preenchimentos: string[] = [];
+    const contexto = new Proxy(
+      {},
+      {
+        get: (_, nome) => (nome === "getImageData" ? () => ({}) : () => {}),
+        set: (_, nome, valor) => {
+          if (nome === "fillStyle") preenchimentos.push(String(valor));
+          return true;
+        },
+      },
+    );
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(
+      contexto as unknown as CanvasRenderingContext2D,
+    );
+    const tamanhos = new Map<string, number>();
+    registrarIcones({
+      hasImage: () => false,
+      addImage: (nome: string, _d: unknown, o: { pixelRatio: number }) => {
+        tamanhos.set(nome, o.pixelRatio);
+        larguras.push(0);
+      },
+    } as never);
+    expect(TAM_ICONE).toBe(Math.round(22 * 1.2));
+    expect(tamanhos.has("tarefa-atrasada")).toBe(true);
+    expect(preenchimentos).toContain("#ffffff");
   });
 });

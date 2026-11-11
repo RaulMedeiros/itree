@@ -144,9 +144,16 @@ describe("realce do bairro buscado (RF-MAPA-011)", () => {
     expect(feicoesRealcadas(mapa)).toHaveLength(1);
     expect(feicoesRealcadas(mapa)[0]!.properties.nome).toBe("Meireles");
     expect(mapa.fitBounds).toHaveBeenCalledWith([-38.56, -3.76, -38.55, -3.75], expect.anything());
-    // Realce translúcido, acima das árvores e abaixo do anel de seleção.
-    const ids = mapa.camadas.map((c) => c.id);
-    expect(ids.indexOf("destaque-preenchimento")).toBeGreaterThan(-1);
+    // C-39: a máscara esmaece o exterior, abaixo das árvores (que mantêm a cor); o
+    // contorno fica abaixo do anel de seleção. Nada tinge o interior do bairro.
+    expect(mapa.camadas.find((c) => c.id === "destaque-preenchimento")?.antesDe).toBe(
+      "arvores-pontos",
+    );
+    const mascara = mapa.dadosDe("destaque-mascara").features;
+    expect(mascara).toHaveLength(1);
+    expect(
+      (mascara[0] as unknown as { geometry: { coordinates: unknown[] } }).geometry.coordinates,
+    ).toHaveLength(2);
     expect(mapa.camadas.find((c) => c.id === "destaque-contorno")?.antesDe).toBe("selecao");
   });
 

@@ -19,6 +19,7 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { Mapa } from "../../mapa/Mapa";
+import { camadasDoAlerta, registrarIcones } from "../../mapa/simbologia";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -78,33 +79,13 @@ function Detalhe({ alerta: a }: { alerta: AlertaAmbiental }) {
         GeoJSONSource["setData"]
       >[0],
     });
+    registrarIcones(m);
+    for (const camada of camadasDoAlerta("alerta", a.tipo_geometria === "Point"))
+      m.addLayer(camada as Parameters<MapaMapLibre["addLayer"]>[0]);
     if (a.tipo_geometria === "Point") {
-      m.addLayer({
-        id: "alerta",
-        type: "circle",
-        source: "alerta",
-        paint: {
-          "circle-radius": 9,
-          "circle-color": "#d9480f",
-          "circle-stroke-color": "#fff",
-          "circle-stroke-width": 2,
-        },
-      });
       const [x1, y1] = (limites(geometria) as number[]).slice(0, 2);
       m.jumpTo({ center: [x1!, y1!], zoom: 14 });
     } else {
-      m.addLayer({
-        id: "alerta-area",
-        type: "fill",
-        source: "alerta",
-        paint: { "fill-color": "#d9480f", "fill-opacity": 0.25 },
-      });
-      m.addLayer({
-        id: "alerta-borda",
-        type: "line",
-        source: "alerta",
-        paint: { "line-color": "#d9480f", "line-width": 2 },
-      });
       m.fitBounds(limites(geometria), { padding: 40, duration: 0, maxZoom: 16 });
     }
   };
