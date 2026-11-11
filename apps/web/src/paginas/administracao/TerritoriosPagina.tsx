@@ -13,7 +13,7 @@ export function TerritoriosPagina() {
     <>
       <CabecalhoPagina
         titulo="Territórios"
-        descricao="Limites administrativos usados no escopo de usuários e equipes, com fonte e data de cada dado. Esta tela é somente leitura."
+        descricao="Limites administrativos usados no escopo de usuários e equipes, com fonte e data de cada dado. A coluna Árvores conta as árvores ativas do território que estão no seu escopo. Esta tela é somente leitura."
       />
       <p className="mb-3 rounded-md bg-info-clara px-3 py-2 text-sm text-info">
         Os limites vêm de fonte aberta e não são oficiais. A importação dos limites oficiais depende
@@ -35,6 +35,7 @@ export function TerritoriosPagina() {
             <tr>
               <Th>Nome</Th>
               <Th>Tipo</Th>
+              <Th className="text-right">Árvores</Th>
               <Th>Código na fonte</Th>
               <Th>Fonte</Th>
               <Th>Data do dado</Th>
@@ -46,6 +47,9 @@ export function TerritoriosPagina() {
               <Linha key={t.id}>
                 <Td className="font-medium">{t.nome}</Td>
                 <Td>{ROTULOS_TIPO_TERRITORIO[t.tipo]}</Td>
+                <Td className="text-right tabular-nums">
+                  {t.arvores_no_escopo?.toLocaleString("pt-BR") ?? "—"}
+                </Td>
                 <Td className="font-mono text-sm">{t.codigo}</Td>
                 <Td>
                   {t.fonte_url ? (

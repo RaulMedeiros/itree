@@ -13,6 +13,11 @@ class TerritorioSerializer(serializers.ModelSerializer):
     """Território com proveniência; sem geometria (ver endpoint GeoJSON)."""
 
     pai = TerritorioResumoSerializer(read_only=True)
+    arvores_no_escopo = serializers.IntegerField(
+        read_only=True,
+        default=None,
+        help_text="Árvores ativas do território no escopo de quem consulta (só na listagem).",
+    )
 
     class Meta:
         model = Territorio
@@ -27,4 +32,5 @@ class TerritorioSerializer(serializers.ModelSerializer):
             "licenca",
             "data_referencia",
             "ingerido_em",
+            "arvores_no_escopo",
         ]

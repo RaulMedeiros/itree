@@ -6415,7 +6415,13 @@ components:
           type: string
           format: date-time
           description: Quando o dado foi ingerido no sistema.
+        arvores_no_escopo:
+          type: integer
+          readOnly: true
+          description: Árvores ativas do território no escopo de quem consulta (só
+            na listagem).
       required:
+      - arvores_no_escopo
       - codigo
       - fonte
       - id

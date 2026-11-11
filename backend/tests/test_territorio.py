@@ -8,7 +8,7 @@ from itree.contas.acesso import filtrar_por_escopo
 from itree.contas.models import EscopoUsuario
 from itree.territorio.models import Territorio
 
-from .conftest import criar_territorio, criar_usuario, quadrado
+from .conftest import com_escopo, criar_territorio, criar_usuario, quadrado
 
 pytestmark = pytest.mark.django_db
 
@@ -128,3 +128,29 @@ def test_auditoria_resume_geometria(cliente, admin, tmp_path):
     )
     assert eventos and all(e["dados"]["geom"] == "(geometria)" for e in eventos)
     assert eventos[0]["contexto"]["evento"] == "importacao_territorios"
+
+
+def test_listagem_conta_arvores_ativas_no_territorio_e_no_escopo(cliente, gestor):
+    from django.contrib.gis.geos import Point
+
+    from itree.inventario.models import Arvore
+
+    a = criar_territorio("A", geom=quadrado(0, 0, 1))
+    b = criar_territorio("B", geom=quadrado(5, 5, 1))
+    vazio = criar_territorio("Vazio", geom=quadrado(20, 20, 1))
+    for ponto, situacao in [
+        ((0.5, 0.5), "ativa"),
+        ((0.6, 0.6), "ativa"),
+        ((0.7, 0.7), "excluida"),  # não conta
+        ((5.5, 5.5), "ativa"),
+    ]:
+        Arvore.objects.create(
+            origem_registro="importacao", geom=Point(*ponto, srid=4326), situacao=situacao
+        )
+    com_escopo(gestor, a, vazio)  # sem escopo em B
+
+    corpo = cliente.como(gestor).get("/api/v1/territorios").json()
+    contagem = {t["nome"]: t["arvores_no_escopo"] for t in corpo["results"]}
+    # B é público como limite, mas as árvores dele estão fora do escopo do gestor.
+    assert contagem == {"A": 2, "B": 0, "Vazio": 0}
+    assert b.nome in contagem

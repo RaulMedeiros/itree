@@ -53,14 +53,21 @@ const TECNICO: UsuarioAdmin = {
   last_login: null,
 };
 
-const MUNICIPIO = { id: "t-mun", nome: "Município de teste", tipo: "municipio", pai: null };
+const MUNICIPIO = {
+  id: "t-mun",
+  nome: "Município de teste",
+  tipo: "municipio",
+  pai: null,
+  arvores_no_escopo: 1240,
+};
 const BAIRRO_B = {
   id: "t-b",
   nome: "Bairro B",
   tipo: "bairro",
   pai: { id: "t-mun", nome: "Município de teste", tipo: "municipio" },
+  arvores_no_escopo: 3,
 };
-const BAIRRO_A = { ...BAIRRO_B, id: "t-a", nome: "Bairro A" };
+const BAIRRO_A = { ...BAIRRO_B, id: "t-a", nome: "Bairro A", arvores_no_escopo: 0 };
 
 const pagina = <T,>(results: T[]) => ({
   count: results.length,
@@ -177,5 +184,16 @@ describe("territórios", () => {
     await abrir("/administracao/territorios");
     expect(await screen.findByText(/não são oficiais/)).toBeInTheDocument();
     expect(screen.getByText("DP-10")).toHaveClass("whitespace-nowrap");
+  });
+
+  it("mostra a coluna Árvores com a contagem de cada território", async () => {
+    await abrir("/administracao/territorios");
+    expect(await screen.findByRole("columnheader", { name: "Árvores" })).toBeInTheDocument();
+    const contagem = (nome: string) =>
+      within(screen.getByRole("cell", { name: nome }).closest("tr")!).getAllByRole("cell")[2]!
+        .textContent;
+    expect(contagem("Município de teste")).toBe("1.240");
+    expect(contagem("Bairro B")).toBe("3");
+    expect(contagem("Bairro A")).toBe("0");
   });
 });

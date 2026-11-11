@@ -1,12 +1,17 @@
 import json
 
 from django.contrib.gis.db.models.functions import AsGeoJSON, PointOnSurface
+from django.db.models import Count, IntegerField, OuterRef, Subquery
+from django.db.models.functions import Coalesce
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
+
+from itree.contas.acesso import filtrar_por_escopo
+from itree.inventario.models import Arvore, SituacaoArvore
 
 from .models import Territorio
 from .serializers import TerritorioSerializer
@@ -29,6 +34,23 @@ class TerritorioViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = Territorio.objects.select_related("pai")
+        if self.action == "list":
+            # Árvores ativas dentro do território e do escopo de quem consulta.
+            arvores = (
+                filtrar_por_escopo(
+                    Arvore.objects.filter(
+                        situacao=SituacaoArvore.ATIVA, geom__intersects=OuterRef("geom")
+                    ),
+                    self.request.user,
+                )
+                .order_by()
+                .values("situacao")
+                .annotate(n=Count("pk"))
+                .values("n")
+            )
+            qs = qs.annotate(
+                arvores_no_escopo=Coalesce(Subquery(arvores, output_field=IntegerField()), 0)
+            )
         if tipo := self.request.query_params.get("tipo"):
             qs = qs.filter(tipo=tipo)
         if busca := self.request.query_params.get("busca"):
