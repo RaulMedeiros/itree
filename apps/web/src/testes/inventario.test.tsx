@@ -752,6 +752,60 @@ describe("importações (C-19)", () => {
   });
 });
 
+describe("assistente de importação: passos coerentes com a tela (R2-20)", () => {
+  async function abrirAssistente() {
+    const usuario = userEvent.setup();
+    servidor.use(
+      http.post(`${API}/api/v1/importacoes/colunas`, () =>
+        HttpResponse.json({
+          formato: "csv",
+          colunas: ["lat", "lon", "especie"],
+          total_linhas: 3,
+          amostra: [],
+          tem_geometria: false,
+        }),
+      ),
+    );
+    await abrir("/inventario/importacoes");
+    await usuario.click((await screen.findAllByRole("button", { name: /Nova importação/ }))[0]!);
+    return { usuario, dialogo: await screen.findByRole("dialog") };
+  }
+
+  const passoAtual = (dialogo: HTMLElement) =>
+    within(within(dialogo).getByRole("list", { name: "Etapas da importação" }))
+      .getByRole("listitem", { current: "step" })
+      .textContent?.replace(/^\d/, "");
+
+  it("nomeia os passos Arquivo e fonte, Colunas e Revisão", async () => {
+    const { dialogo } = await abrirAssistente();
+    const lista = within(dialogo).getByRole("list", { name: "Etapas da importação" });
+    expect(
+      within(lista)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual(["1Arquivo e fonte", "2Colunas", "3Revisão"]);
+  });
+
+  it("o passo 1 tem arquivo e fonte; só o 2 mostra as colunas", async () => {
+    const { usuario, dialogo } = await abrirAssistente();
+    await usuario.upload(
+      within(dialogo).getByLabelText(/Arquivo/),
+      new File(["lat,lon,especie\n1,2,x"], "arvores.csv", { type: "text/csv" }),
+    );
+    await usuario.type(await within(dialogo).findByLabelText(/Fonte dos dados/), "Inventário 2019");
+    expect(passoAtual(dialogo)).toBe("Arquivo e fonte");
+    expect(within(dialogo).queryByText("Correspondência de colunas")).toBeNull();
+
+    await usuario.click(within(dialogo).getByRole("button", { name: "Próximo" }));
+    expect(passoAtual(dialogo)).toBe("Colunas");
+    expect(within(dialogo).getByText("Correspondência de colunas")).toBeInTheDocument();
+    expect(within(dialogo).queryByLabelText(/Fonte dos dados/)).toBeNull();
+
+    await usuario.click(within(dialogo).getByRole("button", { name: "Voltar" }));
+    expect(passoAtual(dialogo)).toBe("Arquivo e fonte");
+  });
+});
+
 describe("duplicidades (C-20)", () => {
   const a = resumo({ id: "a", codigo: "ARV-A", especie_estado: "informada" }) as never;
   const b = resumo({
