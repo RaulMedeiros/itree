@@ -15,6 +15,8 @@ export type OcorrenciasListarParams = {
   equipe?: string;
   /** Um ou mais, separados por vírgula. 'abertas' = não finais. */
   estado?: string;
+  /** 'urgencia': prazo mais próximo primeiro (sem prazo por último), depois prioridade; padrão: mais recentes primeiro. */
+  ordenar?: string;
   origem?: string;
   /** Um número de página dentro do conjunto de resultados paginado. */
   pagina?: number;

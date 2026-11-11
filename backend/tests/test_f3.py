@@ -304,6 +304,9 @@ def test_analise_por_bairro_e_pdf(cliente, gestor_exporta, inventario):
         "Bairro B": 1,
     }
     assert corpo["por_bairro"] and corpo["definicao"]
+    assert corpo["total"] == 3  # soma das contagens por bairro
+    tempo = cliente.get("/api/v1/relatorios/analise", {"analise": "tempo_atendimento_por_tipo"})
+    assert tempo.json()["total"] is None  # médias não se somam
     r = cliente.get("/api/v1/relatorios/painel.pdf")
     assert r.status_code == 200 and r.content.startswith(b"%PDF")
     assert cliente.get("/api/v1/relatorios/analise", {"analise": "x"}).status_code == 404

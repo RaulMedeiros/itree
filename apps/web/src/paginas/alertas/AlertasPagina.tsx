@@ -75,7 +75,7 @@ export function AlertasPagina() {
           onChange={(e) => filtrar({ status: e.target.value })}
           className="max-w-64"
         >
-          <option value="abertos">Em aberto (sem decisão final)</option>
+          <option value="abertos">Em aberto</option>
           {Object.values(StatusAlertaEnum).map((s) => (
             <option key={s} value={s}>
               {ROTULOS_STATUS_ALERTA[s]}

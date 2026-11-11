@@ -8,7 +8,7 @@ import {
 } from "@itree/api-client";
 import { ROTULOS_ESTADO_OCORRENCIA, ROTULOS_PRIORIDADE } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { Map as IconeMapa, Plus } from "lucide-react";
+import { Map as IconeMapa, Plus, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
@@ -19,11 +19,29 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarData, formatarDataHora } from "../../util/formatos";
+import { formatarData, formatarDataHora, prazoRestante } from "../../util/formatos";
 import { AbasOcorrencias } from "../alertas/AlertasPagina";
 import { NovaOcorrenciaDialogo } from "./NovaOcorrenciaDialogo";
 
 const TAMANHO = 50;
+
+const ESTADOS_ENCERRADOS = new Set<string>([
+  EstadoOcorrenciaEnum.concluida,
+  EstadoOcorrenciaEnum.cancelada,
+]);
+
+/** "vence em 3 dias", só para ocorrência ainda em aberto; atraso em vermelho. */
+function PrazoRestante({ prazo, aberta }: { prazo?: string | null; aberta: boolean }) {
+  const restante = aberta ? prazoRestante(prazo) : null;
+  if (!restante) return null;
+  return (
+    <p
+      className={restante.atrasado ? "text-xs font-medium text-perigo" : "text-xs text-texto-suave"}
+    >
+      {restante.texto}
+    </p>
+  );
+}
 
 export interface BuscaOcorrencias {
   busca?: string;
@@ -65,6 +83,8 @@ export function OcorrenciasPagina() {
     ...filtros,
     estado,
     atrasadas: filtros.atrasadas === "true" ? true : undefined,
+    // Na fila de abertas, o que vence primeiro e é mais urgente vem no topo.
+    ordenar: estado === "abertas" ? "urgencia" : undefined,
     tamanho: TAMANHO,
   });
   const filtrar = (parcial: Partial<BuscaOcorrencias>) =>
@@ -215,12 +235,18 @@ export function OcorrenciasPagina() {
                     >
                       {o.codigo}
                     </Link>
-                    <p className="text-xs text-texto-suave">{formatarDataHora(o.criado_em)}</p>
+                    <p className="text-xs whitespace-nowrap text-texto-suave">
+                      {formatarDataHora(o.criado_em)}
+                    </p>
                   </Td>
                   <Td className="max-w-80">
                     <p className="font-medium">{o.tipo.nome}</p>
                     <p className="line-clamp-2 text-texto-suave">{o.descricao}</p>
-                    {o.risco_confirmado && <Selo tom="perigo">Risco confirmado</Selo>}
+                    {o.risco_confirmado && (
+                      <Selo tom="perigo" className="mt-1">
+                        <ShieldAlert className="size-3" aria-hidden /> Risco confirmado
+                      </Selo>
+                    )}
                   </Td>
                   <Td>
                     {o.arvore && <p className="font-mono text-xs">{String(o.arvore.codigo)}</p>}
@@ -239,6 +265,7 @@ export function OcorrenciasPagina() {
                   </Td>
                   <Td className="whitespace-nowrap">
                     {formatarData(o.prazo) ?? "—"}
+                    <PrazoRestante prazo={o.prazo} aberta={!ESTADOS_ENCERRADOS.has(o.estado)} />
                     {o.atrasada && (
                       <div>
                         <Selo tom="perigo">Atrasada</Selo>

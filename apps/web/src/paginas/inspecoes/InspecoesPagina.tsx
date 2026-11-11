@@ -3,14 +3,21 @@ import { ROTULOS_CONDICAO, ROTULOS_ESTADO_INSPECAO } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { SeloEstadoInspecao } from "../../componentes/selos";
+import { CORES_CONDICAO } from "../../mapa/simbologia";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarDataHora, plural } from "../../util/formatos";
+import { contar, diasDesde, formatarDataHora } from "../../util/formatos";
 
 const TAMANHO = 50;
+
+/** Tempo na fila de revisão, em dias corridos. */
+function aguardaHa(dias: number): string {
+  if (dias <= 0) return "chegou hoje";
+  return `aguarda há ${contar(dias, "dia", "dias")}`;
+}
 
 export interface BuscaInspecoes {
   estado?: string;
@@ -134,18 +141,38 @@ export function InspecoesPagina() {
                   </Td>
                   <Td>{i.tecnico.nome || i.tecnico.email}</Td>
                   <Td>
-                    {ROTULOS_CONDICAO[i.condicao_aparente ?? "nao_avaliada"]}
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        aria-hidden
+                        className="size-2.5 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: CORES_CONDICAO[i.condicao_aparente ?? "nao_avaliada"],
+                        }}
+                      />
+                      {ROTULOS_CONDICAO[i.condicao_aparente ?? "nao_avaliada"]}
+                    </span>
                     {i.sinais?.length ? (
                       <p className="text-xs text-texto-suave">
-                        {plural(i.sinais.length, "sinal observado", "sinais observados")}
+                        {contar(i.sinais.length, "sinal", "sinais")}
                       </p>
                     ) : null}
-                    {i.requer_encaminhamento && <Selo tom="atencao">Requer encaminhamento</Selo>}
+                    {i.requer_encaminhamento && (
+                      <p>
+                        <Selo tom="atencao">Requer encaminhamento</Selo>
+                      </p>
+                    )}
                   </Td>
                   <Td>
                     <SeloEstadoInspecao estado={i.estado ?? "rascunho"} />
                   </Td>
-                  <Td className="whitespace-nowrap">{formatarDataHora(i.recebida_em)}</Td>
+                  <Td className="whitespace-nowrap">
+                    {formatarDataHora(i.recebida_em)}
+                    {i.estado === "em_revisao" && (
+                      <p className="text-xs font-medium text-atencao">
+                        {aguardaHa(diasDesde(i.recebida_em))}
+                      </p>
+                    )}
+                  </Td>
                 </Linha>
               ))}
             </tbody>

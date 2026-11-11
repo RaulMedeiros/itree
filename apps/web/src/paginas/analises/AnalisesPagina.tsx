@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Botao } from "../../ui/botao";
+import { MenuAgrupado } from "../../ui/menu";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -83,32 +84,36 @@ export function AnalisesPagina() {
             Toda exportação fica registrada na auditoria.
           </p>
           <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ["arvores", "Inventário"],
-                ["ocorrencias", "Ocorrências"],
-                ["alertas", "Alertas ambientais"],
-              ] as const
-            ).flatMap(([conjunto, nome]) =>
-              (["csv", "xlsx", "geojson"] as const).map((formato) => (
-                <Botao
-                  key={`${conjunto}-${formato}`}
-                  tamanho="pequeno"
-                  variante="secundario"
-                  disabled={baixando !== null}
-                  onClick={() =>
+            <MenuAgrupado
+              rotulo="Exportar dados"
+              icone={<Download />}
+              desabilitado={baixando !== null}
+              grupos={(
+                [
+                  ["arvores", "Inventário"],
+                  ["ocorrencias", "Ocorrências"],
+                  ["alertas", "Alertas ambientais"],
+                ] as const
+              ).map(([conjunto, nome]) => ({
+                titulo: nome,
+                itens: (
+                  [
+                    ["csv", "CSV"],
+                    ["xlsx", "XLSX"],
+                    ["geojson", "GeoJSON"],
+                  ] as const
+                ).map(([formato, rotulo]) => ({
+                  rotulo: `${nome} (${rotulo})`,
+                  aoEscolher: () =>
                     void baixar(`${conjunto}-${formato}`, "/api/v1/relatorios/exportar", {
                       conjunto,
                       formato,
-                    })
-                  }
-                >
-                  <Download /> {nome} ({formato.toUpperCase()})
-                </Botao>
-              )),
-            )}
+                    }),
+                })),
+              }))}
+            />
             <Botao
-              tamanho="pequeno"
+              variante="secundario"
               disabled={baixando !== null}
               onClick={() =>
                 void baixar("pdf", "/api/v1/relatorios/painel.pdf", {
@@ -209,6 +214,16 @@ export function AnalisesPagina() {
                   </Linha>
                 ))}
               </tbody>
+              {dados!.total != null && (
+                <tfoot>
+                  <tr>
+                    <Td className="font-semibold">Total</Td>
+                    <Td className="text-right font-semibold tabular-nums">
+                      {dados!.total.toLocaleString("pt-BR")}
+                    </Td>
+                  </tr>
+                </tfoot>
+              )}
             </Tabela>
           )}
         </section>

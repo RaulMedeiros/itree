@@ -1952,6 +1952,12 @@ paths:
           type: string
         description: Um ou mais, separados por vírgula. 'abertas' = não finais.
       - in: query
+        name: ordenar
+        schema:
+          type: string
+        description: '''urgencia'': prazo mais próximo primeiro (sem prazo por último),
+          depois prioridade; padrão: mais recentes primeiro.'
+      - in: query
         name: origem
         schema:
           type: string
@@ -2874,6 +2880,10 @@ components:
           items:
             type: object
             additionalProperties: {}
+        total:
+          type: integer
+          nullable: true
+          description: Soma das linhas, só quando são contagens que não se sobrepõem.
       required:
       - calculado_em
       - definicao
@@ -2883,6 +2893,7 @@ components:
       - periodo
       - por_bairro
       - titulo
+      - total
     AplicarEnum:
       enum:
       - especie

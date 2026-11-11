@@ -82,3 +82,42 @@ export function mascararDataBr(texto: string): string {
 export function formatarCoordenada(valor: number): string {
   return valor.toLocaleString("pt-BR", { minimumFractionDigits: 6, maximumFractionDigits: 6 });
 }
+
+/** "1 sinal", "3 sinais": singular e plural sem o "(s)" de máquina. */
+export function contar(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`;
+}
+
+const diaFortaleza = new Intl.DateTimeFormat("en-CA", {
+  timeZone: FUSO,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const MS_DIA = 86_400_000;
+
+function numeroDoDia(aaaammdd: string): number {
+  const [a, m, d] = aaaammdd.split("-").map(Number);
+  return Date.UTC(a!, m! - 1, d!) / MS_DIA;
+}
+
+/** Dias corridos (calendário de Fortaleza) desde um instante até `agora`. */
+export function diasDesde(instante: string, agora: Date = new Date()): number {
+  return (
+    numeroDoDia(diaFortaleza.format(agora)) - numeroDoDia(diaFortaleza.format(new Date(instante)))
+  );
+}
+
+/** Prazo (AAAA-MM-DD) em linguagem corrente: "vence em 3 dias", "atrasado há 2 dias". */
+export function prazoRestante(
+  prazo: string | null | undefined,
+  agora: Date = new Date(),
+): { texto: string; atrasado: boolean } | null {
+  if (!prazo) return null;
+  const dias = numeroDoDia(prazo) - numeroDoDia(diaFortaleza.format(agora));
+  if (dias < 0) return { texto: `atrasado há ${contar(-dias, "dia", "dias")}`, atrasado: true };
+  if (dias === 0) return { texto: "vence hoje", atrasado: false };
+  if (dias === 1) return { texto: "vence amanhã", atrasado: false };
+  return { texto: `vence em ${dias} dias`, atrasado: false };
+}
