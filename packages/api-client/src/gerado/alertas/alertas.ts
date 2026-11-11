@@ -26,7 +26,10 @@ import type {
 
 import type {
   Alerta,
+  AlertasArvoresProximasParams,
   AlertasListarParams,
+  AlertasObterParams,
+  ArvoreProxima,
   ConversaoRequest,
   EventoAuditoria,
   Ingestao,
@@ -185,20 +188,29 @@ export type alertasObterResponseSuccess = (alertasObterResponse200) & {
 
 export type alertasObterResponse = (alertasObterResponseSuccess)
 
-export const getAlertasObterUrl = (id: string,) => {
+export const getAlertasObterUrl = (id: string,
+    params?: AlertasObterParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/alertas/${id}`
+  return stringifiedParams.length > 0 ? `/api/v1/alertas/${id}?${stringifiedParams}` : `/api/v1/alertas/${id}`
 }
 
 /**
  * Alertas ambientais para triagem humana (W-08). Separados das ocorrências.
  */
-export const alertasObter = async (id: string, options?: Parameters<typeof requisicao>[1]): Promise<alertasObterResponse> => {
+export const alertasObter = async (id: string,
+    params?: AlertasObterParams, options?: Parameters<typeof requisicao>[1]): Promise<alertasObterResponse> => {
 
-  return requisicao<alertasObterResponse>(getAlertasObterUrl(id),
+  return requisicao<alertasObterResponse>(getAlertasObterUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -211,23 +223,25 @@ export const alertasObter = async (id: string, options?: Parameters<typeof requi
 
 
 
-export const getAlertasObterQueryKey = (id: string,) => {
+export const getAlertasObterQueryKey = (id: string,
+    params?: AlertasObterParams,) => {
     return [
-    `/api/v1/alertas/${id}`
+    `/api/v1/alertas/${id}`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getAlertasObterQueryOptions = <TData = Awaited<ReturnType<typeof alertasObter>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+export const getAlertasObterQueryOptions = <TData = Awaited<ReturnType<typeof alertasObter>>, TError = unknown>(id: string,
+    params?: AlertasObterParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getAlertasObterQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getAlertasObterQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof alertasObter>>> = ({ signal }) => alertasObter(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof alertasObter>>> = ({ signal }) => alertasObter(id,params, { signal, ...requestOptions });
 
 
 
@@ -241,7 +255,8 @@ export type AlertasObterQueryError = unknown
 
 
 export function useAlertasObter<TData = Awaited<ReturnType<typeof alertasObter>>, TError = unknown>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>> & Pick<
+ id: string,
+    params: undefined |  AlertasObterParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof alertasObter>>,
           TError,
@@ -251,7 +266,8 @@ export function useAlertasObter<TData = Awaited<ReturnType<typeof alertasObter>>
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useAlertasObter<TData = Awaited<ReturnType<typeof alertasObter>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>> & Pick<
+ id: string,
+    params?: AlertasObterParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof alertasObter>>,
           TError,
@@ -261,16 +277,142 @@ export function useAlertasObter<TData = Awaited<ReturnType<typeof alertasObter>>
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useAlertasObter<TData = Awaited<ReturnType<typeof alertasObter>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ id: string,
+    params?: AlertasObterParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useAlertasObter<TData = Awaited<ReturnType<typeof alertasObter>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ id: string,
+    params?: AlertasObterParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasObter>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getAlertasObterQueryOptions(id,options)
+  const queryOptions = getAlertasObterQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type alertasArvoresProximasResponse200 = {
+  data: ArvoreProxima[]
+  status: 200
+}
+
+export type alertasArvoresProximasResponseSuccess = (alertasArvoresProximasResponse200) & {
+  headers: Headers;
+};
+;
+
+export type alertasArvoresProximasResponse = (alertasArvoresProximasResponseSuccess)
+
+export const getAlertasArvoresProximasUrl = (id: string,
+    params?: AlertasArvoresProximasParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/alertas/${id}/arvores-proximas?${stringifiedParams}` : `/api/v1/alertas/${id}/arvores-proximas`
+}
+
+/**
+ * Árvores no escopo a até `raio` m do alerta, da mais próxima à mais distante.
+ */
+export const alertasArvoresProximas = async (id: string,
+    params?: AlertasArvoresProximasParams, options?: Parameters<typeof requisicao>[1]): Promise<alertasArvoresProximasResponse> => {
+
+  return requisicao<alertasArvoresProximasResponse>(getAlertasArvoresProximasUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAlertasArvoresProximasQueryKey = (id: string,
+    params?: AlertasArvoresProximasParams,) => {
+    return [
+    `/api/v1/alertas/${id}/arvores-proximas`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAlertasArvoresProximasQueryOptions = <TData = Awaited<ReturnType<typeof alertasArvoresProximas>>, TError = unknown>(id: string,
+    params?: AlertasArvoresProximasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasArvoresProximas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAlertasArvoresProximasQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof alertasArvoresProximas>>> = ({ signal }) => alertasArvoresProximas(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof alertasArvoresProximas>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AlertasArvoresProximasQueryResult = NonNullable<Awaited<ReturnType<typeof alertasArvoresProximas>>>
+export type AlertasArvoresProximasQueryError = unknown
+
+
+export function useAlertasArvoresProximas<TData = Awaited<ReturnType<typeof alertasArvoresProximas>>, TError = unknown>(
+ id: string,
+    params: undefined |  AlertasArvoresProximasParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasArvoresProximas>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof alertasArvoresProximas>>,
+          TError,
+          Awaited<ReturnType<typeof alertasArvoresProximas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAlertasArvoresProximas<TData = Awaited<ReturnType<typeof alertasArvoresProximas>>, TError = unknown>(
+ id: string,
+    params?: AlertasArvoresProximasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasArvoresProximas>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof alertasArvoresProximas>>,
+          TError,
+          Awaited<ReturnType<typeof alertasArvoresProximas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAlertasArvoresProximas<TData = Awaited<ReturnType<typeof alertasArvoresProximas>>, TError = unknown>(
+ id: string,
+    params?: AlertasArvoresProximasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasArvoresProximas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useAlertasArvoresProximas<TData = Awaited<ReturnType<typeof alertasArvoresProximas>>, TError = unknown>(
+ id: string,
+    params?: AlertasArvoresProximasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasArvoresProximas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getAlertasArvoresProximasQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

@@ -279,6 +279,31 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
     expect(screen.getByText(/Capturada em/)).toBeInTheDocument();
   });
 
+  it("evidência de demonstração leva o selo Ilustração; a real não", async () => {
+    const usuario = userEvent.setup();
+    const base = {
+      nome_original: "copa.png",
+      eh_imagem: true,
+      url: "http://x/copa.png",
+      enviada_por_nome: "Tiago",
+      criado_em: "2026-11-10T12:00:00Z",
+      capturada_em: null,
+    };
+    servidor.use(
+      http.get(`${API}/api/v1/evidencias`, () =>
+        HttpResponse.json([
+          { ...base, id: "e-1", descricao: "Foto sintética", ilustrativa: true },
+          { ...base, id: "e-2", descricao: "Foto de campo", ilustrativa: false },
+        ]),
+      ),
+    );
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("tab", { name: "Evidências" }));
+    expect(await screen.findAllByText("Ilustração")).toHaveLength(1);
+    const cartao = screen.getByAltText("Foto sintética").closest("li")!;
+    expect(within(cartao).getByText("Ilustração")).toBeInTheDocument();
+  });
+
   it("sugestão de IA não vem pré-selecionada e só confirma após a escolha", async () => {
     const usuario = userEvent.setup();
     await abrir("/inventario/arvores/a-1");

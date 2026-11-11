@@ -15,8 +15,12 @@ export type AlertasListarParams = {
   fonte?: string;
   /** AAAA-MM-DD */
   ingestao_desde?: string;
+  /** '-data_deteccao' (padrão), 'data_deteccao', 'arvores_proximas', '-arvores_proximas', 'ocorrencias_proximas' ou '-ocorrencias_proximas'. */
+  ordem?: string;
   /** Um número de página dentro do conjunto de resultados paginado. */
   pagina?: number;
+  /** Raio, em metros, das árvores e ocorrências próximas (1 a 1000; 100). */
+  raio?: number;
   /** 'abertos' (não finais, padrão), 'todos' ou lista. */
   status?: string;
   /** Número de resultados a serem retornados por página. */

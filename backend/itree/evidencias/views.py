@@ -45,6 +45,7 @@ class EvidenciaSerializer(serializers.ModelSerializer):
             "descricao",
             "capturada_em",
             "estado",
+            "ilustrativa",
             "eh_imagem",
             "url",
             "enviada_por_nome",

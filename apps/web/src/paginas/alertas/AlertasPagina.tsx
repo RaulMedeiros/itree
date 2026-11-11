@@ -7,16 +7,28 @@ import { SeloStatusAlerta } from "../../componentes/selos";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
-import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarDataHora } from "../../util/formatos";
+import { Linha, Tabela, Td, Th, ThOrdenavel } from "../../ui/tabela";
+import { formatarDataHora, plural } from "../../util/formatos";
 
 const TAMANHO = 50;
+
+export type OrdemAlertas =
+  | "data_deteccao"
+  | "arvores_proximas"
+  | "-arvores_proximas"
+  | "ocorrencias_proximas"
+  | "-ocorrencias_proximas";
+
+/** Raio padrão das árvores e ocorrências próximas, em metros (o mesmo da API). */
+const RAIO_M = 100;
 
 export interface BuscaAlertas {
   status?: string;
   fonte?: FonteAlertaEnum;
   deteccao_desde?: string;
   deteccao_ate?: string;
+  /** Ausente = mais recentes primeiro. */
+  ordem?: OrdemAlertas;
   pagina?: number;
 }
 
@@ -56,8 +68,14 @@ export function AlertasPagina() {
   const consulta = useAlertasListar({
     ...filtros,
     status: filtros.status ?? "abertos",
+    ordem: filtros.ordem,
     tamanho: TAMANHO,
   });
+  const direcaoDe = (campo: "arvores_proximas" | "ocorrencias_proximas") =>
+    filtros.ordem === campo ? "asc" : filtros.ordem === `-${campo}` ? "desc" : undefined;
+  // Primeiro clique: mais próximas/ocorrências primeiro (decrescente), depois alterna.
+  const ordenarPor = (campo: "arvores_proximas" | "ocorrencias_proximas") =>
+    filtrar({ ordem: filtros.ordem === `-${campo}` ? campo : (`-${campo}` as OrdemAlertas) });
   const filtrar = (parcial: Partial<BuscaAlertas>) =>
     void navegar({ search: (s: BuscaAlertas) => ({ ...s, ...parcial, pagina: undefined }) });
 
@@ -133,6 +151,18 @@ export function AlertasPagina() {
                 <Th>Detecção (fonte)</Th>
                 <Th>Ingestão</Th>
                 <Th>Bairros</Th>
+                <ThOrdenavel
+                  direcao={direcaoDe("arvores_proximas")}
+                  aoOrdenar={() => ordenarPor("arvores_proximas")}
+                >
+                  {`Árvores a até ${RAIO_M} m`}
+                </ThOrdenavel>
+                <ThOrdenavel
+                  direcao={direcaoDe("ocorrencias_proximas")}
+                  aoOrdenar={() => ordenarPor("ocorrencias_proximas")}
+                >
+                  Ocorrências
+                </ThOrdenavel>
                 <Th>Status</Th>
               </tr>
             </thead>
@@ -162,6 +192,23 @@ export function AlertasPagina() {
                     {(a.bairros as { nome: string }[]).map((b) => b.nome).join(", ") || (
                       <span className="text-texto-suave">—</span>
                     )}
+                  </Td>
+                  <Td className="whitespace-nowrap">{plural(a.arvores_proximas, "árvore")}</Td>
+                  <Td>
+                    {a.ocorrencia && (
+                      <Link
+                        to="/ocorrencias/$id"
+                        params={{ id: String(a.ocorrencia.id) }}
+                        className="font-mono text-marca-escura hover:underline"
+                      >
+                        {String(a.ocorrencia.codigo)}
+                      </Link>
+                    )}
+                    <p className="text-xs text-texto-suave">
+                      {a.ocorrencias_proximas === 0
+                        ? `nenhuma aberta a até ${RAIO_M} m`
+                        : `${plural(a.ocorrencias_proximas, "aberta", "abertas")} a até ${RAIO_M} m`}
+                    </p>
                   </Td>
                   <Td>
                     <SeloStatusAlerta status={a.status ?? "detectado"} />

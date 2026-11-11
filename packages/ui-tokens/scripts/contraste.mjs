@@ -52,6 +52,92 @@ function compor(frente, fundo, alfa) {
     .join("")}`;
 }
 
+/** Cores do mapa de ruas (OSM padrão, antes do tratamento) onde o contorno do bairro pode cair. */
+const FUNDOS_OSM = [
+  ["fundo geral do OSM", "#f2efe9"],
+  ["parque", "#c8facc"],
+  ["água", "#aad3df"],
+  ["edificação", "#d9d0c9"],
+  ["via residencial", "#ffffff"],
+];
+
+/**
+ * Cor de um pixel do OSM depois do tratamento `raster-*` do estilo base, na
+ * ordem do shader do MapLibre: saturação, contraste e brilho (min/max).
+ */
+export function pinturaRaster(hex, { saturacao, contraste, brilhoMin, brilhoMax }) {
+  const rgb = paraRgb(hex).map((v) => v / 255);
+  const media = (rgb[0] + rgb[1] + rgb[2]) / 3;
+  const fatorSaturacao = saturacao > 0 ? 1 - 1 / (1.001 - saturacao) : -saturacao;
+  const fatorContraste = contraste > 0 ? 1 / (1 - contraste) : 1 + contraste;
+  const saida = rgb
+    .map((c) => c + (media - c) * fatorSaturacao)
+    .map((c) => (c - 0.5) * fatorContraste + 0.5)
+    .map((c) => brilhoMin + (brilhoMax - brilhoMin) * c);
+  return `#${saida
+    .map((c) =>
+      Math.round(Math.min(1, Math.max(0, c)) * 255)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
+/** Lê o realce do bairro (`realce.ts`) e o tratamento do mapa de ruas (`estilo.ts`). */
+export function lerMapa(realceTs, estiloTs) {
+  const achar = (texto, re, o) => {
+    const m = texto.match(re);
+    if (!m) throw new Error(`Não achei ${o} para checar o contraste do mapa.`);
+    return m[1];
+  };
+  const contorno = achar(realceTs, /COR_REALCE\s*=\s*"(#[0-9a-fA-F]{6})"/, "COR_REALCE");
+  const opacidadeContorno = Number(
+    achar(realceTs, /"line-opacity":\s*([0-9.]+)/, "line-opacity do contorno"),
+  );
+  const mascara = achar(realceTs, /"fill-color":\s*"(#[0-9a-fA-F]{6})"/, "fill-color da máscara");
+  const opacidadeMascara = Number(
+    achar(realceTs, /"fill-opacity":\s*([0-9.]+)/, "fill-opacity da máscara"),
+  );
+  const num = (nome) => Number(achar(estiloTs, new RegExp(`"${nome}":\\s*(-?[0-9.]+)`), nome));
+  return {
+    contorno: contorno.toLowerCase(),
+    opacidadeContorno,
+    mascara: mascara.toLowerCase(),
+    opacidadeMascara,
+    raster: {
+      saturacao: num("raster-saturation"),
+      contraste: num("raster-contrast"),
+      brilhoMin: num("raster-brightness-min"),
+      brilhoMax: num("raster-brightness-max"),
+    },
+  };
+}
+
+/**
+ * Realce de bairro no mapa claro (WCAG 1.4.11): o contorno precisa de 3:1 contra
+ * o mapa sem máscara (dentro do bairro) e contra o mapa sob a máscara clara
+ * (fora dele), em cada tipo de fundo do OSM.
+ */
+function paresDoMapa(mapa) {
+  const pares = [];
+  for (const [nome, osm] of FUNDOS_OSM) {
+    const base = pinturaRaster(osm, mapa.raster);
+    const mascarado = compor(mapa.mascara, base, mapa.opacidadeMascara);
+    for (const [lado, fundo] of [
+      ["dentro do bairro", base],
+      ["sob a máscara, fora do bairro", mascarado],
+    ]) {
+      pares.push({
+        descricao: `contorno do bairro (${mapa.contorno}/${mapa.opacidadeContorno}) sobre ${nome}, ${lado}`,
+        frente: compor(mapa.contorno, fundo, mapa.opacidadeContorno),
+        fundo,
+        minimo: NAO_TEXTO,
+      });
+    }
+  }
+  return pares;
+}
+
 const TEXTO = 4.5;
 const NAO_TEXTO = 3;
 const BRANCO = "#ffffff";
@@ -122,7 +208,7 @@ function montarPares(t) {
   return pares.map((x) => ({ ...x, frente: cor(x.frente), fundo: cor(x.fundo) }));
 }
 
-export function verificar(css) {
+export function verificar(css, mapa) {
   const t = lerTokens(css);
   const ausentes = [];
   const exigidos = [
@@ -152,7 +238,8 @@ export function verificar(css) {
   ];
   for (const n of exigidos) if (!t[n]) ausentes.push(n);
   if (ausentes.length) throw new Error(`Tokens ausentes em tokens.css: ${ausentes.join(", ")}`);
-  return montarPares(t).map((x) => ({ ...x, razao: razao(x.frente, x.fundo) }));
+  const pares = [...montarPares(t), ...(mapa ? paresDoMapa(mapa) : [])];
+  return pares.map((x) => ({ ...x, razao: razao(x.frente, x.fundo) }));
 }
 
 /** Confere que tokens.ts (app móvel) repete os valores de tokens.css. */
@@ -171,7 +258,12 @@ export function divergenciasTs(css, ts) {
 function principal() {
   const css = readFileSync(join(raiz, "src/tokens.css"), "utf8");
   const ts = readFileSync(join(raiz, "src/tokens.ts"), "utf8");
-  const resultados = verificar(css);
+  const web = join(raiz, "../../apps/web/src/mapa");
+  const mapa = lerMapa(
+    readFileSync(join(web, "realce.ts"), "utf8"),
+    readFileSync(join(web, "estilo.ts"), "utf8"),
+  );
+  const resultados = verificar(css, mapa);
   let falhas = 0;
   for (const r of resultados) {
     const ok = r.razao >= r.minimo;

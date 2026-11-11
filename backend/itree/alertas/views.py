@@ -22,7 +22,7 @@ from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
 from itree.ocorrencias.models import Ocorrencia, OrigemOcorrencia, TipoOcorrencia
 
-from . import fontes
+from . import fontes, proximidade
 from .models import (
     EXIGEM_JUSTIFICATIVA,
     EXIGEM_REFERENCIA,
@@ -43,6 +43,16 @@ class AlertaSerializer(serializers.ModelSerializer):
     tipo_geometria = serializers.SerializerMethodField()
     analisado_por = serializers.SerializerMethodField()
     ocorrencia = serializers.SerializerMethodField()
+    arvores_proximas = serializers.IntegerField(
+        read_only=True,
+        default=None,
+        help_text="Árvores ativas no escopo a até `raio` m (padrão 100 m) do alerta.",
+    )
+    ocorrencias_proximas = serializers.IntegerField(
+        read_only=True,
+        default=None,
+        help_text="Ocorrências abertas no escopo a até `raio` m (padrão 100 m) do alerta.",
+    )
     transicoes_possiveis = serializers.SerializerMethodField()
 
     class Meta:
@@ -68,6 +78,8 @@ class AlertaSerializer(serializers.ModelSerializer):
             "referencia",
             "analisado_por",
             "ocorrencia",
+            "arvores_proximas",
+            "ocorrencias_proximas",
             "atualizado_em",
         ]
 
@@ -95,6 +107,14 @@ class AlertaSerializer(serializers.ModelSerializer):
     )
     def get_transicoes_possiveis(self, obj):
         return sorted(TRANSICOES_ALERTA.get(obj.status, set()))
+
+
+class ArvoreProximaSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    codigo = serializers.CharField()
+    especie = serializers.CharField(allow_null=True)
+    condicao_aparente = serializers.CharField(allow_blank=True)
+    distancia_m = serializers.FloatField(help_text="Distância geodésica em metros.")
 
 
 class TriagemSerializer(serializers.Serializer):
@@ -151,12 +171,31 @@ FILTROS = [
     OpenApiParameter("deteccao_desde", str, description="AAAA-MM-DD"),
     OpenApiParameter("deteccao_ate", str, description="AAAA-MM-DD"),
     OpenApiParameter("ingestao_desde", str, description="AAAA-MM-DD"),
+    OpenApiParameter(
+        "ordem",
+        str,
+        description=(
+            "'-data_deteccao' (padrão), 'data_deteccao', 'arvores_proximas', "
+            "'-arvores_proximas', 'ocorrencias_proximas' ou '-ocorrencias_proximas'."
+        ),
+    ),
 ]
+PARAMETRO_RAIO = OpenApiParameter(
+    "raio", int, description="Raio, em metros, das árvores e ocorrências próximas (1 a 1000; 100)."
+)
+ORDENS = {
+    "data_deteccao": ("data_deteccao", "numero"),
+    "-data_deteccao": ("-data_deteccao", "-numero"),
+    "arvores_proximas": ("arvores_proximas", "-data_deteccao"),
+    "-arvores_proximas": ("-arvores_proximas", "-data_deteccao"),
+    "ocorrencias_proximas": ("ocorrencias_proximas", "-data_deteccao"),
+    "-ocorrencias_proximas": ("-ocorrencias_proximas", "-data_deteccao"),
+}
 
 
 @extend_schema_view(
-    list=extend_schema(operation_id="alertas_listar", parameters=FILTROS),
-    retrieve=extend_schema(operation_id="alertas_obter"),
+    list=extend_schema(operation_id="alertas_listar", parameters=[*FILTROS, PARAMETRO_RAIO]),
+    retrieve=extend_schema(operation_id="alertas_obter", parameters=[PARAMETRO_RAIO]),
 )
 class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """Alertas ambientais para triagem humana (W-08). Separados das ocorrências."""
@@ -181,9 +220,14 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
         qs = filtrar_por_escopo(
             AlertaAmbiental.objects.select_related("analisado_por", "ocorrencia"), self.request.user
         )
+        p = self.request.query_params
+        try:
+            raio = proximidade.normalizar_raio(p.get("raio"))
+        except ValueError as e:
+            raise ValidationError({"raio": [str(e)]}) from None
+        qs = proximidade.anotar_contagens(qs, self.request.user, raio)
         if self.action != "list":
             return qs
-        p = self.request.query_params
         situacao = p.get("status", "abertos")
         if situacao == "abertos":
             qs = qs.exclude(status__in=FINAIS_ALERTA)
@@ -200,7 +244,45 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
             qs = qs.filter(data_deteccao__date__lte=v)
         if v := p.get("ingestao_desde"):
             qs = qs.filter(ingerido_em__date__gte=v)
-        return qs
+        ordem = p.get("ordem", "-data_deteccao")
+        if ordem not in ORDENS:
+            raise ValidationError({"ordem": ["Ordenação inválida."]})
+        return qs.order_by(*ORDENS[ordem])
+
+    @extend_schema(
+        operation_id="alertas_arvores_proximas",
+        parameters=[PARAMETRO_RAIO],
+        responses=ArvoreProximaSerializer(many=True),
+    )
+    @action(detail=True, url_path="arvores-proximas", pagination_class=None)
+    def arvores_proximas(self, request, pk=None):
+        """Árvores no escopo a até `raio` m do alerta, da mais próxima à mais distante."""
+        alerta = self.get_object()
+        raio = proximidade.normalizar_raio(request.query_params.get("raio"))
+        arvores = proximidade.arvores_do_raio(request.user, alerta.geom, raio).select_related(
+            "especie"
+        )[:200]
+        return Response(
+            ArvoreProximaSerializer(
+                [
+                    {
+                        "id": a.id,
+                        "codigo": a.codigo,
+                        "especie": (
+                            a.especie.nomes_comuns[0]
+                            if a.especie.nomes_comuns
+                            else a.especie.nome_cientifico
+                        )
+                        if a.especie_id
+                        else None,
+                        "condicao_aparente": a.condicao_aparente,
+                        "distancia_m": round(a.distancia_m, 1),
+                    }
+                    for a in arvores
+                ],
+                many=True,
+            ).data
+        )
 
     @extend_schema(
         operation_id="alertas_triagem", request=TriagemSerializer, responses=AlertaSerializer
