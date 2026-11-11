@@ -17,4 +17,9 @@ export interface Analise {
   calculado_em: string;
   por_bairro: boolean;
   linhas: AnaliseLinhasItem[];
+  /**
+     * Soma das linhas, só quando são contagens que não se sobrepõem.
+     * @nullable
+     */
+  total: number | null;
 }

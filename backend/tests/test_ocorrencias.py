@@ -112,6 +112,27 @@ def test_filtros(cliente, gestor_municipal, tipo_queda):
     assert cliente.get(URL, {"tipo": "nao-uuid"}).status_code == 400
 
 
+def test_ordenar_por_urgencia_prazo_depois_prioridade(cliente, gestor_municipal, tipo_queda):
+    hoje = timezone.localdate()
+    tarde = nova(cliente, gestor_municipal, tipo_queda, prazo=str(hoje + timedelta(days=9))).json()
+    atrasada = nova(
+        cliente, gestor_municipal, tipo_queda, prazo=str(hoje - timedelta(days=2))
+    ).json()
+    cedo_baixa = nova(
+        cliente, gestor_municipal, tipo_queda, prazo=str(hoje + timedelta(days=1))
+    ).json()
+    cedo_urgente = nova(
+        cliente, gestor_municipal, tipo_queda, prazo=str(hoje + timedelta(days=1))
+    ).json()
+    for o, prio in ((cedo_baixa, "baixa"), (cedo_urgente, "urgente")):
+        r = cliente.post(
+            f"{URL}/{o['id']}/prioridade", {"prioridade": prio, "motivo": "teste"}, format="json"
+        )
+        assert r.status_code == 200, r.json()
+    ids = [o["id"] for o in cliente.get(URL, {"ordenar": "urgencia"}).json()["results"]]
+    assert ids == [atrasada["id"], cedo_urgente["id"], cedo_baixa["id"], tarde["id"]]
+
+
 def test_escopo_na_listagem(cliente, tecnico_a, gestor_municipal, tipo_queda):
     nova(cliente, gestor_municipal, tipo_queda, localizacao=PONTO_B)
     assert cliente.como(tecnico_a).get(URL).json()["count"] == 0

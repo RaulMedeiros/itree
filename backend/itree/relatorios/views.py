@@ -80,6 +80,9 @@ ANALISES = {
 }
 
 
+NAO_SOMAVEIS = {"tempo_atendimento_por_tipo"}
+
+
 def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
     ocorrencias = filtrar_por_escopo(Ocorrencia.objects.all(), usuario).filter(
         criado_em__date__gte=inicio, criado_em__date__lte=fim
@@ -180,6 +183,10 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             "calculado_em": serializers.DateTimeField(),
             "por_bairro": serializers.BooleanField(),
             "linhas": serializers.ListField(child=serializers.DictField()),
+            "total": serializers.IntegerField(
+                allow_null=True,
+                help_text="Soma das linhas, só quando são contagens que não se sobrepõem.",
+            ),
         },
     ),
 )
@@ -195,6 +202,7 @@ def analise(request: Request):
     ):
         raise PermissionDenied()
     inicio, fim = _periodo(request.query_params)
+    linhas = _linhas_analise(chave, request.user, inicio, fim)
     return Response(
         {
             "id": chave,
@@ -204,7 +212,9 @@ def analise(request: Request):
             "periodo": {"inicio": inicio, "fim": fim},
             "calculado_em": timezone.now(),
             "por_bairro": definicao.get("por_bairro", False),
-            "linhas": _linhas_analise(chave, request.user, inicio, fim),
+            "linhas": linhas,
+            # Médias (tempo de atendimento) não se somam; contagens, sim.
+            "total": None if chave in NAO_SOMAVEIS else sum(linha["valor"] for linha in linhas),
         }
     )
 

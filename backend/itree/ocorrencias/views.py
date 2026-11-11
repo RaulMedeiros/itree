@@ -1,7 +1,7 @@
 import re
 
 import pghistory
-from django.db.models import Q
+from django.db.models import Case, F, IntegerField, Q, When
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from pghistory.models import Events
@@ -21,6 +21,7 @@ from .models import (
     EstadoOcorrencia,
     Ocorrencia,
     OrigemOcorrencia,
+    Prioridade,
     TipoOcorrencia,
 )
 from .serializers import (
@@ -87,7 +88,27 @@ FILTROS = [
     OpenApiParameter("arvore", str),
     OpenApiParameter("atrasadas", bool),
     OpenApiParameter("origem", str),
+    OpenApiParameter(
+        "ordenar",
+        str,
+        description="'urgencia': prazo mais próximo primeiro (sem prazo por último), depois "
+        "prioridade; padrão: mais recentes primeiro.",
+    ),
 ]
+
+
+def ordenar_ocorrencias(qs, p):
+    if p.get("ordenar") != "urgencia":
+        return qs
+    peso = Case(
+        When(prioridade=Prioridade.URGENTE, then=0),
+        When(prioridade=Prioridade.ALTA, then=1),
+        When(prioridade=Prioridade.MEDIA, then=2),
+        When(prioridade=Prioridade.BAIXA, then=3),
+        default=4,
+        output_field=IntegerField(),
+    )
+    return qs.order_by(F("prazo").asc(nulls_last=True), peso, "-numero")
 
 
 def filtrar_ocorrencias(qs, p):
@@ -157,7 +178,9 @@ class OcorrenciaViewSet(
         )
         qs = filtrar_por_escopo(qs, self.request.user)
         if self.action == "list":
-            qs = filtrar_ocorrencias(qs, self.request.query_params)
+            qs = ordenar_ocorrencias(
+                filtrar_ocorrencias(qs, self.request.query_params), self.request.query_params
+            )
         return qs
 
     def _verificar_arvore(self, serializer):
