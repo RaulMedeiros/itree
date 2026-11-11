@@ -260,6 +260,8 @@ const mapa = createRoute({
     cor: z.enum(["origem"]).optional().catch(undefined),
     selecao: textoOpcional,
     destaque: textoOpcional,
+    /** Área da seleção por área, em microgrados (ver `mapa/areaUrl.ts`). */
+    area: textoOpcional,
   }),
   component: () => (
     <Exige permissao="mapa.ler">

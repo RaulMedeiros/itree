@@ -27,7 +27,7 @@ import type {
   VectorTileSource,
 } from "maplibre-gl";
 import { ChevronDown, ClipboardList, Layers, Leaf, List, TriangleAlert, X } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import {
@@ -58,6 +58,7 @@ import {
   type FormaArea,
   type PoligonoGeoJson,
 } from "../../mapa/desenho";
+import { codificarArea, decodificarArea } from "../../mapa/areaUrl";
 import { urlApi } from "../../mapa/url";
 import type { TipoBase } from "../../mapa/estilo";
 import {
@@ -107,6 +108,8 @@ export interface BuscaMapa {
   selecao?: string;
   /** Território (bairro) buscado, realçado até a próxima interação. */
   destaque?: string;
+  /** Área da seleção por área, codificada por `codificarArea`. */
+  area?: string;
 }
 
 function urlTiles(
@@ -188,13 +191,16 @@ export function MapaPagina() {
   // Feições dos bairros, para realçar o buscado, e o destaque vigente (lido nos eventos do mapa).
   const [feicoesBairros, setFeicoesBairros] = useState<FeicaoTerritorio[]>([]);
   const destaqueAtual = useRef<string | undefined>(undefined);
-  // Seleção por área (RF-MAPA-022): forma em desenho e área concluída (abre o painel).
+  // Seleção por área (RF-MAPA-022): forma em desenho e área concluída (abre o painel). A área
+  // concluída mora na URL (M-12): abrir um item da lista e voltar, ou recarregar, a restaura.
   const [formaArea, setFormaArea] = useState<FormaArea | null>(null);
-  const [area, setArea] = useState<PoligonoGeoJson | null>(null);
+  const area = useMemo(() => decodificarArea(busca.area), [busca.area]);
   const botaoSelecionarArea = useRef<HTMLButtonElement>(null);
   const devolverFocoAoBotao = useRef(false);
-  // Cliques nas árvores não abrem o painel contextual enquanto se desenha ou há área.
-  const selecaoPorAreaAtiva = useRef(false);
+  // Enquanto se desenha, cliques no mapa são do desenho; com a área pronta, clicar numa árvore
+  // abre o painel dela e mantém a área.
+  const desenhando = useRef(false);
+  const areaAtiva = useRef(false);
   // Áreas verdes: carregadas na primeira vez que a camada é ligada; a feição clicada abre o painel.
   const [estadoAreasVerdes, setEstadoAreasVerdes] = useState<"inicial" | "pronto" | "erro">(
     "inicial",
@@ -229,8 +235,11 @@ export function MapaPagina() {
     destaqueAtual.current = busca.destaque;
   }, [busca.destaque]);
   useEffect(() => {
-    selecaoPorAreaAtiva.current = formaArea !== null || area !== null;
-  }, [formaArea, area]);
+    desenhando.current = formaArea !== null;
+  }, [formaArea]);
+  useEffect(() => {
+    areaAtiva.current = area !== null;
+  }, [area]);
 
   const atualizarBusca = (parcial: Partial<BuscaMapa>) =>
     void navegar({ search: (s: BuscaMapa) => ({ ...s, ...parcial }), replace: true });
@@ -499,7 +508,7 @@ export function MapaPagina() {
           m.easeTo({ center: e.lngLat, zoom: Math.min(m.getZoom() + 2.5, 18) });
           return;
         }
-        if (selecaoPorAreaAtiva.current) return;
+        if (desenhando.current) return;
         atualizarBusca({
           selecao: `${camada.startsWith("arvores") ? "arvore" : "ocorrencia"}:${p.id}`,
         });
@@ -507,11 +516,11 @@ export function MapaPagina() {
     }
     // Clique numa área verde: nome, tipo e fonte. Árvores e ocorrências têm prioridade.
     m.on("mouseenter", "areas-verdes-preenchimento", () => {
-      if (!selecaoPorAreaAtiva.current) m.getCanvas().style.cursor = "pointer";
+      if (!desenhando.current && !areaAtiva.current) m.getCanvas().style.cursor = "pointer";
     });
     m.on("mouseleave", "areas-verdes-preenchimento", () => (m.getCanvas().style.cursor = ""));
     m.on("click", "areas-verdes-preenchimento", (e: MapLayerMouseEvent) => {
-      if (selecaoPorAreaAtiva.current) return;
+      if (desenhando.current || areaAtiva.current) return;
       const operacionais = CAMADAS_COM_CLIQUE.filter((id) => m.getLayer(id));
       if (operacionais.length && m.queryRenderedFeatures(e.point, { layers: operacionais }).length)
         return;
@@ -612,17 +621,21 @@ export function MapaPagina() {
     if (limites) m.fitBounds(limites, { padding: 60, maxZoom: 16 });
   }, [pronto, feicaoDestaque]);
 
+  const definirAreaNaUrl = (nova: PoligonoGeoJson | null) =>
+    atualizarBusca({ area: nova ? codificarArea(nova) : undefined });
   // Modo de desenho da área: ativo enquanto houver forma escolhida.
   useEffect(() => {
     const m = mapa.current;
     if (!pronto || !m || !formaArea) return;
     return iniciarDesenho(m, formaArea, {
       aoConcluir: (concluida) => {
-        setArea(concluida);
+        definirAreaNaUrl(concluida);
         setFormaArea(null);
       },
       aoCancelar: () => setFormaArea(null),
     });
+    // `definirAreaNaUrl` muda a cada render; o desenho só reinicia com a forma.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pronto, formaArea]);
 
   // A área desenhada fica visível, tracejada, enquanto o painel está aberto.
@@ -639,18 +652,18 @@ export function MapaPagina() {
   }, [formaArea, area]);
 
   const iniciarSelecaoPorArea = (forma: FormaArea) => {
-    setArea(null);
+    definirAreaNaUrl(null);
     setFormaArea(forma);
   };
   const fecharSelecaoPorArea = () => {
     devolverFocoAoBotao.current = true;
-    setArea(null);
+    definirAreaNaUrl(null);
     setFormaArea(null);
   };
   const usarAreaVisivel = () => {
     const limites = mapa.current?.getBounds();
     if (!limites) return;
-    setArea(
+    definirAreaNaUrl(
       poligonoDeLimites([
         limites.getWest(),
         limites.getSouth(),
@@ -1135,7 +1148,7 @@ export function MapaPagina() {
             {dica.texto}
           </div>
         )}
-        {area && (
+        {area && !tipoSelecao && (
           <PainelSelecaoArea
             area={area}
             filtros={{
@@ -1155,7 +1168,7 @@ export function MapaPagina() {
         {areaVerde && !area && !tipoSelecao && (
           <PainelAreaVerde area={areaVerde} aoFechar={() => setAreaVerde(null)} />
         )}
-        {tipoSelecao && idSelecao && !area && (
+        {tipoSelecao && idSelecao && (
           <PainelContextual
             tipo={tipoSelecao}
             id={idSelecao}
