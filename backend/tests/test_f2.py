@@ -403,3 +403,24 @@ def test_medidas_propostas_somem_depois_da_validacao(cliente, tecnico_a, revisor
     r = cliente.post(f"/api/v1/inspecoes/{ins}/validar", {"aplicar": ["medidas"]}, format="json")
     assert r.status_code == 200, r.json()
     assert cliente.get(f"/api/v1/inspecoes/{ins}").json()["medidas_propostas"] == []
+
+
+def test_detalhe_traz_as_medidas_do_cadastro_para_comparar(cliente, tecnico_a, revisor, arvore_a):
+    cliente.como(revisor).post(
+        f"/api/v1/arvores/{arvore_a['id']}/medidas",
+        {"tipo": "dap", "valor": "32", "metodo": "fita_diametrica", "origem": "medido"},
+        format="json",
+    )
+    medidas = [
+        {"tipo": "dap", "valor": "38", "metodo": "fita_diametrica", "origem": "medido"},
+        {"tipo": "altura", "valor": "10.2", "metodo": "hipsometro", "origem": "medido"},
+    ]
+    ins = enviada(cliente, tecnico_a, arvore_a["id"], medidas=medidas)
+
+    detalhe = cliente.como(revisor).get(f"/api/v1/inspecoes/{ins}").json()
+    # Só vale o que já foi aplicado ao cadastro: a proposta de 38 cm não entra.
+    assert [(m["tipo"], m["valor"]) for m in detalhe["medidas_do_cadastro"]] == [("dap", "32.00")]
+    assert {m["tipo"]: m["valor"] for m in detalhe["medidas"]} == {
+        "dap": "38.00",
+        "altura": "10.20",
+    }

@@ -4619,6 +4619,13 @@ components:
           items:
             $ref: '#/components/schemas/Medida'
           readOnly: true
+        medidas_do_cadastro:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+          description: Medida aplicada mais recente de cada tipo no cadastro da árvore,
+            para comparar com as medidas da inspeção.
         anterior:
           allOf:
           - $ref: '#/components/schemas/InspecaoResumo'
@@ -4638,6 +4645,7 @@ components:
       - id
       - localizacao
       - medidas
+      - medidas_do_cadastro
       - medidas_propostas
       - realizada_em
       - recebida_em

@@ -59,6 +59,8 @@ export interface Inspecao {
   /** @maxLength 100 */
   dispositivo?: string;
   readonly medidas: readonly Medida[];
+  /** Medida aplicada mais recente de cada tipo no cadastro da árvore, para comparar com as medidas da inspeção. */
+  readonly medidas_do_cadastro: readonly Medida[];
   /** Inspeção anterior da mesma árvore, para comparação (RF-INSP-004). */
   readonly anterior: InspecaoResumo | null;
   /** @nullable */

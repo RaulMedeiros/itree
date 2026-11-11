@@ -9,6 +9,7 @@ from itree.inventario.serializers import (
     CampoLocalizacao,
     EspecieResumoSerializer,
     MedidaSerializer,
+    medidas_atuais_da_arvore,
 )
 from itree.tarefas.models import Tarefa
 
@@ -86,6 +87,10 @@ class InspecaoResumoSerializer(serializers.ModelSerializer):
 class InspecaoSerializer(InspecaoResumoSerializer):
     localizacao = CampoLocalizacao(source="geom", read_only=True)
     medidas = MedidaSerializer(many=True, read_only=True)
+    medidas_do_cadastro = serializers.SerializerMethodField(
+        help_text="Medida aplicada mais recente de cada tipo no cadastro da árvore, "
+        "para comparar com as medidas da inspeção."
+    )
     anterior = serializers.SerializerMethodField(
         help_text="Inspeção anterior da mesma árvore, para comparação (RF-INSP-004)."
     )
@@ -102,9 +107,14 @@ class InspecaoSerializer(InspecaoResumoSerializer):
             "aplicado_ao_cadastro",
             "dispositivo",
             "medidas",
+            "medidas_do_cadastro",
             "anterior",
             "tarefa",
         ]
+
+    @extend_schema_field(MedidaSerializer(many=True))
+    def get_medidas_do_cadastro(self, obj):
+        return MedidaSerializer(medidas_atuais_da_arvore(obj.arvore), many=True).data
 
     @extend_schema_field(InspecaoResumoSerializer(allow_null=True))
     def get_anterior(self, obj):

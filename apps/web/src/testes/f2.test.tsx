@@ -77,6 +77,7 @@ const INSPECAO: Inspecao = {
   dispositivo: "android-1",
   medidas: [],
   medidas_propostas: [],
+  medidas_do_cadastro: [],
   anterior: null,
   tarefa: null,
 };
@@ -207,6 +208,43 @@ describe("revisão de inspeção", () => {
     await vi.waitFor(() =>
       expect(validacoes).toEqual([{ aplicar: ["condicao_aparente"], motivo: "" }]),
     );
+  });
+});
+
+describe("revisão de inspeção: medidas contra o cadastro (C-25)", () => {
+  const medida = (id: string, tipo: string, valor: string, unidade: string) => ({
+    id,
+    tipo,
+    valor,
+    unidade,
+    metodo: "fita_diametrica",
+    origem: "medido",
+    data_medicao: "2026-11-05",
+    responsavel_nome: "Tiago",
+    observacao: "",
+    criado_em: "2026-11-05T12:00:00Z",
+  });
+
+  it("mostra cada medida uma só vez, com a diferença em relação ao cadastro", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/inspecoes/i-1`, () =>
+        HttpResponse.json({
+          ...INSPECAO,
+          medidas: [medida("m-1", "dap", "38.00", "cm"), medida("m-2", "altura", "10.20", "m")],
+          medidas_do_cadastro: [medida("m-0", "dap", "32.00", "cm")],
+        }),
+      ),
+    );
+    await abrir("/inspecoes/i-1");
+    const linhaDap = await screen.findByRole("row", { name: /^DAP/ });
+    // A diferença, destacada, no mesmo lugar do valor novo.
+    expect(within(linhaDap).getByText("DAP 32 → 38 cm, +6")).toBeInTheDocument();
+    expect(within(linhaDap).getByText("32 cm")).toBeInTheDocument();
+    expect(screen.getAllByText(/38 cm/)).toHaveLength(2); // valor novo + frase da diferença, na mesma linha
+    expect(screen.getAllByRole("row", { name: /DAP/ })).toHaveLength(1);
+    expect(screen.queryByText("Medidas registradas")).toBeNull();
+    const linhaAltura = screen.getByRole("row", { name: /^Altura total/ });
+    expect(within(linhaAltura).getByText("Sem valor no cadastro")).toBeInTheDocument();
   });
 });
 

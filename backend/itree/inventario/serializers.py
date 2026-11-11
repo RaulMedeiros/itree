@@ -144,6 +144,14 @@ class EspecieResumoSerializer(serializers.ModelSerializer):
         fields = ["id", "nome_cientifico", "nomes_comuns"]
 
 
+def medidas_atuais_da_arvore(arvore) -> list:
+    """Medida aplicada mais recente de cada tipo (as de inspeção só valem depois de aplicadas)."""
+    atuais = {}
+    for medida in arvore.medidas.filter(aplicada=True).select_related("responsavel"):
+        atuais.setdefault(medida.tipo, medida)
+    return list(atuais.values())
+
+
 class MedidaSerializer(serializers.ModelSerializer):
     responsavel_nome = serializers.SerializerMethodField()
 
@@ -281,10 +289,7 @@ class ArvoreSerializer(ArvoreResumoSerializer):
     @extend_schema_field(MedidaSerializer(many=True))
     def get_medidas_atuais(self, obj):
         """Medida mais recente de cada tipo."""
-        atuais = {}
-        for medida in obj.medidas.filter(aplicada=True).select_related("responsavel"):
-            atuais.setdefault(medida.tipo, medida)
-        return MedidaSerializer(atuais.values(), many=True).data
+        return MedidaSerializer(medidas_atuais_da_arvore(obj), many=True).data
 
     @extend_schema_field(AreaVerdeResumoSerializer(allow_null=True))
     def get_em_area_verde(self, obj):
