@@ -1,5 +1,6 @@
 import {
   ErroApi,
+  useEvidenciasListar,
   useInspecoesDevolver,
   useInspecoesHistorico,
   useInspecoesObter,
@@ -72,7 +73,7 @@ function Linha3({
   campo: string;
   inspecao: ReactNode;
   cadastro: ReactNode;
-  anterior: ReactNode;
+  anterior?: ReactNode;
   destaque?: boolean;
 }) {
   return (
@@ -84,7 +85,7 @@ function Linha3({
         {inspecao}
       </td>
       <td className="py-2 pr-4 text-sm">{cadastro}</td>
-      <td className="py-2 text-sm text-texto-suave">{anterior}</td>
+      {anterior !== undefined && <td className="py-2 text-sm text-texto-suave">{anterior}</td>}
     </tr>
   );
 }
@@ -96,6 +97,9 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
   const [validando, setValidando] = useState(false);
   const [devolvendo, setDevolvendo] = useState(false);
   const historico = useInspecoesHistorico(i.id);
+  // Mesma consulta da seção de evidências: o aviso e a lista nunca divergem.
+  const evidencias = useEvidenciasListar({ inspecao: i.id });
+  const semEvidencias = evidencias.isSuccess && evidencias.data.data.length === 0;
   const a = i.arvore;
   const condicao = ROTULOS_CONDICAO[i.condicao_aparente ?? "nao_avaliada"];
 
@@ -113,16 +117,6 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
               {formatarDataHora(i.recebida_em)}
             </span>
           </span>
-        }
-        acoes={
-          podeValidar && (
-            <>
-              <Botao variante="secundario" onClick={() => setDevolvendo(true)}>
-                Devolver para correção
-              </Botao>
-              <Botao onClick={() => setValidando(true)}>Validar…</Botao>
-            </>
-          )
         }
       />
       {i.estado === "em_revisao" && i.tecnico.id === eu.id && (
@@ -153,6 +147,9 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
 
       <section className="mb-6 overflow-x-auto rounded-lg border border-borda bg-superficie p-4">
         <h2 className="mb-2 font-semibold">Comparação</h2>
+        {!i.anterior && (
+          <p className="mb-2 text-xs text-texto-suave">Não há inspeção anterior desta árvore.</p>
+        )}
         <table className="w-full">
           <thead>
             <tr className="text-left text-xs tracking-wide text-texto-suave uppercase">
@@ -169,7 +166,7 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                 </Link>
                 )
               </th>
-              <th className="pb-2">Inspeção anterior</th>
+              {i.anterior && <th className="pb-2">Inspeção anterior</th>}
             </tr>
           </thead>
           <tbody>
@@ -188,7 +185,7 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                   "Não identificada"
                 )
               }
-              anterior={i.anterior?.especie?.nome_cientifico ?? "—"}
+              anterior={i.anterior ? (i.anterior.especie?.nome_cientifico ?? "—") : undefined}
               destaque={!!i.especie && i.especie.id !== a.especie?.id}
             />
             <Linha3
@@ -200,7 +197,9 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                   : "Sem avaliação registrada"
               }
               anterior={
-                i.anterior ? ROTULOS_CONDICAO[i.anterior.condicao_aparente ?? "nao_avaliada"] : "—"
+                i.anterior
+                  ? ROTULOS_CONDICAO[i.anterior.condicao_aparente ?? "nao_avaliada"]
+                  : undefined
               }
               destaque={i.condicao_aparente !== a.condicao_aparente}
             />
@@ -232,7 +231,7 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                   "—"
                 )
               }
-              anterior="—"
+              anterior={i.anterior ? "—" : undefined}
             />
           </tbody>
         </table>
@@ -297,12 +296,34 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
         <Evidencias alvo={{ inspecao: i.id }} podeEnviar={false} />
       </div>
 
-      <h2 className="mb-3 font-semibold">Histórico</h2>
-      <LinhaDoTempo
-        eventos={historico.data?.data}
-        carregando={historico.isPending}
-        erro={historico.error}
-      />
+      <details className="mb-6 rounded-lg border border-borda bg-superficie p-4">
+        <summary className="cursor-pointer font-semibold">Histórico técnico</summary>
+        <div className="mt-3">
+          <LinhaDoTempo
+            eventos={historico.data?.data}
+            carregando={historico.isPending}
+            erro={historico.error}
+          />
+        </div>
+      </details>
+
+      {podeValidar && (
+        <div
+          role="region"
+          aria-label="Decisão da revisão"
+          className="sticky bottom-0 z-10 -mx-6 flex flex-wrap items-center justify-end gap-3 border-t border-borda bg-superficie px-6 py-3"
+        >
+          {semEvidencias && (
+            <p className="mr-auto text-sm font-medium text-atencao">
+              Sem evidências anexadas: confira com o técnico antes de validar.
+            </p>
+          )}
+          <Botao variante="secundario" onClick={() => setDevolvendo(true)}>
+            Devolver para correção
+          </Botao>
+          <Botao onClick={() => setValidando(true)}>Validar…</Botao>
+        </div>
+      )}
 
       {validando && <ValidarDialogo inspecao={i} aoFechar={() => setValidando(false)} />}
       {devolvendo && <DevolverDialogo inspecao={i} aoFechar={() => setDevolvendo(false)} />}

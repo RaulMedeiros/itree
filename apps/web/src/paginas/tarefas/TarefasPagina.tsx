@@ -20,10 +20,11 @@ import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
+import { MenuAcoes, type ItemMenu } from "../../ui/menu";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { invalidarCaminhos } from "../../util/cache";
-import { formatarData } from "../../util/formatos";
+import { contar, formatarData } from "../../util/formatos";
 
 const TAMANHO = 50;
 
@@ -78,9 +79,14 @@ export function TarefasPagina() {
               >
                 <p className="font-medium">{e.nome}</p>
                 <p className="text-xs text-texto-suave">
-                  {e.membros.length} membro(s) ·{" "}
+                  {contar(e.membros.length, "membro", "membros")} ·{" "}
                   {e.territorios.map((t) => t.nome).join(", ") || "sem território"}
                 </p>
+                {(e.membros.length === 0 || e.territorios.length === 0) && (
+                  <Selo tom="atencao" className="mt-1">
+                    Incompleta
+                  </Selo>
+                )}
               </button>
             </li>
           ))}
@@ -160,7 +166,7 @@ export function TarefasPagina() {
               {consulta.data.data.results.map((t) => (
                 <Linha key={t.id}>
                   <Td>
-                    <p className="font-mono font-medium">{t.codigo}</p>
+                    <p className="font-mono font-medium whitespace-nowrap">{t.codigo}</p>
                     <p className="text-xs text-texto-suave">{ROTULOS_TIPO_TAREFA[t.tipo]}</p>
                     {t.descricao && <p className="text-xs">{t.descricao}</p>}
                   </Td>
@@ -169,7 +175,7 @@ export function TarefasPagina() {
                       <Link
                         to="/inventario/arvores/$id"
                         params={{ id: String(t.alvo.id) }}
-                        className="font-mono text-marca-escura hover:underline"
+                        className="font-mono whitespace-nowrap text-marca-escura hover:underline"
                       >
                         {String(t.alvo.codigo)}
                       </Link>
@@ -177,7 +183,7 @@ export function TarefasPagina() {
                       <Link
                         to="/ocorrencias/$id"
                         params={{ id: String(t.alvo.id) }}
-                        className="font-mono text-marca-escura hover:underline"
+                        className="font-mono whitespace-nowrap text-marca-escura hover:underline"
                       >
                         {String(t.alvo.codigo)}
                       </Link>
@@ -206,29 +212,12 @@ export function TarefasPagina() {
                     )}
                   </Td>
                   <Td className="text-right">
-                    <div className="flex flex-wrap justify-end gap-1">
-                      {t.transicoes_possiveis.map((e) => (
-                        <Botao
-                          key={e}
-                          tamanho="pequeno"
-                          variante={
-                            e === "cancelada" || e === "bloqueada" ? "secundario" : "primario"
-                          }
-                          onClick={() => setTransicao({ tarefa: t, estado: e })}
-                        >
-                          {ACOES_ESTADO_TAREFA[e]}
-                        </Botao>
-                      ))}
-                      {podeEditar && t.transicoes_possiveis.length > 0 && (
-                        <Botao
-                          tamanho="pequeno"
-                          variante="fantasma"
-                          onClick={() => setAtribuindo(t)}
-                        >
-                          Reatribuir
-                        </Botao>
-                      )}
-                    </div>
+                    <AcoesTarefa
+                      tarefa={t}
+                      podeEditar={podeEditar}
+                      aoTransitar={(estado) => setTransicao({ tarefa: t, estado })}
+                      aoReatribuir={() => setAtribuindo(t)}
+                    />
                   </Td>
                 </Linha>
               ))}
@@ -244,6 +233,43 @@ export function TarefasPagina() {
       )}
       {transicao && <TransicaoDialogo {...transicao} aoFechar={() => setTransicao(null)} />}
       {atribuindo && <ReatribuirDialogo tarefa={atribuindo} aoFechar={() => setAtribuindo(null)} />}
+    </div>
+  );
+}
+
+/** Uma ação principal por linha; bloquear, cancelar e reatribuir ficam no menu "⋯". */
+function AcoesTarefa({
+  tarefa: t,
+  podeEditar,
+  aoTransitar,
+  aoReatribuir,
+}: {
+  tarefa: Tarefa;
+  podeEditar: boolean;
+  aoTransitar: (estado: EstadoTarefaEnum) => void;
+  aoReatribuir: () => void;
+}) {
+  const principal = t.transicoes_possiveis.find((e) => e !== "cancelada" && e !== "bloqueada");
+  const itens: ItemMenu[] = [
+    ...t.transicoes_possiveis
+      .filter((e) => e !== principal)
+      .map((e) => ({
+        rotulo: ACOES_ESTADO_TAREFA[e],
+        aoEscolher: () => aoTransitar(e),
+        perigo: e === "cancelada",
+      })),
+    ...(podeEditar && t.transicoes_possiveis.length > 0
+      ? [{ rotulo: "Reatribuir", aoEscolher: aoReatribuir }]
+      : []),
+  ];
+  return (
+    <div className="flex items-center justify-end gap-1">
+      {principal && (
+        <Botao tamanho="pequeno" onClick={() => aoTransitar(principal)}>
+          {ACOES_ESTADO_TAREFA[principal]}
+        </Botao>
+      )}
+      <MenuAcoes rotulo={`Mais ações de ${t.codigo}`} itens={itens} />
     </div>
   );
 }

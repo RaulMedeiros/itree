@@ -19,6 +19,14 @@ import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { useOpcoesTerritorio, useOpcoesUsuario } from "./dados";
 
+/** Próximo passo de uma equipe ativa que ainda não pode receber tarefas direito. */
+function pendenciasEquipe(e: Pick<Equipe, "membros" | "territorios">): string | null {
+  const falta = [e.membros.length === 0 && "membros", e.territorios.length === 0 && "território"]
+    .filter(Boolean)
+    .join(" e ");
+  return falta ? `Adicione ${falta} para receber tarefas.` : null;
+}
+
 export function EquipesPagina() {
   const consulta = useEquipesListar({ tamanho: 200 });
   const [editando, setEditando] = useState<Equipe | "nova" | null>(null);
@@ -83,7 +91,19 @@ export function EquipesPagina() {
                     <span className="text-texto-suave">Nenhum</span>
                   )}
                 </Td>
-                <Td>{e.ativa ? <Selo tom="sucesso">Ativa</Selo> : <Selo>Desativada</Selo>}</Td>
+                <Td>
+                  {e.ativa ? <Selo tom="sucesso">Ativa</Selo> : <Selo>Desativada</Selo>}
+                  {e.ativa && pendenciasEquipe(e) && (
+                    <>
+                      <Selo tom="atencao" className="ml-1">
+                        Incompleta
+                      </Selo>
+                      <p className="mt-1 max-w-56 text-xs text-texto-suave">
+                        {pendenciasEquipe(e)}
+                      </p>
+                    </>
+                  )}
+                </Td>
               </Linha>
             ))}
           </tbody>
