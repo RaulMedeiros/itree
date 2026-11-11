@@ -17,6 +17,11 @@ paths:
           type: string
         description: ISO 8601
       - in: query
+        name: codigo
+        schema:
+          type: string
+        description: 'Código do registro, ex.: OCO-000014.'
+      - in: query
         name: desde
         schema:
           type: string
@@ -3901,6 +3906,12 @@ components:
         objeto_id:
           type: string
           nullable: true
+        registro:
+          type: string
+          nullable: true
+          readOnly: true
+          description: Código legível do registro afetado (ARV-, OCO-, INS-, TAR-,
+            ALR-), se houver.
         acao:
           type: string
           readOnly: true
@@ -3930,6 +3941,7 @@ components:
       - id
       - momento
       - objeto_id
+      - registro
     Evidencia:
       type: object
       properties:

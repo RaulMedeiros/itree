@@ -145,3 +145,32 @@ def test_comando_criar_administrador_e_idempotente():
     assert usuario.papeis == ["administrador"]
     assert [t.nome for t in usuario.territorios.all()] == ["Fortaleza"]
     assert not usuario.has_usable_password()
+
+
+def test_auditoria_identifica_e_busca_o_registro_por_codigo(cliente, admin, tecnico_a, tipo_queda):
+    from .conftest import PONTO_A
+
+    criada = (
+        cliente.como(tecnico_a)
+        .post(
+            "/api/v1/ocorrencias",
+            {"tipo_id": str(tipo_queda.id), "localizacao": PONTO_A, "descricao": "Galho caído"},
+            format="json",
+        )
+        .json()
+    )
+    outra = cliente.post(
+        "/api/v1/ocorrencias",
+        {"tipo_id": str(tipo_queda.id), "localizacao": PONTO_A, "descricao": "Outro galho"},
+        format="json",
+    ).json()
+    assert criada["codigo"] != outra["codigo"]
+
+    # Aceita minúsculas e zeros à esquerda omitidos.
+    numero = int(criada["codigo"].split("-")[1])
+    eventos = cliente.como(admin).get("/api/v1/admin/auditoria", {"codigo": f"oco-{numero}"}).json()
+    assert eventos["count"] >= 1
+    assert {e["registro"] for e in eventos["results"]} == {criada["codigo"]}
+
+    assert cliente.get("/api/v1/admin/auditoria", {"codigo": "XYZ-1"}).json()["count"] == 0
+    assert cliente.get("/api/v1/admin/auditoria", {"codigo": "lixo"}).json()["count"] == 0

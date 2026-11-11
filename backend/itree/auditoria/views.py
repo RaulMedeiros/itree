@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 
 from drf_spectacular.utils import (
@@ -37,6 +38,17 @@ ENTIDADES = {
     "qualidade.InferenciaIAEvent": "Sugestão de IA",
 }
 
+# Prefixo do código legível -> modelo de evento (RF-ADM-003: busca por registro).
+PREFIXOS_CODIGO = {
+    "ARV": "inventario.ArvoreEvent",
+    "OCO": "ocorrencias.OcorrenciaEvent",
+    "INS": "inspecoes.InspecaoEvent",
+    "TAR": "tarefas.TarefaEvent",
+    "ALR": "alertas.AlertaAmbientalEvent",
+}
+MODELO_PARA_PREFIXO = {modelo: prefixo for prefixo, modelo in PREFIXOS_CODIGO.items()}
+CODIGO_RE = re.compile(r"^\s*([A-Za-z]{3})-?0*(\d+)\s*$")
+
 ACOES = {"insert": "criacao", "update": "alteracao", "delete": "exclusao"}
 
 
@@ -59,6 +71,9 @@ class EventoAuditoriaSerializer(serializers.Serializer):
     entidade = serializers.SerializerMethodField()
     entidade_modelo = serializers.CharField(source="pgh_obj_model")
     objeto_id = serializers.CharField(source="pgh_obj_id", allow_null=True)
+    registro = serializers.SerializerMethodField(
+        help_text="Código legível do registro afetado (ARV-, OCO-, INS-, TAR-, ALR-), se houver."
+    )
     acao = serializers.SerializerMethodField()
     diferencas = serializers.SerializerMethodField(
         help_text="Campo -> [valor anterior, valor novo] (alterações)."
@@ -96,6 +111,13 @@ class EventoAuditoriaSerializer(serializers.Serializer):
     def get_entidade(self, obj) -> str:
         return ENTIDADES.get(obj.pgh_model, obj.pgh_model)
 
+    def get_registro(self, obj) -> str | None:
+        prefixo = MODELO_PARA_PREFIXO.get(obj.pgh_model)
+        numero = (obj.pgh_data or {}).get("numero")
+        if not prefixo or not numero:
+            return None
+        return f"{prefixo}-{int(numero):06d}"
+
     def get_acao(self, obj) -> str:
         return ACOES.get(obj.pgh_label, obj.pgh_label)
 
@@ -115,6 +137,7 @@ def _data(valor: str | None, nome: str):
         parameters=[
             OpenApiParameter("entidade", str, description=f"Um de: {', '.join(ENTIDADES)}"),
             OpenApiParameter("objeto", str, description="ID do objeto auditado."),
+            OpenApiParameter("codigo", str, description="Código do registro, ex.: OCO-000014."),
             OpenApiParameter("usuario", str, description="ID do usuário autor."),
             OpenApiParameter("origem", str, description="web | app | api"),
             OpenApiParameter("desde", str, description="ISO 8601"),
@@ -132,7 +155,16 @@ class AuditoriaListView(generics.ListAPIView):
     def get_queryset(self):
         p = self.request.query_params
         modelos = [p["entidade"]] if p.get("entidade") in ENTIDADES else list(ENTIDADES)
+        codigo = p.get("codigo")
+        if codigo:
+            achado = CODIGO_RE.match(codigo)
+            modelo = PREFIXOS_CODIGO.get(achado.group(1).upper()) if achado else None
+            if not modelo or modelo not in modelos:
+                return Events.objects.none()
+            modelos = [modelo]
         qs = Events.objects.across(*modelos)
+        if codigo:
+            qs = qs.filter(pgh_data__numero=int(achado.group(2)))
         if objeto := p.get("objeto"):
             qs = qs.filter(pgh_obj_id=objeto)
         if usuario := p.get("usuario"):
