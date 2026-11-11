@@ -15,10 +15,14 @@ import { invalidarCaminhos } from "../../util/cache";
 
 type Alvo =
   | { tipo: "lote"; filtros: Record<string, string>; total: number }
+  | { tipo: "selecao"; arvoreIds: string[] }
   | { tipo: "arvore"; id: string; codigo: string }
   | { tipo: "ocorrencia"; id: string; codigo: string };
 
-/** Cria uma tarefa (árvore ou ocorrência) ou várias, a partir dos filtros do inventário. */
+/**
+ * Cria uma tarefa (árvore ou ocorrência) ou várias, a partir dos filtros do
+ * inventário ou de árvores escolhidas (ex.: seleção por área no mapa).
+ */
 export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: () => void }) {
   const equipes = useEquipesListar({ ativa: true, tamanho: 200 });
   const [equipe, setEquipe] = useState("");
@@ -43,9 +47,16 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
     const depois = async () => {
       await invalidarCaminhos(cliente, "/api/v1/tarefas");
     };
-    if (alvo.tipo === "lote") {
+    if (alvo.tipo === "lote" || alvo.tipo === "selecao") {
       lote.mutate(
-        { data: { ...comum, filtros_arvores: alvo.filtros } },
+        {
+          data: {
+            ...comum,
+            ...(alvo.tipo === "lote"
+              ? { filtros_arvores: alvo.filtros }
+              : { arvore_ids: alvo.arvoreIds }),
+          },
+        },
         { onSuccess: async (r) => (await depois(), setResultado(r.data)) },
       );
     } else {
@@ -65,9 +76,11 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
   const titulo =
     alvo.tipo === "lote"
       ? `Criar tarefas de inspeção para ${alvo.total} árvore(s)`
-      : alvo.tipo === "arvore"
-        ? `Tarefa de inspeção para ${alvo.codigo}`
-        : `Tarefa de atendimento para ${alvo.codigo}`;
+      : alvo.tipo === "selecao"
+        ? `Criar tarefas de inspeção para ${alvo.arvoreIds.length} árvore(s)`
+        : alvo.tipo === "arvore"
+          ? `Tarefa de inspeção para ${alvo.codigo}`
+          : `Tarefa de atendimento para ${alvo.codigo}`;
 
   return (
     <Dialogo
@@ -77,7 +90,9 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
       descricao={
         alvo.tipo === "lote"
           ? "Uma tarefa por árvore dos filtros atuais. Árvores que já têm tarefa de inspeção aberta são ignoradas."
-          : undefined
+          : alvo.tipo === "selecao"
+            ? "Uma tarefa por árvore da área selecionada no mapa. Árvores que já têm tarefa de inspeção aberta são ignoradas."
+            : undefined
       }
       rodape={
         resultado ? (

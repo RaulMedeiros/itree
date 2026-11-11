@@ -6,16 +6,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -25,7 +29,10 @@ import type {
   MapaAlertas200,
   MapaBuscaParams,
   MapaTileParams,
-  ResultadoBusca
+  ResultadoBusca,
+  SelecaoEntradaRequest,
+  SelecaoExportarRequest,
+  SelecaoSaida
 } from '../modelos';
 
 import { requisicao } from '../../cliente';
@@ -384,7 +391,205 @@ export function useMapaCamadas<TData = Awaited<ReturnType<typeof mapaCamadas>>, 
 
 
 
-export type mapaTileResponse200 = {
+export type mapaSelecaoResponse200 = {
+  data: SelecaoSaida
+  status: 200
+}
+
+export type mapaSelecaoResponseSuccess = (mapaSelecaoResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mapaSelecaoResponse = (mapaSelecaoResponseSuccess)
+
+export const getMapaSelecaoUrl = () => {
+
+
+
+
+  return `/api/v1/mapa/selecao`
+}
+
+/**
+ * Árvores e ocorrências dentro de uma área desenhada (RF-MAPA-022).
+ *
+ * Respeita o escopo territorial e as permissões do usuário, e aplica os mesmos
+ * filtros do mapa. A lista traz até 2000 itens por camada (``truncado`` avisa
+ * quando há mais); o total e a contagem por condição cobrem a seleção inteira.
+ * Camada sem permissão volta como ``null``.
+ */
+export const mapaSelecao = async (selecaoEntradaRequest: SelecaoEntradaRequest, options?: Parameters<typeof requisicao>[1]): Promise<mapaSelecaoResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<mapaSelecaoResponse>(getMapaSelecaoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(selecaoEntradaRequest)
+  }
+);}
+
+
+
+
+
+export const getMapaSelecaoMutationKey = () => ['mapaSelecao'] as const;
+
+export const getMapaSelecaoMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapaSelecao>>, TError,MapaSelecaoMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof mapaSelecao>>, TError,MapaSelecaoMutationVariables, TContext> => {
+
+const mutationKey = getMapaSelecaoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapaSelecao>>, MapaSelecaoMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  mapaSelecao(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MapaSelecaoMutationResult = NonNullable<Awaited<ReturnType<typeof mapaSelecao>>>
+    export type MapaSelecaoMutationBody = SelecaoEntradaRequest
+    export type MapaSelecaoMutationError = unknown
+    export type MapaSelecaoMutationVariables = {data: SelecaoEntradaRequest}
+
+    export const useMapaSelecao = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapaSelecao>>, TError,MapaSelecaoMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof mapaSelecao>>,
+        TError,
+        MapaSelecaoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMapaSelecaoMutationOptions(options), queryClient);
+    }
+    export type mapaSelecaoExportarResponse200 = {
+  data: Blob
+  status: 200
+}
+
+export type mapaSelecaoExportarResponseSuccess = (mapaSelecaoExportarResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mapaSelecaoExportarResponse = (mapaSelecaoExportarResponseSuccess)
+
+export const getMapaSelecaoExportarUrl = () => {
+
+
+
+
+  return `/api/v1/mapa/selecao/exportar`
+}
+
+/**
+ * Exporta a seleção por área no mesmo formato das exportações do inventário e das
+ * ocorrências (CSV, XLSX ou GeoJSON), com metadados e a área desenhada como filtro.
+ */
+export const mapaSelecaoExportar = async (selecaoExportarRequest: SelecaoExportarRequest, options?: Parameters<typeof requisicao>[1]): Promise<mapaSelecaoExportarResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<mapaSelecaoExportarResponse>(getMapaSelecaoExportarUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(selecaoExportarRequest)
+  }
+);}
+
+
+
+
+
+export const getMapaSelecaoExportarMutationKey = () => ['mapaSelecaoExportar'] as const;
+
+export const getMapaSelecaoExportarMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapaSelecaoExportar>>, TError,MapaSelecaoExportarMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof mapaSelecaoExportar>>, TError,MapaSelecaoExportarMutationVariables, TContext> => {
+
+const mutationKey = getMapaSelecaoExportarMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mapaSelecaoExportar>>, MapaSelecaoExportarMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  mapaSelecaoExportar(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MapaSelecaoExportarMutationResult = NonNullable<Awaited<ReturnType<typeof mapaSelecaoExportar>>>
+    export type MapaSelecaoExportarMutationBody = SelecaoExportarRequest
+    export type MapaSelecaoExportarMutationError = unknown
+    export type MapaSelecaoExportarMutationVariables = {data: SelecaoExportarRequest}
+
+    export const useMapaSelecaoExportar = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mapaSelecaoExportar>>, TError,MapaSelecaoExportarMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof mapaSelecaoExportar>>,
+        TError,
+        MapaSelecaoExportarMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMapaSelecaoExportarMutationOptions(options), queryClient);
+    }
+    export type mapaTileResponse200 = {
   data: Blob
   status: 200
 }

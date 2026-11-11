@@ -176,6 +176,7 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "ENUM_NAME_OVERRIDES": {
         "PapelEnum": "itree.contas.permissoes.Papel",
+        "CamadaSelecaoEnum": "itree.mapa.selecao.CamadaSelecao",
         "PermissaoEnum": "itree.contas.permissoes.Permissao",
         "TipoTerritorioEnum": "itree.territorio.models.TipoTerritorio",
         "EstadoEspecieEnum": "itree.inventario.models.EstadoEspecie",

@@ -12,6 +12,7 @@ from itree.evidencias.views import EvidenciaViewSet
 from itree.indicadores.views import painel
 from itree.inspecoes.views import InspecaoViewSet
 from itree.inventario.views import ArvoreViewSet, EspecieViewSet, ImportacaoViewSet
+from itree.mapa import selecao as mapa_selecao
 from itree.mapa import views as mapa
 from itree.ocorrencias.views import OcorrenciaViewSet, TipoOcorrenciaViewSet
 from itree.qualidade.views import InferenciaViewSet, pendencias
@@ -41,6 +42,8 @@ api_v1 = [
     path("admin/auditoria", AuditoriaListView.as_view(), name="auditoria"),
     path("mapa/tiles/<str:camada>/<int:z>/<int:x>/<int:y>", mapa.tile, name="mapa-tile"),
     path("mapa/busca", mapa.busca, name="mapa-busca"),
+    path("mapa/selecao", mapa_selecao.selecao, name="mapa-selecao"),
+    path("mapa/selecao/exportar", mapa_selecao.selecao_exportar, name="mapa-selecao-exportar"),
     path("indicadores/painel", painel, name="indicadores-painel"),
     path("mapa/alertas", mapa.alertas, name="mapa-alertas"),
     path("relatorios/catalogo", relatorios.catalogo, name="relatorios-catalogo"),
