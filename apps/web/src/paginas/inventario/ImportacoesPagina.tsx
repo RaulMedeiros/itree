@@ -187,10 +187,10 @@ export function ImportacoesPagina() {
 }
 
 /** Passos do assistente (R2-20): cada um corresponde a uma tela. */
-export const ETAPAS = ["Arquivo e fonte", "Colunas", "Revisão"];
+const ETAPAS = ["Arquivo e fonte", "Colunas", "Revisão"];
 
 /** Indicador 1-2-3: arquivo e fonte, correspondência de colunas e a revisão do lote. */
-export function Etapas({ atual }: { atual: number }) {
+function Etapas({ atual }: { atual: number }) {
   return (
     <ol aria-label="Etapas da importação" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
       {ETAPAS.map((nome, i) => (
