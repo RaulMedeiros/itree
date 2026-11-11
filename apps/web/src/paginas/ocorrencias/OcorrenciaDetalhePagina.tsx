@@ -4,6 +4,7 @@ import {
   getOcorrenciasHistoricoQueryKey,
   getOcorrenciasObterQueryKey,
   useEquipesListar,
+  useEvidenciasListar,
   useOcorrenciasAtualizar,
   useOcorrenciasHistorico,
   useOcorrenciasObter,
@@ -35,7 +36,7 @@ import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
-import { formatarData, formatarDataHora } from "../../util/formatos";
+import { descreverPrazo, formatarData, formatarDataHora } from "../../util/formatos";
 import { invalidarCaminhos } from "../../util/cache";
 
 export function OcorrenciaDetalhePagina() {
@@ -108,6 +109,10 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
   const podeTarefa = usePermissao("tarefas.editar") && !encerrada;
   const [criandoTarefa, setCriandoTarefa] = useState(false);
 
+  // O avanço mais provável ganha destaque: concluir, ou o primeiro passo que não cancela.
+  const avancos = o.transicoes_possiveis.filter((e) => e !== "cancelada");
+  const principal = avancos.includes("concluida") ? "concluida" : avancos[0];
+
   return (
     <>
       <CabecalhoPagina
@@ -157,7 +162,9 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
             <Botao
               key={estado}
               tamanho="pequeno"
-              variante={estado === "cancelada" ? "secundario" : "primario"}
+              variante={
+                estado === "cancelada" ? "perigo" : estado === principal ? "primario" : "secundario"
+              }
               onClick={() => setTransicao(estado)}
             >
               {ACOES_ESTADO_OCORRENCIA[estado]}
@@ -262,7 +269,15 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
           <dl className="flex flex-col gap-2">
             <div>
               <dt className="text-xs text-texto-suave">Responsável</dt>
-              <dd>{o.responsavel ? o.responsavel.nome || o.responsavel.email : "Não atribuído"}</dd>
+              <dd>
+                {o.responsavel ? (
+                  o.responsavel.nome || o.responsavel.email
+                ) : encerrada ? (
+                  "Não atribuído"
+                ) : (
+                  <Selo tom="atencao">Sem responsável</Selo>
+                )}
+              </dd>
             </div>
             <div>
               <dt className="text-xs text-texto-suave">Equipe</dt>
@@ -270,7 +285,21 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
             </div>
             <div>
               <dt className="text-xs text-texto-suave">Prazo</dt>
-              <dd>{formatarData(o.prazo) ?? "Sem prazo"}</dd>
+              <dd>
+                {o.prazo ? (
+                  <>
+                    {formatarData(o.prazo)}
+                    {!encerrada && (
+                      <span className={o.atrasada ? "text-perigo" : "text-texto-suave"}>
+                        {" · "}
+                        {descreverPrazo(o.prazo)}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  "Sem prazo"
+                )}
+              </dd>
             </div>
           </dl>
         </Cartao>
@@ -319,6 +348,15 @@ function TransicaoDialogo({
   const mutacao = useOcorrenciasTransicao<ErroApi>();
   const recarregar = useRecarregar(ocorrencia.id);
   const exige = estado === "cancelada";
+  const evidencias = useEvidenciasListar(
+    { ocorrencia: ocorrencia.id },
+    { query: { enabled: estado === "concluida" } },
+  );
+  const avisos: string[] = [];
+  if (estado === "concluida") {
+    if (!ocorrencia.responsavel) avisos.push("sem responsável atribuído");
+    if (evidencias.data && evidencias.data.data.length === 0) avisos.push("sem evidência anexada");
+  }
   return (
     <Dialogo
       aberto
@@ -344,6 +382,12 @@ function TransicaoDialogo({
         </>
       }
     >
+      {avisos.length > 0 && (
+        <p role="alert" className="mb-3 rounded-md bg-atencao-clara px-3 py-2 text-sm text-atencao">
+          Atenção: esta ocorrência está {avisos.join(" e ")}. Confirme apenas se o atendimento já
+          foi feito e registrado.
+        </p>
+      )}
       {mutacao.error && (
         <p className="mb-3 text-sm text-perigo">
           {Object.values(mutacao.error.errosDeCampo).flat()[0] ?? mutacao.error.message}

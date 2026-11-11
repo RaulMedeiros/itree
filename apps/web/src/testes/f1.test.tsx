@@ -154,6 +154,28 @@ describe("ocorrência", () => {
     expect(screen.queryByRole("button", { name: /Registrar$/ })).not.toBeInTheDocument();
   });
 
+  it("avisa antes de concluir sem responsável nem evidência e mostra o prazo restante", async () => {
+    const usuario = userEvent.setup();
+    servidor.use(
+      http.get(`${API}/api/v1/ocorrencias/o-1`, () =>
+        HttpResponse.json({
+          ...OCORRENCIA,
+          estado: "em_atendimento",
+          transicoes_possiveis: ["concluida", "cancelada"],
+          prazo: "2999-12-31",
+        }),
+      ),
+    );
+    await abrir("/ocorrencias/o-1");
+    expect(await screen.findByText("Sem responsável")).toBeInTheDocument();
+    expect(screen.getByText(/· faltam \d+ dias/)).toBeInTheDocument();
+    await usuario.click(await screen.findByRole("button", { name: "Concluir" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(
+      await within(dialogo).findByText(/sem responsável atribuído e sem evidência anexada/),
+    ).toBeInTheDocument();
+  });
+
   it("cancelar exige justificativa", async () => {
     const usuario = userEvent.setup();
     await abrir("/ocorrencias/o-1");

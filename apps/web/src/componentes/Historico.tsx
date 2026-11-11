@@ -5,6 +5,7 @@ import { Fragment } from "react";
 import { Carregando, Erro, Vazio } from "../ui/estados";
 import { Selo } from "../ui/selo";
 import { formatarDataHora } from "../util/formatos";
+import { VAZIO, ehVazio, formatarValorCampo, rotuloDoCampo } from "./historicoFormatos";
 
 export interface ContextoEvento {
   user?: string | null;
@@ -35,35 +36,25 @@ export function autorDoEvento(
 }
 
 const OCULTOS = new Set(["criado_em", "atualizado_em", "geom", "id", "numero"]);
-const DATA_HORA_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
 /** Campos *_id são referências internas: mostram só que mudaram. */
 const ehReferencia = (campo: string) => campo.endsWith("_id");
 
-function exibir(v: unknown): string {
-  if (v === null || v === undefined || v === "") return "(vazio)";
-  if (typeof v === "string" && DATA_HORA_ISO.test(v)) return formatarDataHora(v) ?? v;
-  if (Array.isArray(v)) {
-    if (!v.length) return "(vazio)";
-    return v
-      .map((item) =>
-        item && typeof item === "object"
-          ? String((item as { nome?: unknown }).nome ?? JSON.stringify(item))
-          : String(item),
-      )
-      .join(", ");
-  }
-  if (typeof v === "boolean") return v ? "sim" : "não";
-  return typeof v === "object" ? JSON.stringify(v) : String(v);
-}
-
 export function DetalhesEvento({ evento }: { evento: EventoAuditoria }) {
   const diferencas = evento.diferencas as Record<string, [unknown, unknown]> | null;
   const dados = (evento.dados ?? {}) as Record<string, unknown>;
+  const modelo = evento.entidade_modelo;
 
-  if (evento.acao === "alteracao" && diferencas && Object.keys(diferencas).length > 0) {
-    const linhas = Object.entries(diferencas).filter(([campo]) => !OCULTOS.has(campo));
-    if (diferencas.geom) linhas.unshift(["localização", ["(anterior)", "(nova)"]]);
+  if (evento.acao === "alteracao") {
+    const linhas = Object.entries(diferencas ?? {}).filter(([campo]) => !OCULTOS.has(campo));
+    if (diferencas?.geom) linhas.unshift(["localizacao", ["(anterior)", "(nova)"]]);
+    if (linhas.length === 0) {
+      return (
+        <p className="text-sm text-texto-suave">
+          Registro atualizado, sem mudança em campos exibidos.
+        </p>
+      );
+    }
     return (
       <table className="text-sm">
         <thead>
@@ -76,12 +67,22 @@ export function DetalhesEvento({ evento }: { evento: EventoAuditoria }) {
         <tbody>
           {linhas.map(([campo, [antes, depois]]) => (
             <tr key={campo}>
-              <td className="pr-6 font-mono text-xs">{campo}</td>
+              <th scope="row" className="pr-6 text-left font-normal text-texto-suave">
+                {rotuloDoCampo(campo)}
+              </th>
               <td className="pr-6 text-perigo line-through">
-                {ehReferencia(campo) ? (antes ? "(referência)" : "(vazio)") : exibir(antes)}
+                {ehReferencia(campo)
+                  ? antes
+                    ? "Referência anterior"
+                    : VAZIO
+                  : formatarValorCampo(campo, antes, modelo)}
               </td>
               <td className="text-sucesso">
-                {ehReferencia(campo) ? (depois ? "(nova referência)" : "(vazio)") : exibir(depois)}
+                {ehReferencia(campo)
+                  ? depois
+                    ? "Nova referência"
+                    : VAZIO
+                  : formatarValorCampo(campo, depois, modelo)}
               </td>
             </tr>
           ))}
@@ -89,20 +90,34 @@ export function DetalhesEvento({ evento }: { evento: EventoAuditoria }) {
       </table>
     );
   }
+  const itens = Object.entries(dados).filter(
+    ([campo, valor]) => !OCULTOS.has(campo) && !ehReferencia(campo) && !ehVazio(valor),
+  );
   return (
     <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-0.5 text-sm">
-      {Object.entries(dados)
-        .filter(
-          ([campo, valor]) =>
-            !OCULTOS.has(campo) && !ehReferencia(campo) && valor !== null && valor !== "",
-        )
-        .map(([campo, valor]) => (
-          <Fragment key={campo}>
-            <dt className="font-mono text-xs text-texto-suave">{campo}</dt>
-            <dd className="break-all">{exibir(valor)}</dd>
-          </Fragment>
-        ))}
+      {itens.map(([campo, valor]) => (
+        <Fragment key={campo}>
+          <dt className="text-texto-suave">{rotuloDoCampo(campo)}</dt>
+          <dd className="break-words">{formatarValorCampo(campo, valor, modelo)}</dd>
+        </Fragment>
+      ))}
     </dl>
+  );
+}
+
+/** JSON bruto do evento, só para quem precisa conferir o registro (Auditoria). */
+export function DadosTecnicos({ evento }: { evento: EventoAuditoria }) {
+  return (
+    <details className="mt-2 text-xs">
+      <summary className="cursor-pointer text-texto-suave">Ver dados técnicos</summary>
+      <pre className="mt-1 max-h-64 overflow-auto rounded bg-superficie p-2 font-mono">
+        {JSON.stringify(
+          { diferencas: evento.diferencas, dados: evento.dados, contexto: evento.contexto },
+          null,
+          2,
+        )}
+      </pre>
+    </details>
   );
 }
 

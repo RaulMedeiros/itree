@@ -13,6 +13,11 @@ export interface EventoAuditoria {
   entidade_modelo: string;
   /** @nullable */
   objeto_id: string | null;
+  /**
+     * Código legível do registro afetado (ARV-, OCO-, INS-, TAR-, ALR-), se houver.
+     * @nullable
+     */
+  readonly registro: string | null;
   readonly acao: string;
   /** Campo -> [valor anterior, valor novo] (alterações). */
   readonly diferencas: unknown;
