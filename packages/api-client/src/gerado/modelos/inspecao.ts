@@ -13,6 +13,7 @@ import type { InspecaoAnterior } from './inspecaoAnterior';
 import type { InspecaoTarefa } from './inspecaoTarefa';
 import type { Localizacao } from './localizacao';
 import type { Medida } from './medida';
+import type { OcorrenciaGerada } from './ocorrenciaGerada';
 import type { OrigemInspecaoEnum } from './origemInspecaoEnum';
 import type { SinalObservadoEnum } from './sinalObservadoEnum';
 import type { UsuarioResumo } from './usuarioResumo';
@@ -44,6 +45,8 @@ export interface Inspecao {
   versao?: number;
   /** Medidas da inspeção em revisão que ainda não valem no cadastro da árvore (vazio em qualquer outro estado). */
   readonly medidas_propostas: readonly Medida[];
+  /** Ocorrências abertas a partir desta inspeção (validar e encaminhar). */
+  readonly ocorrencias_geradas: readonly OcorrenciaGerada[];
   readonly localizacao: Localizacao | null;
   /** @nullable */
   precisao_m?: number | null;

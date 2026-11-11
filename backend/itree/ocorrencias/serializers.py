@@ -8,6 +8,7 @@ from itree.contas.models import Equipe, Usuario
 from itree.contas.serializers import UsuarioResumoSerializer
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.serializers import CampoLocalizacao
+from itree.tarefas.models import EstadoTarefa
 from itree.territorio.serializers import TerritorioResumoSerializer
 
 from .models import ESTADOS_FINAIS, EstadoOcorrencia, Ocorrencia, Prioridade, TipoOcorrencia
@@ -46,6 +47,22 @@ class EquipeResumoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Equipe
         fields = ["id", "nome"]
+
+
+class RegistroVinculadoSerializer(serializers.Serializer):
+    """Referência a outro registro (inspeção, alerta), para o link na tela."""
+
+    tipo = serializers.CharField(help_text="inspecao ou alerta")
+    id = serializers.UUIDField()
+    codigo = serializers.CharField()
+
+
+class TarefaVinculadaSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    codigo = serializers.CharField()
+    estado = serializers.ChoiceField(choices=EstadoTarefa.choices)
+    responsavel = serializers.CharField(allow_null=True)
+    prazo = serializers.DateField(allow_null=True)
 
 
 class OcorrenciaSerializer(serializers.ModelSerializer):
@@ -90,6 +107,10 @@ class OcorrenciaSerializer(serializers.ModelSerializer):
     risco_responsavel = UsuarioResumoSerializer(read_only=True, allow_null=True)
     registrada_por = UsuarioResumoSerializer(read_only=True)
     atrasada = serializers.SerializerMethodField()
+    origem_vinculo = serializers.SerializerMethodField(
+        help_text="Registro de onde a ocorrência veio (inspeção ou alerta), quando houver."
+    )
+    tarefas = serializers.SerializerMethodField(help_text="Tarefas vinculadas, com o estado.")
     transicoes_possiveis = serializers.SerializerMethodField()
 
     class Meta:
@@ -123,6 +144,8 @@ class OcorrenciaSerializer(serializers.ModelSerializer):
             "atrasada",
             "origem",
             "origem_referencia",
+            "origem_vinculo",
+            "tarefas",
             "registrada_por",
             "criado_em",
             "atualizado_em",
@@ -138,6 +161,30 @@ class OcorrenciaSerializer(serializers.ModelSerializer):
             "origem",
             "origem_referencia",
             "concluida_em",
+        ]
+
+    @extend_schema_field(RegistroVinculadoSerializer(allow_null=True))
+    def get_origem_vinculo(self, obj):
+        if obj.inspecao_id:
+            return {"tipo": "inspecao", "id": obj.inspecao_id, "codigo": obj.inspecao.codigo}
+        alerta = getattr(obj, "alerta", None)
+        if alerta is not None:
+            return {"tipo": "alerta", "id": alerta.pk, "codigo": alerta.codigo}
+        return None
+
+    @extend_schema_field(TarefaVinculadaSerializer(many=True))
+    def get_tarefas(self, obj):
+        return [
+            {
+                "id": t.pk,
+                "codigo": t.codigo,
+                "estado": t.estado,
+                "responsavel": (t.responsavel.nome or t.responsavel.email)
+                if t.responsavel_id
+                else None,
+                "prazo": t.prazo,
+            }
+            for t in sorted(obj.tarefas.all(), key=lambda t: t.numero)
         ]
 
     @extend_schema_field(serializers.DictField(allow_null=True))

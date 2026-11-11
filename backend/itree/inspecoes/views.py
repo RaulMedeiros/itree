@@ -1,9 +1,10 @@
+from django.db.models import Case, IntegerField, Value, When
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from pghistory.models import Events
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from itree.auditoria.views import EventoAuditoriaSerializer
@@ -12,9 +13,11 @@ from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
 
 from . import servicos
-from .models import EstadoInspecao, Inspecao
+from .models import CondicaoAparente, EstadoInspecao, Inspecao
 from .serializers import (
     DevolucaoSerializer,
+    EncaminhamentoResultadoSerializer,
+    EncaminhamentoSerializer,
     InspecaoDeCampoSerializer,
     InspecaoResumoSerializer,
     InspecaoSerializer,
@@ -33,8 +36,40 @@ FILTROS = [
     OpenApiParameter("desde", str, description="AAAA-MM-DD (data da inspeção)"),
     OpenApiParameter("ate", str, description="AAAA-MM-DD"),
     OpenApiParameter("requer_encaminhamento", bool),
-    OpenApiParameter("ordenar", str, description="realizada_em ou -realizada_em (padrão)"),
+    OpenApiParameter("condicao", str, description="Uma ou mais condições, separadas por vírgula."),
+    OpenApiParameter(
+        "ordenar",
+        str,
+        description="realizada_em, recebida_em ou condicao (da pior para a melhor), com '-' "
+        "na frente para inverter. Padrão: -realizada_em.",
+    ),
 ]
+
+ORDENACOES = {"realizada_em", "recebida_em"}
+# Da pior condição para a melhor; "não avaliada" por último.
+ESCALA_CONDICAO = [
+    CondicaoAparente.MORTA,
+    CondicaoAparente.RUIM,
+    CondicaoAparente.REGULAR,
+    CondicaoAparente.BOA,
+    CondicaoAparente.NAO_AVALIADA,
+]
+
+
+def ordenar_inspecoes(qs, ordem: str):
+    """Ordenação da listagem; valor desconhecido cai no padrão (mais recentes primeiro)."""
+    descendente = ordem.startswith("-")
+    campo = ordem.lstrip("-")
+    if campo == "condicao":
+        peso = Case(
+            *[When(condicao_aparente=c, then=Value(i)) for i, c in enumerate(ESCALA_CONDICAO)],
+            default=Value(len(ESCALA_CONDICAO)),
+            output_field=IntegerField(),
+        )
+        return qs.order_by(peso.desc() if descendente else peso.asc(), "recebida_em")
+    if campo in ORDENACOES:
+        return qs.order_by(ordem, "numero")
+    return qs.order_by("-realizada_em")
 
 
 @extend_schema_view(
@@ -49,6 +84,7 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
     def get_permissions(self):
         mapa = {
             "validar": P.INSPECOES_VALIDAR,
+            "validar_e_encaminhar": P.INSPECOES_VALIDAR,
             "devolver": P.INSPECOES_VALIDAR,
             "sincronizar": P.INSPECOES_EXECUTAR,
         }
@@ -62,7 +98,7 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
             return Inspecao.objects.none()
         qs = Inspecao.objects.select_related(
             "arvore", "arvore__especie", "arvore__bairro", "tecnico", "revisor", "especie", "tarefa"
-        ).prefetch_related("medidas", "medidas__responsavel")
+        ).prefetch_related("medidas", "medidas__responsavel", "ocorrencias_geradas")
         qs = filtrar_por_escopo(qs, self.request.user, campo_geom="arvore__geom")
         if self.action != "list":
             return qs
@@ -80,8 +116,9 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
             qs = qs.filter(realizada_em__date__lte=ate)
         if p.get("requer_encaminhamento") == "true":
             qs = qs.filter(requer_encaminhamento=True)
-        ordem = p.get("ordenar", "-realizada_em")
-        return qs.order_by(ordem if ordem in ("realizada_em", "-realizada_em") else "-realizada_em")
+        if condicao := p.get("condicao"):
+            qs = qs.filter(condicao_aparente__in=condicao.split(","))
+        return ordenar_inspecoes(qs, p.get("ordenar", "-realizada_em"))
 
     @extend_schema(
         operation_id="inspecoes_sincronizar",
@@ -133,6 +170,54 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
         except servicos.ErroInspecao as exc:
             raise ValidationError(str(exc)) from exc
         return Response(InspecaoSerializer(self.get_object()).data)
+
+    @extend_schema(
+        operation_id="inspecoes_validar_e_encaminhar",
+        request=EncaminhamentoSerializer,
+        responses=EncaminhamentoResultadoSerializer,
+        description="Valida a inspeção e abre, na mesma operação, a ocorrência vinculada a ela "
+        "(com tarefa de atendimento opcional). Exige também registrar ocorrências e, para a "
+        "tarefa, criar tarefas.",
+    )
+    @action(detail=True, methods=["post"], url_path="validar-e-encaminhar")
+    def validar_e_encaminhar(self, request, pk=None):
+        usuario = request.user
+        if not usuario.tem_permissao(P.OCORRENCIAS_EDITAR):
+            raise PermissionDenied("Você não pode registrar ocorrências.")
+        dados = EncaminhamentoSerializer(data=request.data)
+        dados.is_valid(raise_exception=True)
+        v = dados.validated_data
+        if v["criar_tarefa"] and not usuario.tem_permissao(P.TAREFAS_EDITAR):
+            raise PermissionDenied("Você não pode criar tarefas.")
+        try:
+            resultado = servicos.validar_e_encaminhar(
+                self.get_object(),
+                usuario,
+                aplicar=v["aplicar"],
+                tipo=v["tipo_id"],
+                motivo=v.get("motivo", ""),
+                descricao=v.get("descricao", ""),
+                prazo=v.get("prazo"),
+                criar_tarefa=v["criar_tarefa"],
+                responsavel=v.get("responsavel"),
+                equipe=v.get("equipe"),
+            )
+        except servicos.ErroInspecao as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(
+            {
+                "inspecao": InspecaoSerializer(self.get_object()).data,
+                "ocorrencia": {
+                    "id": str(resultado.ocorrencia.pk),
+                    "codigo": resultado.ocorrencia.codigo,
+                },
+                "tarefa": (
+                    {"id": str(resultado.tarefa.pk), "codigo": resultado.tarefa.codigo}
+                    if resultado.tarefa
+                    else None
+                ),
+            }
+        )
 
     @extend_schema(
         operation_id="inspecoes_devolver", request=DevolucaoSerializer, responses=InspecaoSerializer

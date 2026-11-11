@@ -11,6 +11,7 @@
  * * `app` - Aplicativo
  * * `importacao` - Importação
  * * `alerta` - Conversão de alerta ambiental
+ * * `inspecao` - Encaminhamento de inspeção
  */
 export type OrigemOcorrenciaEnum = typeof OrigemOcorrenciaEnum[keyof typeof OrigemOcorrenciaEnum];
 
@@ -20,4 +21,5 @@ export const OrigemOcorrenciaEnum = {
   app: 'app',
   importacao: 'importacao',
   alerta: 'alerta',
+  inspecao: 'inspecao',
 } as const;

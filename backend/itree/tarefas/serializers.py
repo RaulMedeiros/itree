@@ -7,7 +7,7 @@ from itree.contas.serializers import UsuarioResumoSerializer
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.serializers import CampoLocalizacao
 from itree.ocorrencias.models import ESTADOS_FINAIS, Ocorrencia
-from itree.ocorrencias.serializers import EquipeResumoSerializer
+from itree.ocorrencias.serializers import EquipeResumoSerializer, RegistroVinculadoSerializer
 
 from .models import ESTADOS_FINAIS_TAREFA, TRANSICOES_TAREFA, EstadoTarefa, Tarefa, TipoTarefa
 
@@ -48,6 +48,9 @@ class TarefaSerializer(serializers.ModelSerializer):
     )
     criada_por = UsuarioResumoSerializer(read_only=True)
     atrasada = serializers.SerializerMethodField()
+    origem = serializers.SerializerMethodField(
+        help_text="De onde a tarefa veio: a inspeção que originou a ocorrência atendida."
+    )
     transicoes_possiveis = serializers.SerializerMethodField()
     motivo = serializers.CharField(
         write_only=True, required=False, allow_blank=True, max_length=500
@@ -60,6 +63,7 @@ class TarefaSerializer(serializers.ModelSerializer):
             "codigo",
             "tipo",
             "alvo",
+            "origem",
             "arvore_id",
             "ocorrencia_id",
             "localizacao",
@@ -87,6 +91,17 @@ class TarefaSerializer(serializers.ModelSerializer):
         if obj.arvore_id:
             return {"tipo": "arvore", "id": str(obj.arvore_id), "codigo": obj.arvore.codigo}
         return {"tipo": "ocorrencia", "id": str(obj.ocorrencia_id), "codigo": obj.ocorrencia.codigo}
+
+    @extend_schema_field(RegistroVinculadoSerializer(allow_null=True))
+    def get_origem(self, obj):
+        ocorrencia = obj.ocorrencia
+        if ocorrencia is not None and ocorrencia.inspecao_id:
+            return {
+                "tipo": "inspecao",
+                "id": ocorrencia.inspecao_id,
+                "codigo": ocorrencia.inspecao.codigo,
+            }
+        return None
 
     def get_atrasada(self, obj) -> bool:
         return bool(

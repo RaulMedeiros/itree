@@ -8,6 +8,7 @@
 import type { EquipeResumo } from './equipeResumo';
 import type { EstadoTarefaEnum } from './estadoTarefaEnum';
 import type { Localizacao } from './localizacao';
+import type { RegistroVinculado } from './registroVinculado';
 import type { TarefaAlvo } from './tarefaAlvo';
 import type { TipoTarefaEnum } from './tipoTarefaEnum';
 import type { UsuarioResumo } from './usuarioResumo';
@@ -17,6 +18,8 @@ export interface Tarefa {
   readonly codigo: string;
   tipo: TipoTarefaEnum;
   readonly alvo: TarefaAlvo;
+  /** De onde a tarefa veio: a inspeção que originou a ocorrência atendida. */
+  readonly origem: RegistroVinculado | null;
   readonly localizacao: Localizacao | null;
   descricao?: string;
   readonly responsavel: UsuarioResumo | null;

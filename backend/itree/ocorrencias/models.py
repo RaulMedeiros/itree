@@ -61,6 +61,7 @@ class OrigemOcorrencia(models.TextChoices):
     APP = "app", "Aplicativo"
     IMPORTACAO = "importacao", "Importação"
     ALERTA = "alerta", "Conversão de alerta ambiental"
+    INSPECAO = "inspecao", "Encaminhamento de inspeção"
 
 
 @pghistory.track(*eventos())
@@ -112,6 +113,14 @@ class Ocorrencia(ModeloBase):
 
     origem = models.CharField(max_length=20, choices=OrigemOcorrencia.choices)
     origem_referencia = models.CharField(max_length=200, blank=True)
+    inspecao = models.ForeignKey(
+        "inspecoes.Inspecao",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="ocorrencias_geradas",
+        help_text="Inspeção validada que originou a ocorrência (G-01).",
+    )
     registrada_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )

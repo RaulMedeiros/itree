@@ -3,6 +3,7 @@ from decimal import Decimal
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from itree.contas.models import Equipe, Usuario
 from itree.contas.serializers import UsuarioResumoSerializer
 from itree.inventario.models import Arvore, Especie, MetodoMedida, OrigemValor, TipoMedida
 from itree.inventario.serializers import (
@@ -11,6 +12,7 @@ from itree.inventario.serializers import (
     MedidaSerializer,
     medidas_atuais_da_arvore,
 )
+from itree.ocorrencias.models import EstadoOcorrencia, TipoOcorrencia
 from itree.tarefas.models import Tarefa
 
 from .models import CondicaoAparente, EstadoInspecao, Inspecao, SinalObservado
@@ -93,6 +95,12 @@ class InspecaoAnteriorSerializer(InspecaoResumoSerializer):
         fields = [*InspecaoResumoSerializer.Meta.fields, "medidas"]
 
 
+class OcorrenciaGeradaSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    codigo = serializers.CharField()
+    estado = serializers.ChoiceField(choices=EstadoOcorrencia.choices)
+
+
 class InspecaoSerializer(InspecaoResumoSerializer):
     localizacao = CampoLocalizacao(source="geom", read_only=True)
     medidas = MedidaSerializer(many=True, read_only=True)
@@ -105,10 +113,14 @@ class InspecaoSerializer(InspecaoResumoSerializer):
         "para comparação (RF-INSP-004)."
     )
     tarefa = serializers.SerializerMethodField()
+    ocorrencias_geradas = serializers.SerializerMethodField(
+        help_text="Ocorrências abertas a partir desta inspeção (validar e encaminhar)."
+    )
 
     class Meta(InspecaoResumoSerializer.Meta):
         fields = [
             *InspecaoResumoSerializer.Meta.fields,
+            "ocorrencias_geradas",
             "localizacao",
             "precisao_m",
             "arvore_confirmada",
@@ -141,6 +153,13 @@ class InspecaoSerializer(InspecaoResumoSerializer):
             .first()
         )
         return InspecaoAnteriorSerializer(anterior).data if anterior else None
+
+    @extend_schema_field(OcorrenciaGeradaSerializer(many=True))
+    def get_ocorrencias_geradas(self, obj):
+        return [
+            {"id": o.pk, "codigo": o.codigo, "estado": o.estado}
+            for o in obj.ocorrencias_geradas.all()
+        ]
 
     @extend_schema_field(serializers.DictField(allow_null=True))
     def get_tarefa(self, obj):
@@ -220,6 +239,51 @@ class ValidacaoSerializer(serializers.Serializer):
         help_text="Valores da inspeção que atualizam o cadastro da árvore.",
     )
     motivo = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
+class EncaminhamentoSerializer(ValidacaoSerializer):
+    """Validar a inspeção e abrir a ocorrência de origem nela (G-01)."""
+
+    tipo_id = serializers.PrimaryKeyRelatedField(
+        queryset=TipoOcorrencia.objects.filter(ativo=True), help_text="Tipo da ocorrência aberta."
+    )
+    descricao = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=2000,
+        help_text="O que deve ser atendido; vazio usa as observações da inspeção.",
+    )
+    prazo = serializers.DateField(required=False, allow_null=True)
+    criar_tarefa = serializers.BooleanField(
+        default=False, help_text="Cria também a tarefa de atendimento da ocorrência."
+    )
+    responsavel_id = serializers.PrimaryKeyRelatedField(
+        source="responsavel",
+        queryset=Usuario.objects.filter(is_active=True),
+        required=False,
+        allow_null=True,
+    )
+    equipe_id = serializers.PrimaryKeyRelatedField(
+        source="equipe", queryset=Equipe.objects.filter(ativa=True), required=False, allow_null=True
+    )
+
+    def validate(self, attrs):
+        if not attrs.get("criar_tarefa") and (attrs.get("responsavel") or attrs.get("equipe")):
+            raise serializers.ValidationError(
+                "Responsável e equipe só valem junto com a tarefa de atendimento."
+            )
+        return attrs
+
+
+class ReferenciaSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    codigo = serializers.CharField()
+
+
+class EncaminhamentoResultadoSerializer(serializers.Serializer):
+    inspecao = InspecaoSerializer()
+    ocorrencia = ReferenciaSerializer(help_text="A ocorrência aberta.")
+    tarefa = ReferenciaSerializer(allow_null=True, help_text="A tarefa criada, se houve.")
 
 
 class DevolucaoSerializer(serializers.Serializer):

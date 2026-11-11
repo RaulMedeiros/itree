@@ -93,7 +93,12 @@ class TarefaViewSet(
         if getattr(self, "swagger_fake_view", False):
             return Tarefa.objects.none()
         qs = Tarefa.objects.select_related(
-            "arvore", "ocorrencia", "responsavel", "equipe", "criada_por"
+            "arvore",
+            "ocorrencia",
+            "ocorrencia__inspecao",
+            "responsavel",
+            "equipe",
+            "criada_por",
         )
         qs = filtrar_por_escopo(qs, self.request.user)
         if self.action != "list":
@@ -178,6 +183,8 @@ class TarefaViewSet(
             raise ValidationError({"estado": ["Transição não permitida a partir do estado atual."]})
         if novo in EXIGEM_MOTIVO and not motivo:
             raise ValidationError({"motivo": ["Informe o motivo."]})
+        if tarefa.estado == EstadoTarefa.BLOQUEADA and not motivo:
+            raise ValidationError({"motivo": ["Informe por que o bloqueio acabou."]})
         with transaction.atomic(), pghistory.context(motivo=motivo or None):
             tarefa.estado = novo
             tarefa.motivo_estado = motivo

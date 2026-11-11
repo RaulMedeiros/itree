@@ -11,6 +11,8 @@ import type { Localizacao } from './localizacao';
 import type { OcorrenciaArvore } from './ocorrenciaArvore';
 import type { OcorrenciaPrioridade } from './ocorrenciaPrioridade';
 import type { OrigemOcorrenciaEnum } from './origemOcorrenciaEnum';
+import type { RegistroVinculado } from './registroVinculado';
+import type { TarefaVinculada } from './tarefaVinculada';
 import type { TerritorioResumo } from './territorioResumo';
 import type { TipoOcorrencia } from './tipoOcorrencia';
 import type { UsuarioResumo } from './usuarioResumo';
@@ -53,6 +55,10 @@ export interface Ocorrencia {
   readonly atrasada: boolean;
   readonly origem: OrigemOcorrenciaEnum;
   readonly origem_referencia: string;
+  /** Registro de onde a ocorrência veio (inspeção ou alerta), quando houver. */
+  readonly origem_vinculo: RegistroVinculado | null;
+  /** Tarefas vinculadas, com o estado. */
+  readonly tarefas: readonly TarefaVinculada[];
   readonly registrada_por: UsuarioResumo;
   readonly criado_em: string;
   readonly atualizado_em: string;

@@ -13,6 +13,8 @@ const variantes = cva(
         secundario: "border border-borda bg-superficie text-texto hover:bg-neutro-clara",
         fantasma: "text-texto hover:bg-neutro-clara",
         perigo: "bg-perigo text-white hover:bg-perigo/90",
+        // Ação destrutiva secundária: não compete com a principal.
+        perigoContorno: "border border-perigo/40 bg-superficie text-perigo hover:bg-perigo-clara",
       },
       tamanho: {
         normal: "h-9 px-3.5",

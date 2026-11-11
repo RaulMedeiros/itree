@@ -30,6 +30,7 @@ const GESTOR: Eu = {
     "inspecoes.ler",
     "inspecoes.validar",
     "ocorrencias.ler",
+    "ocorrencias.editar",
     "tarefas.ler",
     "tarefas.editar",
     "relatorios.ler",
@@ -88,6 +89,7 @@ const inspecao = (id: string, codigo: string, sinais: string[]) => ({
   medidas: [],
   anterior: null,
   tarefa: null,
+  ocorrencias_geradas: [],
 });
 const equipe = (id: string, nome: string, membros: unknown[], territorios: unknown[]) => ({
   id,
@@ -115,18 +117,22 @@ const tarefa = {
 
 let evidencias: unknown[] = [];
 const consultasOcorrencias: URLSearchParams[] = [];
+const consultasInspecoes: URLSearchParams[] = [];
+const encaminhamentos: unknown[] = [];
+const transicoesTarefa: unknown[] = [];
 
 const servidor = criarServidor(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(GESTOR)),
   http.get(`${API}/api/v1/territorios`, () => HttpResponse.json(pagina([]))),
-  http.get(`${API}/api/v1/inspecoes`, () =>
-    HttpResponse.json(
+  http.get(`${API}/api/v1/inspecoes`, ({ request }) => {
+    consultasInspecoes.push(new URL(request.url).searchParams);
+    return HttpResponse.json(
       pagina([
         inspecao("i-1", "INS-000001", ["fungos", "cavidade", "rachadura"]),
         inspecao("i-2", "INS-000002", ["fungos"]),
       ]),
-    ),
-  ),
+    );
+  }),
   http.get(`${API}/api/v1/inspecoes/i-1`, () =>
     HttpResponse.json(inspecao("i-1", "INS-000001", ["fungos"])),
   ),
@@ -177,6 +183,9 @@ afterEach(() => {
   servidor.resetHandlers();
   evidencias = [];
   consultasOcorrencias.length = 0;
+  consultasInspecoes.length = 0;
+  encaminhamentos.length = 0;
+  transicoesTarefa.length = 0;
 });
 afterAll(() => servidor.close());
 
@@ -198,6 +207,129 @@ describe("inspeções", () => {
     expect(screen.getByText("1 sinal")).toBeInTheDocument();
     expect(screen.queryByText(/sinal\(is\)/)).toBeNull();
     expect(screen.getAllByText(/aguarda há \d+ dias/).length).toBe(2);
+  });
+
+  it("a fila abre pelas mais antigas e ordena e filtra por condição e por encaminhamento", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inspecoes");
+    await screen.findByText("INS-000001");
+    const ultima = () => consultasInspecoes[consultasInspecoes.length - 1]!;
+    expect(ultima().get("estado")).toBe("em_revisao");
+    expect(ultima().get("ordenar")).toBe("recebida_em");
+    expect(ultima().get("requer_encaminhamento")).toBeNull();
+
+    await usuario.selectOptions(screen.getByLabelText("Ordenar por"), "condicao");
+    await vi.waitFor(() => expect(ultima().get("ordenar")).toBe("condicao"));
+    await usuario.selectOptions(screen.getByLabelText("Condição aparente"), "ruim");
+    await vi.waitFor(() => expect(ultima().get("condicao")).toBe("ruim"));
+    await usuario.click(screen.getByRole("checkbox", { name: "Requer encaminhamento" }));
+    await vi.waitFor(() => expect(ultima().get("requer_encaminhamento")).toBe("true"));
+    // Os três filtros valem juntos.
+    expect(ultima().get("ordenar")).toBe("condicao");
+    expect(ultima().get("condicao")).toBe("ruim");
+  });
+
+  it('mostra "chegou hoje" só para quem chegou hoje', async () => {
+    const agora = new Date().toISOString();
+    servidor.use(
+      http.get(`${API}/api/v1/inspecoes`, () =>
+        HttpResponse.json(
+          pagina([
+            { ...inspecao("i-1", "INS-000001", []), recebida_em: agora },
+            inspecao("i-2", "INS-000002", []),
+          ]),
+        ),
+      ),
+    );
+    await abrir("/inspecoes");
+    await screen.findByText("INS-000001");
+    expect(screen.getAllByText("chegou hoje")).toHaveLength(1);
+    expect(screen.getAllByText(/aguarda há \d+ dias/)).toHaveLength(1);
+  });
+
+  it('com "requer encaminhamento", "Validar e encaminhar" é a ação principal e abre a ocorrência', async () => {
+    const usuario = userEvent.setup();
+    servidor.use(
+      http.get(`${API}/api/v1/tipos-ocorrencia`, () =>
+        HttpResponse.json([
+          { id: "tp-1", nome: "Galho caído", descricao: "", prazo_padrao_dias: 3, ativo: true },
+        ]),
+      ),
+      http.post(`${API}/api/v1/inspecoes/i-1/validar-e-encaminhar`, async ({ request }) => {
+        encaminhamentos.push(await request.json());
+        return HttpResponse.json({
+          inspecao: inspecao("i-1", "INS-000001", []),
+          ocorrencia: { id: "o-9", codigo: "OCO-000009" },
+          tarefa: null,
+        });
+      }),
+      http.get(`${API}/api/v1/ocorrencias/o-9`, () => new HttpResponse(null, { status: 404 })),
+    );
+    await abrir("/inspecoes/i-1");
+    const barra = await screen.findByRole("region", { name: "Decisão da revisão" });
+    const encaminhar = within(barra).getByRole("button", { name: "Validar e encaminhar…" });
+    expect(encaminhar.className).toMatch(/bg-marca/);
+    expect(within(barra).getByRole("button", { name: "Validar…" }).className).not.toMatch(
+      /bg-marca/,
+    );
+    await usuario.click(encaminhar);
+    const dialogo = await screen.findByRole("dialog");
+    const confirmar = within(dialogo).getByRole("button", { name: "Validar e encaminhar" });
+    expect(confirmar).toBeDisabled();
+    await usuario.selectOptions(await within(dialogo).findByLabelText(/^Tipo/), "tp-1");
+    await usuario.type(within(dialogo).getByLabelText(/O que deve ser atendido/), "Galho solto");
+    await usuario.click(confirmar);
+    await vi.waitFor(() =>
+      expect(encaminhamentos).toEqual([
+        expect.objectContaining({
+          tipo_id: "tp-1",
+          descricao: "Galho solto",
+          criar_tarefa: false,
+        }),
+      ]),
+    );
+  });
+
+  it('sem "requer encaminhamento", encaminhar fica como ação secundária', async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/inspecoes/i-1`, () =>
+        HttpResponse.json({
+          ...inspecao("i-1", "INS-000001", []),
+          requer_encaminhamento: false,
+        }),
+      ),
+    );
+    await abrir("/inspecoes/i-1");
+    const barra = await screen.findByRole("region", { name: "Decisão da revisão" });
+    expect(
+      within(barra).getByRole("button", { name: "Validar e encaminhar…" }).className,
+    ).not.toMatch(/bg-marca/);
+    expect(within(barra).getByRole("button", { name: "Validar…" }).className).toMatch(/bg-marca/);
+  });
+
+  it("reserva espaço no fim da página para a barra de decisão não cobrir o conteúdo", async () => {
+    await abrir("/inspecoes/i-1");
+    const barra = await screen.findByRole("region", { name: "Decisão da revisão" });
+    const reserva = barra.previousElementSibling as HTMLElement;
+    expect(reserva).toHaveAttribute("data-reserva-barra");
+    expect(reserva.className).toMatch(/\bh-20\b/);
+  });
+
+  it("depois de validada, mostra a ocorrência aberta com link", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/inspecoes/i-1`, () =>
+        HttpResponse.json({
+          ...inspecao("i-1", "INS-000001", []),
+          estado: "validada",
+          revisor: tecnico,
+          validada_em: "2026-10-31T10:00:00Z",
+          ocorrencias_geradas: [{ id: "o-9", codigo: "OCO-000009", estado: "aberta" }],
+        }),
+      ),
+    );
+    await abrir("/inspecoes/i-1");
+    const link = await screen.findByRole("link", { name: "OCO-000009" });
+    expect(link).toHaveAttribute("href", "/ocorrencias/o-9");
   });
 
   it("revisão sem evidências avisa no ponto de decisão e recolhe o histórico", async () => {
@@ -249,6 +381,78 @@ describe("equipes e tarefas", () => {
     expect(await screen.findByRole("menuitem", { name: "Cancelar" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Marcar como bloqueada" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Reatribuir" })).toBeInTheDocument();
+  });
+
+  it("tarefa bloqueada não oferece Iniciar: a ação principal é Desbloquear, com motivo", async () => {
+    const usuario = userEvent.setup();
+    servidor.use(
+      http.get(`${API}/api/v1/tarefas`, () =>
+        HttpResponse.json(
+          pagina([
+            {
+              ...tarefa,
+              estado: "bloqueada",
+              motivo_estado: "Acesso bloqueado por obra no local",
+              transicoes_possiveis: ["nao_iniciada", "em_execucao", "cancelada"],
+            },
+          ]),
+        ),
+      ),
+      http.post(`${API}/api/v1/tarefas/tf-1/transicao`, async ({ request }) => {
+        transicoesTarefa.push(await request.json());
+        return HttpResponse.json({ ...tarefa, estado: "nao_iniciada" });
+      }),
+    );
+    await abrir("/equipes-tarefas");
+    const linha = (await screen.findByText("TAR-000001")).closest("tr")!;
+    expect(within(linha).queryByRole("button", { name: "Iniciar" })).toBeNull();
+    expect(within(linha).getByText("Acesso bloqueado por obra no local")).toBeInTheDocument();
+    await usuario.click(within(linha).getByRole("button", { name: /Mais ações de TAR-000001/ }));
+    expect(screen.queryByRole("menuitem", { name: "Iniciar" })).toBeNull();
+    await usuario.keyboard("{Escape}");
+
+    await usuario.click(within(linha).getByRole("button", { name: "Desbloquear" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByText(/Bloqueada por: Acesso bloqueado/)).toBeInTheDocument();
+    const confirmar = within(dialogo).getByRole("button", { name: "Confirmar" });
+    expect(confirmar).toBeDisabled();
+    await usuario.type(
+      within(dialogo).getByLabelText(/Por que o bloqueio acabou/),
+      "Obra terminou",
+    );
+    await usuario.click(confirmar);
+    await vi.waitFor(() =>
+      expect(transicoesTarefa).toEqual([{ estado: "nao_iniciada", motivo: "Obra terminou" }]),
+    );
+  });
+
+  it("mostra na linha a inspeção de origem da tarefa de atendimento", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/tarefas`, () =>
+        HttpResponse.json(
+          pagina([
+            {
+              ...tarefa,
+              tipo: "atendimento_ocorrencia",
+              alvo: { tipo: "ocorrencia", id: "o-1", codigo: "OCO-000007" },
+              origem: { tipo: "inspecao", id: "i-1", codigo: "INS-000001" },
+            },
+          ]),
+        ),
+      ),
+    );
+    await abrir("/equipes-tarefas");
+    const linha = (await screen.findByText("TAR-000001")).closest("tr")!;
+    expect(within(linha).getByRole("link", { name: "INS-000001" })).toHaveAttribute(
+      "href",
+      "/inspecoes/i-1",
+    );
+  });
+
+  it("tarefa sem origem de inspeção não mostra a linha de origem", async () => {
+    await abrir("/equipes-tarefas");
+    const linha = (await screen.findByText("TAR-000001")).closest("tr")!;
+    expect(within(linha).queryByText(/Origem:/)).toBeNull();
   });
 
   it("cartões de equipe usam plural correto e marcam equipe incompleta", async () => {

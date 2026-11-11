@@ -1686,6 +1686,11 @@ paths:
         schema:
           type: string
       - in: query
+        name: condicao
+        schema:
+          type: string
+        description: Uma ou mais condições, separadas por vírgula.
+      - in: query
         name: desde
         schema:
           type: string
@@ -1699,7 +1704,8 @@ paths:
         name: ordenar
         schema:
           type: string
-        description: realizada_em ou -realizada_em (padrão)
+        description: 'realizada_em, recebida_em ou condicao (da pior para a melhor),
+          com ''-'' na frente para inverter. Padrão: -realizada_em.'
       - name: pagina
         required: false
         in: query
@@ -1847,6 +1853,43 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Inspecao'
+          description: ''
+  /api/v1/inspecoes/{id}/validar-e-encaminhar:
+    post:
+      operationId: inspecoes_validar_e_encaminhar
+      description: Valida a inspeção e abre, na mesma operação, a ocorrência vinculada
+        a ela (com tarefa de atendimento opcional). Exige também registrar ocorrências
+        e, para a tarefa, criar tarefas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este inspecao.
+        required: true
+      tags:
+      - inspecoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncaminhamentoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EncaminhamentoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EncaminhamentoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EncaminhamentoResultado'
           description: ''
   /api/v1/inspecoes/sincronizar:
     post:
@@ -3754,6 +3797,62 @@ components:
           maxLength: 2000
       required:
       - motivo
+    EncaminhamentoRequest:
+      type: object
+      description: Validar a inspeção e abrir a ocorrência de origem nela (G-01).
+      properties:
+        aplicar:
+          type: array
+          items:
+            $ref: '#/components/schemas/AplicarEnum'
+          description: Valores da inspeção que atualizam o cadastro da árvore.
+        motivo:
+          type: string
+          maxLength: 500
+        tipo_id:
+          type: string
+          format: uuid
+          description: Tipo da ocorrência aberta.
+        descricao:
+          type: string
+          description: O que deve ser atendido; vazio usa as observações da inspeção.
+          maxLength: 2000
+        prazo:
+          type: string
+          format: date
+          nullable: true
+        criar_tarefa:
+          type: boolean
+          default: false
+          description: Cria também a tarefa de atendimento da ocorrência.
+        responsavel_id:
+          type: string
+          format: uuid
+          nullable: true
+        equipe_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - tipo_id
+    EncaminhamentoResultado:
+      type: object
+      properties:
+        inspecao:
+          $ref: '#/components/schemas/Inspecao'
+        ocorrencia:
+          allOf:
+          - $ref: '#/components/schemas/Referencia'
+          description: A ocorrência aberta.
+        tarefa:
+          allOf:
+          - $ref: '#/components/schemas/Referencia'
+          nullable: true
+          description: A tarefa criada, se houve.
+      required:
+      - inspecao
+      - ocorrencia
+      - tarefa
     EnvioEvidencia:
       type: object
       properties:
@@ -4706,6 +4805,12 @@ components:
           readOnly: true
           description: Medidas da inspeção em revisão que ainda não valem no cadastro
             da árvore (vazio em qualquer outro estado).
+        ocorrencias_geradas:
+          type: array
+          items:
+            $ref: '#/components/schemas/OcorrenciaGerada'
+          readOnly: true
+          description: Ocorrências abertas a partir desta inspeção (validar e encaminhar).
         localizacao:
           allOf:
           - $ref: '#/components/schemas/Localizacao'
@@ -4765,6 +4870,7 @@ components:
       - medidas
       - medidas_do_cadastro
       - medidas_propostas
+      - ocorrencias_geradas
       - realizada_em
       - recebida_em
       - revisor
@@ -5581,6 +5687,19 @@ components:
         origem_referencia:
           type: string
           readOnly: true
+        origem_vinculo:
+          allOf:
+          - $ref: '#/components/schemas/RegistroVinculado'
+          nullable: true
+          readOnly: true
+          description: Registro de onde a ocorrência veio (inspeção ou alerta), quando
+            houver.
+        tarefas:
+          type: array
+          items:
+            $ref: '#/components/schemas/TarefaVinculada'
+          readOnly: true
+          description: Tarefas vinculadas, com o estado.
         registrada_por:
           allOf:
           - $ref: '#/components/schemas/UsuarioResumo'
@@ -5612,6 +5731,7 @@ components:
       - id
       - origem
       - origem_referencia
+      - origem_vinculo
       - prioridade
       - prioridade_definida_em
       - prioridade_definida_por
@@ -5621,8 +5741,23 @@ components:
       - risco_descricao
       - risco_registrado_em
       - risco_responsavel
+      - tarefas
       - tipo
       - transicoes_possiveis
+    OcorrenciaGerada:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        estado:
+          $ref: '#/components/schemas/EstadoOcorrenciaEnum'
+      required:
+      - codigo
+      - estado
+      - id
     OcorrenciaRequest:
       type: object
       properties:
@@ -5690,12 +5825,14 @@ components:
       - app
       - importacao
       - alerta
+      - inspecao
       type: string
       description: |-
         * `web` - Painel web
         * `app` - Aplicativo
         * `importacao` - Importação
         * `alerta` - Conversão de alerta ambiental
+        * `inspecao` - Encaminhamento de inspeção
     OrigemRegistroEnum:
       enum:
       - web
@@ -6410,6 +6547,17 @@ components:
           maxLength: 500
       required:
       - prioridade
+    Referencia:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+      required:
+      - codigo
+      - id
     ReferenciasSituacaoEnum:
       enum:
       - nao_consultada
@@ -6422,6 +6570,23 @@ components:
         * `encontradas` - Encontradas
         * `nao_encontradas` - Não encontradas
         * `erro` - Erro na consulta
+    RegistroVinculado:
+      type: object
+      description: Referência a outro registro (inspeção, alerta), para o link na
+        tela.
+      properties:
+        tipo:
+          type: string
+          description: inspecao ou alerta
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+      required:
+      - codigo
+      - id
+      - tipo
     RemoverEvidenciaRequest:
       type: object
       properties:
@@ -6721,6 +6886,13 @@ components:
           type: object
           additionalProperties: {}
           readOnly: true
+        origem:
+          allOf:
+          - $ref: '#/components/schemas/RegistroVinculado'
+          nullable: true
+          readOnly: true
+          description: 'De onde a tarefa veio: a inspeção que originou a ocorrência
+            atendida.'
         localizacao:
           allOf:
           - $ref: '#/components/schemas/Localizacao'
@@ -6790,6 +6962,7 @@ components:
       - id
       - localizacao
       - motivo_estado
+      - origem
       - responsavel
       - tipo
       - transicoes_possiveis
@@ -6841,6 +7014,29 @@ components:
           maxLength: 500
       required:
       - tipo
+    TarefaVinculada:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        estado:
+          $ref: '#/components/schemas/EstadoTarefaEnum'
+        responsavel:
+          type: string
+          nullable: true
+        prazo:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - codigo
+      - estado
+      - id
+      - prazo
+      - responsavel
     TarefasEmLoteRequest:
       type: object
       description: Cria uma tarefa de inspeção por árvore (RF-EQP-003).

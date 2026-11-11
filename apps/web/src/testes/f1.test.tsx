@@ -78,6 +78,8 @@ const OCORRENCIA: Ocorrencia = {
   atrasada: false,
   origem: "web",
   origem_referencia: "",
+  origem_vinculo: null,
+  tarefas: [],
   registrada_por: { id: "u-gestor", nome: "Gabi Gestora", email: "gabi@itree.teste" },
   criado_em: "2026-10-31T12:00:00Z",
   atualizado_em: "2026-10-31T12:00:00Z",
@@ -247,6 +249,90 @@ describe("ocorrência", () => {
 
     await usuario.selectOptions(within(dialogo).getByLabelText("Equipe"), "e-1");
     expect(within(dialogo).queryByRole("note")).toBeNull();
+  });
+
+  it("cancelar fica afastado do próximo passo, em contorno, e a confirmação avisa o efeito", async () => {
+    const usuario = userEvent.setup();
+    servidor.use(
+      http.get(`${API}/api/v1/ocorrencias/o-1`, () =>
+        HttpResponse.json({
+          ...OCORRENCIA,
+          estado: "em_triagem",
+          transicoes_possiveis: ["encaminhada", "em_atendimento", "cancelada"],
+        }),
+      ),
+    );
+    await abrir("/ocorrencias/o-1");
+    const cancelar = await screen.findByRole("button", { name: "Cancelar" });
+    // Não usa o vermelho sólido da ação principal e fica separado dela.
+    expect(cancelar.className).not.toMatch(/(^| )bg-perigo( |$)/);
+    expect(cancelar.className).toMatch(/border-perigo/);
+    expect(cancelar.className).toMatch(/ml-auto/);
+    const principal = screen.getByRole("button", { name: "Encaminhar" });
+    expect(principal.className).toMatch(/bg-marca/);
+    await usuario.click(cancelar);
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByText(/encerra a ocorrência e as tarefas abertas/)).toBeVisible();
+    expect(within(dialogo).getByRole("button", { name: "Confirmar" })).toBeDisabled();
+  });
+
+  it("em atendimento sem responsável mostra aviso no cartão da situação", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/ocorrencias/o-1`, () =>
+        HttpResponse.json({
+          ...OCORRENCIA,
+          estado: "em_atendimento",
+          transicoes_possiveis: ["concluida", "cancelada"],
+        }),
+      ),
+    );
+    await abrir("/ocorrencias/o-1");
+    const situacao = (await screen.findByRole("heading", { name: "Situação" })).closest("section")!;
+    expect(within(situacao).getByRole("alert")).toHaveTextContent(/sem responsável/);
+  });
+
+  it("sem estar em atendimento, não mostra o aviso de responsável", async () => {
+    await abrir("/ocorrencias/o-1");
+    const situacao = (await screen.findByRole("heading", { name: "Situação" })).closest("section")!;
+    expect(within(situacao).queryByRole("alert")).toBeNull();
+  });
+
+  it("mostra a origem na inspeção, com link, e as tarefas vinculadas com o estado", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/ocorrencias/o-1`, () =>
+        HttpResponse.json({
+          ...OCORRENCIA,
+          origem: "inspecao",
+          origem_referencia: "INS-000009",
+          origem_vinculo: { tipo: "inspecao", id: "i-9", codigo: "INS-000009" },
+          tarefas: [
+            {
+              id: "tf-1",
+              codigo: "TAR-000004",
+              estado: "bloqueada",
+              responsavel: "Tiago Técnico",
+              prazo: "2999-12-31",
+            },
+          ],
+        }),
+      ),
+    );
+    await abrir("/ocorrencias/o-1");
+    const origem = (await screen.findByText("Origem")).closest("div")!;
+    expect(within(origem).getByText(/Encaminhamento de inspeção/)).toBeInTheDocument();
+    expect(within(origem).getByRole("link", { name: "INS-000009" })).toHaveAttribute(
+      "href",
+      "/inspecoes/i-9",
+    );
+    const tarefas = screen.getByRole("heading", { name: "Tarefas vinculadas" }).closest("section")!;
+    expect(within(tarefas).getByText("TAR-000004")).toBeInTheDocument();
+    expect(within(tarefas).getByText("Bloqueada")).toBeInTheDocument();
+    expect(within(tarefas).getByText(/Tiago Técnico/)).toBeInTheDocument();
+  });
+
+  it("sem tarefas vinculadas, diz que não há", async () => {
+    await abrir("/ocorrencias/o-1");
+    expect(await screen.findByText("Nenhuma tarefa de atendimento criada.")).toBeInTheDocument();
   });
 
   it("cancelar exige justificativa", async () => {
