@@ -59,8 +59,10 @@ export function SeloOrigemValor({ origem }: { origem: string }) {
 
 export function SeloEstadoOcorrencia({
   estado,
+  className,
 }: {
   estado: keyof typeof ROTULOS_ESTADO_OCORRENCIA;
+  className?: string;
 }) {
   const tom: Record<string, Tom> = {
     aberta: "atencao",
@@ -70,11 +72,21 @@ export function SeloEstadoOcorrencia({
     concluida: "sucesso",
     cancelada: "neutro",
   };
-  return <Selo tom={tom[estado]}>{ROTULOS_ESTADO_OCORRENCIA[estado]}</Selo>;
+  return (
+    <Selo tom={tom[estado]} className={className}>
+      {ROTULOS_ESTADO_OCORRENCIA[estado]}
+    </Selo>
+  );
 }
 
-export function SeloPrioridade({ prioridade }: { prioridade?: string | null }) {
-  if (!prioridade) return <Selo>Sem prioridade definida</Selo>;
+export function SeloPrioridade({
+  prioridade,
+  className,
+}: {
+  prioridade?: string | null;
+  className?: string;
+}) {
+  if (!prioridade) return <Selo className={className}>Sem prioridade definida</Selo>;
   const tom: Record<string, Tom> = {
     urgente: "perigo",
     alta: "perigo",
@@ -82,7 +94,7 @@ export function SeloPrioridade({ prioridade }: { prioridade?: string | null }) {
     baixa: "info",
   };
   return (
-    <Selo tom={tom[prioridade]}>
+    <Selo tom={tom[prioridade]} className={className}>
       Prioridade {ROTULOS_PRIORIDADE[prioridade as keyof typeof ROTULOS_PRIORIDADE].toLowerCase()}
     </Selo>
   );

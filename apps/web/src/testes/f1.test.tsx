@@ -154,6 +154,23 @@ describe("ocorrência", () => {
     expect(screen.queryByRole("button", { name: /Registrar$/ })).not.toBeInTheDocument();
   });
 
+  it("destaca prioridade e situação, deixa condição e risco como contexto e recolhe o histórico", async () => {
+    await abrir("/ocorrencias/o-1");
+    const destaque = (titulo: string) =>
+      screen.getByRole("heading", { name: titulo }).closest("section")!;
+    await screen.findByRole("heading", { name: "Situação" });
+    for (const titulo of ["Prioridade operacional", "Situação"]) {
+      expect(destaque(titulo).className).toMatch(/border-l-4/);
+    }
+    for (const titulo of ["Condição aparente", "Risco confirmado"]) {
+      expect(destaque(titulo).className).not.toMatch(/border-l-4/);
+    }
+    // A situação sai do cabeçalho e fica no cartão em destaque.
+    expect(within(destaque("Situação")).getByText("Aberta")).toBeInTheDocument();
+    const historico = screen.getByText("Histórico de encaminhamentos").closest("details")!;
+    expect(historico).not.toHaveAttribute("open");
+  });
+
   it("avisa antes de concluir sem responsável nem evidência e mostra o prazo restante", async () => {
     const usuario = userEvent.setup();
     servidor.use(

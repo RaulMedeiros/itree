@@ -18,6 +18,7 @@ import {
   autorDoEvento,
   type ContextoEvento,
 } from "../../componentes/Historico";
+import { agruparEventos } from "./auditoria";
 import { useOpcoesUsuario } from "./dados";
 
 const TAMANHO = 50;
@@ -45,71 +46,73 @@ const ENTIDADES: Record<string, string> = {
   "qualidade.InferenciaIAEvent": "Sugestão de IA",
 };
 
-/** Eventos seguidos e iguais (mesma entidade, ação, autor e minuto) viram um lote. */
-export type ItemAuditoria = { eventos: EventoAuditoria[] };
-
-export function agruparEventos(eventos: EventoAuditoria[]): ItemAuditoria[] {
-  const chave = (ev: EventoAuditoria) => {
-    const ctx = (ev.contexto ?? {}) as ContextoEvento;
-    return [
-      ev.entidade_modelo,
-      ev.acao,
-      ctx.user ?? ctx.evento ?? "",
-      ctx.origem ?? "",
-      ctx.motivo ?? "",
-      ev.momento.slice(0, 16),
-    ].join("|");
-  };
-  const itens: ItemAuditoria[] = [];
-  let ultima = "";
-  for (const ev of eventos) {
-    const k = chave(ev);
-    const anterior = itens[itens.length - 1];
-    if (anterior && k === ultima) anterior.eventos.push(ev);
-    else itens.push({ eventos: [ev] });
-    ultima = k;
-  }
-  return itens;
-}
-
 const PLURAL_ACAO: Record<string, string> = {
   criacao: "criados",
   alteracao: "alterados",
   exclusao: "excluídos",
 };
 
+interface PaiEvento {
+  tipo: "arvore" | "inspecao" | "ocorrencia";
+  id: string;
+  codigo: string;
+}
+
+/** Código do registro afetado e o tipo/ID para o link: o próprio registro ou,
+ * em medidas, evidências e sugestões de IA, o registro pai. */
+function alvoDoRegistro(ev: EventoAuditoria) {
+  const pai = ev.pai as PaiEvento | null;
+  if (pai) return { codigo: pai.codigo, tipo: pai.tipo as string, id: pai.id, ehPai: true };
+  if (!ev.registro) return null;
+  const tipo =
+    ev.entidade_modelo
+      .replace(/Event$/, "")
+      .split(".")[1]
+      ?.toLowerCase() ?? "";
+  return { codigo: ev.registro, tipo, id: ev.objeto_id ?? "", ehPai: false };
+}
+
 /** Link para o registro, quando existe uma tela de detalhe para ele. */
 function Registro({ ev }: { ev: EventoAuditoria }) {
-  if (!ev.registro) return <span className="text-texto-suave">—</span>;
+  const alvo = alvoDoRegistro(ev);
+  if (!alvo) return <span className="text-texto-suave">—</span>;
   const classe = "font-mono text-xs text-marca-escura hover:underline";
-  const id = ev.objeto_id ?? "";
-  switch (ev.entidade_modelo) {
-    case "inventario.ArvoreEvent":
+  const { codigo, id } = alvo;
+  const rotulo = alvo.ehPai ? (
+    <>
+      <span className="font-sans text-texto-suave">em </span>
+      {codigo}
+    </>
+  ) : (
+    codigo
+  );
+  switch (alvo.tipo) {
+    case "arvore":
       return (
         <Link to="/inventario/arvores/$id" params={{ id }} className={classe}>
-          {ev.registro}
+          {rotulo}
         </Link>
       );
-    case "ocorrencias.OcorrenciaEvent":
+    case "ocorrencia":
       return (
         <Link to="/ocorrencias/$id" params={{ id }} className={classe}>
-          {ev.registro}
+          {rotulo}
         </Link>
       );
-    case "inspecoes.InspecaoEvent":
+    case "inspecao":
       return (
         <Link to="/inspecoes/$id" params={{ id }} className={classe}>
-          {ev.registro}
+          {rotulo}
         </Link>
       );
-    case "alertas.AlertaAmbientalEvent":
+    case "alertaambiental":
       return (
         <Link to="/alertas/$id" params={{ id }} className={classe}>
-          {ev.registro}
+          {rotulo}
         </Link>
       );
     default:
-      return <span className="font-mono text-xs">{ev.registro}</span>;
+      return <span className="font-mono text-xs">{codigo}</span>;
   }
 }
 

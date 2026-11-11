@@ -2949,6 +2949,12 @@ components:
           items:
             type: object
             additionalProperties: {}
+        serie_mensal:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          description: Evolução mensal (meses AAAA-MM e séries), só nas análises com
+            dimensão temporal.
         total:
           type: integer
           nullable: true
@@ -2962,6 +2968,7 @@ components:
       - linhas
       - periodo
       - por_bairro
+      - serie_mensal
       - titulo
       - total
       - unidade
@@ -4023,6 +4030,13 @@ components:
           readOnly: true
           description: Código legível do registro afetado (ARV-, OCO-, INS-, TAR-,
             ALR-), se houver.
+        pai:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+          description: 'Registro pai (árvore, inspeção ou ocorrência) de medidas,
+            evidências e sugestões de IA: {tipo, id, codigo}.'
         acao:
           type: string
           readOnly: true
@@ -4052,6 +4066,7 @@ components:
       - id
       - momento
       - objeto_id
+      - pai
       - registro
     Evidencia:
       type: object
@@ -6400,7 +6415,13 @@ components:
           type: string
           format: date-time
           description: Quando o dado foi ingerido no sistema.
+        arvores_no_escopo:
+          type: integer
+          readOnly: true
+          description: Árvores ativas do território no escopo de quem consulta (só
+            na listagem).
       required:
+      - arvores_no_escopo
       - codigo
       - fonte
       - id

@@ -14,6 +14,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
+import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
 import { SeloEstadoTarefa } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
@@ -385,6 +386,7 @@ function ReatribuirDialogo({ tarefa, aoFechar }: { tarefa: Tarefa; aoFechar: () 
         </p>
       )}
       <div className="flex flex-col gap-3">
+        <AvisoEquipeIncompleta equipe={equipes.data?.data.results.find((e) => e.id === equipe)} />
         <Campo rotulo="Equipe">
           {(p) => (
             <Selecao {...p} value={equipe} onChange={(e) => setEquipe(e.target.value)}>

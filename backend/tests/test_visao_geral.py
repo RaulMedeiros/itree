@@ -100,3 +100,29 @@ def test_pendencia_de_alertas_exige_permissao(cliente, gestor_municipal, territo
     com_alertas = {p["id"]: p for p in cliente.como(analista).get(URL).json()["pendencias"]}
     assert ("alertas_detectados" in sem_alertas) is gestor_municipal.tem_permissao("alertas.ler")
     assert com_alertas["alertas_detectados"]["quantidade"] == 1
+
+
+def test_analise_traz_evolucao_mensal_com_zeros(cliente, gestor_municipal, tipo):
+    ocorrencia(tipo, PONTO_A, 2)
+    ocorrencia(tipo, PONTO_A, 5)
+    ocorrencia(tipo, PONTO_A, 70)
+    corpo = (
+        cliente.como(gestor_municipal)
+        .get("/api/v1/relatorios/analise", {"analise": "ocorrencias_por_tipo"})
+        .json()
+    )
+    serie = corpo["serie_mensal"]
+    assert len(serie["meses"]) == 13  # 12 meses corridos + o mês corrente
+    registradas = next(s for s in serie["series"] if s["id"] == "registradas")
+    assert len(registradas["valores"]) == len(serie["meses"])
+    assert sum(registradas["valores"]) == 3
+    assert 0 in registradas["valores"]  # meses sem registro entram com zero
+
+
+def test_analise_sem_dimensao_temporal_nao_tem_serie_mensal(cliente, gestor_municipal):
+    corpo = (
+        cliente.como(gestor_municipal)
+        .get("/api/v1/relatorios/analise", {"analise": "arvores_por_bairro"})
+        .json()
+    )
+    assert corpo["serie_mensal"] is None

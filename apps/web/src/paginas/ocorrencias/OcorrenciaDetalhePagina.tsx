@@ -71,27 +71,37 @@ function useRecarregar(id: string) {
     ]);
 }
 
+/** `destaque` para o que decide o atendimento (prioridade e situação); `secundario` para o contexto. */
 function Cartao({
   titulo,
   subtitulo,
   children,
   acao,
+  variante = "normal",
 }: {
   titulo: string;
   subtitulo: string;
   children: ReactNode;
   acao?: ReactNode;
+  variante?: "destaque" | "normal" | "secundario";
 }) {
+  const classes = {
+    destaque: "border-borda border-l-4 border-l-marca bg-superficie p-5",
+    normal: "border-borda bg-superficie p-4",
+    secundario: "border-borda bg-fundo p-3",
+  }[variante];
   return (
-    <section className="flex flex-col rounded-lg border border-borda bg-superficie p-4">
+    <section className={`flex flex-col rounded-lg border ${classes}`}>
       <div className="mb-2 flex items-start justify-between gap-2">
         <div>
-          <h2 className="font-semibold">{titulo}</h2>
+          <h2 className={variante === "secundario" ? "text-sm font-medium" : "font-semibold"}>
+            {titulo}
+          </h2>
           <p className="text-xs text-texto-suave">{subtitulo}</p>
         </div>
         {acao}
       </div>
-      <div className="text-sm">{children}</div>
+      <div className={variante === "secundario" ? "text-xs" : "text-sm"}>{children}</div>
     </section>
   );
 }
@@ -119,8 +129,6 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
         titulo={`${o.codigo} · ${o.tipo.nome}`}
         descricao={
           <span className="flex flex-wrap items-center gap-2">
-            <SeloEstadoOcorrencia estado={o.estado} />
-            {o.atrasada && <Selo tom="perigo">Atrasada</Selo>}
             <span>
               Registrada em {formatarDataHora(o.criado_em)} por{" "}
               {o.registrada_por.nome || o.registrada_por.email} ·{" "}
@@ -173,13 +181,9 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
         </div>
       )}
 
-      <div className="mb-4 grid gap-4 lg:grid-cols-3">
-        <Cartao titulo="Condição aparente" subtitulo="O que foi observado. Não é diagnóstico.">
-          <p className="whitespace-pre-wrap">
-            {o.condicao_aparente || <span className="text-texto-suave">Não descrita.</span>}
-          </p>
-        </Cartao>
+      <div className="mb-4 grid gap-4 md:grid-cols-2">
         <Cartao
+          variante="destaque"
           titulo="Prioridade operacional"
           subtitulo="Ordem de atendimento definida pela gestão."
           acao={
@@ -190,7 +194,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
             )
           }
         >
-          <SeloPrioridade prioridade={o.prioridade} />
+          <SeloPrioridade prioridade={o.prioridade} className="px-2.5 py-1 text-base" />
           {o.prioridade_definida_por && (
             <p className="mt-2 text-xs text-texto-suave">
               Por {o.prioridade_definida_por.nome || o.prioridade_definida_por.email} em{" "}
@@ -199,6 +203,33 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
           )}
         </Cartao>
         <Cartao
+          variante="destaque"
+          titulo="Situação"
+          subtitulo="Em que ponto do atendimento a ocorrência está."
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <SeloEstadoOcorrencia estado={o.estado} className="px-2.5 py-1 text-base" />
+            {o.atrasada && (
+              <Selo tom="perigo" className="px-2.5 py-1 text-base">
+                Atrasada
+              </Selo>
+            )}
+          </div>
+        </Cartao>
+      </div>
+
+      <div className="mb-4 grid gap-3 md:grid-cols-2">
+        <Cartao
+          variante="secundario"
+          titulo="Condição aparente"
+          subtitulo="O que foi observado. Não é diagnóstico."
+        >
+          <p className="whitespace-pre-wrap">
+            {o.condicao_aparente || <span className="text-texto-suave">Não descrita.</span>}
+          </p>
+        </Cartao>
+        <Cartao
+          variante="secundario"
           titulo="Risco confirmado"
           subtitulo="Conclusão de avaliação técnica competente."
           acao={
@@ -217,7 +248,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
             <>
               <Selo tom="perigo">Risco confirmado</Selo>
               <p className="mt-2 whitespace-pre-wrap">{o.risco_descricao}</p>
-              <p className="mt-2 text-xs text-texto-suave">
+              <p className="mt-2 text-texto-suave">
                 Responsável técnico: {o.risco_responsavel?.nome || o.risco_responsavel?.email} ·{" "}
                 {formatarDataHora(o.risco_registrado_em)}
               </p>
@@ -310,12 +341,16 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
         <Evidencias alvo={{ ocorrencia: o.id }} podeEnviar={podeEditar} />
       </div>
 
-      <h2 className="mb-3 font-semibold">Histórico de encaminhamentos</h2>
-      <LinhaDoTempo
-        eventos={historico.data?.data}
-        carregando={historico.isPending}
-        erro={historico.error}
-      />
+      <details className="mb-6 rounded-lg border border-borda bg-superficie p-4">
+        <summary className="cursor-pointer font-semibold">Histórico de encaminhamentos</summary>
+        <div className="mt-3">
+          <LinhaDoTempo
+            eventos={historico.data?.data}
+            carregando={historico.isPending}
+            erro={historico.error}
+          />
+        </div>
+      </details>
 
       {criandoTarefa && (
         <CriarTarefasDialogo

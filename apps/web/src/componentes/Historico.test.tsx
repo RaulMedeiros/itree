@@ -13,6 +13,7 @@ function evento(parcial: Partial<EventoAuditoria>): EventoAuditoria {
     entidade_modelo: "inventario.MedidaEvent",
     objeto_id: "1",
     registro: null,
+    pai: null,
     acao: "criacao",
     diferencas: null,
     dados: {},

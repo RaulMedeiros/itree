@@ -7,6 +7,7 @@
  */
 import type { AnaliseLinhasItem } from './analiseLinhasItem';
 import type { AnalisePeriodo } from './analisePeriodo';
+import type { AnaliseSerieMensal } from './analiseSerieMensal';
 
 export interface Analise {
   id: string;
@@ -19,6 +20,11 @@ export interface Analise {
   unidade: string;
   base_rotulo: string;
   linhas: AnaliseLinhasItem[];
+  /**
+     * Evolução mensal (meses AAAA-MM e séries), só nas análises com dimensão temporal.
+     * @nullable
+     */
+  serie_mensal: AnaliseSerieMensal;
   /**
      * Soma das linhas, só quando são contagens que não se sobrepõem.
      * @nullable

@@ -34,4 +34,6 @@ export interface Territorio {
   data_referencia?: string | null;
   /** Quando o dado foi ingerido no sistema. */
   ingerido_em: string;
+  /** Árvores ativas do território no escopo de quem consulta (só na listagem). */
+  readonly arvores_no_escopo: number;
 }

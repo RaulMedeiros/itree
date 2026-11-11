@@ -197,6 +197,94 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
     raise NotFound("Análise desconhecida.")
 
 
+def _meses_do_periodo(inicio: date, fim: date) -> list[date]:
+    """Primeiro dia de cada mês entre as duas datas, no máximo os últimos 36."""
+    meses = []
+    ano, mes = inicio.year, inicio.month
+    while (ano, mes) <= (fim.year, fim.month):
+        meses.append(date(ano, mes, 1))
+        ano, mes = (ano + 1, 1) if mes == 12 else (ano, mes + 1)
+    return meses[-36:]
+
+
+def _contagem_mensal(qs, campo: str, **agregado) -> dict[date, float]:
+    """Agrega por mês do `campo` (datetime). Sem `agregado`, conta registros."""
+    resultado = (
+        qs.annotate(mes=TruncMonth(campo))
+        .values("mes")
+        .annotate(**(agregado or {"n": Count("id")}))
+    )
+    return {
+        timezone.localtime(r["mes"]).date().replace(day=1): r[next(k for k in r if k != "mes")]
+        for r in resultado
+    }
+
+
+def _serie_mensal(chave: str, usuario, inicio: date, fim: date) -> dict | None:
+    """Evolução mensal das análises com dimensão temporal (None nas demais).
+
+    Cada série traz um valor por mês do período, com zero nos meses sem
+    registro, para o gráfico e a tabela equivalente."""
+    if chave in ("ocorrencias_por_tipo", "ocorrencias_por_estado"):
+        todas = filtrar_por_escopo(Ocorrencia.objects.all(), usuario)
+        registradas = _contagem_mensal(
+            todas.filter(criado_em__date__gte=inicio, criado_em__date__lte=fim), "criado_em"
+        )
+        concluidas = _contagem_mensal(
+            todas.filter(
+                estado=EstadoOcorrencia.CONCLUIDA,
+                concluida_em__date__gte=inicio,
+                concluida_em__date__lte=fim,
+            ),
+            "concluida_em",
+        )
+        series = [
+            ("registradas", "Registradas", registradas),
+            ("concluidas", "Concluídas", concluidas),
+        ]
+    elif chave == "tempo_atendimento_por_tipo":
+        concluidas = _contagem_mensal(
+            filtrar_por_escopo(Ocorrencia.objects.all(), usuario).filter(
+                estado=EstadoOcorrencia.CONCLUIDA,
+                concluida_em__date__gte=inicio,
+                concluida_em__date__lte=fim,
+            ),
+            "concluida_em",
+            media=Avg(F("concluida_em") - F("criado_em")),
+        )
+        series = [
+            (
+                "tempo_medio",
+                "Tempo médio (dias)",
+                {m: round(v.total_seconds() / 86400, 1) for m, v in concluidas.items()},
+            )
+        ]
+    elif chave == "inspecoes_por_mes":
+        inspecoes = filtrar_por_escopo(
+            Inspecao.objects.all(), usuario, campo_geom="arvore__geom"
+        ).filter(
+            estado__in=[EstadoInspecao.EM_REVISAO, EstadoInspecao.VALIDADA],
+            realizada_em__date__gte=inicio,
+            realizada_em__date__lte=fim,
+        )
+        series = [("inspecoes", "Inspeções", _contagem_mensal(inspecoes, "realizada_em"))]
+    elif chave == "alertas_por_fonte":
+        alertas = filtrar_por_escopo(AlertaAmbiental.objects.all(), usuario).filter(
+            data_deteccao__date__gte=inicio, data_deteccao__date__lte=fim
+        )
+        series = [("alertas", "Alertas detectados", _contagem_mensal(alertas, "data_deteccao"))]
+    else:
+        return None
+    meses = _meses_do_periodo(inicio, fim)
+    return {
+        "meses": [m.strftime("%Y-%m") for m in meses],
+        "series": [
+            {"id": sid, "rotulo": rotulo, "valores": [dados.get(m, 0) for m in meses]}
+            for sid, rotulo, dados in series
+        ],
+    }
+
+
 @extend_schema(
     operation_id="relatorios_analise",
     parameters=[
@@ -217,6 +305,10 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             "unidade": serializers.CharField(),
             "base_rotulo": serializers.CharField(),
             "linhas": serializers.ListField(child=serializers.DictField()),
+            "serie_mensal": serializers.DictField(
+                allow_null=True,
+                help_text="Evolução mensal (meses AAAA-MM e séries), só nas análises com dimensão temporal.",
+            ),
             "total": serializers.IntegerField(
                 allow_null=True,
                 help_text="Soma das linhas, só quando são contagens que não se sobrepõem.",
@@ -249,6 +341,7 @@ def analise(request: Request):
             "unidade": definicao.get("unidade", ""),
             "base_rotulo": definicao.get("base_rotulo", ""),
             "linhas": linhas,
+            "serie_mensal": _serie_mensal(chave, request.user, inicio, fim),
             # Médias (tempo de atendimento) e percentuais não se somam; contagens, sim.
             "total": None
             if chave in NAO_SOMAVEIS or definicao.get("unidade") == "%"

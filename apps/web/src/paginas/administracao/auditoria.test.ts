@@ -1,7 +1,7 @@
 import type { EventoAuditoria } from "@itree/api-client";
 import { describe, expect, it } from "vitest";
 
-import { agruparEventos } from "./AuditoriaPagina";
+import { agruparEventos } from "./auditoria";
 
 const ev = (id: string, parcial: Partial<EventoAuditoria> = {}): EventoAuditoria => ({
   id,
@@ -10,6 +10,7 @@ const ev = (id: string, parcial: Partial<EventoAuditoria> = {}): EventoAuditoria
   entidade_modelo: "qualidade.InferenciaIAEvent",
   objeto_id: id,
   registro: null,
+  pai: null,
   acao: "criacao",
   diferencas: null,
   dados: {},

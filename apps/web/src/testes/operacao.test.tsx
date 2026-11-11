@@ -282,4 +282,146 @@ describe("análises", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByRole("menuitem")).toHaveLength(9);
   });
+
+  it("mostra a evolução mensal ao lado da tabela, com legenda e tabela equivalente", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/relatorios/analise`, () =>
+        HttpResponse.json({
+          id: "inspecoes_por_mes",
+          titulo: "Inspeções por mês",
+          definicao: "d",
+          fonte: "Registros da plataforma",
+          periodo: { inicio: "2026-09-01", fim: "2026-11-10" },
+          calculado_em: "2026-11-10T12:00:00Z",
+          por_bairro: false,
+          linhas: [{ rotulo: "10/2026", valor: 4 }],
+          total: 4,
+          serie_mensal: {
+            meses: ["2026-09", "2026-10", "2026-11"],
+            series: [{ id: "inspecoes", rotulo: "Inspeções", valores: [0, 4, 1] }],
+          },
+        }),
+      ),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/analises");
+    expect(await screen.findByRole("heading", { name: "Evolução mensal" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /Evolução mensal: Inspeções, de set\/26 a nov\/26/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("list", { name: "Legenda" })).getByText("Inspeções"),
+    ).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Ver em tabela" }));
+    expect(screen.getByRole("cell", { name: "out/26" })).toBeInTheDocument();
+  });
+
+  it("sem série mensal (análise sem dimensão temporal) não desenha o gráfico", async () => {
+    await abrir("/analises");
+    await screen.findByText("Total");
+    expect(screen.queryByRole("heading", { name: "Evolução mensal" })).toBeNull();
+  });
+});
+
+describe("auditoria", () => {
+  const evento = (id: string, parcial: Record<string, unknown>) => ({
+    id,
+    momento: "2026-11-10T21:17:10Z",
+    entidade: "Medida",
+    entidade_modelo: "inventario.Medida",
+    objeto_id: id,
+    registro: null,
+    pai: null,
+    acao: "criacao",
+    diferencas: null,
+    dados: {},
+    autor_nome: null,
+    contexto: null,
+    ...parcial,
+  });
+
+  it("mostra o registro pai de medida e evidência, com link para a árvore e a inspeção", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "admin.auditoria"] }),
+      ),
+      http.get(`${API}/api/v1/admin/auditoria`, () =>
+        HttpResponse.json(
+          pagina([
+            evento("m-1", { pai: { tipo: "arvore", id: "a-1", codigo: "ARV-000010" } }),
+            evento("e-1", {
+              entidade: "Evidência",
+              entidade_modelo: "evidencias.Evidencia",
+              pai: { tipo: "inspecao", id: "i-1", codigo: "INS-000001" },
+            }),
+          ]),
+        ),
+      ),
+    );
+    await abrir("/administracao/auditoria");
+    const arvoreLink = await screen.findByRole("link", { name: /ARV-000010/ });
+    expect(arvoreLink).toHaveAttribute("href", "/inventario/arvores/a-1");
+    expect(screen.getByRole("link", { name: /INS-000001/ })).toHaveAttribute(
+      "href",
+      "/inspecoes/i-1",
+    );
+  });
+});
+
+describe("atribuição a equipe incompleta", () => {
+  it("avisa antes de confirmar, sem bloquear a reatribuição", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/equipes-tarefas");
+    const linha = (await screen.findByText("TAR-000001")).closest("tr")!;
+    await usuario.click(within(linha).getByRole("button", { name: /Mais ações de TAR-000001/ }));
+    await usuario.click(await screen.findByRole("menuitem", { name: "Reatribuir" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).queryByRole("note")).toBeNull();
+
+    await usuario.selectOptions(within(dialogo).getByLabelText("Equipe"), "e-2");
+    expect(await within(dialogo).findByRole("note")).toHaveTextContent(
+      /Equipe de Poda Oeste está incompleta \(sem membros e sem território\)/,
+    );
+    await usuario.type(within(dialogo).getByLabelText(/Motivo/), "Reforço");
+    expect(within(dialogo).getByRole("button", { name: "Salvar" })).toBeEnabled();
+
+    await usuario.selectOptions(within(dialogo).getByLabelText("Equipe"), "e-1");
+    expect(within(dialogo).queryByRole("note")).toBeNull();
+  });
+});
+
+describe("tipos de ocorrência (administração)", () => {
+  it("tem ação Editar explícita por linha e legenda de situações em ordem fixa", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "admin.configuracao"] }),
+      ),
+      http.get(`${API}/api/v1/tipos-ocorrencia`, () =>
+        HttpResponse.json([
+          { id: "t-1", nome: "Risco de queda", descricao: "", prazo_padrao_dias: 1, ativo: true },
+          { id: "t-2", nome: "Poda", descricao: "", prazo_padrao_dias: null, ativo: true },
+        ]),
+      ),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/administracao/tipos-ocorrencia");
+    expect(await screen.findByText("1 dia")).toBeInTheDocument();
+    const legenda = screen.getByRole("list", { name: /Situações das ocorrências/ });
+    expect(
+      within(legenda)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual([
+      "Aberta",
+      "→Em triagem",
+      "→Encaminhada",
+      "→Em atendimento",
+      "→Concluída",
+      "→Cancelada",
+    ]);
+
+    const linha = screen.getByText("Poda").closest("tr")!;
+    await usuario.click(within(linha).getByRole("button", { name: "Editar Poda" }));
+    expect(await screen.findByRole("dialog", { name: /Editar Poda/ })).toBeInTheDocument();
+  });
 });
