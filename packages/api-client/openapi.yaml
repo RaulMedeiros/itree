@@ -1361,6 +1361,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/Evidencia'
           description: ''
+  /api/v1/implantacao/primeiros-passos:
+    get:
+      operationId: implantacao_primeiros_passos
+      description: Checklist "Primeiros passos" da implantação; `completo` esconde
+        o cartão na visão geral.
+      tags:
+      - implantacao
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrimeirosPassos'
+          description: ''
   /api/v1/importacoes:
     get:
       operationId: importacoes_listar
@@ -6290,6 +6306,29 @@ components:
       required:
       - arvore_a
       - arvore_b
+    Passo:
+      type: object
+      properties:
+        id:
+          type: string
+        titulo:
+          type: string
+        descricao:
+          type: string
+        concluido:
+          type: boolean
+        detalhe:
+          type: string
+        link:
+          type: string
+          description: Caminho da tela onde o passo é feito.
+      required:
+      - concluido
+      - descricao
+      - detalhe
+      - id
+      - link
+      - titulo
     PatchedArvoreRequest:
       type: object
       description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).
@@ -6580,6 +6619,18 @@ components:
         * `admin.auditoria` - Consultar auditoria
         * `admin.territorios` - Administrar territórios
         * `admin.configuracao` - Administrar catálogos e integrações
+    PrimeirosPassos:
+      type: object
+      properties:
+        completo:
+          type: boolean
+        passos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Passo'
+      required:
+      - completo
+      - passos
     PrioridadeEnum:
       enum:
       - baixa

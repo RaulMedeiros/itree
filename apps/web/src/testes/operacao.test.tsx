@@ -364,7 +364,7 @@ describe("inspeções", () => {
 describe("ocorrências", () => {
   it("abre em aberto e ordenada por urgência", async () => {
     await abrir("/ocorrencias");
-    await screen.findByText("Nenhuma ocorrência encontrada");
+    await screen.findByText("Ainda não há ocorrências registradas");
     expect(consultasOcorrencias[0]?.get("estado")).toBe("abertas");
     expect(consultasOcorrencias[0]?.get("ordenar")).toBe("urgencia");
   });

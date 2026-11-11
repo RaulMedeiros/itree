@@ -12,7 +12,9 @@ import { useBairroDoFiltro } from "../../layout/territorio";
 import { RAIO_PADRAO_M, SeletorRaio, type RaioM } from "./raio";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { EntradaData, Selecao } from "../../ui/campos";
-import { Carregando, Erro, Vazio } from "../../ui/estados";
+import { Botao } from "../../ui/botao";
+import { Carregando, Erro, ListaVazia } from "../../ui/estados";
+import { contarFiltros } from "../../util/filtros";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th, ThOrdenavel } from "../../ui/tabela";
 import { descreverAreaVerdeProxima, formatarDataHora, plural } from "../../util/formatos";
@@ -73,6 +75,7 @@ export function AlertasPagina() {
   const navegar = useNavigate({ from: "/alertas/" });
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
   const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
+  const podeConfigurar = usePermissao("admin.configuracao");
   const raio = filtros.raio ?? RAIO_PADRAO_M;
   const consulta = useAlertasListar({
     ...filtros,
@@ -166,9 +169,22 @@ export function AlertasPagina() {
       ) : consulta.isError ? (
         <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />
       ) : consulta.data.data.count === 0 ? (
-        <Vazio titulo="Nenhum alerta encontrado">
-          Alertas chegam pela ingestão das fontes configuradas em Administração → Integrações.
-        </Vazio>
+        <ListaVazia
+          filtrada={contarFiltros({ ...filtros, bairro }, ["raio"]) > 0}
+          aoLimparFiltros={() => void navegar({ search: {} })}
+          titulo="Ainda não há alertas"
+          acao={
+            podeConfigurar && (
+              <Botao asChild>
+                <Link to="/administracao/integracoes">Configurar fontes externas</Link>
+              </Botao>
+            )
+          }
+        >
+          Alertas chegam pela coleta das fontes externas (focos de calor, desmatamento) ou pelo
+          envio manual de um arquivo.
+          {!podeConfigurar && " Peça a quem administra o sistema para configurar as fontes."}
+        </ListaVazia>
       ) : (
         <>
           <Tabela>

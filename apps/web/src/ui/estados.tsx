@@ -60,6 +60,46 @@ export function Vazio({
   );
 }
 
+/**
+ * Estado vazio de uma lista principal. Com filtro escolhido, o vazio é do filtro e a ação é
+ * limpá-lo; sem filtro, a base está vazia e o texto diz o que fazer, com a ação certa (G-03).
+ */
+export function ListaVazia({
+  filtrada,
+  aoLimparFiltros,
+  titulo,
+  children,
+  acao,
+}: {
+  filtrada: boolean;
+  aoLimparFiltros?: () => void;
+  titulo: string;
+  children?: ReactNode;
+  acao?: ReactNode;
+}) {
+  if (filtrada) {
+    return (
+      <Vazio
+        titulo="Nenhum resultado para os filtros escolhidos"
+        acao={
+          aoLimparFiltros && (
+            <Botao variante="secundario" onClick={aoLimparFiltros}>
+              Limpar filtros
+            </Botao>
+          )
+        }
+      >
+        Tente ampliar a busca ou limpar os filtros.
+      </Vazio>
+    );
+  }
+  return (
+    <Vazio titulo={titulo} acao={acao}>
+      {children}
+    </Vazio>
+  );
+}
+
 export function SemPermissao() {
   return (
     <Bloco icone={<Lock />} titulo="Você não tem permissão para acessar esta área">

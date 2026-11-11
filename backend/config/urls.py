@@ -10,6 +10,7 @@ from itree.auditoria.views import AuditoriaListView
 from itree.contas.views import EquipeViewSet, UsuarioAdminViewSet, eu
 from itree.core.views import saude
 from itree.evidencias.views import EvidenciaViewSet
+from itree.indicadores.implantacao import primeiros_passos
 from itree.indicadores.views import arborizacao_entorno_geojson, painel
 from itree.inspecoes.views import InspecaoViewSet
 from itree.inventario.views import ArvoreViewSet, EspecieViewSet, ImportacaoViewSet
@@ -49,6 +50,7 @@ api_v1 = [
     path("mapa/selecao", mapa_selecao.selecao, name="mapa-selecao"),
     path("mapa/selecao/exportar", mapa_selecao.selecao_exportar, name="mapa-selecao-exportar"),
     path("indicadores/painel", painel, name="indicadores-painel"),
+    path("implantacao/primeiros-passos", primeiros_passos, name="implantacao-primeiros-passos"),
     path(
         "indicadores/externos/arborizacao-entorno",
         arborizacao_entorno_geojson,

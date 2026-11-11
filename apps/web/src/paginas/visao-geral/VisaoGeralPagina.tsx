@@ -51,6 +51,7 @@ import {
   type Serie,
 } from "./graficos";
 import { MapaResumo } from "./MapaResumo";
+import { PrimeirosPassos } from "./PrimeirosPassos";
 
 export interface BuscaVisaoGeral {
   inicio?: string;
@@ -625,6 +626,7 @@ export function VisaoGeralPagina() {
             : "Indicadores do seu escopo territorial."
         }
       />
+      <PrimeirosPassos />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           De

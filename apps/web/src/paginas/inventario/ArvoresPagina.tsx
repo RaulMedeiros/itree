@@ -22,7 +22,8 @@ import { SeloEspecie, SeloLocalizacao, nomeEspecie } from "../../componentes/sel
 import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
-import { Carregando, Erro, Vazio } from "../../ui/estados";
+import { Carregando, Erro, ListaVazia } from "../../ui/estados";
+import { contarFiltros } from "../../util/filtros";
 import { MenuAgrupado } from "../../ui/menu";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
@@ -74,6 +75,7 @@ export function ArvoresPagina() {
   const navegar = useNavigate({ from: "/inventario/arvores" });
   const podeEditar = usePermissao("inventario.editar");
   const podeTarefas = usePermissao("tarefas.editar");
+  const podeImportar = usePermissao("inventario.importar");
   const podeExportar = usePermissao("relatorios.exportar", "inventario.ler");
   const [criandoTarefas, setCriandoTarefas] = useState(false);
   const [tarefasDaSelecao, setTarefasDaSelecao] = useState(false);
@@ -333,9 +335,37 @@ export function ArvoresPagina() {
       ) : consulta.isError ? (
         <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />
       ) : consulta.data.data.count === 0 ? (
-        <Vazio titulo="Nenhuma árvore encontrada">
-          Ajuste os filtros, cadastre uma árvore ou importe um inventário existente.
-        </Vazio>
+        <ListaVazia
+          filtrada={
+            contarFiltros({ ...filtros, bairro, situacao: filtros.situacao ?? "ativa" }, [
+              "situacao",
+            ]) > 0 || (filtros.situacao ?? "ativa") !== "ativa"
+          }
+          aoLimparFiltros={() => {
+            setBusca("");
+            void navegar({ search: {} });
+          }}
+          titulo="Ainda não há árvores cadastradas"
+          acao={
+            (podeEditar || podeImportar) && (
+              <div className="flex flex-wrap justify-center gap-2">
+                {podeImportar && (
+                  <Botao asChild>
+                    <Link to="/inventario/importacoes">Importar inventário existente</Link>
+                  </Botao>
+                )}
+                {podeEditar && (
+                  <Botao variante="secundario" onClick={() => setNova(true)}>
+                    <Plus /> Cadastrar árvore
+                  </Botao>
+                )}
+              </div>
+            )
+          }
+        >
+          Importe o inventário que a prefeitura já tem (planilha ou GeoJSON) ou cadastre a primeira
+          árvore. Elas aparecem aqui, no mapa e na visão geral.
+        </ListaVazia>
       ) : (
         <>
           {totalSelecionado > 0 && (

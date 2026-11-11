@@ -20,7 +20,8 @@ import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { useTerritorioAtivo } from "../../layout/territorio";
 import { Dialogo } from "../../ui/dialogo";
-import { Carregando, Erro, Vazio } from "../../ui/estados";
+import { Carregando, Erro, ListaVazia } from "../../ui/estados";
+import { contarFiltros } from "../../util/filtros";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { MenuAcoes, type ItemMenu } from "../../ui/menu";
 import { Selo } from "../../ui/selo";
@@ -158,7 +159,21 @@ export function TarefasPagina() {
       ) : consulta.isError ? (
         <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />
       ) : consulta.data.data.count === 0 ? (
-        <Vazio titulo="Nenhuma tarefa encontrada" />
+        <ListaVazia
+          filtrada={contarFiltros({ ...filtros, bairro: territorioAtivo.id }) > 0}
+          aoLimparFiltros={() => void navegar({ search: {} })}
+          titulo="Ainda não há tarefas"
+          acao={
+            podeEditar && (
+              <Botao asChild>
+                <Link to="/inventario/arvores">Criar tarefas a partir do inventário</Link>
+              </Botao>
+            )
+          }
+        >
+          Tarefas de inspeção são criadas a partir de árvores do inventário: selecione as árvores,
+          escolha a equipe e o prazo.
+        </ListaVazia>
       ) : (
         <>
           <Tabela>

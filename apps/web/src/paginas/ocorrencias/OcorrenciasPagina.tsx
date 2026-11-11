@@ -16,7 +16,8 @@ import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
-import { Carregando, Erro, Vazio } from "../../ui/estados";
+import { Carregando, Erro, ListaVazia } from "../../ui/estados";
+import { contarFiltros } from "../../util/filtros";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
@@ -213,9 +214,24 @@ export function OcorrenciasPagina() {
       ) : consulta.isError ? (
         <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />
       ) : consulta.data.data.count === 0 ? (
-        <Vazio titulo="Nenhuma ocorrência encontrada">
-          Ajuste os filtros ou registre uma ocorrência.
-        </Vazio>
+        <ListaVazia
+          filtrada={contarFiltros({ ...filtros, bairro }) > 0}
+          aoLimparFiltros={() => {
+            setBusca("");
+            void navegar({ search: {} });
+          }}
+          titulo="Ainda não há ocorrências registradas"
+          acao={
+            podeRegistrar && (
+              <Botao onClick={() => setNova(true)}>
+                <Plus /> Registrar ocorrência
+              </Botao>
+            )
+          }
+        >
+          Ocorrências são problemas observados em uma árvore ou num ponto da cidade, como galho
+          caído ou risco de queda. Registre a primeira para abrir o atendimento.
+        </ListaVazia>
       ) : (
         <>
           <Tabela>

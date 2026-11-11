@@ -6,7 +6,9 @@ import { SeloEstadoInspecao } from "../../componentes/selos";
 import { CORES_CONDICAO } from "../../mapa/simbologia";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
-import { Carregando, Erro, Vazio } from "../../ui/estados";
+import { Botao } from "../../ui/botao";
+import { Carregando, Erro, ListaVazia } from "../../ui/estados";
+import { contarFiltros } from "../../util/filtros";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
@@ -160,11 +162,19 @@ export function InspecoesPagina() {
       ) : consulta.isError ? (
         <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />
       ) : consulta.data.data.count === 0 ? (
-        <Vazio
-          titulo={fila ? "Nenhuma inspeção aguardando revisão" : "Nenhuma inspeção encontrada"}
+        <ListaVazia
+          filtrada={contarFiltros({ ...filtros, bairro }) > 0}
+          aoLimparFiltros={() => void navegar({ search: {} })}
+          titulo={fila ? "Nenhuma inspeção aguardando revisão" : "Ainda não há inspeções"}
+          acao={
+            <Botao variante="secundario" asChild>
+              <Link to="/equipes-tarefas">Ver tarefas de inspeção</Link>
+            </Botao>
+          }
         >
-          Inspeções chegam pelo aplicativo de campo.
-        </Vazio>
+          Inspeções chegam pelo aplicativo de campo, enviadas por quem executa a tarefa. Crie
+          tarefas de inspeção para as equipes e acompanhe-as em Equipes e tarefas.
+        </ListaVazia>
       ) : (
         <>
           <Tabela>
