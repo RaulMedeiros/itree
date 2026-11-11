@@ -2153,6 +2153,11 @@ paths:
       operationId: notificacoes_listar
       description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
       parameters:
+      - in: query
+        name: lida
+        schema:
+          type: boolean
+        description: true = só lidas; false = só não lidas.
       - name: pagina
         required: false
         in: query
@@ -2165,6 +2170,11 @@ paths:
         description: Número de resultados a serem retornados por página.
         schema:
           type: integer
+      - in: query
+        name: tipo
+        schema:
+          type: string
+        description: Um tipo de notificação.
       tags:
       - notificacoes
       security:
@@ -2199,12 +2209,65 @@ paths:
               schema:
                 $ref: '#/components/schemas/Notificacao'
           description: ''
+  /api/v1/notificacoes/agrupadas:
+    get:
+      operationId: notificacoes_agrupadas
+      description: |-
+        Eventos do mesmo tipo no mesmo dia viram um item ("5 inspeções aguardando revisão").
+
+        Grupos com não lidas vêm primeiro; dentro de cada faixa, o mais recente antes.
+      parameters:
+      - in: query
+        name: limite
+        schema:
+          type: integer
+        description: Máximo de grupos (padrão 8).
+      tags:
+      - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GrupoNotificacoes'
+          description: ''
   /api/v1/notificacoes/contagem:
     get:
       operationId: notificacoes_contar
       description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
       tags:
       - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContagemNaoLidas'
+          description: ''
+  /api/v1/notificacoes/ler-grupo:
+    post:
+      operationId: notificacoes_ler_grupo
+      description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
+      tags:
+      - notificacoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LerGrupoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LerGrupoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LerGrupoRequest'
+        required: true
       security:
       - oidc: []
       responses:
@@ -4640,6 +4703,44 @@ components:
       required:
       - descartar
       - motivo
+    GrupoNotificacoes:
+      type: object
+      description: Notificações do mesmo tipo no mesmo dia, para o menu do sino.
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoNotificacaoEnum'
+        dia:
+          type: string
+          format: date
+          description: Dia no fuso de Fortaleza.
+        quantidade:
+          type: integer
+        nao_lidas:
+          type: integer
+        lida:
+          type: boolean
+          description: Verdadeiro quando não resta nenhuma não lida.
+        titulo:
+          type: string
+          description: 'Com mais de uma: "5 inspeções aguardando revisão"; com uma,
+            o título dela.'
+        texto:
+          type: string
+        link:
+          type: string
+        ultima_em:
+          type: string
+          format: date-time
+      required:
+      - dia
+      - lida
+      - link
+      - nao_lidas
+      - quantidade
+      - texto
+      - tipo
+      - titulo
+      - ultima_em
     IdentificadorExterno:
       type: object
       properties:
@@ -5151,6 +5252,17 @@ components:
       - prioridade
       - risco_confirmado
       - tipo
+    LerGrupoRequest:
+      type: object
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoNotificacaoEnum'
+        dia:
+          type: string
+          format: date
+      required:
+      - dia
+      - tipo
     LinhaImportacao:
       type: object
       properties:
@@ -5475,7 +5587,7 @@ components:
           readOnly: true
         tipo:
           allOf:
-          - $ref: '#/components/schemas/NotificacaoTipoEnum'
+          - $ref: '#/components/schemas/TipoNotificacaoEnum'
           readOnly: true
         titulo:
           type: string
@@ -5508,24 +5620,6 @@ components:
       - texto
       - tipo
       - titulo
-    NotificacaoTipoEnum:
-      enum:
-      - tarefa_atribuida
-      - tarefa_concluida
-      - tarefa_bloqueada
-      - risco_confirmado
-      - inspecao_devolvida
-      - inspecao_para_revisao
-      - alerta_novo
-      type: string
-      description: |-
-        * `tarefa_atribuida` - Tarefa atribuída
-        * `tarefa_concluida` - Tarefa concluída
-        * `tarefa_bloqueada` - Tarefa bloqueada
-        * `risco_confirmado` - Risco confirmado
-        * `inspecao_devolvida` - Inspeção devolvida
-        * `inspecao_para_revisao` - Inspeção para revisão
-        * `alerta_novo` - Alerta ambiental novo
     NovaEvidenciaRequest:
       type: object
       properties:
@@ -7306,6 +7400,24 @@ components:
         * `cap` - CAP (circunferência à altura do peito)
         * `diametro_copa` - Diâmetro da copa
         * `altura_bifurcacao` - Altura da 1ª bifurcação
+    TipoNotificacaoEnum:
+      enum:
+      - tarefa_atribuida
+      - tarefa_concluida
+      - tarefa_bloqueada
+      - risco_confirmado
+      - inspecao_devolvida
+      - inspecao_para_revisao
+      - alerta_novo
+      type: string
+      description: |-
+        * `tarefa_atribuida` - Tarefa atribuída
+        * `tarefa_concluida` - Tarefa concluída
+        * `tarefa_bloqueada` - Tarefa bloqueada
+        * `risco_confirmado` - Risco confirmado
+        * `inspecao_devolvida` - Inspeção devolvida
+        * `inspecao_para_revisao` - Inspeção para revisão
+        * `alerta_novo` - Alerta ambiental novo
     TipoOcorrencia:
       type: object
       properties:

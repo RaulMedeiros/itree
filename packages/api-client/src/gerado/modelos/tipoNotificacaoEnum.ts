@@ -15,10 +15,10 @@
  * * `inspecao_para_revisao` - Inspeção para revisão
  * * `alerta_novo` - Alerta ambiental novo
  */
-export type NotificacaoTipoEnum = typeof NotificacaoTipoEnum[keyof typeof NotificacaoTipoEnum];
+export type TipoNotificacaoEnum = typeof TipoNotificacaoEnum[keyof typeof TipoNotificacaoEnum];
 
 
-export const NotificacaoTipoEnum = {
+export const TipoNotificacaoEnum = {
   tarefa_atribuida: 'tarefa_atribuida',
   tarefa_concluida: 'tarefa_concluida',
   tarefa_bloqueada: 'tarefa_bloqueada',

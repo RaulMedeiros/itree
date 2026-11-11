@@ -202,6 +202,7 @@ SPECTACULAR_SETTINGS = {
         "FonteAlertaEnum": "itree.alertas.models.FonteAlerta",
         "TipoAlertaEnum": "itree.alertas.models.TipoAlerta",
         "StatusAlertaEnum": "itree.alertas.models.StatusAlerta",
+        "TipoNotificacaoEnum": "itree.notificacoes.models.TipoNotificacao",
         "TarefaIaEnum": "itree.qualidade.models.TarefaIA",
         "DecisaoIaEnum": "itree.qualidade.models.DecisaoIA",
         "EstadoTarefaEnum": "itree.tarefas.models.EstadoTarefa",

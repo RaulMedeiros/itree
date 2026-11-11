@@ -1,17 +1,18 @@
 import {
+  useNotificacoesAgrupadas,
   useNotificacoesContar,
-  useNotificacoesLer,
+  useNotificacoesLerGrupo,
   useNotificacoesLerTodas,
-  useNotificacoesListar,
-  type Notificacao,
+  type GrupoNotificacoes,
 } from "@itree/api-client";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Bell } from "lucide-react";
 import { useState } from "react";
 
 import { invalidarCaminhos } from "../util/cache";
+import { destinoDoLink } from "../util/filtros";
 import { cn } from "../util/cn";
 import { formatarDataHora, plural } from "../util/formatos";
 
@@ -25,17 +26,17 @@ export function Sino() {
   const contagem = useNotificacoesContar({
     query: { refetchInterval: 60_000, staleTime: 30_000 },
   });
-  const lista = useNotificacoesListar({ tamanho: ULTIMAS }, { query: { enabled: aberto } });
+  const lista = useNotificacoesAgrupadas({ limite: ULTIMAS }, { query: { enabled: aberto } });
   const atualizar = () => invalidarCaminhos(cliente, "/api/v1/notificacoes");
-  const ler = useNotificacoesLer({ mutation: { onSuccess: atualizar } });
+  const lerGrupo = useNotificacoesLerGrupo({ mutation: { onSuccess: atualizar } });
   const lerTodas = useNotificacoesLerTodas({ mutation: { onSuccess: atualizar } });
 
   const naoLidas = contagem.data?.data.nao_lidas ?? 0;
-  const itens = lista.data?.data.results ?? [];
+  const itens = lista.data?.data ?? [];
 
-  const abrirItem = (n: Notificacao) => {
-    if (!n.lida) ler.mutate({ id: n.id });
-    if (n.link) void navegar({ to: n.link });
+  const abrirItem = (g: GrupoNotificacoes) => {
+    if (!g.lida) lerGrupo.mutate({ data: { tipo: g.tipo, dia: g.dia } });
+    if (g.link) void navegar(destinoDoLink(g.link));
   };
 
   return (
@@ -83,7 +84,7 @@ export function Sino() {
             ) : (
               itens.map((n) => (
                 <Menu.Item
-                  key={n.id}
+                  key={`${n.tipo}-${n.dia}`}
                   onSelect={() => abrirItem(n)}
                   className="flex cursor-pointer gap-2 rounded-sm px-2.5 py-2 text-sm outline-none data-highlighted:bg-marca-clara"
                 >
@@ -100,12 +101,22 @@ export function Sino() {
                       <span className="block truncate text-xs text-texto-suave">{n.texto}</span>
                     )}
                     <span className="block text-xs text-texto-suave">
-                      {formatarDataHora(n.criado_em)}
+                      {formatarDataHora(n.ultima_em)}
                     </span>
                   </span>
                 </Menu.Item>
               ))
             )}
+          </div>
+          <div className="border-t border-borda p-1">
+            <Menu.Item asChild>
+              <Link
+                to="/notificacoes"
+                className="block rounded-sm px-2.5 py-2 text-center text-sm font-medium text-marca-escura outline-none data-highlighted:bg-marca-clara"
+              >
+                Ver todas
+              </Link>
+            </Menu.Item>
           </div>
         </Menu.Content>
       </Menu.Portal>

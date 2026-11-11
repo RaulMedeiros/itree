@@ -10,6 +10,7 @@ const API = "http://api.teste";
  */
 export const handlersPadrao = [
   http.get(`${API}/api/v1/notificacoes/contagem`, () => HttpResponse.json({ nao_lidas: 0 })),
+  http.get(`${API}/api/v1/notificacoes/agrupadas`, () => HttpResponse.json([])),
   http.get(`${API}/api/v1/notificacoes`, () =>
     HttpResponse.json({ count: 0, next: null, previous: null, results: [] }),
   ),
