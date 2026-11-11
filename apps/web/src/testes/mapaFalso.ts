@@ -8,7 +8,16 @@ type Manipulador = (e: unknown) => void;
 
 export class MapaFalso {
   fontes = new Map<string, { data: unknown }>();
-  camadas: { id: string; type: string; source?: string; antesDe?: string }[] = [];
+  camadas: {
+    id: string;
+    type: string;
+    source?: string;
+    antesDe?: string;
+    paint?: Record<string, unknown>;
+  }[] = [];
+  /** Propriedades com que a tela pediu o mapa (centro, zoom, somente leitura...). */
+  opcoes: { centro?: [number, number]; zoom?: number; somenteLeitura?: boolean } = {};
+  jumpTo = vi.fn();
   manipuladores: { evento: string; camada?: string; fn: Manipulador }[] = [];
   dragPan = { enable: vi.fn(), disable: vi.fn() };
   doubleClickZoom = { enable: vi.fn(), disable: vi.fn() };
@@ -28,7 +37,10 @@ export class MapaFalso {
       setTiles: vi.fn(),
     };
   }
-  addLayer(camada: { id: string; type: string; source?: string }, antesDe?: string) {
+  addLayer(
+    camada: { id: string; type: string; source?: string; paint?: Record<string, unknown> },
+    antesDe?: string,
+  ) {
     this.camadas.push({ ...camada, antesDe });
   }
   getLayer(id: string) {
@@ -75,6 +87,10 @@ export class MapaFalso {
   emitir(evento: string, e: unknown = {}, camada?: string) {
     for (const m of [...this.manipuladores])
       if (m.evento === evento && m.camada === camada) m.fn(e);
+  }
+  /** Camada de dados já adicionada, com a pintura usada. */
+  camadaDe(id: string) {
+    return this.camadas.find((c) => c.id === id);
   }
   dadosDe(id: string) {
     return this.fontes.get(id)?.data as { features: { properties: Record<string, unknown> }[] };

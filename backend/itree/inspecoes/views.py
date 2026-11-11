@@ -62,7 +62,7 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
             return Inspecao.objects.none()
         qs = Inspecao.objects.select_related(
             "arvore", "arvore__especie", "arvore__bairro", "tecnico", "revisor", "especie", "tarefa"
-        ).prefetch_related("medidas")
+        ).prefetch_related("medidas", "medidas__responsavel")
         qs = filtrar_por_escopo(qs, self.request.user, campo_geom="arvore__geom")
         if self.action != "list":
             return qs

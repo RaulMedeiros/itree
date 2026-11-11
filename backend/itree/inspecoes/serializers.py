@@ -9,10 +9,11 @@ from itree.inventario.serializers import (
     CampoLocalizacao,
     EspecieResumoSerializer,
     MedidaSerializer,
+    medidas_atuais_da_arvore,
 )
 from itree.tarefas.models import Tarefa
 
-from .models import CondicaoAparente, Inspecao, SinalObservado
+from .models import CondicaoAparente, EstadoInspecao, Inspecao, SinalObservado
 from .servicos import APLICAVEIS
 
 
@@ -47,6 +48,10 @@ class InspecaoResumoSerializer(serializers.ModelSerializer):
     tecnico = UsuarioResumoSerializer(read_only=True)
     revisor = UsuarioResumoSerializer(read_only=True, allow_null=True)
     especie = EspecieResumoSerializer(read_only=True, allow_null=True)
+    medidas_propostas = serializers.SerializerMethodField(
+        help_text="Medidas da inspeção em revisão que ainda não valem no cadastro da árvore "
+        "(vazio em qualquer outro estado)."
+    )
 
     class Meta:
         model = Inspecao
@@ -67,12 +72,25 @@ class InspecaoResumoSerializer(serializers.ModelSerializer):
             "revisor",
             "validada_em",
             "versao",
+            "medidas_propostas",
         ]
+
+    @extend_schema_field(MedidaSerializer(many=True))
+    def get_medidas_propostas(self, obj):
+        if obj.estado != EstadoInspecao.EM_REVISAO:
+            return []
+        # Filtra em memória para aproveitar o prefetch da listagem.
+        pendentes = [m for m in obj.medidas.all() if not m.aplicada]
+        return MedidaSerializer(pendentes, many=True).data
 
 
 class InspecaoSerializer(InspecaoResumoSerializer):
     localizacao = CampoLocalizacao(source="geom", read_only=True)
     medidas = MedidaSerializer(many=True, read_only=True)
+    medidas_do_cadastro = serializers.SerializerMethodField(
+        help_text="Medida aplicada mais recente de cada tipo no cadastro da árvore, "
+        "para comparar com as medidas da inspeção."
+    )
     anterior = serializers.SerializerMethodField(
         help_text="Inspeção anterior da mesma árvore, para comparação (RF-INSP-004)."
     )
@@ -89,9 +107,14 @@ class InspecaoSerializer(InspecaoResumoSerializer):
             "aplicado_ao_cadastro",
             "dispositivo",
             "medidas",
+            "medidas_do_cadastro",
             "anterior",
             "tarefa",
         ]
+
+    @extend_schema_field(MedidaSerializer(many=True))
+    def get_medidas_do_cadastro(self, obj):
+        return MedidaSerializer(medidas_atuais_da_arvore(obj.arvore), many=True).data
 
     @extend_schema_field(InspecaoResumoSerializer(allow_null=True))
     def get_anterior(self, obj):

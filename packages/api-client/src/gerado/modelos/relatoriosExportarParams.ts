@@ -11,4 +11,6 @@ export type RelatoriosExportarParams = {
   conjunto: string;
   /** csv | xlsx | geojson */
   formato: string;
+  /** Só para o conjunto arvores: IDs separados por vírgula (seleção na lista). */
+  ids?: string;
 };

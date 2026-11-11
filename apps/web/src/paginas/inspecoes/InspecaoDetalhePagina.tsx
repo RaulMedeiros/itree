@@ -32,7 +32,8 @@ import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { cn } from "../../util/cn";
 import { invalidarCaminhos } from "../../util/cache";
-import { formatarDataHora, plural } from "../../util/formatos";
+import { formatarData, formatarDataHora, plural } from "../../util/formatos";
+import { compararMedidas, descreverDiferenca } from "./medidas";
 
 const ROTULOS_APLICAVEL: Record<string, string> = {
   especie: "espécie",
@@ -101,6 +102,7 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
   const evidencias = useEvidenciasListar({ inspecao: i.id });
   const semEvidencias = evidencias.isSuccess && evidencias.data.data.length === 0;
   const a = i.arvore;
+  const comparacoes = compararMedidas(i.medidas, i.medidas_do_cadastro);
   const condicao = ROTULOS_CONDICAO[i.condicao_aparente ?? "nao_avaliada"];
 
   return (
@@ -116,6 +118,7 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
               {i.tecnico.nome || i.tecnico.email} · {ROTULOS_ORIGEM_INSPECAO[i.origem ?? "app"]}
               {i.dispositivo ? ` (${i.dispositivo})` : ""} · recebida em{" "}
               {formatarDataHora(i.recebida_em)}
+              {i.tarefa ? ` · tarefa ${String(i.tarefa.codigo)}` : ""}
             </span>
           </span>
         }
@@ -234,11 +237,58 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
               }
               anterior={i.anterior ? "—" : undefined}
             />
+            {comparacoes.length === 0 ? (
+              <Linha3
+                campo="Medidas"
+                inspecao={<span className="text-texto-suave">Nenhuma medida</span>}
+                cadastro="—"
+                anterior={i.anterior ? "—" : undefined}
+              />
+            ) : (
+              comparacoes.map((c) => (
+                <Linha3
+                  key={c.proposta.id}
+                  campo={ROTULOS_TIPO_MEDIDA[c.proposta.tipo]}
+                  inspecao={
+                    <>
+                      <span className="font-mono">
+                        {c.proposta.origem === "estimado" ? "≈ " : ""}
+                        {Number(c.proposta.valor).toLocaleString("pt-BR")} {c.proposta.unidade}
+                      </span>{" "}
+                      <SeloOrigemValor origem={c.proposta.origem} />
+                      <p className="text-xs font-normal text-texto-suave">
+                        {ROTULOS_METODO_MEDIDA[c.proposta.metodo]}
+                      </p>
+                      <p className="text-xs">{descreverDiferenca(c)}</p>
+                    </>
+                  }
+                  cadastro={
+                    c.cadastro ? (
+                      <>
+                        <span className="font-mono">
+                          {c.cadastro.origem === "estimado" ? "≈ " : ""}
+                          {Number(c.cadastro.valor).toLocaleString("pt-BR")} {c.cadastro.unidade}
+                        </span>
+                        {c.cadastro.data_medicao && (
+                          <p className="text-xs text-texto-suave">
+                            em {formatarData(c.cadastro.data_medicao)}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-texto-suave">Sem valor no cadastro</span>
+                    )
+                  }
+                  anterior={i.anterior ? "—" : undefined}
+                  destaque={c.diferenca !== 0}
+                />
+              ))
+            )}
           </tbody>
         </table>
       </section>
 
-      <div className="mb-6 grid gap-4 lg:grid-cols-2">
+      <div className="mb-6">
         <section className="rounded-lg border border-borda bg-superficie p-4">
           <h2 className="mb-1 font-semibold">Sinais visuais observados</h2>
           <p className="mb-2 text-xs text-texto-suave">
@@ -264,31 +314,6 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
           <p className="text-sm whitespace-pre-wrap">
             {i.observacoes || <span className="text-texto-suave">—</span>}
           </p>
-        </section>
-        <section className="rounded-lg border border-borda bg-superficie p-4">
-          <h2 className="mb-2 font-semibold">Medidas registradas</h2>
-          {i.medidas.length === 0 ? (
-            <p className="text-sm text-texto-suave">Nenhuma medida.</p>
-          ) : (
-            <ul className="flex flex-col gap-2 text-sm">
-              {i.medidas.map((m) => (
-                <li key={m.id} className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{ROTULOS_TIPO_MEDIDA[m.tipo]}:</span>
-                  <span className="font-mono">
-                    {m.origem === "estimado" ? "≈ " : ""}
-                    {Number(m.valor).toLocaleString("pt-BR")} {m.unidade}
-                  </span>
-                  <SeloOrigemValor origem={m.origem} />
-                  <span className="text-texto-suave">{ROTULOS_METODO_MEDIDA[m.metodo]}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {i.tarefa && (
-            <p className="mt-3 text-xs text-texto-suave">
-              Vinculada à tarefa {String(i.tarefa.codigo)}.
-            </p>
-          )}
         </section>
       </div>
 

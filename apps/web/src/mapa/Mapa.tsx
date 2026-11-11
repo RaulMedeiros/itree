@@ -24,6 +24,8 @@ interface Props {
   centro?: [number, number];
   zoom?: number;
   aoCarregar?: (mapa: MapaMapLibre) => void;
+  /** Sem interação nem controles: para mini-mapas que só situam um ponto. */
+  somenteLeitura?: boolean;
   children?: ReactNode;
   rotulo: string;
 }
@@ -32,7 +34,16 @@ interface Props {
  * Mapa MapLibre com o token OIDC nas requisições à API (vector tiles com
  * escopo territorial) e troca de mapa base sem perder camadas.
  */
-export function Mapa({ base, className, centro, zoom, aoCarregar, children, rotulo }: Props) {
+export function Mapa({
+  base,
+  className,
+  centro,
+  zoom,
+  aoCarregar,
+  somenteLeitura,
+  children,
+  rotulo,
+}: Props) {
   const elemento = useRef<HTMLDivElement>(null);
   const mapa = useRef<MapaMapLibre | null>(null);
   const [pronto, setPronto] = useState(false);
@@ -47,6 +58,7 @@ export function Mapa({ base, className, centro, zoom, aoCarregar, children, rotu
       center: centro ?? CENTRO_PADRAO,
       zoom: zoom ?? 11,
       attributionControl: { compact: true },
+      interactive: !somenteLeitura,
       transformRequest: (url) =>
         url.startsWith(origemApi) && tokenAtual
           ? {
@@ -55,8 +67,13 @@ export function Mapa({ base, className, centro, zoom, aoCarregar, children, rotu
             }
           : { url },
     });
-    instancia.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-    instancia.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+    if (!somenteLeitura) {
+      instancia.addControl(
+        new maplibregl.NavigationControl({ showCompass: false }),
+        "bottom-right",
+      );
+      instancia.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-left");
+    }
     instancia.on("load", () => {
       setPronto(true);
       aoCarregar?.(instancia);

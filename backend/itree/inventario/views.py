@@ -5,7 +5,7 @@ from datetime import timedelta
 import pghistory
 from django.conf import settings
 from django.db import transaction
-from django.db.models import CharField, Count, F, Func, Q, Value
+from django.db.models import Case, CharField, Count, F, Func, IntegerField, Q, Value, When
 from django.utils import timezone
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -178,7 +178,16 @@ FILTROS_ARVORE = [
         "sem_inspecao_dias", int, description="Sem inspeção validada há mais de N dias."
     ),
     OpenApiParameter("condicao_aparente", str, description="Use 'sem' para sem avaliação."),
-    OpenApiParameter("ordenar", str, description="numero, -numero, atualizado_em, -atualizado_em"),
+    OpenApiParameter(
+        "ordenar",
+        str,
+        description=(
+            "numero, atualizado_em, ultima_inspecao_em ou condicao_aparente; com '-' na frente, "
+            "ordem decrescente. Em ultima_inspecao_em, árvores sem inspeção ficam no fim. Em "
+            "condicao_aparente, a ordem crescente vai da melhor para a pior condição e as não "
+            "avaliadas ficam no fim, em qualquer direção."
+        ),
+    ),
 ]
 
 
@@ -199,6 +208,9 @@ def filtrar_arvores(qs, params):
             if consulta.endswith("_id"):
                 valor = uuid_do_parametro(valor, campo)
             qs = qs.filter(**{consulta: valor})
+    if ids := params.get("ids"):
+        # Seleção explícita na lista (ex.: exportar só as árvores marcadas).
+        qs = qs.filter(pk__in=[uuid_do_parametro(i, "ids") for i in ids.split(",") if i])
     if dias := params.get("sem_inspecao_dias"):
         try:
             limite = timezone.now() - timedelta(days=int(dias))
@@ -214,6 +226,37 @@ def filtrar_arvores(qs, params):
         condicao = Q(situacao=SituacaoArvore.ATIVA, geom__isnull=False) & ~Q(localizacao_origem="")
         qs = qs.filter(condicao) if valida == "true" else qs.exclude(condicao)
     return qs.distinct()
+
+
+# Da melhor para a pior condição; sem avaliação (vazia ou "nao_avaliada") fica depois de todas.
+_ORDEM_CONDICAO = ["boa", "regular", "ruim", "morta"]
+
+
+def ordenar_arvores(qs, ordem: str):
+    """Aplica ``ordenar`` à lista de árvores. Valor desconhecido usa a ordem padrão (-numero).
+
+    Os campos novos desempatam por ``numero`` para a paginação ser estável.
+    """
+    campo, desc = ordem.lstrip("-"), ordem.startswith("-")
+    if campo in ("numero", "atualizado_em"):
+        return qs.order_by(ordem)
+    if campo == "ultima_inspecao_em":
+        return qs.order_by(
+            F("ultima_inspecao_em").desc(nulls_last=True)
+            if desc
+            else F("ultima_inspecao_em").asc(nulls_last=True),
+            "numero",
+        )
+    if campo == "condicao_aparente":
+        # "Sem avaliação" fica no fim também na ordem decrescente.
+        escala = _ORDEM_CONDICAO[::-1] if desc else _ORDEM_CONDICAO
+        posicao = Case(
+            *[When(condicao_aparente=c, then=Value(i)) for i, c in enumerate(escala)],
+            default=Value(len(escala)),
+            output_field=IntegerField(),
+        )
+        return qs.annotate(_posicao_condicao=posicao).order_by("_posicao_condicao", "numero")
+    return qs.order_by("-numero")
 
 
 @extend_schema_view(
@@ -255,9 +298,7 @@ class ArvoreViewSet(
         qs = filtrar_por_escopo(qs, self.request.user, incluir_sem_geom=True)
         if self.action == "list":
             qs = filtrar_arvores(qs, self.request.query_params)
-            ordem = self.request.query_params.get("ordenar", "-numero")
-            if ordem.lstrip("-") in ("numero", "atualizado_em"):
-                qs = qs.order_by(ordem)
+            qs = ordenar_arvores(qs, self.request.query_params.get("ordenar", "-numero"))
         return qs
 
     def _verificar_escopo(self, geom):

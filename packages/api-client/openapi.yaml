@@ -579,7 +579,10 @@ paths:
         name: ordenar
         schema:
           type: string
-        description: numero, -numero, atualizado_em, -atualizado_em
+        description: numero, atualizado_em, ultima_inspecao_em ou condicao_aparente;
+          com '-' na frente, ordem decrescente. Em ultima_inspecao_em, árvores sem
+          inspeção ficam no fim. Em condicao_aparente, a ordem crescente vai da melhor
+          para a pior condição e as não avaliadas ficam no fim, em qualquer direção.
       - name: pagina
         required: false
         in: query
@@ -867,7 +870,10 @@ paths:
         name: ordenar
         schema:
           type: string
-        description: numero, -numero, atualizado_em, -atualizado_em
+        description: numero, atualizado_em, ultima_inspecao_em ou condicao_aparente;
+          com '-' na frente, ordem decrescente. Em ultima_inspecao_em, árvores sem
+          inspeção ficam no fim. Em condicao_aparente, a ordem crescente vai da melhor
+          para a pior condição e as não avaliadas ficam no fim, em qualquer direção.
       - in: query
         name: sem_inspecao_dias
         schema:
@@ -2482,6 +2488,12 @@ paths:
           type: string
         description: csv | xlsx | geojson
         required: true
+      - in: query
+        name: ids
+        schema:
+          type: string
+        description: 'Só para o conjunto arvores: IDs separados por vírgula (seleção
+          na lista).'
       tags:
       - relatorios
       security:
@@ -4570,6 +4582,13 @@ components:
           maximum: 2147483647
           minimum: 0
           description: Controle de concorrência na sincronização.
+        medidas_propostas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+          description: Medidas da inspeção em revisão que ainda não valem no cadastro
+            da árvore (vazio em qualquer outro estado).
         localizacao:
           allOf:
           - $ref: '#/components/schemas/Localizacao'
@@ -4600,6 +4619,13 @@ components:
           items:
             $ref: '#/components/schemas/Medida'
           readOnly: true
+        medidas_do_cadastro:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+          description: Medida aplicada mais recente de cada tipo no cadastro da árvore,
+            para comparar com as medidas da inspeção.
         anterior:
           allOf:
           - $ref: '#/components/schemas/InspecaoResumo'
@@ -4619,6 +4645,8 @@ components:
       - id
       - localizacao
       - medidas
+      - medidas_do_cadastro
+      - medidas_propostas
       - realizada_em
       - recebida_em
       - revisor
@@ -4684,11 +4712,19 @@ components:
           maximum: 2147483647
           minimum: 0
           description: Controle de concorrência na sincronização.
+        medidas_propostas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+          description: Medidas da inspeção em revisão que ainda não valem no cadastro
+            da árvore (vazio em qualquer outro estado).
       required:
       - arvore
       - codigo
       - especie
       - id
+      - medidas_propostas
       - realizada_em
       - recebida_em
       - revisor

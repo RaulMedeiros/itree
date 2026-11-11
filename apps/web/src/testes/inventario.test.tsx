@@ -5,10 +5,11 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { camposDiferentes } from "../paginas/inventario/duplicidades";
 import { ordenarPendencias, type Pendencia } from "../paginas/inventario/qualidade";
+import { mapasCriados } from "./mapaFalso";
 
 vi.mock("react-oidc-context", () => ({
   useAuth: () => ({
@@ -21,6 +22,10 @@ vi.mock("react-oidc-context", () => ({
 }));
 vi.mock("../autenticacao/gerenciador", () => ({ gerenciadorUsuario: {} }));
 vi.mock("maplibre-gl", () => ({ setWorkerUrl: () => undefined }));
+// O MapLibre precisa de WebGL, ausente no jsdom: o mini-mapa da ficha usa um mapa falso.
+vi.mock("../mapa/Mapa", async () => ({
+  Mapa: (await import("./MapaFalsoComponente")).MapaFalsoComponente,
+}));
 
 const API = "http://api.teste";
 
@@ -71,13 +76,33 @@ const resumo = (extra: Record<string, unknown> = {}) => ({
 });
 
 const consultas: URL[] = [];
+const exportacoes: URL[] = [];
+const pedidosLote: Record<string, unknown>[] = [];
+let eu: Eu = REVISOR;
 const decisoes: unknown[] = [];
 
 const servidor = setupServer(
-  http.get(`${API}/api/v1/eu`, () => HttpResponse.json(REVISOR)),
+  http.get(`${API}/api/v1/eu`, () => HttpResponse.json(eu)),
   http.get(`${API}/api/v1/arvores`, ({ request }) => {
     consultas.push(new URL(request.url));
     return HttpResponse.json(pagina([resumo()]));
+  }),
+  http.get(`${API}/api/v1/equipes`, () => HttpResponse.json(pagina([]))),
+  http.post(`${API}/api/v1/tarefas/lote`, async ({ request }) => {
+    pedidosLote.push((await request.json()) as Record<string, unknown>);
+    return HttpResponse.json(
+      { criadas: 2, ignoradas: 0, fora_do_escopo_do_responsavel: 0 },
+      { status: 201 },
+    );
+  }),
+  http.get(`${API}/api/v1/relatorios/exportar`, ({ request }) => {
+    exportacoes.push(new URL(request.url));
+    return new HttpResponse("codigo\nARV-000001\n", {
+      headers: {
+        "Content-Type": "text/csv",
+        "Content-Disposition": 'attachment; filename="itree-arvores.csv"',
+      },
+    });
   }),
   http.get(`${API}/api/v1/arvores/contadores`, () => HttpResponse.json({ total: 1, validos: 1 })),
   http.get(`${API}/api/v1/arvores/a-1`, () =>
@@ -104,6 +129,26 @@ const servidor = setupServer(
         enviada_por_nome: "Tiago",
         criado_em: "2026-11-10T12:00:00Z",
         capturada_em: "2026-11-07T12:00:00Z",
+      },
+      {
+        id: "e-2",
+        nome_original: "antiga.jpg",
+        descricao: "Foto antiga do tronco",
+        eh_imagem: true,
+        url: "http://armazenamento.teste/antiga.jpg",
+        enviada_por_nome: "Bia",
+        criado_em: "2026-11-09T12:00:00Z",
+        capturada_em: "2026-10-01T12:00:00Z",
+      },
+      {
+        id: "e-3",
+        nome_original: "recente.jpg",
+        descricao: "Copa vista da calçada",
+        eh_imagem: true,
+        url: "http://armazenamento.teste/recente.jpg",
+        enviada_por_nome: "Marta",
+        criado_em: "2026-11-10T12:00:00Z",
+        capturada_em: "2026-11-08T12:00:00Z",
       },
     ]),
   ),
@@ -197,11 +242,17 @@ const servidor = setupServer(
 beforeAll(() => {
   servidor.listen({ onUnhandledRequest: "error" });
   configurarCliente({ urlBase: API, origem: "web", obterToken: () => "t" });
+  URL.createObjectURL = vi.fn(() => "blob:teste");
+  URL.revokeObjectURL = vi.fn();
 });
 afterEach(() => {
   servidor.resetHandlers();
   consultas.length = 0;
+  exportacoes.length = 0;
+  pedidosLote.length = 0;
+  eu = REVISOR;
   decisoes.length = 0;
+  mapasCriados.length = 0;
 });
 afterAll(() => servidor.close());
 
@@ -233,6 +284,202 @@ describe("lista de árvores (C-13, C-14)", () => {
       "aria-sort",
       "descending",
     );
+  });
+});
+
+const DUAS_ARVORES = [
+  resumo({ condicao_aparente: "boa", ultima_inspecao_em: "2026-10-01T12:00:00Z" }),
+  resumo({
+    id: "a-2",
+    codigo: "ARV-000002",
+    condicao_aparente: "ruim",
+    ultima_inspecao_em: null,
+  }),
+];
+const COORDENADOR: Eu = {
+  ...REVISOR,
+  permissoes: [...REVISOR.permissoes, "tarefas.ler", "tarefas.editar", "relatorios.exportar"],
+};
+
+describe("lista de árvores: ordenação por inspeção e condição", () => {
+  it("ordena pelos cabeçalhos Última inspeção e Condição aparente", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    // A tabela some enquanto a nova consulta carrega: cada clique busca o cabeçalho de novo.
+    const clicar = async (nome: RegExp) =>
+      usuario.click(await screen.findByRole("button", { name: nome }));
+    const ordenacao = () => consultas.at(-1)?.searchParams.get("ordenar");
+    await clicar(/Última inspeção/);
+    await vi.waitFor(() => expect(ordenacao()).toBe("-ultima_inspecao_em"));
+    await clicar(/Última inspeção/);
+    await vi.waitFor(() => expect(ordenacao()).toBe("ultima_inspecao_em"));
+    await clicar(/Condição aparente/);
+    await vi.waitFor(() => expect(ordenacao()).toBe("-condicao_aparente"));
+    expect(await screen.findByRole("columnheader", { name: /Condição aparente/ })).toHaveAttribute(
+      "aria-sort",
+      "descending",
+    );
+  });
+
+  it("mostra a data da última inspeção ou 'Nunca'", async () => {
+    servidor.use(http.get(`${API}/api/v1/arvores`, () => HttpResponse.json(pagina(DUAS_ARVORES))));
+    await abrir("/inventario/arvores");
+    const linhas = await screen.findAllByRole("row");
+    expect(within(linhas[1]!).getByText("01/10/2026")).toBeInTheDocument();
+    expect(within(linhas[2]!).getByText("Nunca")).toBeInTheDocument();
+  });
+});
+
+describe("lista de árvores: seleção em lote", () => {
+  beforeEach(() => {
+    servidor.use(
+      http.get(`${API}/api/v1/arvores`, ({ request }) => {
+        consultas.push(new URL(request.url));
+        return HttpResponse.json(pagina(DUAS_ARVORES));
+      }),
+    );
+  });
+
+  it("seleciona a página inteira e uma a uma, e sem permissão não oferece as ações", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    expect(screen.queryByRole("region", { name: "Ações da seleção" })).toBeNull();
+
+    await usuario.click(screen.getByRole("checkbox", { name: "Selecionar ARV-000002" }));
+    const barra = await screen.findByRole("region", { name: "Ações da seleção" });
+    expect(within(barra).getByText("1 árvore selecionada")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /Selecionar todas/ })).toHaveProperty(
+      "indeterminate",
+      true,
+    );
+
+    await usuario.click(screen.getByRole("checkbox", { name: /Selecionar todas/ }));
+    expect(within(barra).getByText("2 árvores selecionadas")).toBeInTheDocument();
+    // REVISOR não tem tarefas.editar nem relatorios.exportar.
+    expect(within(barra).queryByRole("button", { name: /Criar tarefas/ })).toBeNull();
+    expect(within(barra).queryByRole("button", { name: /Exportar seleção/ })).toBeNull();
+
+    await usuario.click(within(barra).getByRole("button", { name: "Limpar seleção" }));
+    expect(screen.queryByRole("region", { name: "Ações da seleção" })).toBeNull();
+  });
+
+  it("cria tarefas de inspeção só para as árvores marcadas", async () => {
+    eu = COORDENADOR;
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    await usuario.click(screen.getByRole("checkbox", { name: "Selecionar ARV-000002" }));
+    const barra = await screen.findByRole("region", { name: "Ações da seleção" });
+    await usuario.click(within(barra).getByRole("button", { name: "Criar tarefas de inspeção" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByText(/para 1 árvore/)).toBeInTheDocument();
+    expect(within(dialogo).getByText(/marcada na lista/)).toBeInTheDocument();
+    await usuario.click(within(dialogo).getByRole("button", { name: "Criar" }));
+    await vi.waitFor(() =>
+      expect(pedidosLote).toEqual([expect.objectContaining({ arvore_ids: ["a-2"] })]),
+    );
+  });
+
+  it("exporta só a seleção, em CSV, pelos ids marcados", async () => {
+    eu = COORDENADOR;
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    await usuario.click(screen.getByRole("checkbox", { name: /Selecionar todas/ }));
+    const barra = await screen.findByRole("region", { name: "Ações da seleção" });
+    await usuario.click(within(barra).getByRole("button", { name: /Exportar seleção/ }));
+    await usuario.click(await screen.findByRole("menuitem", { name: "CSV" }));
+    await vi.waitFor(() => expect(exportacoes).toHaveLength(1));
+    expect(exportacoes[0]!.searchParams.get("conjunto")).toBe("arvores");
+    expect(exportacoes[0]!.searchParams.get("formato")).toBe("csv");
+    expect(exportacoes[0]!.searchParams.get("ids")).toBe("a-1,a-2");
+  });
+
+  it("a seleção some quando os filtros mudam", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    await usuario.click(screen.getByRole("checkbox", { name: /Selecionar todas/ }));
+    await screen.findByRole("region", { name: "Ações da seleção" });
+    await usuario.selectOptions(screen.getByLabelText("Situação do registro"), "todas");
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Ações da seleção" })).toBeNull(),
+    );
+  });
+});
+
+const medida = (extra: Record<string, unknown>) => ({
+  id: "m-1",
+  tipo: "dap",
+  valor: "32.00",
+  unidade: "cm",
+  metodo: "fita_diametrica",
+  origem: "medido",
+  data_medicao: "2025-10-06",
+  responsavel_nome: "Inventário sintético 2024",
+  observacao: "",
+  criado_em: "2025-10-06T12:00:00Z",
+  ...extra,
+});
+
+describe("medidas pendentes na ficha (C-16)", () => {
+  const inspecaoEmRevisao = (propostas: unknown[]) =>
+    http.get(`${API}/api/v1/inspecoes`, () =>
+      HttpResponse.json(
+        pagina([
+          { id: "i-9", codigo: "INS-000006", estado: "em_revisao", medidas_propostas: propostas },
+        ]),
+      ),
+    );
+
+  it("mostra o valor pendente ao lado do cadastro, com o link da revisão", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/arvores/a-1`, () =>
+        HttpResponse.json({
+          ...resumo(),
+          identificadores: [],
+          medidas_atuais: [medida({})],
+          observacoes: "",
+          criado_por_nome: "Rita",
+          motivo_situacao: "",
+        }),
+      ),
+      inspecaoEmRevisao([medida({ id: "m-2", valor: "38.00", data_medicao: "2026-11-05" })]),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("tab", { name: "Medidas" }));
+    const aviso = await screen.findByRole("status");
+    expect(aviso).toHaveTextContent("DAP 38 cm pendente");
+    expect(within(aviso).getByRole("link", { name: "INS-000006" })).toHaveAttribute(
+      "href",
+      "/inspecoes/i-9",
+    );
+    const linha = screen.getByRole("row", { name: /DAP/ });
+    expect(within(linha).getByText("32 cm")).toBeInTheDocument();
+    expect(within(linha).getByText(/38 cm/)).toBeInTheDocument();
+    expect(within(linha).getByRole("link", { name: "INS-000006" })).toBeInTheDocument();
+  });
+
+  it("mostra uma linha para a medida que só existe como proposta", async () => {
+    servidor.use(
+      inspecaoEmRevisao([medida({ id: "m-3", tipo: "altura", valor: "10.20", unidade: "m" })]),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("tab", { name: "Medidas" }));
+    const linha = await screen.findByRole("row", { name: /Altura total/ });
+    expect(within(linha).getByText("Sem valor no cadastro")).toBeInTheDocument();
+    expect(within(linha).getByText(/10,2 m/)).toBeInTheDocument();
+  });
+
+  it("sem medida proposta, não avisa nada", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("tab", { name: "Medidas" }));
+    expect(await screen.findByText("Nenhuma medida registrada")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });
 
@@ -268,6 +515,38 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
     expect(screen.getByText("(Praça)")).toBeInTheDocument();
   });
 
+  it("mostra o mini-mapa somente leitura com a cor da condição e o selo de origem", async () => {
+    await abrir("/inventario/arvores/a-1");
+    const regiao = await screen.findByRole("region", {
+      name: "Localização de ARV-000001 no mapa (somente leitura)",
+    });
+    await vi.waitFor(() => expect(mapasCriados).toHaveLength(1));
+    const mapa = mapasCriados[0]!;
+    expect(mapa.opcoes).toMatchObject({
+      somenteLeitura: true,
+      centro: [-38.540452, -3.746602],
+    });
+    // A mesma pintura do mapa principal, alimentada com a condição e a origem da árvore.
+    expect(mapa.camadaDe("arvore")?.type).toBe("circle");
+    expect(mapa.dadosDe("arvore").features).toEqual([
+      expect.objectContaining({
+        geometry: { type: "Point", coordinates: [-38.540452, -3.746602] },
+        properties: expect.objectContaining({ condicao: "ruim", localizacao_origem: "importada" }),
+      }),
+    ]);
+    // Cor nunca sozinha: a condição e a origem aparecem em texto.
+    expect(within(regiao.parentElement!).getByText("Ruim")).toBeInTheDocument();
+    expect(within(regiao.parentElement!).getByText("Importada")).toBeInTheDocument();
+  });
+
+  it("mostra como foto principal a evidência mais recente que é imagem", async () => {
+    await abrir("/inventario/arvores/a-1");
+    const foto = await screen.findByRole("img", { name: "Copa vista da calçada" });
+    expect(foto).toHaveAttribute("src", "http://armazenamento.teste/recente.jpg");
+    expect(screen.getByText(/Foto enviada por Marta em/)).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Foto antiga do tronco" })).toBeNull();
+  });
+
   it("evidência mostra a legenda inteira e quem enviou", async () => {
     const usuario = userEvent.setup();
     await abrir("/inventario/arvores/a-1");
@@ -276,7 +555,7 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
       await screen.findByText("Copa e tronco vistos da calçada, com a fachada ao fundo"),
     ).toBeInTheDocument();
     expect(screen.getByText(/Enviada por Tiago/)).toBeInTheDocument();
-    expect(screen.getByText(/Capturada em/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Capturada em/).length).toBeGreaterThan(0);
   });
 
   it("evidência de demonstração leva o selo Ilustração; a real não", async () => {

@@ -27,6 +27,7 @@ import { UsuariosPagina } from "./paginas/administracao/UsuariosPagina";
 import { EspeciesPagina, TiposOcorrenciaPagina } from "./paginas/administracao/CatalogosPaginas";
 import { ArvoreDetalhePagina } from "./paginas/inventario/ArvoreDetalhePagina";
 import { ArvoresPagina } from "./paginas/inventario/ArvoresPagina";
+import { ORDENACOES_ARVORES } from "./paginas/inventario/ordenacao";
 import { DuplicidadesPagina } from "./paginas/inventario/DuplicidadesPagina";
 import {
   EspecieDetalhePagina,
@@ -301,10 +302,7 @@ const arvores = createRoute({
     situacao: z.enum(["ativa", "excluida", "fundida", "todas"]).optional().catch(undefined),
     sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),
     condicao_aparente: textoOpcional,
-    ordenar: z
-      .enum(["numero", "-numero", "atualizado_em", "-atualizado_em"])
-      .optional()
-      .catch(undefined),
+    ordenar: z.enum(ORDENACOES_ARVORES).optional().catch(undefined),
     pagina: paginaOpcional,
   }),
   component: ArvoresPagina,
