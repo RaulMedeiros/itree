@@ -1,0 +1,105 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "id": "vw_PracasFortaleza.fid-53925a7a_1a1ca420dc9_49d5",
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        -38.52637582,
+        -3.72518009
+       ],
+       [
+        -38.52600675,
+        -3.72530192
+       ],
+       [
+        -38.52606921,
+        -3.72550966
+       ],
+       [
+        -38.52644415,
+        -3.7253892
+       ],
+       [
+        -38.52637582,
+        -3.72518009
+       ]
+      ]
+     ]
+    ]
+   },
+   "geometry_name": "the_geom",
+   "properties": {
+    "id": 124,
+    "nome": "Largo do Mercado",
+    "nome_pop": "Praça dos Correios",
+    "fonte": "UrbFor",
+    "anoref": 2019,
+    "epsg_codif": "EPSG: 31984 (SIRGAS 2000 - UTM 24S); Codificação: UTF-8",
+    "bairro": "Centro",
+    "cod_bairro": 10,
+    "area m2": 1049.77
+   }
+  },
+  {
+   "type": "Feature",
+   "id": "vw_PracasFortaleza.fid-53925a7a_1a1ca420dc9_4aa2",
+   "geometry": {
+    "type": "MultiPolygon",
+    "coordinates": [
+     [
+      [
+       [
+        -38.57817284,
+        -3.79077636
+       ],
+       [
+        -38.57869573,
+        -3.79077457
+       ],
+       [
+        -38.57819169,
+        -3.79023494
+       ],
+       [
+        -38.57816138,
+        -3.79024899
+       ],
+       [
+        -38.57817284,
+        -3.79077636
+       ]
+      ]
+     ]
+    ]
+   },
+   "geometry_name": "the_geom",
+   "properties": {
+    "id": 366,
+    "nome": "Sem Denominação Oficial",
+    "nome_pop": "Bifurcação Tiago Lanches",
+    "fonte": "UrbFor",
+    "anoref": 2019,
+    "epsg_codif": "EPSG: 31984 (SIRGAS 2000 - UTM 24S); Codificação: UTF-8",
+    "bairro": "Vila Manuel Sátiro",
+    "cod_bairro": 81,
+    "area m2": 1837.61
+   }
+  }
+ ],
+ "totalFeatures": 2,
+ "numberMatched": 2,
+ "numberReturned": 2,
+ "timeStamp": "2026-11-11T10:59:24.588Z",
+ "crs": {
+  "type": "name",
+  "properties": {
+   "name": "urn:ogc:def:crs:EPSG::4326"
+  }
+ }
+}

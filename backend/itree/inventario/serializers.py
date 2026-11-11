@@ -1,6 +1,8 @@
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from itree.areas_verdes.serializers import AreaVerdeResumoSerializer
+from itree.areas_verdes.servico import area_verde_do_ponto
 from itree.core import armazenamento
 from itree.core.geo import ponto
 from itree.territorio.serializers import TerritorioResumoSerializer
@@ -250,11 +252,13 @@ class ArvoreSerializer(ArvoreResumoSerializer):
     )
 
     especie_cartao = EspecieCartaoSerializer(source="especie", read_only=True, allow_null=True)
+    em_area_verde = serializers.SerializerMethodField()
 
     class Meta(ArvoreResumoSerializer.Meta):
         fields = [
             *ArvoreResumoSerializer.Meta.fields,
             "especie_cartao",
+            "em_area_verde",
             "especie_id",
             "identificadores",
             "medidas_atuais",
@@ -281,6 +285,12 @@ class ArvoreSerializer(ArvoreResumoSerializer):
         for medida in obj.medidas.filter(aplicada=True).select_related("responsavel"):
             atuais.setdefault(medida.tipo, medida)
         return MedidaSerializer(atuais.values(), many=True).data
+
+    @extend_schema_field(AreaVerdeResumoSerializer(allow_null=True))
+    def get_em_area_verde(self, obj):
+        """Praça, parque ou unidade de conservação que contém a árvore, se houver."""
+        area = area_verde_do_ponto(obj.geom)
+        return AreaVerdeResumoSerializer(area).data if area else None
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_fundida_em(self, obj):
