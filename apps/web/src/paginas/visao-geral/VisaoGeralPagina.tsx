@@ -29,6 +29,7 @@ import { ROTULOS_CONDICAO } from "@itree/domain";
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { EntradaData, Selecao } from "../../ui/campos";
+import { useBairroDoFiltro } from "../../layout/territorio";
 import { CORES_CONDICAO } from "../../mapa/simbologia";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -485,7 +486,8 @@ const ATALHOS_PERIODO: {
 export function VisaoGeralPagina() {
   const filtros = useSearch({ from: "/autenticado/visao-geral" });
   const navegar = useNavigate({ from: "/visao-geral" });
-  const consulta = useIndicadoresPainel(filtros);
+  const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
+  const consulta = useIndicadoresPainel({ ...filtros, bairro });
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
   const podeEquipes = usePermissao("tarefas.ler");
   const equipes = useEquipesListar(
@@ -537,8 +539,11 @@ export function VisaoGeralPagina() {
         </div>
         <Selecao
           aria-label="Bairro"
-          value={filtros.bairro ?? ""}
-          onChange={(e) => filtrar({ bairro: e.target.value || undefined })}
+          value={bairro ?? ""}
+          onChange={(e) => {
+            filtrar({ bairro: e.target.value || undefined });
+            aoEscolherBairro(e.target.value);
+          }}
           className="max-w-52"
         >
           <option value="">Todo o escopo</option>

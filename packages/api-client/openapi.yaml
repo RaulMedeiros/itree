@@ -6330,8 +6330,8 @@ components:
           additionalProperties:
             type: string
           description: 'Mesmos filtros dos vector tiles: especie, especie_estado,
-            localizacao_origem, bairro, sem_inspecao_dias, condicao_aparente (árvores);
-            estado, prioridade, tipo (ocorrências).'
+            localizacao_origem, sem_inspecao_dias, condicao_aparente (árvores); estado,
+            prioridade, tipo (ocorrências); bairro (ambas).'
         camadas:
           type: array
           items:
@@ -6349,8 +6349,8 @@ components:
           additionalProperties:
             type: string
           description: 'Mesmos filtros dos vector tiles: especie, especie_estado,
-            localizacao_origem, bairro, sem_inspecao_dias, condicao_aparente (árvores);
-            estado, prioridade, tipo (ocorrências).'
+            localizacao_origem, sem_inspecao_dias, condicao_aparente (árvores); estado,
+            prioridade, tipo (ocorrências); bairro (ambas).'
         camadas:
           type: array
           items:

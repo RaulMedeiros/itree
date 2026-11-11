@@ -19,6 +19,7 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { SeloEspecie, SeloLocalizacao, nomeEspecie } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
+import { useBairroDoFiltro } from "../../layout/territorio";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
@@ -74,6 +75,7 @@ export function ArvoresPagina() {
   const [busca, setBusca] = useState(filtros.busca ?? "");
   const especies = useEspeciesListar({ tamanho: 500, ativa: true });
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
+  const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -87,8 +89,12 @@ export function ArvoresPagina() {
   }, [busca, filtros.busca, navegar]);
 
   const { pagina, ordenar, ...semPagina } = filtros;
-  const consulta = useArvoresListar({ ...filtros, tamanho: TAMANHO });
-  const contadores = useArvoresContadores({ ...semPagina, situacao: filtros.situacao ?? "ativa" });
+  const consulta = useArvoresListar({ ...filtros, bairro, tamanho: TAMANHO });
+  const contadores = useArvoresContadores({
+    ...semPagina,
+    bairro,
+    situacao: filtros.situacao ?? "ativa",
+  });
 
   const filtrar = (parcial: Partial<BuscaArvores>) =>
     void navegar({ search: (s: BuscaArvores) => ({ ...s, ...parcial, pagina: undefined }) });
@@ -182,8 +188,11 @@ export function ArvoresPagina() {
         </Selecao>
         <Selecao
           aria-label="Bairro"
-          value={filtros.bairro ?? ""}
-          onChange={(e) => filtrar({ bairro: e.target.value || undefined })}
+          value={bairro ?? ""}
+          onChange={(e) => {
+            filtrar({ bairro: e.target.value || undefined });
+            aoEscolherBairro(e.target.value);
+          }}
           className="w-full sm:w-48"
         >
           <option value="">Todos os bairros</option>

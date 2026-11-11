@@ -18,6 +18,7 @@ import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
 import { SeloEstadoTarefa } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
+import { useTerritorioAtivo } from "../../layout/territorio";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
@@ -43,8 +44,10 @@ export function TarefasPagina() {
   const navegar = useNavigate({ from: "/equipes-tarefas" });
   const podeEditar = usePermissao("tarefas.editar");
   const equipes = useEquipesListar({ ativa: true, tamanho: 200 });
+  const territorioAtivo = useTerritorioAtivo();
   const consulta = useTarefasListar({
     ...filtros,
+    bairro: territorioAtivo.id,
     estado: filtros.estado ?? "abertas",
     atrasadas: filtros.atrasadas === "true" ? true : undefined,
     tamanho: TAMANHO,

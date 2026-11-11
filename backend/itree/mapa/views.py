@@ -81,6 +81,9 @@ def _filtros_ocorrencias(params) -> tuple[str, dict]:
     if tipo := params.get("tipo"):
         clausulas.append("o.tipo_id = %(tipo)s")
         valores["tipo"] = str(uuid_do_parametro(tipo, "tipo"))
+    if bairro := params.get("bairro"):
+        clausulas.append("o.bairro_id = %(bairro)s")
+        valores["bairro"] = str(uuid_do_parametro(bairro, "bairro"))
     return "".join(f" AND {c}" for c in clausulas), valores
 
 
