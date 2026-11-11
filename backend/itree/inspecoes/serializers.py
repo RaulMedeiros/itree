@@ -101,8 +101,8 @@ class InspecaoSerializer(InspecaoResumoSerializer):
         "para comparar com as medidas da inspeção."
     )
     anterior = serializers.SerializerMethodField(
-        help_text="Inspeção validada anterior da mesma árvore, com as medidas dela, para comparação "
-        "(RF-INSP-004)."
+        help_text="Inspeção validada anterior da mesma árvore, com as medidas dela, "
+        "para comparação (RF-INSP-004)."
     )
     tarefa = serializers.SerializerMethodField()
 
