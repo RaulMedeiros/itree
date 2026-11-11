@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from itree.inventario.models import Arvore, Especie, Medida
@@ -164,7 +166,7 @@ def test_duplicidades_revisao_e_fusao(cliente, revisor, ipe):
     pares = cliente.get(f"{URL}/duplicidades").json()
     assert len(pares) == 1
     assert {pares[0]["arvore_a"]["id"], pares[0]["arvore_b"]["id"]} == {a["id"], b["id"]}
-    assert "m de distância" in pares[0]["criterio"]
+    assert re.search(r"a \d+,\d m de distância", pares[0]["criterio"])
 
     cliente.post(
         f"{URL}/{b['id']}/medidas",

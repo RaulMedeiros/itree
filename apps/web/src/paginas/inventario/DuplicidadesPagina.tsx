@@ -11,16 +11,24 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
-import { SeloEspecie, SeloLocalizacao, nomeEspecie } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
-import { formatarDataHora } from "../../util/formatos";
+import { cn } from "../../util/cn";
+import { nomeEspecie } from "../../componentes/selos";
+import { formatarCoordenada } from "../../util/formatos";
+import {
+  ROTULOS_CAMPO,
+  VALORES,
+  camposDiferentes,
+  rotuloLocalizacao,
+  type CampoFicha,
+} from "./duplicidades";
 import { invalidarCaminhos } from "../../util/cache";
 
-function Ficha({ a }: { a: ArvoreResumo }) {
+function Ficha({ a, diferentes }: { a: ArvoreResumo; diferentes: CampoFicha[] }) {
   return (
     <div className="flex-1 rounded-md border border-borda p-3">
       <Link
@@ -30,14 +38,25 @@ function Ficha({ a }: { a: ArvoreResumo }) {
       >
         {a.codigo}
       </Link>
-      <p className={a.especie ? "italic" : "text-texto-suave"}>{nomeEspecie(a)}</p>
-      <div className="mt-1 flex flex-wrap gap-1">
-        <SeloEspecie estado={a.especie_estado ?? "nao_identificada"} />
-        <SeloLocalizacao origem={a.localizacao_origem ?? ""} precisao={a.precisao_m} />
-      </div>
-      <p className="mt-1 text-xs text-texto-suave">
-        {a.endereco || "Sem endereço"} · cadastrada em {formatarDataHora(a.criado_em)}
-      </p>
+      <dl className="mt-2 flex flex-col gap-1 text-sm">
+        {(Object.keys(VALORES) as CampoFicha[]).map((c) => {
+          const difere = diferentes.includes(c);
+          return (
+            <div
+              key={c}
+              className={difere ? "rounded-sm bg-info-clara px-1.5 py-0.5" : "px-1.5 py-0.5"}
+            >
+              <dt className="inline text-xs text-texto-suave">{ROTULOS_CAMPO[c]}: </dt>
+              <dd className={cn("inline", difere && "font-medium")}>
+                <span className={c === "especie" && a.especie ? "italic" : undefined}>
+                  {VALORES[c](a)}
+                </span>
+                {difere && <span className="sr-only"> (difere do outro registro)</span>}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
     </div>
   );
 }
@@ -70,10 +89,13 @@ export function DuplicidadesPagina() {
               key={`${par.arvore_a.id}-${par.arvore_b.id}`}
               className="rounded-lg border border-borda bg-superficie p-4"
             >
-              <p className="mb-2 text-sm text-texto-suave">Critério: {par.criterio}</p>
+              <p className="mb-2 text-sm text-texto-suave">
+                {par.criterio.charAt(0).toUpperCase() + par.criterio.slice(1)}. Campos em azul
+                diferem entre os dois registros.
+              </p>
               <div className="flex flex-col gap-3 md:flex-row">
-                <Ficha a={par.arvore_a} />
-                <Ficha a={par.arvore_b} />
+                <Ficha a={par.arvore_a} diferentes={camposDiferentes(par.arvore_a, par.arvore_b)} />
+                <Ficha a={par.arvore_b} diferentes={camposDiferentes(par.arvore_a, par.arvore_b)} />
               </div>
               {podeDecidir && (
                 <div className="mt-3 flex gap-2">
@@ -90,7 +112,7 @@ export function DuplicidadesPagina() {
                   >
                     Não são a mesma árvore
                   </Botao>
-                  <Botao tamanho="pequeno" onClick={() => setFundindo(par)}>
+                  <Botao tamanho="pequeno" variante="secundario" onClick={() => setFundindo(par)}>
                     Fundir registros…
                   </Botao>
                 </div>
@@ -111,7 +133,7 @@ const CAMPOS = [
     rotulo: "Localização",
     valor: (a: ArvoreResumo) =>
       a.localizacao
-        ? `${a.localizacao.latitude.toFixed(6)}, ${a.localizacao.longitude.toFixed(6)} (${a.localizacao_origem})`
+        ? `${formatarCoordenada(a.localizacao.latitude)}, ${formatarCoordenada(a.localizacao.longitude)} (${rotuloLocalizacao(a)})`
         : "—",
   },
   { id: "endereco", rotulo: "Endereço", valor: (a: ArvoreResumo) => a.endereco || "—" },
@@ -223,6 +245,27 @@ function FusaoDialogo({ par, aoFechar }: { par: ParDuplicidade; aoFechar: () => 
           ))}
         </tbody>
       </table>
+      <section aria-label="Resumo da fusão" className="mb-4 rounded-md bg-fundo px-3 py-2 text-sm">
+        <p className="font-medium">O que acontece ao fundir</p>
+        <ul className="mt-1 list-disc pl-5 text-texto-suave">
+          <li>
+            {principal.codigo} permanece com{" "}
+            {daOutra.length
+              ? `os campos de ${outra.codigo} escolhidos acima (${daOutra
+                  .map((c) => CAMPOS.find((x) => x.id === c)?.rotulo.toLowerCase())
+                  .join(", ")}) e os demais próprios`
+              : "todos os seus próprios dados"}
+            .
+          </li>
+          <li>
+            {outra.codigo} fica marcado como fundido e deixa de aparecer entre as árvores ativas.
+          </li>
+          <li>
+            Medidas, identificadores, evidências e ocorrências de {outra.codigo} passam para{" "}
+            {principal.codigo}.
+          </li>
+        </ul>
+      </section>
       <Campo rotulo="Justificativa" obrigatorio>
         {(p) => <AreaTexto {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
       </Campo>

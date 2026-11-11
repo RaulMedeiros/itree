@@ -107,7 +107,7 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
           {consulta.data.data.map((ev) => (
             <li
               key={ev.id}
-              className="overflow-hidden rounded-lg border border-borda bg-superficie"
+              className="group overflow-hidden rounded-lg border border-borda bg-superficie"
             >
               <a
                 href={ev.url ?? undefined}
@@ -134,21 +134,26 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
               </span>
               <div className="flex items-start justify-between gap-2 p-2 text-xs">
                 <div className="min-w-0">
-                  <p className="truncate font-medium" title={ev.nome_original}>
+                  <p
+                    className="line-clamp-2 font-medium break-words"
+                    title={
+                      ev.descricao ? `${ev.descricao} (${ev.nome_original})` : ev.nome_original
+                    }
+                  >
                     {ev.descricao || ev.nome_original}
                   </p>
                   <p className="text-texto-suave">
-                    {ev.enviada_por_nome} · {formatarDataHora(ev.criado_em)}
+                    Enviada por {ev.enviada_por_nome} em {formatarDataHora(ev.criado_em)}
                   </p>
                   {ev.capturada_em && (
                     <p className="text-texto-suave">
-                      Arquivo de {formatarDataHora(ev.capturada_em)}
+                      Capturada em {formatarDataHora(ev.capturada_em)}
                     </p>
                   )}
                 </div>
                 {podeEnviar && (
                   <button
-                    className="rounded p-1 text-texto-suave hover:bg-perigo-clara hover:text-perigo"
+                    className="rounded p-1 text-texto-suave hover:bg-perigo-clara hover:text-perigo focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
                     aria-label={`Remover ${ev.nome_original}`}
                     onClick={() => setRemovendo(ev.id)}
                   >

@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
 
 import { cn } from "../util/cn";
@@ -29,4 +30,34 @@ export function Td({ className, ...props }: TdHTMLAttributes<HTMLTableCellElemen
 
 export function Linha({ className, ...props }: HTMLAttributes<HTMLTableRowElement>) {
   return <tr className={cn("last:[&>td]:border-b-0", className)} {...props} />;
+}
+
+/** Cabeçalho clicável: `direcao` indica a ordenação atual desta coluna (undefined = não ordenada). */
+export function ThOrdenavel({
+  children,
+  direcao,
+  aoOrdenar,
+  className,
+}: {
+  children: string;
+  direcao?: "asc" | "desc";
+  aoOrdenar: () => void;
+  className?: string;
+}) {
+  const Icone = direcao === "asc" ? ArrowUp : direcao === "desc" ? ArrowDown : ArrowUpDown;
+  return (
+    <Th
+      className={className}
+      aria-sort={direcao === "asc" ? "ascending" : direcao === "desc" ? "descending" : "none"}
+    >
+      <button
+        type="button"
+        onClick={aoOrdenar}
+        className="inline-flex items-center gap-1 font-semibold tracking-wide uppercase hover:text-texto"
+      >
+        {children}
+        <Icone className={cn("size-3.5", !direcao && "opacity-50")} aria-hidden />
+      </button>
+    </Th>
+  );
 }

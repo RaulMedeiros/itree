@@ -62,7 +62,7 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarData, formatarDataHora } from "../../util/formatos";
+import { formatarCoordenada, formatarData, formatarDataHora } from "../../util/formatos";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { invalidarCaminhos } from "../../util/cache";
@@ -164,9 +164,16 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
               </Botao>
             )}
             {podeExcluir && (
-              <Botao variante="secundario" onClick={() => setExcluindo(true)}>
-                <Trash2 /> Excluir
-              </Botao>
+              <>
+                <span aria-hidden className="mx-1 w-px self-stretch bg-borda" />
+                <Botao
+                  variante="fantasma"
+                  className="text-perigo hover:bg-perigo-clara"
+                  onClick={() => setExcluindo(true)}
+                >
+                  <Trash2 /> Excluir
+                </Botao>
+              </>
             )}
           </>
         }
@@ -254,7 +261,7 @@ function Item({ rotulo, children }: { rotulo: string; children: ReactNode }) {
 function Resumo({ arvore }: { arvore: Arvore }) {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      <section className="rounded-lg border border-borda bg-superficie p-4 lg:col-span-2">
+      <section className="self-start rounded-lg border border-borda bg-superficie p-4 lg:col-span-2">
         <h2 className="mb-3 font-semibold">Identificação e localização</h2>
         <dl className="grid grid-cols-2 gap-4">
           <Item rotulo="Espécie">
@@ -269,7 +276,8 @@ function Resumo({ arvore }: { arvore: Arvore }) {
           <Item rotulo="Localização">
             {arvore.localizacao ? (
               <span className="font-mono text-xs">
-                {arvore.localizacao.latitude.toFixed(6)}, {arvore.localizacao.longitude.toFixed(6)}
+                {formatarCoordenada(arvore.localizacao.latitude)},{" "}
+                {formatarCoordenada(arvore.localizacao.longitude)}
               </span>
             ) : (
               "Sem localização"
@@ -280,8 +288,11 @@ function Resumo({ arvore }: { arvore: Arvore }) {
                 precisao={arvore.precisao_m}
               />
             </div>
-            {!arvore.precisao_m && arvore.localizacao && (
-              <p className="mt-1 text-xs text-texto-suave">Precisão não informada pela origem.</p>
+            {arvore.localizacao && (
+              <p className="mt-1 text-xs text-texto-suave">
+                Graus decimais (WGS 84).
+                {!arvore.precisao_m && " Precisão não informada pela origem."}
+              </p>
             )}
           </Item>
           <Item rotulo="Endereço">{arvore.endereco || "—"}</Item>
@@ -343,6 +354,32 @@ function Resumo({ arvore }: { arvore: Arvore }) {
   );
 }
 
+/** Avisa que a tabela mostra só o que já foi validado, quando há inspeção aguardando revisão. */
+function AvisoInspecoesEmRevisao({ arvoreId }: { arvoreId: string }) {
+  const podeVer = usePermissao("inspecoes.ler");
+  const consulta = useInspecoesListar(
+    { arvore: arvoreId, estado: "em_revisao", tamanho: 20 },
+    { query: { enabled: podeVer } },
+  );
+  const pendentes = consulta.data?.data.results ?? [];
+  if (!podeVer || pendentes.length === 0) return null;
+  return (
+    <p role="status" className="rounded-md bg-info-clara px-3 py-2 text-sm text-info">
+      Há {pendentes.length === 1 ? "1 inspeção" : `${pendentes.length} inspeções`} em revisão com
+      medidas ainda não aplicadas ao cadastro:{" "}
+      {pendentes.map((i, n) => (
+        <span key={i.id}>
+          {n > 0 && ", "}
+          <Link to="/inspecoes/$id" params={{ id: i.id }} className="font-medium underline">
+            {i.codigo}
+          </Link>
+        </span>
+      ))}
+      .
+    </p>
+  );
+}
+
 function Medidas({
   arvore,
   podeMedir,
@@ -354,6 +391,7 @@ function Medidas({
 }) {
   return (
     <div className="flex flex-col gap-3">
+      <AvisoInspecoesEmRevisao arvoreId={arvore.id} />
       {podeMedir && (
         <div>
           <Botao variante="secundario" onClick={aoMedir}>
@@ -372,7 +410,7 @@ function Medidas({
               <Th>Origem</Th>
               <Th>Método</Th>
               <Th>Data</Th>
-              <Th>Responsável</Th>
+              <Th>Fonte / responsável</Th>
             </tr>
           </thead>
           <tbody>
@@ -523,7 +561,8 @@ function SugestoesIA({ arvore }: { arvore: Arvore }) {
       ) : (
         itens.map((s) => {
           const alternativas = (s.alternativas ?? []) as { especie_id: string; nome: string }[];
-          const escolhida = escolhas[s.id] ?? alternativas[0]?.especie_id ?? "";
+          // IA sugere, revisor decide: nada vem pré-selecionado.
+          const escolhida = escolhas[s.id] ?? "";
           return (
             <section
               key={s.id}
@@ -553,6 +592,23 @@ function SugestoesIA({ arvore }: { arvore: Arvore }) {
                 </p>
               )}
               {s.orientacao && <p className="mt-1 text-texto-suave">Orientação: {s.orientacao}</p>}
+              <p className="mt-1 text-texto-suave">
+                {s.inspecao ? (
+                  <>
+                    Base da inferência: fotos da{" "}
+                    <Link
+                      to="/inspecoes/$id"
+                      params={{ id: s.inspecao }}
+                      className="text-marca-escura underline"
+                    >
+                      inspeção analisada
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  "Base da inferência: nenhuma inspeção vinculada a esta sugestão."
+                )}
+              </p>
               <p className="mt-2">
                 Alternativas (em ordem):{" "}
                 {alternativas.length ? alternativas.map((a) => a.nome).join(", ") : "nenhuma"}
@@ -573,6 +629,7 @@ function SugestoesIA({ arvore }: { arvore: Arvore }) {
                     onChange={(e) => setEscolhas({ ...escolhas, [s.id]: e.target.value })}
                     className="max-w-72"
                   >
+                    <option value="">Escolher espécie…</option>
                     {alternativas.map((a) => (
                       <option key={a.especie_id} value={a.especie_id}>
                         {a.nome}

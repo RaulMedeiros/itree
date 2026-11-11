@@ -75,7 +75,8 @@ def pares_suspeitos(
         linhas = cursor.fetchall()
     pares = []
     for id_a, id_b, distancia, mesma_especie in linhas:
-        criterios = [f"a {distancia:.1f} m de distância"]
+        # Vírgula decimal: o texto vai direto para a tela (pt-BR).
+        criterios = [f"a {distancia:.1f}".replace(".", ",") + " m de distância"]
         criterios.append(
             "mesma espécie" if mesma_especie else "espécie não identificada em ao menos uma"
         )

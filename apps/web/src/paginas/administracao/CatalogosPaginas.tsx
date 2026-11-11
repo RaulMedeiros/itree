@@ -366,19 +366,24 @@ function ReferenciasEspecie({ especie }: { especie: Especie }) {
     },
   });
   const [tom, rotulo] = TONS_REFERENCIA[especie.referencias_situacao ?? "nao_consultada"];
+  const verbo =
+    especie.referencias_situacao === "nao_consultada" || !especie.referencias_situacao
+      ? "Consultar"
+      : "Atualizar";
   return (
     <div className="flex items-center gap-2">
       <span title={especie.referencias_mensagem || undefined}>
         <Selo tom={tom}>{rotulo}</Selo>
       </span>
       <Botao
-        variante="fantasma"
+        variante="secundario"
         tamanho="pequeno"
         disabled={atualizar.isPending}
-        aria-label={`Atualizar referências de ${especie.nome_cientifico}`}
+        aria-label={`${verbo} referências de ${especie.nome_cientifico}`}
         onClick={() => atualizar.mutate({ id: especie.id })}
       >
         <RefreshCw className={atualizar.isPending ? "animate-spin" : ""} />
+        {verbo}
       </Botao>
     </div>
   );

@@ -17,7 +17,7 @@ interface ComImagem {
 function rotuloOrigem(nativa: boolean | null | undefined) {
   if (nativa === true)
     return { texto: "Nativa do Brasil", classe: "bg-sucesso-clara text-sucesso" };
-  if (nativa === false) return { texto: "Exótica", classe: "bg-atencao-clara text-atencao" };
+  if (nativa === false) return { texto: "Exótica", classe: "bg-neutro-clara text-neutro" };
   return { texto: "Origem não informada", classe: "bg-neutro-clara text-neutro" };
 }
 
