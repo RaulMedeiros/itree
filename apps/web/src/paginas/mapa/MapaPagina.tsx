@@ -266,6 +266,16 @@ export function MapaPagina() {
   const modoCor: ModoCor = busca.cor === "origem" ? "origem" : "condicao";
   const mostrarArvores = busca.arvores !== "0";
   const mostrarOcorrencias = podeOcorrencias && busca.ocorrencias !== "0";
+  // Filtros fora do padrão nas camadas visíveis: mostrados no grupo "Filtros" recolhido (R2-06).
+  const filtrosAtivos =
+    (mostrarArvores
+      ? [
+          busca.condicao_aparente,
+          busca.especie_estado,
+          busca.sem_inspecao_dias,
+          busca.localizacao_origem,
+        ].filter(Boolean).length
+      : 0) + (mostrarOcorrencias && busca.estado === "todas" ? 1 : 0);
   const mostrarBairros = busca.bairros !== "0";
   const mostrarAreasVerdes = podeMapa && busca.areas_verdes === "1";
   const mostrarArborizacao = podeMapa && busca.arborizacao_entorno === "1";
@@ -1053,85 +1063,96 @@ export function MapaPagina() {
                         <option value="origem">Origem da localização</option>
                       </Selecao>
                     </label>
-                    <Selecao
-                      aria-label="Condição aparente"
-                      value={busca.condicao_aparente ?? ""}
-                      onChange={(e) =>
-                        atualizarBusca({
-                          condicao_aparente: (e.target.value ||
-                            undefined) as BuscaMapa["condicao_aparente"],
-                        })
-                      }
-                    >
-                      <option value="">Qualquer condição</option>
-                      {(["boa", "regular", "ruim", "morta"] as const).map((v) => (
-                        <option key={v} value={v}>
-                          {ROTULOS_CONDICAO[v]}
-                        </option>
-                      ))}
-                      <option value="sem">Não avaliada</option>
-                    </Selecao>
-                    <Selecao
-                      aria-label="Identificação da espécie"
-                      value={busca.especie_estado ?? ""}
-                      onChange={(e) =>
-                        atualizarBusca({
-                          especie_estado: (e.target.value || undefined) as EstadoEspecieEnum,
-                        })
-                      }
-                    >
-                      <option value="">Qualquer identificação</option>
-                      {Object.entries(ROTULOS_ESTADO_ESPECIE).map(([v, r]) => (
-                        <option key={v} value={v}>
-                          {r}
-                        </option>
-                      ))}
-                    </Selecao>
-                    <Selecao
-                      aria-label="Inspeção"
-                      value={busca.sem_inspecao_dias ? String(busca.sem_inspecao_dias) : ""}
-                      onChange={(e) =>
-                        atualizarBusca({
-                          sem_inspecao_dias: e.target.value ? Number(e.target.value) : undefined,
-                        })
-                      }
-                    >
-                      <option value="">Qualquer data de inspeção</option>
-                      <option value="365">Sem inspeção há 1 ano</option>
-                      <option value="730">Sem inspeção há 2 anos</option>
-                    </Selecao>
-                    <Selecao
-                      aria-label="Origem da localização"
-                      value={busca.localizacao_origem ?? ""}
-                      onChange={(e) =>
-                        atualizarBusca({
-                          localizacao_origem: (e.target.value ||
-                            undefined) as OrigemLocalizacaoEnum,
-                        })
-                      }
-                    >
-                      <option value="">Qualquer origem de localização</option>
-                      {Object.entries(ROTULOS_ORIGEM_LOCALIZACAO).map(([v, r]) => (
-                        <option key={v} value={v}>
-                          {r}
-                        </option>
-                      ))}
-                    </Selecao>
                   </Grupo>
                 )}
 
-                {mostrarOcorrencias && (
-                  <Grupo titulo="Ocorrências" aberto>
-                    <Selecao
-                      aria-label="Estado das ocorrências"
-                      value={busca.estado ?? "abertas"}
-                      onChange={(e) =>
-                        atualizarBusca({ estado: e.target.value as BuscaMapa["estado"] })
-                      }
-                    >
-                      <option value="abertas">Em aberto</option>
-                      <option value="todas">Todas</option>
-                    </Selecao>
+                {(mostrarArvores || mostrarOcorrencias) && (
+                  <Grupo
+                    titulo="Filtros"
+                    resumo={filtrosAtivos > 0 ? `${plural(filtrosAtivos, "ativo")}` : undefined}
+                  >
+                    {mostrarArvores && (
+                      <>
+                        <Selecao
+                          aria-label="Condição aparente"
+                          value={busca.condicao_aparente ?? ""}
+                          onChange={(e) =>
+                            atualizarBusca({
+                              condicao_aparente: (e.target.value ||
+                                undefined) as BuscaMapa["condicao_aparente"],
+                            })
+                          }
+                        >
+                          <option value="">Qualquer condição</option>
+                          {(["boa", "regular", "ruim", "morta"] as const).map((v) => (
+                            <option key={v} value={v}>
+                              {ROTULOS_CONDICAO[v]}
+                            </option>
+                          ))}
+                          <option value="sem">Não avaliada</option>
+                        </Selecao>
+                        <Selecao
+                          aria-label="Identificação da espécie"
+                          value={busca.especie_estado ?? ""}
+                          onChange={(e) =>
+                            atualizarBusca({
+                              especie_estado: (e.target.value || undefined) as EstadoEspecieEnum,
+                            })
+                          }
+                        >
+                          <option value="">Qualquer identificação</option>
+                          {Object.entries(ROTULOS_ESTADO_ESPECIE).map(([v, r]) => (
+                            <option key={v} value={v}>
+                              {r}
+                            </option>
+                          ))}
+                        </Selecao>
+                        <Selecao
+                          aria-label="Inspeção"
+                          value={busca.sem_inspecao_dias ? String(busca.sem_inspecao_dias) : ""}
+                          onChange={(e) =>
+                            atualizarBusca({
+                              sem_inspecao_dias: e.target.value
+                                ? Number(e.target.value)
+                                : undefined,
+                            })
+                          }
+                        >
+                          <option value="">Qualquer data de inspeção</option>
+                          <option value="365">Sem inspeção há 1 ano</option>
+                          <option value="730">Sem inspeção há 2 anos</option>
+                        </Selecao>
+                        <Selecao
+                          aria-label="Origem da localização"
+                          value={busca.localizacao_origem ?? ""}
+                          onChange={(e) =>
+                            atualizarBusca({
+                              localizacao_origem: (e.target.value ||
+                                undefined) as OrigemLocalizacaoEnum,
+                            })
+                          }
+                        >
+                          <option value="">Qualquer origem de localização</option>
+                          {Object.entries(ROTULOS_ORIGEM_LOCALIZACAO).map(([v, r]) => (
+                            <option key={v} value={v}>
+                              {r}
+                            </option>
+                          ))}
+                        </Selecao>
+                      </>
+                    )}
+                    {mostrarOcorrencias && (
+                      <Selecao
+                        aria-label="Estado das ocorrências"
+                        value={busca.estado ?? "abertas"}
+                        onChange={(e) =>
+                          atualizarBusca({ estado: e.target.value as BuscaMapa["estado"] })
+                        }
+                      >
+                        <option value="abertas">Em aberto</option>
+                        <option value="todas">Todas</option>
+                      </Selecao>
+                    )}
                   </Grupo>
                 )}
 
@@ -1358,16 +1379,26 @@ export function MapaPagina() {
 function Grupo({
   titulo,
   aberto,
+  resumo,
   children,
 }: {
   titulo: string;
   aberto?: boolean;
+  /** Texto curto ao lado do título, visível com o grupo recolhido (ex.: "2 ativos"). */
+  resumo?: string;
   children: ReactNode;
 }) {
   return (
     <details open={aberto} className="group border-b border-borda py-2 last:border-b-0">
       <summary className="flex cursor-pointer list-none items-center justify-between py-1 text-xs font-semibold tracking-wide text-texto-suave uppercase">
-        {titulo}
+        <span className="flex items-center gap-2">
+          {titulo}
+          {resumo && (
+            <span className="rounded-full bg-marca/15 px-2 py-0.5 text-[11px] font-medium tracking-normal text-marca normal-case">
+              {resumo}
+            </span>
+          )}
+        </span>
         <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
       </summary>
       <div className="mt-1.5 flex flex-col gap-2">{children}</div>

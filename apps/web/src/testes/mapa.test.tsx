@@ -628,3 +628,26 @@ describe("áreas verdes (praças, parques e unidades de conservação)", () => {
     );
   });
 });
+
+describe("painel de camadas: grupo Filtros (R2-06)", () => {
+  it("começa recolhido e sem contagem quando nenhum filtro está ativo", async () => {
+    await abrirMapa();
+    const grupo = (await screen.findByText("Filtros")).closest("details")!;
+    expect(grupo).not.toHaveAttribute("open");
+    expect(within(grupo).queryByText(/ativo/)).not.toBeInTheDocument();
+  });
+
+  it("mostra no título do grupo recolhido quantos filtros estão ativos", async () => {
+    await abrirMapa("/mapa?condicao_aparente=ruim&sem_inspecao_dias=365");
+    const grupo = (await screen.findByText("Filtros")).closest("details")!;
+    expect(grupo).not.toHaveAttribute("open");
+    expect(within(grupo).getByText("2 ativos")).toBeInTheDocument();
+  });
+
+  it("guarda os seletores de filtro no grupo, fora de Camadas e Árvores", async () => {
+    await abrirMapa();
+    const grupo = (await screen.findByText("Filtros")).closest("details")!;
+    expect(within(grupo).getByLabelText("Condição aparente")).toBeInTheDocument();
+    expect(within(grupo).getByLabelText("Identificação da espécie")).toBeInTheDocument();
+  });
+});

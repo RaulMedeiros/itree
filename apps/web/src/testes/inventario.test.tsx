@@ -584,7 +584,9 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
 
   it("formata coordenadas em pt-BR e separa a ação de excluir", async () => {
     await abrir("/inventario/arvores/a-1");
-    expect(await screen.findByText("lat \u22123,746602 \u00b7 lon \u221238,540452")).toBeInTheDocument();
+    expect(
+      await screen.findByText("lat \u22123,746602 \u00b7 lon \u221238,540452"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Excluir/ }).className).toContain("text-perigo");
   });
 

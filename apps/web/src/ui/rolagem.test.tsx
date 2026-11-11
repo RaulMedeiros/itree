@@ -18,7 +18,11 @@ describe("AreaRolavel", () => {
         <p>filtros</p>
       </AreaRolavel>,
     );
-    expect(screen.getByTestId("mais-conteudo")).toHaveTextContent("Role para ver mais");
+    const aviso = screen.getByTestId("mais-conteudo");
+    expect(aviso).toHaveTextContent("Role para ver mais");
+    // A faixa fica fora do fluxo de rolagem e não se sobrepõe ao conteúdo (R2-06).
+    expect(aviso.className).not.toMatch(/\babsolute\b/);
+    expect(aviso.parentElement?.firstElementChild).not.toContainElement(aviso);
     medidas(proto, 0, 0);
   });
 
