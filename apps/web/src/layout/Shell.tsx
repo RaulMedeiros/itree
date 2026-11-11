@@ -10,6 +10,7 @@ import { config } from "../config";
 import { Selo } from "../ui/selo";
 import { BuscaGlobal } from "./BuscaGlobal";
 import { FontesIndicador } from "./FontesIndicador";
+import { Sino } from "./Sino";
 
 export function Shell() {
   const eu = useUsuario();
@@ -89,6 +90,7 @@ function Cabecalho() {
       <BuscaGlobal />
       <div className="flex items-center gap-2">
         <FontesIndicador />
+        <Sino />
         <Menu.Root>
           <Menu.Trigger className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-fundo">
             <span className="flex size-7 items-center justify-center rounded-full bg-marca-clara text-xs font-semibold text-marca-escura">

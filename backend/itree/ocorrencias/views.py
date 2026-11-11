@@ -1,6 +1,7 @@
 import re
 
 import pghistory
+from django.db import transaction
 from django.db.models import Case, F, IntegerField, Q, When
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
@@ -14,6 +15,7 @@ from itree.auditoria.views import EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo, ponto_no_escopo, requer
 from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
+from itree.notificacoes import servicos as notificacoes
 
 from .models import (
     ESTADOS_FINAIS,
@@ -288,7 +290,10 @@ class OcorrenciaViewSet(
         dados.is_valid(raise_exception=True)
         if ocorrencia.risco_confirmado:
             raise ValidationError("O risco desta ocorrência já foi registrado.")
-        with pghistory.context(registro_profissional=request.user.registro_profissional):
+        with (
+            transaction.atomic(),
+            pghistory.context(registro_profissional=request.user.registro_profissional),
+        ):
             ocorrencia.risco_confirmado = True
             ocorrencia.risco_descricao = dados.validated_data["descricao"]
             ocorrencia.risco_responsavel = request.user
@@ -302,6 +307,7 @@ class OcorrenciaViewSet(
                     "atualizado_em",
                 ]
             )
+            notificacoes.risco_confirmado(ocorrencia, autor=request.user)
         return self._responder(request)
 
     @extend_schema(

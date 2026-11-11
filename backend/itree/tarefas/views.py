@@ -16,6 +16,7 @@ from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
+from itree.notificacoes import servicos as notificacoes
 from itree.territorio.models import Territorio
 
 from .acesso import pode_atuar
@@ -137,7 +138,9 @@ class TarefaViewSet(
         if not ponto_no_escopo(self.request.user, geom):
             raise ValidationError({"alvo": ["O alvo está fora do seu escopo territorial."]})
         _verificar_escopo_responsavel(geom, serializer.validated_data.get("responsavel"))
-        serializer.save(criada_por=self.request.user)
+        with transaction.atomic():
+            tarefa = serializer.save(criada_por=self.request.user)
+            notificacoes.tarefa_atribuida(tarefa, autor=self.request.user)
 
     def perform_update(self, serializer):
         tarefa = serializer.instance
@@ -145,8 +148,14 @@ class TarefaViewSet(
             raise ValidationError("Tarefas concluídas ou canceladas não podem ser alteradas.")
         if "responsavel" in serializer.validated_data:
             _verificar_escopo_responsavel(tarefa.geom, serializer.validated_data["responsavel"])
-        with pghistory.context(motivo=self.request.data.get("motivo") or None):
-            serializer.save()
+        with (
+            transaction.atomic(),
+            pghistory.context(motivo=self.request.data.get("motivo") or None),
+        ):
+            anterior = (tarefa.equipe_id, tarefa.responsavel_id)
+            tarefa = serializer.save()
+            if (tarefa.equipe_id, tarefa.responsavel_id) != anterior:
+                notificacoes.tarefa_atribuida(tarefa, autor=self.request.user)
 
     @extend_schema(
         operation_id="tarefas_transicao",
@@ -219,7 +228,7 @@ class TarefaViewSet(
                 ):
                     fora += 1
                     continue
-                Tarefa.objects.create(
+                nova = Tarefa.objects.create(
                     tipo=TipoTarefa.INSPECAO_ARVORE,
                     arvore=arvore,
                     geom=arvore.geom,
@@ -230,6 +239,7 @@ class TarefaViewSet(
                     descricao=v.get("descricao", ""),
                     criada_por=request.user,
                 )
+                notificacoes.tarefa_atribuida(nova, autor=request.user)
                 criadas += 1
         return Response(
             {

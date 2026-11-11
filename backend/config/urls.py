@@ -15,6 +15,7 @@ from itree.inspecoes.views import InspecaoViewSet
 from itree.inventario.views import ArvoreViewSet, EspecieViewSet, ImportacaoViewSet
 from itree.mapa import selecao as mapa_selecao
 from itree.mapa import views as mapa
+from itree.notificacoes.views import NotificacaoViewSet
 from itree.ocorrencias.views import OcorrenciaViewSet, TipoOcorrenciaViewSet
 from itree.qualidade.views import InferenciaViewSet, pendencias
 from itree.relatorios import views as relatorios
@@ -36,6 +37,7 @@ roteador.register("evidencias", EvidenciaViewSet, basename="evidencia")
 roteador.register("inspecoes", InspecaoViewSet, basename="inspecao")
 roteador.register("tarefas", TarefaViewSet, basename="tarefa")
 roteador.register("alertas", AlertaViewSet, basename="alerta")
+roteador.register("notificacoes", NotificacaoViewSet, basename="notificacao")
 roteador.register("inferencias", InferenciaViewSet, basename="inferencia")
 
 api_v1 = [
