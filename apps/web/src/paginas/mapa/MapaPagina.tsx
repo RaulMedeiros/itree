@@ -96,7 +96,12 @@ import { Botao } from "../../ui/botao";
 import { Selecao } from "../../ui/campos";
 import { useTituloDocumento } from "../../util/titulo";
 import { Carregando } from "../../ui/estados";
-import { formatarData, formatarDataHora, plural } from "../../util/formatos";
+import {
+  formatarData,
+  formatarDataHora,
+  formatarPontoGeografico,
+  plural,
+} from "../../util/formatos";
 import { BarraSelecaoArea, PainelSelecaoArea } from "./SelecaoArea";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
@@ -1305,7 +1310,7 @@ export function MapaPagina() {
             className="pointer-events-none absolute right-14 bottom-2 z-10 rounded bg-superficie/90 px-2 py-0.5 font-mono text-[11px] text-texto-suave shadow-sm"
             aria-hidden
           >
-            {cursor.lat.toFixed(5)}, {cursor.lon.toFixed(5)}
+            {formatarPontoGeografico(cursor.lat, cursor.lon)}
           </div>
         )}
         {dica && (

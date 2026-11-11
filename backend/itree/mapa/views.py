@@ -247,6 +247,15 @@ ResultadoBusca = inline_serializer(
 COORDENADA = re.compile(r"^\s*(-?\d{1,3}(?:[.,]\d+)?)\s*[,; ]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*$")
 
 
+def _rotulo_coordenada(lat: float, lon: float) -> str:
+    """Mesmo formato da interface web: "lat −3,746602 · lon −38,540452"."""
+
+    def parte(v: float) -> str:
+        return f"{v:.6f}".replace(".", ",").replace("-", "\u2212")
+
+    return f"lat {parte(lat)} \u00b7 lon {parte(lon)}"
+
+
 @extend_schema(
     operation_id="mapa_busca",
     parameters=[OpenApiParameter("q", str, required=True)],
@@ -268,7 +277,7 @@ def busca(request: Request):
                 {
                     "tipo": "coordenada",
                     "id": None,
-                    "rotulo": f"{lat:.6f}, {lon:.6f}",
+                    "rotulo": _rotulo_coordenada(lat, lon),
                     "descricao": "Coordenada (latitude, longitude)",
                     "localizacao": {"longitude": lon, "latitude": lat},
                     "limites": None,

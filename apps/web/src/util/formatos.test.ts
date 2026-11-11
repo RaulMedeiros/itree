@@ -6,6 +6,7 @@ import {
   descreverPrazo,
   descreverVariacao,
   diasDesde,
+  formatarPontoGeografico,
   prazoRestante,
 } from "./formatos";
 
@@ -79,5 +80,14 @@ describe("descreverVariacao (R2-22)", () => {
   it("usa o percentual a partir de 20", () => {
     expect(descreverVariacao(30, 20).texto).toBe("+50%");
     expect(descreverVariacao(90, 120).texto).toBe("−25%");
+  });
+});
+
+describe("formatarPontoGeografico", () => {
+  it("usa um só formato, com rótulos e sem vírgula separadora", () => {
+    expect(formatarPontoGeografico(-3.746602, -38.540452)).toBe(
+      "lat \u22123,746602 \u00b7 lon \u221238,540452",
+    );
+    expect(formatarPontoGeografico(3.5, 38)).toBe("lat 3,500000 \u00b7 lon 38,000000");
   });
 });

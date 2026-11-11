@@ -35,7 +35,12 @@ import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { cn } from "../../util/cn";
 import { invalidarCaminhos } from "../../util/cache";
-import { formatarData, formatarDataHora, plural } from "../../util/formatos";
+import {
+  formatarData,
+  formatarDataHora,
+  formatarPontoGeografico,
+  plural,
+} from "../../util/formatos";
 import { compararMedidas, descreverDiferenca, descreverMedidaAnterior } from "./medidas";
 
 const ROTULOS_APLICAVEL: Record<string, string> = {
@@ -240,7 +245,7 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                 i.localizacao ? (
                   <>
                     <span className="font-mono text-xs">
-                      {i.localizacao.latitude.toFixed(6)}, {i.localizacao.longitude.toFixed(6)}
+                      {formatarPontoGeografico(i.localizacao.latitude, i.localizacao.longitude)}
                     </span>
                     <br />
                     <SeloLocalizacao origem="gps_campo" precisao={i.precisao_m} />
@@ -253,7 +258,7 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                 a.localizacao ? (
                   <>
                     <span className="font-mono text-xs">
-                      {a.localizacao.latitude.toFixed(6)}, {a.localizacao.longitude.toFixed(6)}
+                      {formatarPontoGeografico(a.localizacao.latitude, a.localizacao.longitude)}
                     </span>
                     <br />
                     <SeloLocalizacao origem={a.localizacao_origem ?? ""} precisao={a.precisao_m} />

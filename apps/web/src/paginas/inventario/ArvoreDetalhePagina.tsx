@@ -66,7 +66,12 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarCoordenada, formatarData, formatarDataHora, plural } from "../../util/formatos";
+import {
+  formatarData,
+  formatarDataHora,
+  formatarPontoGeografico,
+  plural,
+} from "../../util/formatos";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { invalidarCaminhos } from "../../util/cache";
@@ -288,8 +293,7 @@ function Resumo({ arvore }: { arvore: Arvore }) {
           <Item rotulo="Localização">
             {arvore.localizacao ? (
               <span className="font-mono text-xs">
-                {formatarCoordenada(arvore.localizacao.latitude)},{" "}
-                {formatarCoordenada(arvore.localizacao.longitude)}
+                {formatarPontoGeografico(arvore.localizacao.latitude, arvore.localizacao.longitude)}
               </span>
             ) : (
               "Sem localização"
