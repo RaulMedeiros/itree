@@ -87,7 +87,7 @@ export function MiniMapaArvore({ arvore }: { arvore: ArvoreNoMapa }) {
         somenteLeitura
         aoCarregar={aoCarregar}
       />
-      <ul className="absolute bottom-2 left-2 flex flex-wrap items-center gap-1.5 text-xs">
+      <ul className="absolute top-2 left-2 flex flex-wrap items-center gap-1.5 text-xs">
         <li className="inline-flex items-center gap-1.5 rounded-full bg-superficie/95 px-2 py-0.5 shadow-sm">
           <span
             aria-hidden

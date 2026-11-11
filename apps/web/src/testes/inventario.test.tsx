@@ -564,6 +564,13 @@ describe("medidas pendentes na ficha (C-16)", () => {
 });
 
 describe("ficha da árvore (C-15, C-17, C-18)", () => {
+  it("põe os selos do mini-mapa no canto superior, longe da atribuição do OpenStreetMap", async () => {
+    await abrir("/inventario/arvores/a-1");
+    const selos = (await screen.findByText("Ruim", { selector: "li" })).closest("ul")!;
+    expect(selos).toHaveClass("top-2", "left-2");
+    expect(selos).not.toHaveClass("bottom-2");
+  });
+
   it('tem só as migalhas para voltar, sem o link "← Árvores" repetido', async () => {
     await abrir("/inventario/arvores/a-1");
     const migalhas = await screen.findByRole("navigation", { name: "Migalhas" });
