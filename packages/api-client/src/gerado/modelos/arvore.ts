@@ -5,6 +5,7 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { AreaVerdeResumo } from './areaVerdeResumo';
 import type { ArvoreLocalizacaoOrigem } from './arvoreLocalizacaoOrigem';
 import type { ArvoreLote } from './arvoreLote';
 import type { EspecieCartao } from './especieCartao';
@@ -55,6 +56,7 @@ export interface Arvore {
   readonly criado_em: string;
   readonly atualizado_em: string;
   readonly especie_cartao: EspecieCartao | null;
+  readonly em_area_verde: AreaVerdeResumo | null;
   readonly identificadores: readonly IdentificadorExterno[];
   readonly medidas_atuais: readonly Medida[];
   /** @nullable */

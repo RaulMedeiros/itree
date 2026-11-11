@@ -5,7 +5,12 @@
  * novo, a compilação falha aqui até o rótulo ser adicionado. Isso mantém os
  * termos idênticos em web, app e API (specs/README, "Linguagem obrigatória").
  */
-import type { PapelEnum, PermissaoEnum, TipoTerritorioEnum } from "@itree/api-client";
+import type {
+  PapelEnum,
+  PermissaoEnum,
+  TipoAreaVerdeEnum,
+  TipoTerritorioEnum,
+} from "@itree/api-client";
 
 export const ROTULOS_PAPEL: Record<PapelEnum, string> = {
   gestor: "Gestor municipal",
@@ -57,6 +62,12 @@ export const ROTULOS_TIPO_TERRITORIO: Record<TipoTerritorioEnum, string> = {
   municipio: "Município",
   regional: "Regional",
   bairro: "Bairro",
+};
+
+export const ROTULOS_TIPO_AREA_VERDE: Record<TipoAreaVerdeEnum, string> = {
+  praca: "Praça",
+  parque: "Parque urbano",
+  unidade_conservacao: "Unidade de conservação",
 };
 
 export const ROTULOS_ACAO_AUDITORIA: Record<string, string> = {

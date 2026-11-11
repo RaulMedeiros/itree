@@ -59,6 +59,11 @@ Pontos do contexto:
   e o horário da detecção, e a decisão é sempre humana (W-08).
 - **Território.** Bairros e limites municipais entram por importação
   (`importar_territorios`), com fonte e data de referência registradas.
+- **Áreas verdes.** Praças, parques urbanos e unidades de conservação entram
+  pelo comando `importar_areas_verdes`, a partir da API do Fortaleza em Mapas
+  (mapas 99, 86 e 737), com fonte, licença, data de referência e data de
+  ingestão. São camada de contexto: não alteram o inventário. A ficha da árvore
+  informa a área verde que a contém.
 
 ---
 
@@ -165,6 +170,7 @@ flowchart TB
         subgraph dominio["Domínio"]
             direction TB
             territorio["<b>territorio</b><br/>Municípios e bairros importados"]:::comp
+            areas_verdes["<b>areas_verdes</b><br/>Praças, parques e unidades<br/>de conservação importados"]:::comp
             contas["<b>contas</b><br/>Usuários, papéis, escopos, equipes"]:::comp
             inventario["<b>inventario</b><br/>Árvores, espécies, medidas, proveniência;<br/>importação em lote, duplicidades e fusão"]:::comp
             evidencias["<b>evidencias</b><br/>Fotos/documentos via URL pré-assinada"]:::comp

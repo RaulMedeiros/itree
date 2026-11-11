@@ -5,12 +5,14 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { CamadasAreasVerdesItem } from './camadasAreasVerdesItem';
 import type { CamadasArvores } from './camadasArvores';
 import type { CamadasOcorrencias } from './camadasOcorrencias';
 import type { CamadasTerritoriosItem } from './camadasTerritoriosItem';
 
 export interface Camadas {
   territorios: CamadasTerritoriosItem[];
+  areas_verdes: CamadasAreasVerdesItem[];
   /** @nullable */
   arvores: CamadasArvores;
   /** @nullable */

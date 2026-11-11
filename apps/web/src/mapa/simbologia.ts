@@ -45,6 +45,22 @@ export const COR_TAREFA_ATRASADA = "#c92a2a";
 export const COR_ALERTA = "#7048e8";
 export const COR_SELECAO = "#0b7285";
 
+/**
+ * Áreas verdes (praças, parques, unidades de conservação): camada de contexto,
+ * translúcida e abaixo das árvores. As cores são deliberadamente diferentes da
+ * cor "Boa" das árvores (#2f9e44): oliva, verde-azulado e musgo escuro, com
+ * preenchimento de baixa opacidade. Sobre o mapa base claro, o preenchimento
+ * fica a ΔE (CIE76) ≈ 58-60 da cor "Boa" e o contorno a ≥ 33. As unidades de
+ * conservação ainda têm contorno tracejado, para não depender só da cor.
+ */
+export const CORES_AREA_VERDE: Record<string, string> = {
+  praca: "#8a9a2b",
+  parque: "#1f8a70",
+  unidade_conservacao: "#4b6b3a",
+};
+export const OPACIDADE_AREA_VERDE = 0.22;
+export const OPACIDADE_AREA_VERDE_UC = 0.14;
+
 export type ModoCor = "condicao" | "origem";
 
 const match = (
