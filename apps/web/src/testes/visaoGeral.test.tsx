@@ -257,3 +257,67 @@ describe("visão geral: cartões enxutos e sem repetição (R2-02, R2-03)", () =
     }
   });
 });
+
+describe("visão geral: bairros que pedem atenção (G-02)", () => {
+  const ranking = {
+    titulo: "Bairros que pedem atenção",
+    definicao: "Os 5 bairros do seu escopo com maior índice.",
+    formula: "10 × risco + 5 × atrasadas + 2 × ruins ou mortas + 1 × sem inspeção",
+    itens: [
+      {
+        id: "b-1",
+        nome: "Meireles",
+        indice: 19,
+        componentes: [
+          { id: "risco_confirmado", rotulo: "Risco confirmado", quantidade: 1, peso: 10 },
+          { id: "atrasadas", rotulo: "Ocorrências atrasadas", quantidade: 1, peso: 5 },
+          { id: "ruins_ou_mortas", rotulo: "Árvores ruins ou mortas", quantidade: 2, peso: 2 },
+          { id: "sem_inspecao", rotulo: "Sem inspeção há 12 meses", quantidade: 0, peso: 1 },
+        ],
+        link: { pagina: "/mapa", filtros: { destaque: "b-1" } },
+      },
+      {
+        id: "b-2",
+        nome: "Aldeota",
+        indice: 3,
+        componentes: [
+          { id: "risco_confirmado", rotulo: "Risco confirmado", quantidade: 0, peso: 10 },
+          { id: "atrasadas", rotulo: "Ocorrências atrasadas", quantidade: 0, peso: 5 },
+          { id: "ruins_ou_mortas", rotulo: "Árvores ruins ou mortas", quantidade: 0, peso: 2 },
+          { id: "sem_inspecao", rotulo: "Sem inspeção há 12 meses", quantidade: 3, peso: 1 },
+        ],
+        link: { pagina: "/mapa", filtros: { destaque: "b-2" } },
+      },
+    ],
+  };
+
+  it("lista os bairros na ordem do servidor, com cada componente e o índice", async () => {
+    await abrirComPainel(painel({ bairros_atencao: ranking }));
+    const tabela = await screen.findByRole("table");
+    const linhas = within(tabela).getAllByRole("row").slice(1);
+    expect(linhas).toHaveLength(2);
+    const [meireles, aldeota] = linhas.map((l) =>
+      within(l)
+        .getAllByRole("cell")
+        .map((c) => c.textContent),
+    );
+    expect(meireles).toEqual(["1.Meireles", "1", "1", "2", "0", "19"]);
+    expect(aldeota?.[0]).toBe("2.Aldeota");
+    expect(within(tabela).getByRole("columnheader", { name: "Risco confirmado" })).toBeVisible();
+  });
+
+  it("cada bairro abre o mapa com o bairro em destaque e a fórmula fica em “Como é calculado”", async () => {
+    await abrirComPainel(painel({ bairros_atencao: ranking }));
+    const link = await screen.findByRole("link", { name: "Meireles: ver no mapa" });
+    const destino = new URL(link.getAttribute("href")!, "http://x");
+    expect(destino.pathname).toBe("/mapa");
+    expect(destino.searchParams.get("destaque")).toBe("b-1");
+    expect(screen.getByText(/^Índice = 10 × risco \+ 5 × atrasadas/)).toBeInTheDocument();
+  });
+
+  it("sem bairro com pendência, diz isso em vez de mostrar tabela vazia", async () => {
+    await abrirComPainel(painel());
+    expect(await screen.findByText("Nenhum bairro com pendência no momento.")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+});

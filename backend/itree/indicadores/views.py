@@ -22,7 +22,7 @@ from itree.auditoria.views import ENTIDADES, EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo, requer
 from itree.contas.models import Equipe
 from itree.core.parametros import uuid_do_parametro
-from itree.indicadores import externos, instantaneos
+from itree.indicadores import atencao, externos, instantaneos
 from itree.inspecoes.models import CondicaoAparente, EstadoInspecao, Inspecao
 from itree.inventario.models import Arvore, EstadoEspecie
 from itree.ocorrencias.models import ESTADOS_FINAIS, EstadoOcorrencia, Ocorrencia, Prioridade
@@ -59,6 +59,7 @@ Painel = inline_serializer(
         "distribuicoes": serializers.DictField(),
         "series_mensais": serializers.DictField(),
         "pendencias": serializers.ListField(child=serializers.DictField()),
+        "bairros_atencao": serializers.DictField(),
         "equipes": serializers.ListField(child=serializers.DictField()),
         "atividades": EventoAuditoriaSerializer(many=True),
     },
@@ -91,6 +92,9 @@ def painel(request: Request):
     ocorrencias = filtrar_por_escopo(Ocorrencia.objects.all(), usuario)
     inspecoes = filtrar_por_escopo(Inspecao.objects.all(), usuario, campo_geom="arvore__geom")
     tarefas = filtrar_por_escopo(Tarefa.objects.all(), usuario)
+
+    # O ranking de bairros olha o escopo inteiro, sem os filtros de bairro e equipe.
+    arvores_escopo, ocorrencias_escopo = arvores, ocorrencias
 
     bairro_nome = equipe_nome = bairro_obj = None
     if bairro := p.get("bairro"):
@@ -519,6 +523,9 @@ def painel(request: Request):
             "distribuicoes": distribuicoes,
             "series_mensais": series_mensais,
             "pendencias": pendencias,
+            "bairros_atencao": atencao.ranking(
+                usuario, arvores_escopo, ocorrencias_escopo, hoje=hoje, agora=timezone.now()
+            ),
             "equipes": equipes,
             "atividades": EventoAuditoriaSerializer(atividades, many=True).data
             # A trilha não é filtrada por escopo: só quem consulta a auditoria a vê.

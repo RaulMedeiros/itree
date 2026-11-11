@@ -58,6 +58,17 @@ Indicadores oficiais e fórmulas dependem de
   prioridade, revisão pendente, alertas a triar). Itens com zero não aparecem.
 - **RF-VG-007** — Mapa resumido do escopo, com árvores pela condição aparente
   validada e atalho para o mapa completo.
+- **RF-VG-008** — "Bairros que pedem atenção": os 5 bairros do escopo com maior
+  índice, que soma com pesos (10, 5, 2 e 1) as ocorrências abertas com risco
+  confirmado, as ocorrências abertas atrasadas, as árvores válidas com condição
+  ruim ou aparentemente morta e as árvores válidas sem inspeção validada há
+  mais de 12 meses. Cada componente aparece separado, a fórmula fica em "Como é
+  calculado" e cada bairro abre o mapa com ele em destaque. Critério provisório
+  (DP-14); bairros com índice zero não aparecem. O ranking ignora os filtros de
+  bairro e equipe.
+- **RF-VG-009** — A comparação de contagens contra o período anterior mostra a
+  diferença absoluta ("+5") quando a base anterior é menor que 20, e o
+  percentual a partir daí.
 
 ## 5. Regras
 

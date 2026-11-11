@@ -98,6 +98,21 @@ interface Distribuicao {
   itens: { rotulo: string; quantidade: number }[];
 }
 
+interface BairroAtencao {
+  id: string;
+  nome: string;
+  indice: number;
+  componentes: { id: string; rotulo: string; quantidade: number; peso: number }[];
+  link: { pagina: string; filtros: Record<string, string> };
+}
+
+interface BairrosAtencao {
+  titulo: string;
+  definicao: string;
+  formula: string;
+  itens: BairroAtencao[];
+}
+
 interface DesempenhoEquipe {
   equipe: string;
   tarefas_abertas: number;
@@ -450,6 +465,81 @@ function Pendencias({ itens }: { itens: Pendencia[] }) {
   );
 }
 
+/** Ranking dos bairros do escopo por um índice simples: cada componente aparece separado
+ * e a fórmula, em "Como é calculado". Cada bairro abre o mapa com ele em destaque. */
+function BairrosQuePedemAtencao({ dados }: { dados: BairrosAtencao }) {
+  return (
+    <Painel
+      titulo={dados.titulo}
+      definicao="Onde agir primeiro: os bairros do seu escopo com mais ocorrências e árvores pendentes."
+      className="mb-4"
+    >
+      {dados.itens.length === 0 ? (
+        <p className="flex items-center gap-2 text-sm text-sucesso">
+          <CircleCheck className="size-4" aria-hidden /> Nenhum bairro com pendência no momento.
+        </p>
+      ) : (
+        <Tabela>
+          <thead>
+            <tr>
+              <Th>Bairro</Th>
+              {dados.itens[0]!.componentes.map((c) => (
+                <Th key={c.id} className="text-right">
+                  {c.rotulo}
+                </Th>
+              ))}
+              <Th className="text-right">Índice</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {dados.itens.map((b, posicao) => (
+              <Linha key={b.id}>
+                <Td className="font-medium">
+                  <span className="mr-2 text-texto-suave tabular-nums">{posicao + 1}.</span>
+                  <Link
+                    to={b.link.pagina}
+                    search={b.link.filtros}
+                    className="text-marca-escura hover:underline"
+                    aria-label={`${b.nome}: ver no mapa`}
+                  >
+                    {b.nome}
+                  </Link>
+                </Td>
+                {b.componentes.map((c) => (
+                  <Td
+                    key={c.id}
+                    className={cn(
+                      "text-right tabular-nums",
+                      c.quantidade === 0 && "text-texto-suave",
+                    )}
+                  >
+                    {c.quantidade.toLocaleString("pt-BR")}
+                  </Td>
+                ))}
+                <Td className="text-right font-semibold tabular-nums">
+                  {b.indice.toLocaleString("pt-BR")}
+                </Td>
+              </Linha>
+            ))}
+          </tbody>
+        </Tabela>
+      )}
+      <details className="mt-3 text-xs text-texto-suave">
+        <summary className="inline-flex cursor-pointer items-center gap-1">
+          <Info className="size-3.5" aria-hidden /> Como é calculado
+        </summary>
+        <p className="mt-1">{dados.definicao}</p>
+        <p className="mt-1">Índice = {dados.formula}.</p>
+        <p className="mt-1">
+          Ordem: do maior para o menor índice; em empate, por nome. Fonte: {FONTE_REGISTROS}.
+        </p>
+      </details>
+    </Painel>
+  );
+}
+
+const FONTE_REGISTROS = "Registros da plataforma";
+
 /** Cor da condição pelo rótulo devolvido pela API; texto da barra por luminância. */
 const COR_POR_ROTULO: Record<string, { cor: string; textoClaro: boolean }> = {
   ...Object.fromEntries(
@@ -614,6 +704,7 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
   const distribuicoes = dados.distribuicoes as unknown as Record<string, Distribuicao>;
   const series = dados.series_mensais as unknown as SeriesMensais;
   const pendencias = dados.pendencias as unknown as Pendencia[];
+  const bairrosAtencao = dados.bairros_atencao as unknown as BairrosAtencao | undefined;
   // Não repete o que já está nos cartões nem em "Alertas e pendências" (que traz, com
   // link, os que têm quantidade). A contagem de registros fica na base do 1º cartão.
   const repetidos = new Set([...DESTAQUE, "arvores_registros", ...pendencias.map((p) => p.id)]);
@@ -641,6 +732,8 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
         </div>
         <Pendencias itens={pendencias} />
       </div>
+
+      {bairrosAtencao && <BairrosQuePedemAtencao dados={bairrosAtencao} />}
 
       <div className="mb-4">
         <MapaResumo />

@@ -6027,6 +6027,9 @@ components:
           items:
             type: object
             additionalProperties: {}
+        bairros_atencao:
+          type: object
+          additionalProperties: {}
         equipes:
           type: array
           items:
@@ -6038,6 +6041,7 @@ components:
             $ref: '#/components/schemas/EventoAuditoria'
       required:
       - atividades
+      - bairros_atencao
       - calculado_em
       - contexto_externo
       - distribuicoes
