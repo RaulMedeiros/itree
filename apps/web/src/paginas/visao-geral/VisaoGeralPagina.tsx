@@ -35,7 +35,12 @@ import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Tabela, Td, Th, Linha } from "../../ui/tabela";
 import { cn } from "../../util/cn";
-import { formatarData, formatarDataCurta, formatarDataHora } from "../../util/formatos";
+import {
+  descreverVariacao,
+  formatarData,
+  formatarDataCurta,
+  formatarDataHora,
+} from "../../util/formatos";
 import {
   BarraSegmentada,
   BarrasHorizontais,
@@ -181,22 +186,30 @@ function LinhaComparacao({
 function Variacao({ i }: { i: Indicador }) {
   if (i.periodo !== "selecionado" || i.anterior === null || i.anterior === undefined) return null;
   if (i.valor === null) return null;
-  const diferenca = i.valor - i.anterior;
-  if (i.anterior === 0) {
+  // Contagens com base pequena mostram a diferença absoluta; médias (dias) seguem em %.
+  const { texto, diferenca } =
+    i.unidade === "" ? descreverVariacao(i.valor, i.anterior) : porcentagem(i.valor, i.anterior);
+  if (texto === null) {
     return <p className="text-xs text-texto-suave">Período anterior: 0</p>;
   }
-  const pct = Math.round((100 * diferenca) / i.anterior);
   const subiu = diferenca > 0;
   const bom = MELHOR_SUBIR[i.id] === undefined ? null : MELHOR_SUBIR[i.id] === subiu;
   return (
     <LinhaComparacao
-      texto={`${pct > 0 ? "+" : ""}${pct}%`}
+      texto={texto}
       data={i.anterior_em}
       rotuloBase="período anterior"
       diferenca={diferenca}
       bom={bom}
     />
   );
+}
+
+function porcentagem(valor: number, anterior: number) {
+  const diferenca = valor - anterior;
+  if (anterior === 0) return { texto: null, diferenca };
+  const pct = Math.round((100 * diferenca) / anterior);
+  return { texto: `${pct > 0 ? "+" : ""}${pct}%`, diferenca };
 }
 
 /** Variação de um instantâneo desde o registro anterior ao período (ou, sem ele,
