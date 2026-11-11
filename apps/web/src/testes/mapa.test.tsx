@@ -4,7 +4,7 @@ import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { criarServidor } from "./servidorPadrao";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { COR_POR_VALOR, ROTULOS_CLASSES_ARBORIZACAO } from "../mapa/coropletica";
@@ -109,7 +109,7 @@ const AREAS_VERDES = {
 };
 const consultasAreasVerdes: URL[] = [];
 
-const servidor = setupServer(
+const servidor = criarServidor(
   http.get(`${API}/api/v1/areas-verdes`, ({ request }) => {
     consultasAreasVerdes.push(new URL(request.url));
     return HttpResponse.json(AREAS_VERDES);

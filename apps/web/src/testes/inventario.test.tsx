@@ -4,7 +4,7 @@ import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { criarServidor } from "./servidorPadrao";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { camposDiferentes } from "../paginas/inventario/duplicidades";
@@ -81,7 +81,7 @@ const pedidosLote: Record<string, unknown>[] = [];
 let eu: Eu = REVISOR;
 const decisoes: unknown[] = [];
 
-const servidor = setupServer(
+const servidor = criarServidor(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(eu)),
   http.get(`${API}/api/v1/arvores`, ({ request }) => {
     consultas.push(new URL(request.url));
