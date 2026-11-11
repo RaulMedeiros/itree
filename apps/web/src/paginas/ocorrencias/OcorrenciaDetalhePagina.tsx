@@ -170,19 +170,30 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
 
       {podeEditar && o.transicoes_possiveis.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-borda bg-superficie px-4 py-3">
-          <span className="text-sm text-texto-suave">Próximo passo:</span>
-          {o.transicoes_possiveis.map((estado) => (
+          {avancos.length > 0 && <span className="text-sm text-texto-suave">Próximo passo:</span>}
+          {o.transicoes_possiveis
+            .filter((estado) => estado !== "cancelada")
+            .map((estado) => (
+              <Botao
+                key={estado}
+                tamanho="pequeno"
+                variante={estado === principal ? "primario" : "secundario"}
+                onClick={() => setTransicao(estado)}
+              >
+                {ACOES_ESTADO_OCORRENCIA[estado]}
+              </Botao>
+            ))}
+          {/* Cancelar é ação destrutiva: contorno, afastada da principal e com confirmação. */}
+          {o.transicoes_possiveis.includes("cancelada") && (
             <Botao
-              key={estado}
               tamanho="pequeno"
-              variante={
-                estado === "cancelada" ? "perigo" : estado === principal ? "primario" : "secundario"
-              }
-              onClick={() => setTransicao(estado)}
+              variante="perigoContorno"
+              className="ml-auto"
+              onClick={() => setTransicao("cancelada")}
             >
-              {ACOES_ESTADO_OCORRENCIA[estado]}
+              {ACOES_ESTADO_OCORRENCIA.cancelada}
             </Botao>
-          ))}
+          )}
         </div>
       )}
 
@@ -220,6 +231,27 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
               </Selo>
             )}
           </div>
+          {o.estado === "em_atendimento" && !o.responsavel && (
+            <p
+              role="alert"
+              className="mt-3 rounded-md bg-atencao-clara px-3 py-2 text-sm text-atencao"
+            >
+              Em atendimento, mas sem responsável. Atribua alguém para que a ocorrência não fique
+              sem dono.
+              {podeEditar && (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="font-medium underline"
+                    onClick={() => setAtribuindo(true)}
+                  >
+                    Atribuir agora
+                  </button>
+                </>
+              )}
+            </p>
+          )}
         </Cartao>
       </div>
 
@@ -475,6 +507,11 @@ function TransicaoDialogo({
         <p role="alert" className="mb-3 rounded-md bg-atencao-clara px-3 py-2 text-sm text-atencao">
           Atenção: esta ocorrência está {avisos.join(" e ")}. Confirme apenas se o atendimento já
           foi feito e registrado.
+        </p>
+      )}
+      {exige && (
+        <p className="mb-3 rounded-md bg-perigo-clara px-3 py-2 text-sm text-perigo">
+          Cancelar encerra a ocorrência e as tarefas abertas dela. Não dá para desfazer.
         </p>
       )}
       {mutacao.error && (

@@ -251,6 +251,52 @@ describe("ocorrência", () => {
     expect(within(dialogo).queryByRole("note")).toBeNull();
   });
 
+  it("cancelar fica afastado do próximo passo, em contorno, e a confirmação avisa o efeito", async () => {
+    const usuario = userEvent.setup();
+    servidor.use(
+      http.get(`${API}/api/v1/ocorrencias/o-1`, () =>
+        HttpResponse.json({
+          ...OCORRENCIA,
+          estado: "em_triagem",
+          transicoes_possiveis: ["encaminhada", "em_atendimento", "cancelada"],
+        }),
+      ),
+    );
+    await abrir("/ocorrencias/o-1");
+    const cancelar = await screen.findByRole("button", { name: "Cancelar" });
+    // Não usa o vermelho sólido da ação principal e fica separado dela.
+    expect(cancelar.className).not.toMatch(/(^| )bg-perigo( |$)/);
+    expect(cancelar.className).toMatch(/border-perigo/);
+    expect(cancelar.className).toMatch(/ml-auto/);
+    const principal = screen.getByRole("button", { name: "Encaminhar" });
+    expect(principal.className).toMatch(/bg-marca/);
+    await usuario.click(cancelar);
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByText(/encerra a ocorrência e as tarefas abertas/)).toBeVisible();
+    expect(within(dialogo).getByRole("button", { name: "Confirmar" })).toBeDisabled();
+  });
+
+  it("em atendimento sem responsável mostra aviso no cartão da situação", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/ocorrencias/o-1`, () =>
+        HttpResponse.json({
+          ...OCORRENCIA,
+          estado: "em_atendimento",
+          transicoes_possiveis: ["concluida", "cancelada"],
+        }),
+      ),
+    );
+    await abrir("/ocorrencias/o-1");
+    const situacao = (await screen.findByRole("heading", { name: "Situação" })).closest("section")!;
+    expect(within(situacao).getByRole("alert")).toHaveTextContent(/sem responsável/);
+  });
+
+  it("sem estar em atendimento, não mostra o aviso de responsável", async () => {
+    await abrir("/ocorrencias/o-1");
+    const situacao = (await screen.findByRole("heading", { name: "Situação" })).closest("section")!;
+    expect(within(situacao).queryByRole("alert")).toBeNull();
+  });
+
   it("mostra a origem na inspeção, com link, e as tarefas vinculadas com o estado", async () => {
     servidor.use(
       http.get(`${API}/api/v1/ocorrencias/o-1`, () =>
