@@ -1,5 +1,6 @@
 import {
   ErroApi,
+  useAlertasArvoresProximas,
   useAlertasConverterOcorrencia,
   useAlertasHistorico,
   useAlertasObter,
@@ -24,9 +25,10 @@ import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
+import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { invalidarCaminhos } from "../../util/cache";
-import { formatarDataHora } from "../../util/formatos";
+import { formatarDataHora, plural } from "../../util/formatos";
 
 export function AlertaDetalhePagina() {
   const { id } = useParams({ from: "/autenticado/alertas/$id" });
@@ -190,6 +192,7 @@ function Detalhe({ alerta: a }: { alerta: AlertaAmbiental }) {
           </p>
         </section>
       </div>
+      <ArvoresProximas alerta={a} />
       <details className="mb-6 rounded-lg border border-borda bg-superficie p-4">
         <summary className="cursor-pointer font-semibold">Atributos originais da fonte</summary>
         <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-sm">
@@ -210,6 +213,64 @@ function Detalhe({ alerta: a }: { alerta: AlertaAmbiental }) {
       {status && <TriagemDialogo alerta={a} status={status} aoFechar={() => setStatus(null)} />}
       {convertendo && <ConverterDialogo alerta={a} aoFechar={() => setConvertendo(false)} />}
     </>
+  );
+}
+
+const RAIO_M = 100;
+
+function ArvoresProximas({ alerta }: { alerta: AlertaAmbiental }) {
+  const consulta = useAlertasArvoresProximas(alerta.id);
+  const arvores = consulta.data?.data ?? [];
+  return (
+    <section className="mb-6" aria-labelledby="arvores-proximas">
+      <h2 id="arvores-proximas" className="mb-1 font-semibold">
+        Árvores a até {RAIO_M} m
+      </h2>
+      <p className="mb-3 text-sm text-texto-suave">
+        {plural(alerta.ocorrencias_proximas, "ocorrência aberta", "ocorrências abertas")} no mesmo
+        raio. Distância medida até o ponto ou a borda do polígono; só entram árvores do seu escopo.
+      </p>
+      {consulta.isPending ? (
+        <Carregando linhas={3} />
+      ) : consulta.isError ? (
+        <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />
+      ) : arvores.length === 0 ? (
+        <p className="rounded-lg border border-borda bg-superficie px-4 py-3 text-sm text-texto-suave">
+          Nenhuma árvore cadastrada a até {RAIO_M} m deste alerta.
+        </p>
+      ) : (
+        <Tabela>
+          <thead>
+            <tr>
+              <Th>Árvore</Th>
+              <Th>Espécie</Th>
+              <Th>Condição aparente</Th>
+              <Th className="text-right">Distância</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {arvores.map((v) => (
+              <Linha key={v.id}>
+                <Td>
+                  <Link
+                    to="/inventario/arvores/$id"
+                    params={{ id: v.id }}
+                    className="font-mono font-medium text-marca-escura hover:underline"
+                  >
+                    {v.codigo}
+                  </Link>
+                </Td>
+                <Td>{v.especie ?? <span className="text-texto-suave">Não identificada</span>}</Td>
+                <Td>{v.condicao_aparente || <span className="text-texto-suave">—</span>}</Td>
+                <Td className="text-right whitespace-nowrap">
+                  {Math.round(v.distancia_m).toLocaleString("pt-BR")} m
+                </Td>
+              </Linha>
+            ))}
+          </tbody>
+        </Tabela>
+      )}
+    </section>
   );
 }
 

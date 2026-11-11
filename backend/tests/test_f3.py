@@ -368,3 +368,108 @@ def test_sugestao_de_ia_nao_altera_cadastro_sem_decisao(
     assert InferenciaIA.objects.get().resultado == {
         "rotulos": ["Licania tomentosa"]
     }  # original preservado
+
+
+# --- Árvores e ocorrências próximas (C-27, C-28) --------------------------------
+
+
+def _ponto_a_metros(alerta, norte_m):
+    """Ponto ``norte_m`` metros ao norte do alerta, calculado em UTM 24S."""
+    from django.contrib.gis.geos import Point
+
+    p = Point(alerta.geom.x, alerta.geom.y, srid=4326)
+    p.transform(31984)
+    q = Point(p.x, p.y + norte_m, srid=31984)
+    q.transform(4326)
+    return q
+
+
+def _arvore_a(geom):
+    return Arvore.objects.create(geom=geom, localizacao_origem="gps", origem_registro="web")
+
+
+def test_alerta_conta_arvores_e_ocorrencias_no_raio(cliente, analista, alerta_a, tipo_queda):
+    _arvore_a(_ponto_a_metros(alerta_a, 40))
+    _arvore_a(_ponto_a_metros(alerta_a, 90))
+    _arvore_a(_ponto_a_metros(alerta_a, 150))  # fora do raio padrão
+    excluida = _arvore_a(_ponto_a_metros(alerta_a, 10))
+    excluida.situacao = "excluida"
+    excluida.save(update_fields=["situacao"])
+    Ocorrencia.objects.create(
+        tipo=tipo_queda, geom=_ponto_a_metros(alerta_a, 30), descricao="x", registrada_por=analista
+    )
+    Ocorrencia.objects.create(
+        tipo=tipo_queda,
+        geom=_ponto_a_metros(alerta_a, 30),
+        descricao="encerrada",
+        estado="concluida",
+        registrada_por=analista,
+    )
+    cliente.como(analista)
+    detalhe = cliente.get(f"/api/v1/alertas/{alerta_a.id}").json()
+    assert (detalhe["arvores_proximas"], detalhe["ocorrencias_proximas"]) == (2, 1)
+    lista = cliente.get("/api/v1/alertas").json()["results"]
+    por_id = {a["id_externo"]: a for a in lista}
+    assert por_id["F1"]["arvores_proximas"] == 2
+    assert por_id["F2"]["arvores_proximas"] == 0
+    # Raio configurável.
+    assert cliente.get(f"/api/v1/alertas/{alerta_a.id}?raio=200").json()["arvores_proximas"] == 3
+    assert cliente.get(f"/api/v1/alertas/{alerta_a.id}?raio=0").status_code == 400
+
+
+def test_arvores_proximas_com_distancia_ordenada(cliente, analista, alerta_a):
+    longe = _arvore_a(_ponto_a_metros(alerta_a, 90))
+    perto = _arvore_a(_ponto_a_metros(alerta_a, 40))
+    _arvore_a(_ponto_a_metros(alerta_a, 150))
+    r = cliente.como(analista).get(f"/api/v1/alertas/{alerta_a.id}/arvores-proximas")
+    itens = r.json()
+    assert [i["id"] for i in itens] == [str(perto.id), str(longe.id)]
+    assert itens[0]["distancia_m"] == pytest.approx(40, abs=1)
+    assert itens[1]["distancia_m"] == pytest.approx(90, abs=1)
+    assert len(cliente.get(f"/api/v1/alertas/{alerta_a.id}/arvores-proximas?raio=200").json()) == 3
+
+
+def test_poligono_mede_distancia_a_partir_da_borda(cliente, analista, territorios):
+    fontes.ingerir("inpe_deter", poligono_utm(), "deter.geojson")
+    alerta = AlertaAmbiental.objects.get()
+    dentro = _arvore_a(alerta.geom.centroid)
+    r = cliente.como(analista).get(f"/api/v1/alertas/{alerta.id}/arvores-proximas").json()
+    assert [(i["id"], i["distancia_m"]) for i in r] == [(str(dentro.id), 0.0)]
+
+
+def test_contagem_e_lista_respeitam_o_escopo_do_usuario(cliente, territorios, alerta_a):
+    """Alerta junto à borda do Bairro A: árvore fora do escopo não é contada nem listada."""
+    from django.contrib.gis.geos import Point
+
+    AlertaAmbiental.objects.filter(pk=alerta_a.pk).update(geom=Point(-38.5502, -3.755, srid=4326))
+    dentro = _arvore_a(Point(-38.5507, -3.755, srid=4326))  # Bairro A, ~55 m
+    _arvore_a(Point(-38.5497, -3.755, srid=4326))  # fora do Bairro A, ~55 m
+    analista_a = com_escopo(
+        criar_usuario("anaa@itree.teste", ["analista_ambiental"]), territorios["a"]
+    )
+    gestor_mun = com_escopo(
+        criar_usuario("anam@itree.teste", ["analista_ambiental"]), territorios["municipio"]
+    )
+    url = f"/api/v1/alertas/{alerta_a.id}"
+    assert cliente.como(gestor_mun).get(url).json()["arvores_proximas"] == 2
+    assert cliente.get(url + "/arvores-proximas").json().__len__() == 2
+    assert cliente.como(analista_a).get(url).json()["arvores_proximas"] == 1
+    assert [i["id"] for i in cliente.get(url + "/arvores-proximas").json()] == [str(dentro.id)]
+    # Quem não tem o alerta no escopo nem o enxerga.
+    analista_b = com_escopo(
+        criar_usuario("anab@itree.teste", ["analista_ambiental"]), territorios["b"]
+    )
+    assert cliente.como(analista_b).get(url + "/arvores-proximas").status_code == 404
+
+
+def test_lista_ordena_por_arvores_proximas(cliente, analista, alerta_a):
+    _arvore_a(_ponto_a_metros(alerta_a, 40))
+    base = "/api/v1/alertas?ordem="
+    cliente.como(analista)
+    assert [a["id_externo"] for a in cliente.get(base + "-arvores_proximas").json()["results"]][
+        0
+    ] == "F1"
+    assert [a["id_externo"] for a in cliente.get(base + "arvores_proximas").json()["results"]][
+        -1
+    ] == "F1"
+    assert cliente.get(base + "banana").status_code == 400

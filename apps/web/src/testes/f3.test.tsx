@@ -61,15 +61,34 @@ const ALERTA: Alerta = {
   referencia: "SEUMA 1/2026",
   analisado_por: "Ana Analista",
   ocorrencia: null,
+  arvores_proximas: 2,
+  ocorrencias_proximas: 1,
   atualizado_em: "2026-10-31T10:00:00Z",
 };
 
 const triagens: unknown[] = [];
+const pedidosLista: (string | null)[] = [];
 
 const servidor = setupServer(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(ANALISTA)),
   http.get(`${API}/api/v1/alertas/ingestoes`, () => HttpResponse.json([])),
   http.get(`${API}/api/v1/alertas/al-1`, () => HttpResponse.json(ALERTA)),
+  http.get(`${API}/api/v1/alertas/al-1/arvores-proximas`, () =>
+    HttpResponse.json([
+      {
+        id: "a-1",
+        codigo: "ARV-000001",
+        especie: "Oiti",
+        condicao_aparente: "boa",
+        distancia_m: 42.4,
+      },
+      { id: "a-2", codigo: "ARV-000002", especie: null, condicao_aparente: "", distancia_m: 87.6 },
+    ]),
+  ),
+  http.get(`${API}/api/v1/alertas`, ({ request }) => {
+    pedidosLista.push(new URL(request.url).searchParams.get("ordem"));
+    return HttpResponse.json({ count: 1, next: null, previous: null, results: [ALERTA] });
+  }),
   http.get(`${API}/api/v1/alertas/al-1/historico`, () => HttpResponse.json([])),
   http.post(`${API}/api/v1/alertas/al-1/triagem`, async ({ request }) => {
     triagens.push(await request.json());
@@ -84,6 +103,7 @@ beforeAll(() => {
 afterEach(() => {
   servidor.resetHandlers();
   triagens.length = 0;
+  pedidosLista.length = 0;
 });
 afterAll(() => servidor.close());
 
@@ -125,5 +145,41 @@ describe("alertas ambientais", () => {
         },
       ]),
     );
+  });
+
+  it("o detalhe lista as árvores próximas com link e distância", async () => {
+    const { criarRoteador } = await import("../rotas");
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <RouterProvider
+          router={criarRoteador(createMemoryHistory({ initialEntries: ["/alertas/al-1"] }))}
+        />
+      </QueryClientProvider>,
+    );
+    const link = await screen.findByRole("link", { name: "ARV-000001" });
+    expect(link).toHaveAttribute("href", "/inventario/arvores/a-1");
+    expect(screen.getByText("42 m")).toBeInTheDocument();
+    expect(screen.getByText("88 m")).toBeInTheDocument();
+    expect(screen.getByText(/1 ocorrência aberta no mesmo raio/)).toBeInTheDocument();
+  });
+
+  it("a lista mostra as contagens e ordena por árvores próximas", async () => {
+    const usuario = userEvent.setup();
+    const { criarRoteador } = await import("../rotas");
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <RouterProvider
+          router={criarRoteador(createMemoryHistory({ initialEntries: ["/alertas"] }))}
+        />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("2 árvores")).toBeInTheDocument();
+    expect(screen.getByText("1 aberta a até 100 m")).toBeInTheDocument();
+    await usuario.click(screen.getByRole("button", { name: "Árvores a até 100 m" }));
+    await vi.waitFor(() => expect(pedidosLista).toContain("-arvores_proximas"));
   });
 });

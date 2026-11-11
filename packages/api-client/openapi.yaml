@@ -234,12 +234,24 @@ paths:
         schema:
           type: string
         description: AAAA-MM-DD
+      - in: query
+        name: ordem
+        schema:
+          type: string
+        description: '''-data_deteccao'' (padrão), ''data_deteccao'', ''arvores_proximas'',
+          ''-arvores_proximas'', ''ocorrencias_proximas'' ou ''-ocorrencias_proximas''.'
       - name: pagina
         required: false
         in: query
         description: Um número de página dentro do conjunto de resultados paginado.
         schema:
           type: integer
+      - in: query
+        name: raio
+        schema:
+          type: integer
+        description: Raio, em metros, das árvores e ocorrências próximas (1 a 1000;
+          100).
       - in: query
         name: status
         schema:
@@ -278,6 +290,12 @@ paths:
           format: uuid
         description: Um string UUID que identifica este alerta ambiental.
         required: true
+      - in: query
+        name: raio
+        schema:
+          type: integer
+        description: Raio, em metros, das árvores e ocorrências próximas (1 a 1000;
+          100).
       tags:
       - alertas
       security:
@@ -288,6 +306,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Alerta'
+          description: ''
+  /api/v1/alertas/{id}/arvores-proximas:
+    get:
+      operationId: alertas_arvores_proximas
+      description: Árvores no escopo a até `raio` m do alerta, da mais próxima à mais
+        distante.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este alerta ambiental.
+        required: true
+      - in: query
+        name: raio
+        schema:
+          type: integer
+        description: Raio, em metros, das árvores e ocorrências próximas (1 a 1000;
+          100).
+      tags:
+      - alertas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ArvoreProxima'
           description: ''
   /api/v1/alertas/{id}/converter-ocorrencia:
     post:
@@ -2903,12 +2953,22 @@ components:
           additionalProperties: {}
           nullable: true
           readOnly: true
+        arvores_proximas:
+          type: integer
+          readOnly: true
+          description: Árvores ativas no escopo a até `raio` m (padrão 100 m) do alerta.
+        ocorrencias_proximas:
+          type: integer
+          readOnly: true
+          description: Ocorrências abertas no escopo a até `raio` m (padrão 100 m)
+            do alerta.
         atualizado_em:
           type: string
           format: date-time
           readOnly: true
       required:
       - analisado_por
+      - arvores_proximas
       - atualizado_em
       - codigo
       - data_deteccao
@@ -2918,6 +2978,7 @@ components:
       - id_externo
       - ingerido_em
       - ocorrencia
+      - ocorrencias_proximas
       - tipo
       - tipo_geometria
       - transicoes_possiveis
@@ -3190,6 +3251,29 @@ components:
       - especie
       - id
       - localizacao
+    ArvoreProxima:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        especie:
+          type: string
+          nullable: true
+        condicao_aparente:
+          type: string
+        distancia_m:
+          type: number
+          format: double
+          description: Distância geodésica em metros.
+      required:
+      - codigo
+      - condicao_aparente
+      - distancia_m
+      - especie
+      - id
     ArvoreRequest:
       type: object
       description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).

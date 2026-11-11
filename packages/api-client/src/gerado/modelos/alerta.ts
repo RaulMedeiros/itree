@@ -47,5 +47,9 @@ export interface Alerta {
   readonly analisado_por: string | null;
   /** @nullable */
   readonly ocorrencia: AlertaOcorrencia;
+  /** Árvores ativas no escopo a até `raio` m (padrão 100 m) do alerta. */
+  readonly arvores_proximas: number;
+  /** Ocorrências abertas no escopo a até `raio` m (padrão 100 m) do alerta. */
+  readonly ocorrencias_proximas: number;
   readonly atualizado_em: string;
 }

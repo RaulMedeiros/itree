@@ -9,7 +9,9 @@
 export * from './acaoComMotivoRequest';
 export * from './alerta';
 export * from './alertaOcorrencia';
+export * from './alertasArvoresProximasParams';
 export * from './alertasListarParams';
+export * from './alertasObterParams';
 export * from './analise';
 export * from './analiseLinhasItem';
 export * from './analisePeriodo';
@@ -25,6 +27,7 @@ export * from './arvoreDaInspecao';
 export * from './arvoreDaInspecaoLocalizacaoOrigem';
 export * from './arvoreLocalizacaoOrigem';
 export * from './arvoreLote';
+export * from './arvoreProxima';
 export * from './arvoreRequest';
 export * from './arvoreRequestLocalizacaoOrigem';
 export * from './arvoreResumo';

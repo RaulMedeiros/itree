@@ -464,6 +464,16 @@ const alertasLista = createRoute({
     fonte: z.enum(["inpe_focos", "inpe_deter", "mapbiomas"]).optional().catch(undefined),
     deteccao_desde: dataOpcionalF2,
     deteccao_ate: dataOpcionalF2,
+    ordem: z
+      .enum([
+        "data_deteccao",
+        "arvores_proximas",
+        "-arvores_proximas",
+        "ocorrencias_proximas",
+        "-ocorrencias_proximas",
+      ])
+      .optional()
+      .catch(undefined),
     pagina: paginaOpcional,
   }),
   component: AlertasPagina,
