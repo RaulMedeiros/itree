@@ -248,6 +248,48 @@ describe("revisão de inspeção: medidas contra o cadastro (C-25)", () => {
   });
 });
 
+describe("revisão de inspeção: inspeção anterior", () => {
+  const medidaDe = (tipo: string, valor: string, unidade: string) => ({
+    id: `ant-${tipo}`,
+    tipo,
+    valor,
+    unidade,
+    metodo: "fita_diametrica",
+    origem: "medido",
+    data_medicao: "2026-08-01",
+    responsavel_nome: "Tiago",
+    observacao: "",
+    criado_em: "2026-08-01T12:00:00Z",
+  });
+
+  it("mostra na coluna 'Inspeção anterior' as medidas da validada anterior", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/inspecoes/i-1`, () =>
+        HttpResponse.json({
+          ...INSPECAO,
+          medidas: [
+            { ...medidaDe("dap", "38.00", "cm"), id: "m-1" },
+            { ...medidaDe("altura", "10.20", "m"), id: "m-2" },
+          ],
+          anterior: {
+            ...INSPECAO,
+            id: "i-0",
+            estado: "validada",
+            medidas: [medidaDe("dap", "30.00", "cm")],
+          },
+        }),
+      ),
+    );
+    await abrir("/inspecoes/i-1");
+    const linhaDap = await screen.findByRole("row", { name: /^DAP/ });
+    expect(within(linhaDap).getByText("30 cm")).toBeInTheDocument();
+    // Sem medida do tipo na anterior: traço, não o valor de outra.
+    const linhaAltura = screen.getByRole("row", { name: /^Altura total/ });
+    expect(within(linhaAltura).getAllByText("—").length).toBeGreaterThan(0);
+    expect(screen.getByRole("columnheader", { name: "Inspeção anterior" })).toBeInTheDocument();
+  });
+});
+
 describe("visão geral", () => {
   it("indicador sem base aparece como “Sem dados”, não como zero", async () => {
     await abrir("/visao-geral");

@@ -9,7 +9,7 @@ import type { ArvoreDaInspecao } from './arvoreDaInspecao';
 import type { CondicaoAparenteEnum } from './condicaoAparenteEnum';
 import type { EspecieResumo } from './especieResumo';
 import type { EstadoInspecaoEnum } from './estadoInspecaoEnum';
-import type { InspecaoResumo } from './inspecaoResumo';
+import type { InspecaoAnterior } from './inspecaoAnterior';
 import type { InspecaoTarefa } from './inspecaoTarefa';
 import type { Localizacao } from './localizacao';
 import type { Medida } from './medida';
@@ -61,8 +61,8 @@ export interface Inspecao {
   readonly medidas: readonly Medida[];
   /** Medida aplicada mais recente de cada tipo no cadastro da árvore, para comparar com as medidas da inspeção. */
   readonly medidas_do_cadastro: readonly Medida[];
-  /** Inspeção anterior da mesma árvore, para comparação (RF-INSP-004). */
-  readonly anterior: InspecaoResumo | null;
+  /** Inspeção validada anterior da mesma árvore, com as medidas dela, para comparação (RF-INSP-004). */
+  readonly anterior: InspecaoAnterior | null;
   /** @nullable */
   readonly tarefa: InspecaoTarefa;
 }

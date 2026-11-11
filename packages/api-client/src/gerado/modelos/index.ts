@@ -94,6 +94,7 @@ export * from './inferencia';
 export * from './inferenciasListarParams';
 export * from './ingestao';
 export * from './inspecao';
+export * from './inspecaoAnterior';
 export * from './inspecaoResumo';
 export * from './inspecaoTarefa';
 export * from './inspecoesListarParams';

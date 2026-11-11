@@ -84,6 +84,15 @@ class InspecaoResumoSerializer(serializers.ModelSerializer):
         return MedidaSerializer(pendentes, many=True).data
 
 
+class InspecaoAnteriorSerializer(InspecaoResumoSerializer):
+    """Inspeção validada anterior, com as medidas que ela registrou (RF-INSP-004)."""
+
+    medidas = MedidaSerializer(many=True, read_only=True)
+
+    class Meta(InspecaoResumoSerializer.Meta):
+        fields = [*InspecaoResumoSerializer.Meta.fields, "medidas"]
+
+
 class InspecaoSerializer(InspecaoResumoSerializer):
     localizacao = CampoLocalizacao(source="geom", read_only=True)
     medidas = MedidaSerializer(many=True, read_only=True)
@@ -92,7 +101,8 @@ class InspecaoSerializer(InspecaoResumoSerializer):
         "para comparar com as medidas da inspeção."
     )
     anterior = serializers.SerializerMethodField(
-        help_text="Inspeção anterior da mesma árvore, para comparação (RF-INSP-004)."
+        help_text="Inspeção validada anterior da mesma árvore, com as medidas dela, para comparação "
+        "(RF-INSP-004)."
     )
     tarefa = serializers.SerializerMethodField()
 
@@ -116,16 +126,21 @@ class InspecaoSerializer(InspecaoResumoSerializer):
     def get_medidas_do_cadastro(self, obj):
         return MedidaSerializer(medidas_atuais_da_arvore(obj.arvore), many=True).data
 
-    @extend_schema_field(InspecaoResumoSerializer(allow_null=True))
+    @extend_schema_field(InspecaoAnteriorSerializer(allow_null=True))
     def get_anterior(self, obj):
         anterior = (
-            Inspecao.objects.filter(arvore_id=obj.arvore_id, realizada_em__lt=obj.realizada_em)
+            Inspecao.objects.filter(
+                arvore_id=obj.arvore_id,
+                estado=EstadoInspecao.VALIDADA,
+                realizada_em__lt=obj.realizada_em,
+            )
             .exclude(pk=obj.pk)
             .select_related("arvore", "tecnico", "revisor", "especie")
+            .prefetch_related("medidas")
             .order_by("-realizada_em")
             .first()
         )
-        return InspecaoResumoSerializer(anterior).data if anterior else None
+        return InspecaoAnteriorSerializer(anterior).data if anterior else None
 
     @extend_schema_field(serializers.DictField(allow_null=True))
     def get_tarefa(self, obj):

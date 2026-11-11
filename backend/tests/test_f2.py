@@ -191,14 +191,29 @@ def test_tecnico_nao_valida_e_revisor_nao_valida_a_propria(cliente, tecnico_a, r
     assert r.status_code == 400 and "outra pessoa" in r.json()[0]
 
 
-def test_detalhe_traz_inspecao_anterior(cliente, tecnico_a, arvore_a):
-    primeira = inspecao(
-        arvore_a["id"], realizada_em=(timezone.now() - timedelta(days=30)).isoformat()
+def test_detalhe_traz_a_inspecao_validada_anterior_com_as_medidas(
+    cliente, tecnico_a, revisor, arvore_a
+):
+    antiga = enviada(
+        cliente,
+        tecnico_a,
+        arvore_a["id"],
+        realizada_em=(timezone.now() - timedelta(days=60)).isoformat(),
+        medidas=[{"tipo": "dap", "valor": "30", "metodo": "fita_diametrica", "origem": "medido"}],
     )
-    segunda = inspecao(arvore_a["id"])
-    sincronizar(cliente, tecnico_a, primeira, segunda)
-    detalhe = cliente.get(f"/api/v1/inspecoes/{segunda['id']}").json()
-    assert detalhe["anterior"]["id"] == primeira["id"]
+    cliente.como(revisor).post(f"/api/v1/inspecoes/{antiga}/validar", {}, format="json")
+    # Mais recente, mas só em revisão: não conta como "anterior".
+    em_revisao = enviada(
+        cliente,
+        tecnico_a,
+        arvore_a["id"],
+        realizada_em=(timezone.now() - timedelta(days=30)).isoformat(),
+        medidas=[{"tipo": "dap", "valor": "99", "metodo": "fita_diametrica", "origem": "medido"}],
+    )
+    atual = enviada(cliente, tecnico_a, arvore_a["id"])
+    detalhe = cliente.como(revisor).get(f"/api/v1/inspecoes/{atual}").json()
+    assert detalhe["anterior"]["id"] == antiga != em_revisao
+    assert [(m["tipo"], m["valor"]) for m in detalhe["anterior"]["medidas"]] == [("dap", "30.00")]
     assert detalhe["medidas"][0]["tipo"] == "altura"
 
 

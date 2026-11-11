@@ -45,3 +45,10 @@ export function descreverDiferenca({ proposta, cadastro, diferenca }: Comparacao
   const sinal = diferenca > 0 ? "+" : "-";
   return `${nome} ${numero(Number(cadastro.valor))} → ${novo} ${proposta.unidade}, ${sinal}${numero(Math.abs(diferenca))}`;
 }
+
+/** Valor da medida do mesmo tipo na inspeção validada anterior; "—" quando ela não registrou. */
+export function descreverMedidaAnterior(anteriores: readonly Medida[], tipo: string): string {
+  const m = anteriores.find((x) => x.tipo === tipo);
+  if (!m) return "—";
+  return `${m.origem === "estimado" ? "≈ " : ""}${numero(Number(m.valor))} ${m.unidade}`;
+}

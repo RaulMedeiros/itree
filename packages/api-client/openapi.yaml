@@ -4688,10 +4688,11 @@ components:
             para comparar com as medidas da inspeção.
         anterior:
           allOf:
-          - $ref: '#/components/schemas/InspecaoResumo'
+          - $ref: '#/components/schemas/InspecaoAnterior'
           nullable: true
           readOnly: true
-          description: Inspeção anterior da mesma árvore, para comparação (RF-INSP-004).
+          description: Inspeção validada anterior da mesma árvore, com as medidas
+            dela, para comparação (RF-INSP-004).
         tarefa:
           type: object
           additionalProperties: {}
@@ -4711,6 +4712,90 @@ components:
       - recebida_em
       - revisor
       - tarefa
+      - tecnico
+    InspecaoAnterior:
+      type: object
+      description: Inspeção validada anterior, com as medidas que ela registrou (RF-INSP-004).
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        arvore:
+          allOf:
+          - $ref: '#/components/schemas/ArvoreDaInspecao'
+          readOnly: true
+        tecnico:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+        realizada_em:
+          type: string
+          format: date-time
+          description: Momento da inspeção no dispositivo.
+        recebida_em:
+          type: string
+          format: date-time
+          readOnly: true
+        estado:
+          $ref: '#/components/schemas/EstadoInspecaoEnum'
+        condicao_aparente:
+          $ref: '#/components/schemas/CondicaoAparenteEnum'
+        sinais:
+          type: array
+          items:
+            $ref: '#/components/schemas/SinalObservadoEnum'
+        especie:
+          allOf:
+          - $ref: '#/components/schemas/EspecieResumo'
+          readOnly: true
+          nullable: true
+        especie_texto:
+          type: string
+          maxLength: 200
+        requer_encaminhamento:
+          type: boolean
+        origem:
+          $ref: '#/components/schemas/OrigemInspecaoEnum'
+        revisor:
+          allOf:
+          - $ref: '#/components/schemas/UsuarioResumo'
+          readOnly: true
+          nullable: true
+        validada_em:
+          type: string
+          format: date-time
+          nullable: true
+        versao:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Controle de concorrência na sincronização.
+        medidas_propostas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+          description: Medidas da inspeção em revisão que ainda não valem no cadastro
+            da árvore (vazio em qualquer outro estado).
+        medidas:
+          type: array
+          items:
+            $ref: '#/components/schemas/Medida'
+          readOnly: true
+      required:
+      - arvore
+      - codigo
+      - especie
+      - id
+      - medidas
+      - medidas_propostas
+      - realizada_em
+      - recebida_em
+      - revisor
       - tecnico
     InspecaoResumo:
       type: object

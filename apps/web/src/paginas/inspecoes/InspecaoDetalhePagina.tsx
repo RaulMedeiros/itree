@@ -33,7 +33,7 @@ import { Selo } from "../../ui/selo";
 import { cn } from "../../util/cn";
 import { invalidarCaminhos } from "../../util/cache";
 import { formatarData, formatarDataHora, plural } from "../../util/formatos";
-import { compararMedidas, descreverDiferenca } from "./medidas";
+import { compararMedidas, descreverDiferenca, descreverMedidaAnterior } from "./medidas";
 
 const ROTULOS_APLICAVEL: Record<string, string> = {
   especie: "espécie",
@@ -279,7 +279,11 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                       <span className="text-texto-suave">Sem valor no cadastro</span>
                     )
                   }
-                  anterior={i.anterior ? "—" : undefined}
+                  anterior={
+                    i.anterior
+                      ? descreverMedidaAnterior(i.anterior.medidas, c.proposta.tipo)
+                      : undefined
+                  }
                   destaque={c.diferenca !== 0}
                 />
               ))
