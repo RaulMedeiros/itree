@@ -126,6 +126,39 @@ function valorFormatado(i: Indicador) {
   return i.unidade === "%" ? `${numero}%` : i.unidade ? `${numero} ${i.unidade}` : numero;
 }
 
+/** Linha única de comparação, igual em todos os cartões: sinal e texto ("melhorou",
+ * "piorou") acompanham a cor, e a data-base é sempre explícita. */
+function LinhaComparacao({
+  texto,
+  data,
+  rotuloBase,
+  diferenca,
+  bom,
+}: {
+  texto: string;
+  data: string | null | undefined;
+  rotuloBase: string;
+  diferenca: number;
+  bom: boolean | null;
+}) {
+  const Icone = diferenca === 0 ? Minus : diferenca > 0 ? ArrowUpRight : ArrowDownRight;
+  const avaliacao = diferenca === 0 || bom === null ? "" : bom ? " · melhorou" : " · piorou";
+  return (
+    <p
+      className={cn(
+        "flex items-start gap-1 text-xs font-medium",
+        diferenca === 0 || bom === null ? "text-texto-suave" : bom ? "text-sucesso" : "text-perigo",
+      )}
+    >
+      <Icone className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <span>
+        {diferenca === 0 ? "Igual" : texto} vs. {data ? `${formatarDataCurta(data)} ` : ""}(
+        {rotuloBase}){avaliacao}
+      </span>
+    </p>
+  );
+}
+
 function Variacao({ i }: { i: Indicador }) {
   if (i.periodo !== "selecionado" || i.anterior === null || i.anterior === undefined) return null;
   if (i.valor === null) return null;
@@ -136,17 +169,14 @@ function Variacao({ i }: { i: Indicador }) {
   const pct = Math.round((100 * diferenca) / i.anterior);
   const subiu = diferenca > 0;
   const bom = MELHOR_SUBIR[i.id] === undefined ? null : MELHOR_SUBIR[i.id] === subiu;
-  const Icone = diferenca === 0 ? Minus : subiu ? ArrowUpRight : ArrowDownRight;
   return (
-    <p
-      className={cn(
-        "flex items-center gap-1 text-xs font-medium",
-        diferenca === 0 || bom === null ? "text-texto-suave" : bom ? "text-sucesso" : "text-perigo",
-      )}
-    >
-      <Icone className="size-3.5" aria-hidden />
-      {diferenca === 0 ? "Igual" : `${pct > 0 ? "+" : ""}${pct}%`} vs. período anterior
-    </p>
+    <LinhaComparacao
+      texto={`${pct > 0 ? "+" : ""}${pct}%`}
+      data={i.anterior_em}
+      rotuloBase="período anterior"
+      diferenca={diferenca}
+      bom={bom}
+    />
   );
 }
 
@@ -165,28 +195,40 @@ function Tendencia({ i }: { i: Indicador }) {
     MELHOR_SUBIR[i.id] === undefined || diferenca === 0
       ? null
       : MELHOR_SUBIR[i.id] === diferenca > 0;
-  const Icone = diferenca === 0 ? Minus : diferenca > 0 ? ArrowUpRight : ArrowDownRight;
   return (
     <div>
-      <p
-        className={cn(
-          "flex items-center gap-1 text-xs font-medium",
-          bom === null ? "text-texto-suave" : bom ? "text-sucesso" : "text-perigo",
-        )}
-      >
-        <Icone className="size-3.5" aria-hidden />
-        {diferenca === 0 ? "Igual" : texto} desde {formatarDataCurta(referencia.data)}
-      </p>
+      <LinhaComparacao
+        texto={texto}
+        data={referencia.data}
+        rotuloBase="registro anterior"
+        diferenca={diferenca}
+        bom={bom}
+      />
       <Sparkline serie={serie} unidade={i.unidade} />
     </div>
   );
 }
 
-function Definicao({ i }: { i: Indicador }) {
+/** Janela temporal do indicador: só os do período selecionado seguem o filtro. */
+function JanelaTemporal({ i }: { i: Indicador }) {
+  if (i.periodo === "selecionado") return null;
+  const fixa = /12 meses/.test(i.nome);
+  return (
+    <p className="text-xs text-texto-suave">
+      {fixa ? "Janela fixa de 12 meses" : "Situação atual"} (ignora o período)
+    </p>
+  );
+}
+
+function Definicao({ i, compacta = false }: { i: Indicador; compacta?: boolean }) {
   return (
     <details className="mt-2 text-xs text-texto-suave">
-      <summary className="inline-flex cursor-pointer items-center gap-1">
-        <Info className="size-3.5" aria-hidden /> Como é calculado
+      <summary
+        className="inline-flex cursor-pointer items-center gap-1"
+        title={compacta ? "Como é calculado" : undefined}
+      >
+        <Info className="size-3.5" aria-hidden />{" "}
+        <span className={compacta ? "sr-only" : undefined}>Como é calculado</span>
       </summary>
       <p className="mt-1">{i.definicao}</p>
       <p className="mt-1">Fórmula: {i.formula}</p>
@@ -231,8 +273,9 @@ function CartaoDestaque({ i, extra }: { i: Indicador; extra?: ReactNode }) {
         {i.periodo !== "selecionado" && i.base !== null && i.unidade === "%" && (
           <p className="text-xs text-texto-suave">Base: {i.base.toLocaleString("pt-BR")}</p>
         )}
+        <JanelaTemporal i={i} />
       </div>
-      <Definicao i={i} />
+      <Definicao i={i} compacta />
     </div>
   );
 }
@@ -254,6 +297,7 @@ function CartaoCompacto({ i }: { i: Indicador }) {
       </div>
       <Variacao i={i} />
       <Tendencia i={i} />
+      <JanelaTemporal i={i} />
       <Definicao i={i} />
     </div>
   );
@@ -348,6 +392,24 @@ function Painel({
   );
 }
 
+const iso = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const diasAtras = (hoje: Date, dias: number) =>
+  new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - dias);
+
+/** Atalhos de período; o fim é sempre hoje. */
+const ATALHOS_PERIODO: {
+  rotulo: string;
+  periodo: (hoje: Date) => Pick<BuscaVisaoGeral, "inicio" | "fim">;
+}[] = [
+  { rotulo: "30 dias", periodo: (h) => ({ inicio: iso(diasAtras(h, 30)), fim: iso(h) }) },
+  { rotulo: "12 meses", periodo: (h) => ({ inicio: iso(diasAtras(h, 365)), fim: iso(h) }) },
+  {
+    rotulo: "Ano",
+    periodo: (h) => ({ inicio: iso(new Date(h.getFullYear(), 0, 1)), fim: iso(h) }),
+  },
+];
+
 export function VisaoGeralPagina() {
   const filtros = useSearch({ from: "/autenticado/visao-geral" });
   const navegar = useNavigate({ from: "/visao-geral" });
@@ -376,7 +438,7 @@ export function VisaoGeralPagina() {
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           De
           <EntradaData
-            value={filtros.inicio ?? ""}
+            value={filtros.inicio ?? String(dados?.periodo.inicio ?? "")}
             onChange={(v) => filtrar({ inicio: v || undefined })}
             className="w-40"
           />
@@ -384,11 +446,23 @@ export function VisaoGeralPagina() {
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           até
           <EntradaData
-            value={filtros.fim ?? ""}
+            value={filtros.fim ?? String(dados?.periodo.fim ?? "")}
             onChange={(v) => filtrar({ fim: v || undefined })}
             className="w-40"
           />
         </label>
+        <div className="flex items-center gap-1" role="group" aria-label="Atalhos de período">
+          {ATALHOS_PERIODO.map((a) => (
+            <button
+              key={a.rotulo}
+              type="button"
+              onClick={() => filtrar(a.periodo(new Date()))}
+              className="rounded-md border border-borda px-2 py-1 text-xs text-texto-suave hover:border-marca hover:text-marca-escura"
+            >
+              {a.rotulo}
+            </button>
+          ))}
+        </div>
         <Selecao
           aria-label="Bairro"
           value={filtros.bairro ?? ""}
@@ -439,31 +513,38 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
   const atrasadas = porId.ocorrencias_atrasadas?.valor;
   return (
     <>
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        {DESTAQUE.filter((id) => porId[id]).map((id) => (
-          <CartaoDestaque
-            key={id}
-            i={porId[id]!}
-            extra={
-              id === "ocorrencias_abertas" && atrasadas ? (
-                <p className="text-xs font-medium text-perigo">
-                  {atrasadas.toLocaleString("pt-BR")} com prazo vencido
-                </p>
-              ) : id === "arvores_validas" && porId.arvores_registros?.valor ? (
-                <p className="text-xs text-texto-suave">
-                  de {porId.arvores_registros.valor.toLocaleString("pt-BR")} registros
-                </p>
-              ) : null
-            }
-          />
-        ))}
-      </div>
-
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <MapaResumo />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {DESTAQUE.filter((id) => porId[id]).map((id) => (
+              <CartaoDestaque
+                key={id}
+                i={porId[id]!}
+                extra={
+                  id === "ocorrencias_abertas" && atrasadas ? (
+                    <p className="text-xs font-medium text-perigo">
+                      {atrasadas.toLocaleString("pt-BR")} com prazo vencido
+                    </p>
+                  ) : id === "arvores_validas" && porId.arvores_registros?.valor ? (
+                    <>
+                      <p className="text-xs text-texto-suave">
+                        Base: {porId.arvores_registros.valor.toLocaleString("pt-BR")} registros
+                      </p>
+                      <p className="text-xs text-texto-suave">
+                        Válido: ativa, com localização e origem registradas (critério provisório).
+                      </p>
+                    </>
+                  ) : null
+                }
+              />
+            ))}
+          </div>
         </div>
         <Pendencias itens={pendencias} />
+      </div>
+
+      <div className="mb-4">
+        <MapaResumo />
       </div>
 
       <div className="mb-4 grid gap-4 lg:grid-cols-3">
@@ -525,7 +606,7 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
           </Painel>
         )}
         <Painel titulo="Outros indicadores">
-          <div className="flex flex-col gap-2">
+          <div className="grid gap-2 sm:grid-cols-2">
             {indicadores
               .filter((i) => !DESTAQUE.includes(i.id) && i.id !== "ocorrencias_atrasadas")
               .map((i) => (
