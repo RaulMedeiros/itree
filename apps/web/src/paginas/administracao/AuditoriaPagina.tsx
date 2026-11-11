@@ -11,14 +11,14 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarDataHora } from "../../util/formatos";
+import { formatarDataHora, plural } from "../../util/formatos";
 import {
   DadosTecnicos,
   DetalhesEvento,
   autorDoEvento,
   type ContextoEvento,
 } from "../../componentes/Historico";
-import { agruparEventos } from "./auditoria";
+import { agruparEventos, usuarioAfetado } from "./auditoria";
 import { useOpcoesUsuario } from "./dados";
 
 const TAMANHO = 50;
@@ -73,9 +73,24 @@ function alvoDoRegistro(ev: EventoAuditoria) {
 }
 
 /** Link para o registro, quando existe uma tela de detalhe para ele. */
-function Registro({ ev }: { ev: EventoAuditoria }) {
+function Registro({ ev, nomes }: { ev: EventoAuditoria; nomes?: Map<string, string> }) {
   const alvo = alvoDoRegistro(ev);
-  if (!alvo) return <span className="text-texto-suave">—</span>;
+  if (!alvo) {
+    const usuario = usuarioAfetado(ev, nomes);
+    if (!usuario) return <span className="text-texto-suave">—</span>;
+    const ehUsuario = ev.entidade_modelo === "contas.UsuarioEvent" && ev.objeto_id;
+    return ehUsuario ? (
+      <Link
+        to="/administracao/usuarios/$id"
+        params={{ id: ev.objeto_id! }}
+        className="text-xs text-marca-escura hover:underline"
+      >
+        {usuario}
+      </Link>
+    ) : (
+      <span className="text-xs">{usuario}</span>
+    );
+  }
   const classe = "font-mono text-xs text-marca-escura hover:underline";
   const { codigo, id } = alvo;
   const rotulo = alvo.ehPai ? (
@@ -149,6 +164,8 @@ export function AuditoriaPagina() {
     tamanho: TAMANHO,
   });
 
+  const linhas = consulta.data ? agruparEventos(consulta.data.data.results) : [];
+
   const filtrar = (parcial: Partial<BuscaAuditoria>) =>
     void navegar({ search: (s: BuscaAuditoria) => ({ ...s, ...parcial, pagina: undefined }) });
 
@@ -157,7 +174,7 @@ export function AuditoriaPagina() {
       <CabecalhoPagina
         titulo="Auditoria"
         migalhas={[{ rotulo: "Administração", para: "/administracao" }, { rotulo: "Auditoria" }]}
-        descricao="Toda alteração em usuários, equipes e territórios, com autor, origem e justificativa. Os registros não podem ser alterados."
+        descricao="Toda alteração em usuários, equipes, territórios, árvores, ocorrências e demais registros, com autor, origem e justificativa. Eventos seguidos e iguais aparecem agrupados numa linha. Os registros não podem ser alterados."
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Selecao
@@ -255,7 +272,7 @@ export function AuditoriaPagina() {
               </tr>
             </thead>
             <tbody>
-              {agruparEventos(consulta.data.data.results).map(({ eventos }) => {
+              {linhas.map(({ eventos }) => {
                 const ev = eventos[0]!;
                 const lote = eventos.length > 1;
                 const ctx = (ev.contexto ?? {}) as ContextoEvento;
@@ -291,7 +308,7 @@ export function AuditoriaPagina() {
                             ) : null}
                           </span>
                         ) : (
-                          <Registro ev={ev} />
+                          <Registro ev={ev} nomes={nomes} />
                         )}
                       </Td>
                       <Td>
@@ -343,6 +360,12 @@ export function AuditoriaPagina() {
             pagina={filtros.pagina ?? 1}
             total={consulta.data.data.count}
             tamanho={TAMANHO}
+            unidade="eventos"
+            nota={
+              linhas.length < consulta.data.data.results.length
+                ? `agrupados em ${plural(linhas.length, "linha")}`
+                : undefined
+            }
             aoMudar={(pagina) =>
               void navegar({ search: (s: BuscaAuditoria) => ({ ...s, pagina }) })
             }

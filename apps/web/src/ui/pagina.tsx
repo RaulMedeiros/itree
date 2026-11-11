@@ -71,11 +71,17 @@ export function Paginacao({
   total,
   tamanho,
   aoMudar,
+  unidade,
+  nota,
 }: {
   pagina: number;
   total: number;
   tamanho: number;
   aoMudar: (pagina: number) => void;
+  /** O que se conta ("eventos"): evita "1–50 de 2.022" sem dizer do quê. */
+  unidade?: string;
+  /** Esclarecimento quando as linhas visíveis não são os itens contados (ex.: grupos). */
+  nota?: string;
 }) {
   const paginas = Math.max(1, Math.ceil(total / tamanho));
   if (total === 0) return null;
@@ -87,7 +93,9 @@ export function Paginacao({
       className="mt-3 flex items-center justify-between text-sm text-texto-suave"
     >
       <span>
-        {inicio}–{fim} de {total}
+        {inicio}–{fim} de {total.toLocaleString("pt-BR")}
+        {unidade ? ` ${unidade}` : ""}
+        {nota ? ` (${nota})` : ""}
       </span>
       <div className="flex gap-2">
         <button

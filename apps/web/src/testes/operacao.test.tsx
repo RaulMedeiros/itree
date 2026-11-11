@@ -610,6 +610,74 @@ describe("auditoria: lote de filhos", () => {
   });
 });
 
+describe("auditoria: usuário afetado e contagem (R2-18)", () => {
+  const eventoUsuario = (id: string, dados: Record<string, unknown>, contexto: unknown = null) => ({
+    id,
+    momento: "2026-11-10T21:17:10Z",
+    entidade: "Usuário",
+    entidade_modelo: "contas.UsuarioEvent",
+    objeto_id: `u-${id}`,
+    registro: null,
+    pai: null,
+    acao: "alteracao",
+    diferencas: null,
+    dados,
+    autor_nome: null,
+    contexto,
+  });
+
+  it("identifica o usuário nos eventos de usuário e explica o primeiro acesso", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "admin.auditoria"] }),
+      ),
+      http.get(`${API}/api/v1/admin/auditoria`, () =>
+        HttpResponse.json(
+          pagina([
+            eventoUsuario(
+              "1",
+              { nome: "Bia Souza", email: "bia@itree.teste" },
+              {
+                evento: "vinculo_oidc",
+              },
+            ),
+            eventoUsuario("2", { nome: "", email: "caio@itree.teste" }),
+          ]),
+        ),
+      ),
+    );
+    await abrir("/administracao/auditoria");
+    expect(await screen.findByRole("link", { name: "Bia Souza" })).toHaveAttribute(
+      "href",
+      "/administracao/usuarios/u-1",
+    );
+    expect(screen.getByRole("link", { name: "caio@itree.teste" })).toBeInTheDocument();
+    expect(screen.getByText("Sistema: vínculo da conta no primeiro acesso")).toBeInTheDocument();
+    expect(screen.queryByText(/Primeiro acesso \(provedor de login\)/)).toBeNull();
+  });
+
+  it("o rodapé conta eventos e diz quando as linhas são grupos deles", async () => {
+    const lote = (id: string) => eventoUsuario(id, { nome: "Ana", email: "a@itree.teste" });
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "admin.auditoria"] }),
+      ),
+      http.get(`${API}/api/v1/admin/auditoria`, () =>
+        HttpResponse.json({
+          count: 2022,
+          next: null,
+          previous: null,
+          results: [lote("1"), lote("1")],
+        }),
+      ),
+    );
+    await abrir("/administracao/auditoria");
+    expect(
+      await screen.findByText("1–50 de 2.022 eventos (agrupados em 1 linha)"),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("atribuição a equipe incompleta", () => {
   it("avisa antes de confirmar, sem bloquear a reatribuição", async () => {
     const usuario = userEvent.setup();
