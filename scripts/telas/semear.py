@@ -170,6 +170,7 @@ for i, a in enumerate(arvores_com_foto):
         id=ident, chave=chave, nome_original=f"arvore-{a.codigo}.png", tipo_conteudo="image/png",
         tamanho=len(conteudo), descricao="Copa e tronco vistos da calçada (ilustração sintética)",
         capturada_em=agora - timedelta(days=3), estado="disponivel", enviada_por=tecnicos[0], arvore=a,
+        ilustrativa=True,  # imagem gerada aqui: a interface mostra o selo "Ilustração"
     )
 
 # --- Ocorrências ---------------------------------------------------------------

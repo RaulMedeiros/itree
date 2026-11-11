@@ -88,6 +88,32 @@ def test_fluxo_de_envio_direto(cliente, tecnico_a, arvore, s3):
     assert cliente.get("/api/v1/evidencias", {"arvore": arvore["id"]}).json() == []
 
 
+def test_evidencia_ilustrativa_e_marcada_na_api_e_nunca_pelo_cliente(
+    cliente, tecnico_a, arvore, s3
+):
+    cliente.como(tecnico_a)
+    r = cliente.post(
+        "/api/v1/evidencias",
+        {
+            "arvore": arvore["id"],
+            "nome_original": "real.jpg",
+            "tipo_conteudo": "image/jpeg",
+            "tamanho": 5,
+            "ilustrativa": True,  # o cliente não declara ilustração: só a semeadura
+        },
+        format="json",
+    )
+    assert r.status_code == 201, r.json()
+    assert r.json()["evidencia"]["ilustrativa"] is False
+    assert Evidencia.objects.get(pk=r.json()["evidencia"]["id"]).ilustrativa is False
+
+    Evidencia.objects.filter(pk=r.json()["evidencia"]["id"]).update(
+        ilustrativa=True, estado="disponivel"
+    )
+    lista = cliente.get("/api/v1/evidencias", {"arvore": arvore["id"]}).json()
+    assert [e["ilustrativa"] for e in lista] == [True]
+
+
 def test_tamanho_divergente_e_tipo_proibido(cliente, tecnico_a, arvore, s3):
     cliente.como(tecnico_a)
     r = cliente.post(

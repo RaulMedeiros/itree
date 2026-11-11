@@ -37,6 +37,10 @@ class Evidencia(ModeloBase):
     capturada_em = models.DateTimeField(
         null=True, blank=True, help_text="Momento da captura, quando conhecido."
     )
+    ilustrativa = models.BooleanField(
+        default=False,
+        help_text="Imagem sintética de demonstração, não uma fotografia real da árvore.",
+    )
     estado = models.CharField(
         max_length=20, choices=EstadoEvidencia.choices, default=EstadoEvidencia.AGUARDANDO_ENVIO
     )

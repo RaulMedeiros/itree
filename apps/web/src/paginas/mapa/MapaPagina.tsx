@@ -32,6 +32,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import {
   SeloEspecie,
+  SeloIlustracao,
   SeloEstadoOcorrencia,
   SeloLocalizacao,
   SeloPrioridade,
@@ -1504,11 +1505,14 @@ function FotoDaArvore({ id }: { id: string }) {
   const data = foto.capturada_em ?? foto.criado_em;
   return (
     <figure className="-mx-4 -mt-4 w-[calc(100%+2rem)] max-w-none">
-      <img
-        src={foto.url}
-        alt={foto.descricao || `Foto de ${foto.nome_original}`}
-        className="aspect-[16/9] w-full rounded-t-xl object-cover"
-      />
+      <div className="relative">
+        <img
+          src={foto.url}
+          alt={foto.descricao || `Foto de ${foto.nome_original}`}
+          className="aspect-[16/9] w-full rounded-t-xl object-cover"
+        />
+        {foto.ilustrativa && <SeloIlustracao className="absolute top-2 left-2 shadow-sm" />}
+      </div>
       <figcaption className="px-4 pt-1 text-xs text-texto-suave">
         Foto enviada por {foto.enviada_por_nome || "autor não informado"} em {formatarData(data)}
       </figcaption>

@@ -4179,6 +4179,10 @@ components:
           description: Momento da captura, quando conhecido.
         estado:
           $ref: '#/components/schemas/EstadoEvidenciaEnum'
+        ilustrativa:
+          type: boolean
+          description: Imagem sintética de demonstração, não uma fotografia real da
+            árvore.
         eh_imagem:
           type: boolean
           readOnly: true

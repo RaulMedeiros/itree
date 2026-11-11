@@ -26,6 +26,8 @@ export interface Evidencia {
      */
   capturada_em?: string | null;
   estado?: EstadoEvidenciaEnum;
+  /** Imagem sintética de demonstração, não uma fotografia real da árvore. */
+  ilustrativa?: boolean;
   readonly eh_imagem: boolean;
   /**
      * URL temporária (5 min) para visualizar.

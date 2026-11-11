@@ -432,6 +432,32 @@ describe("painel da árvore e controles do mapa (C-09, C-10, C-11, C-12)", () =>
     expect(within(painel).queryByRole("button", { name: /Pedir inspeção/ })).toBeNull();
   });
 
+  const FOTO = {
+    id: "e-1",
+    nome_original: "arvore.png",
+    eh_imagem: true,
+    url: "http://x/foto.png",
+    descricao: "",
+    enviada_por_nome: "Ana Campo",
+    capturada_em: null,
+    criado_em: "2026-10-05T12:00:00Z",
+  };
+
+  it("foto ilustrativa leva o selo Ilustração no painel", async () => {
+    comArvore([{ ...FOTO, ilustrativa: true }]);
+    await abrirMapa("/mapa?selecao=arvore:a-1");
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da seleção" });
+    expect(await within(painel).findByText("Ilustração")).toBeInTheDocument();
+  });
+
+  it("foto real não leva o selo Ilustração", async () => {
+    comArvore([{ ...FOTO, ilustrativa: false }]);
+    await abrirMapa("/mapa?selecao=arvore:a-1");
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da seleção" });
+    expect(await within(painel).findByText(/Foto enviada por Ana Campo/)).toBeInTheDocument();
+    expect(within(painel).queryByText("Ilustração")).toBeNull();
+  });
+
   it("legenda começa recolhida com o painel aberto e camada desligada avisa que está oculta", async () => {
     const usuario = userEvent.setup();
     await abrirMapa("/mapa?ocorrencias=0");

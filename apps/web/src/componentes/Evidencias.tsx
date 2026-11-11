@@ -17,6 +17,7 @@ import { AreaTexto, Campo } from "../ui/campos";
 import { Dialogo } from "../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../ui/estados";
 import { formatarDataHora } from "../util/formatos";
+import { SeloIlustracao } from "./selos";
 
 const TIPOS_ACEITOS = Object.values(TipoConteudoEnum).join(",");
 const TAMANHO_MAXIMO = 25 * 1024 * 1024;
@@ -117,11 +118,16 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
                 aria-describedby={`ev-nova-aba-${ev.id}`}
               >
                 {ev.eh_imagem && ev.url ? (
-                  <img
-                    src={ev.url}
-                    alt={ev.descricao || ev.nome_original}
-                    className="size-full object-cover"
-                  />
+                  <span className="relative block size-full">
+                    <img
+                      src={ev.url}
+                      alt={ev.descricao || ev.nome_original}
+                      className="size-full object-cover"
+                    />
+                    {ev.ilustrativa && (
+                      <SeloIlustracao className="absolute top-2 left-2 shadow-sm" />
+                    )}
+                  </span>
                 ) : (
                   <span className="flex size-full items-center justify-center text-texto-suave">
                     <FileText className="size-8" aria-hidden />

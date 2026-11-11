@@ -14,6 +14,19 @@ import { Selo } from "../ui/selo";
 
 type Tom = "neutro" | "marca" | "info" | "atencao" | "perigo" | "sucesso";
 
+/** Imagem sintética de demonstração: nunca deve ser lida como foto real da árvore. */
+export function SeloIlustracao({ className }: { className?: string }) {
+  return (
+    <Selo
+      tom="info"
+      className={className}
+      title="Imagem sintética de demonstração, não é uma fotografia real"
+    >
+      Ilustração
+    </Selo>
+  );
+}
+
 export function SeloEspecie({ estado }: { estado: keyof typeof ROTULOS_ESTADO_ESPECIE }) {
   const tom: Record<string, Tom> = {
     confirmada: "sucesso",
