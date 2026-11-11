@@ -13,22 +13,18 @@ from datetime import date
 
 import pghistory
 from django.contrib.gis.gdal import CoordTransform, DataSource, SpatialReference
-from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
+from itree.territorio.importacao import (
+    geometria_valida,
+    gravar_territorio,
+    obter_ou_criar_municipio,
+)
 from itree.territorio.models import Territorio, TipoTerritorio
 
 WGS84 = SpatialReference(4326)
-
-
-def _multipoligono(geom: GEOSGeometry) -> MultiPolygon:
-    if geom.geom_type == "Polygon":
-        return MultiPolygon(geom, srid=geom.srid)
-    if geom.geom_type == "MultiPolygon":
-        return geom
-    raise CommandError(f"Geometria {geom.geom_type} não é polígono.")
 
 
 class Command(BaseCommand):
@@ -90,47 +86,23 @@ class Command(BaseCommand):
                 geom.transform(transformacao)
                 geos = geom.geos
                 geos.srid = 4326
-                if not geos.valid:
-                    geos = geos.buffer(0)
-                territorio, criado = Territorio.objects.update_or_create(
-                    tipo=opts["tipo"],
-                    codigo=str(feicao.get(opts["campo_codigo"])),
-                    defaults={
-                        **comuns,
-                        "nome": str(feicao.get(opts["campo_nome"])).strip(),
-                        "geom": _multipoligono(geos),
-                        "metadados": {
-                            "src_original": src_original,
-                            "arquivo": str(opts["arquivo"]),
-                        },
-                    },
+                geos = geometria_valida(geos)
+                territorio, criado = gravar_territorio(
+                    opts["tipo"],
+                    str(feicao.get(opts["campo_codigo"])),
+                    str(feicao.get(opts["campo_nome"])).strip(),
+                    geos,
+                    comuns,
+                    {"src_original": src_original, "arquivo": str(opts["arquivo"])},
                 )
                 importados.append(territorio)
                 criados += criado
                 atualizados += not criado
 
             if opts["municipio"] and opts["tipo"] != TipoTerritorio.MUNICIPIO:
-                municipio = self._municipio(opts["municipio"], importados, comuns, src_original)
+                municipio = obter_ou_criar_municipio(
+                    opts["municipio"], importados, comuns, src_original, self.stdout.write
+                )
                 Territorio.objects.filter(pk__in=[t.pk for t in importados]).update(pai=municipio)
 
         self.stdout.write(self.style.SUCCESS(f"{criados} criado(s), {atualizados} atualizado(s)."))
-
-    def _municipio(self, nome, importados, comuns, src_original) -> Territorio:
-        existente = Territorio.objects.filter(tipo=TipoTerritorio.MUNICIPIO, nome=nome).first()
-        if existente:
-            return existente
-        uniao = importados[0].geom
-        for t in importados[1:]:
-            uniao = uniao.union(t.geom)
-        self.stdout.write(f"Município {nome} criado pela união de {len(importados)} territórios.")
-        return Territorio.objects.create(
-            tipo=TipoTerritorio.MUNICIPIO,
-            codigo=nome.lower(),
-            nome=nome,
-            geom=_multipoligono(uniao),
-            metadados={
-                "src_original": src_original,
-                "derivado": "união dos territórios importados",
-            },
-            **comuns,
-        )
