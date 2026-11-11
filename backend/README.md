@@ -16,7 +16,7 @@ Django + GeoDjango + Django REST Framework sobre PostgreSQL/PostGIS
 
 ## Desenvolvimento
 
-Requer Python 3.13, [uv](https://docs.astral.sh/uv/), GDAL e os serviços do
+Requer Python 3.14, [uv](https://docs.astral.sh/uv/), GDAL e os serviços do
 `infra/docker/compose.yml` (veja o README da raiz).
 
 ```bash
