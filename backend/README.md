@@ -60,6 +60,15 @@ uv run python manage.py importar_territorios bairros.geojson \
   --data-referencia <AAAA-MM-DD> --municipio Fortaleza
 ```
 
+Para os limites oficiais de Fortaleza (12 regionais e 121 bairros, do Fortaleza em
+Mapas), sem precisar descobrir campos:
+
+```bash
+uv run python manage.py importar_limites_fortaleza   # lê a API; --arquivo-bairros/--arquivo-regionais para offline
+```
+
+Detalhes e fontes em [`docs/integracoes/fontes-publicas.md`](../docs/integracoes/fontes-publicas.md).
+
 Os nomes dos campos dependem do arquivo publicado. Para descobri-los:
 `ogrinfo -so -al bairros.geojson`. O conjunto oficial de bairros e o
 responsável por ele ainda são uma decisão pendente (DP-10).

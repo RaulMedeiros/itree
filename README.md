@@ -125,8 +125,10 @@ e GDAL (`apt install gdal-bin libgdal-dev` ou `brew install gdal`).
    Console do Keycloak: http://localhost:8080 (`admin` / `admin`). Essas senhas
    valem **só** para o ambiente local.
 
-Para ter territórios, importe os bairros com `importar_territorios`
-(ver [`backend/README.md`](backend/README.md#importar-territórios)).
+Para ter territórios, rode `importar_limites_fortaleza` (regionais e bairros oficiais) ou
+importe os seus com `importar_territorios`
+(ver [`backend/README.md`](backend/README.md#importar-territórios) e
+[fontes públicas](docs/integracoes/fontes-publicas.md)).
 
 ### Verificações
 
