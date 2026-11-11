@@ -564,6 +564,17 @@ describe("medidas pendentes na ficha (C-16)", () => {
 });
 
 describe("ficha da árvore (C-15, C-17, C-18)", () => {
+  it('tem só as migalhas para voltar, sem o link "← Árvores" repetido', async () => {
+    await abrir("/inventario/arvores/a-1");
+    const migalhas = await screen.findByRole("navigation", { name: "Migalhas" });
+    expect(within(migalhas).getByRole("link", { name: "Árvores" })).toHaveAttribute(
+      "href",
+      "/inventario/arvores",
+    );
+    // O link "← Árvores" (seta à esquerda) não existe mais ao lado das migalhas.
+    expect(document.querySelector(".lucide-arrow-left")).toBeNull();
+  });
+
   it("formata coordenadas em pt-BR e separa a ação de excluir", async () => {
     await abrir("/inventario/arvores/a-1");
     expect(await screen.findByText("-3,746602, -38,540452")).toBeInTheDocument();

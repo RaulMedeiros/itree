@@ -78,12 +78,15 @@ export function ArvoreDetalhePagina() {
   const consulta = useArvoresObter(id);
   return (
     <>
-      <Link
-        to="/inventario/arvores"
-        className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
-      >
-        <ArrowLeft className="size-4" aria-hidden /> Árvores
-      </Link>
+      {/* Com os dados carregados, as migalhas do cabeçalho já levam de volta; o link só fica no erro. */}
+      {consulta.isError && (
+        <Link
+          to="/inventario/arvores"
+          className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
+        >
+          <ArrowLeft className="size-4" aria-hidden /> Árvores
+        </Link>
+      )}
       {consulta.isPending ? (
         <Carregando linhas={8} />
       ) : consulta.isError ? (

@@ -47,12 +47,15 @@ export function InspecaoDetalhePagina() {
   const consulta = useInspecoesObter(id);
   return (
     <div className="mx-auto max-w-6xl">
-      <Link
-        to="/inspecoes"
-        className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
-      >
-        <ArrowLeft className="size-4" aria-hidden /> Inspeções
-      </Link>
+      {/* Com os dados carregados, as migalhas do cabeçalho já levam de volta; o link só fica no erro. */}
+      {consulta.isError && (
+        <Link
+          to="/inspecoes"
+          className="mb-3 inline-flex items-center gap-1 text-sm text-texto-suave hover:text-texto"
+        >
+          <ArrowLeft className="size-4" aria-hidden /> Inspeções
+        </Link>
+      )}
       {consulta.isPending ? (
         <Carregando linhas={8} />
       ) : consulta.isError ? (
