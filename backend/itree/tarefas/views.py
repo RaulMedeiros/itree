@@ -183,6 +183,8 @@ class TarefaViewSet(
             raise ValidationError({"estado": ["Transição não permitida a partir do estado atual."]})
         if novo in EXIGEM_MOTIVO and not motivo:
             raise ValidationError({"motivo": ["Informe o motivo."]})
+        if tarefa.estado == EstadoTarefa.BLOQUEADA and not motivo:
+            raise ValidationError({"motivo": ["Informe por que o bloqueio acabou."]})
         with transaction.atomic(), pghistory.context(motivo=motivo or None):
             tarefa.estado = novo
             tarefa.motivo_estado = motivo

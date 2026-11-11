@@ -30,6 +30,12 @@ import { contar, formatarData } from "../../util/formatos";
 
 const TAMANHO = 50;
 
+/** Rótulo da ação de levar a tarefa a `estado`. Sair de "Bloqueada" é desbloquear, não iniciar. */
+function rotuloDaAcao(tarefa: Tarefa, estado: EstadoTarefaEnum): string {
+  if (tarefa.estado === "bloqueada" && estado === "nao_iniciada") return "Desbloquear";
+  return ACOES_ESTADO_TAREFA[estado];
+}
+
 export interface BuscaTarefas {
   responsavel?: "eu";
   estado?: string;
@@ -265,12 +271,16 @@ function AcoesTarefa({
   aoTransitar: (estado: EstadoTarefaEnum) => void;
   aoReatribuir: () => void;
 }) {
-  const principal = t.transicoes_possiveis.find((e) => e !== "cancelada" && e !== "bloqueada");
+  // Bloqueada não pode ser "iniciada": a ação principal é desbloquear, com motivo.
+  const bloqueada = t.estado === "bloqueada";
+  const principal = bloqueada
+    ? t.transicoes_possiveis.find((e) => e === "nao_iniciada")
+    : t.transicoes_possiveis.find((e) => e !== "cancelada" && e !== "bloqueada");
   const itens: ItemMenu[] = [
     ...t.transicoes_possiveis
-      .filter((e) => e !== principal)
+      .filter((e) => e !== principal && !(bloqueada && e === "em_execucao"))
       .map((e) => ({
-        rotulo: ACOES_ESTADO_TAREFA[e],
+        rotulo: rotuloDaAcao(t, e),
         aoEscolher: () => aoTransitar(e),
         perigo: e === "cancelada",
       })),
@@ -282,7 +292,7 @@ function AcoesTarefa({
     <div className="flex items-center justify-end gap-1">
       {principal && (
         <Botao tamanho="pequeno" onClick={() => aoTransitar(principal)}>
-          {ACOES_ESTADO_TAREFA[principal]}
+          {rotuloDaAcao(t, principal)}
         </Botao>
       )}
       <MenuAcoes rotulo={`Mais ações de ${t.codigo}`} itens={itens} />
@@ -302,12 +312,13 @@ function TransicaoDialogo({
   const [motivo, setMotivo] = useState("");
   const mutacao = useTarefasTransicao<ErroApi>();
   const cliente = useQueryClient();
-  const exige = estado === "bloqueada" || estado === "cancelada";
+  const desbloqueio = tarefa.estado === "bloqueada";
+  const exige = estado === "bloqueada" || estado === "cancelada" || desbloqueio;
   return (
     <Dialogo
       aberto
       aoMudar={(v) => !v && aoFechar()}
-      titulo={`${ACOES_ESTADO_TAREFA[estado]} ${tarefa.codigo}`}
+      titulo={`${rotuloDaAcao(tarefa, estado)} ${tarefa.codigo}`}
       rodape={
         <>
           <Botao variante="secundario" onClick={aoFechar}>
@@ -337,7 +348,17 @@ function TransicaoDialogo({
           {Object.values(mutacao.error.errosDeCampo).flat()[0] ?? mutacao.error.message}
         </p>
       )}
-      <Campo rotulo={exige ? "Motivo" : "Observação (opcional)"} obrigatorio={exige}>
+      {desbloqueio && tarefa.motivo_estado && (
+        <p className="mb-3 rounded-md bg-atencao-clara px-3 py-2 text-sm text-atencao">
+          Bloqueada por: {tarefa.motivo_estado}
+        </p>
+      )}
+      <Campo
+        rotulo={
+          desbloqueio ? "Por que o bloqueio acabou" : exige ? "Motivo" : "Observação (opcional)"
+        }
+        obrigatorio={exige}
+      >
         {(p) => <AreaTexto {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
       </Campo>
     </Dialogo>

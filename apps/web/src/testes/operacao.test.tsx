@@ -375,6 +375,49 @@ describe("equipes e tarefas", () => {
     expect(screen.getByRole("menuitem", { name: "Reatribuir" })).toBeInTheDocument();
   });
 
+  it("tarefa bloqueada não oferece Iniciar: a ação principal é Desbloquear, com motivo", async () => {
+    const usuario = userEvent.setup();
+    servidor.use(
+      http.get(`${API}/api/v1/tarefas`, () =>
+        HttpResponse.json(
+          pagina([
+            {
+              ...tarefa,
+              estado: "bloqueada",
+              motivo_estado: "Acesso bloqueado por obra no local",
+              transicoes_possiveis: ["nao_iniciada", "em_execucao", "cancelada"],
+            },
+          ]),
+        ),
+      ),
+      http.post(`${API}/api/v1/tarefas/tf-1/transicao`, async ({ request }) => {
+        transicoesTarefa.push(await request.json());
+        return HttpResponse.json({ ...tarefa, estado: "nao_iniciada" });
+      }),
+    );
+    await abrir("/equipes-tarefas");
+    const linha = (await screen.findByText("TAR-000001")).closest("tr")!;
+    expect(within(linha).queryByRole("button", { name: "Iniciar" })).toBeNull();
+    expect(within(linha).getByText("Acesso bloqueado por obra no local")).toBeInTheDocument();
+    await usuario.click(within(linha).getByRole("button", { name: /Mais ações de TAR-000001/ }));
+    expect(screen.queryByRole("menuitem", { name: "Iniciar" })).toBeNull();
+    await usuario.keyboard("{Escape}");
+
+    await usuario.click(within(linha).getByRole("button", { name: "Desbloquear" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByText(/Bloqueada por: Acesso bloqueado/)).toBeInTheDocument();
+    const confirmar = within(dialogo).getByRole("button", { name: "Confirmar" });
+    expect(confirmar).toBeDisabled();
+    await usuario.type(
+      within(dialogo).getByLabelText(/Por que o bloqueio acabou/),
+      "Obra terminou",
+    );
+    await usuario.click(confirmar);
+    await vi.waitFor(() =>
+      expect(transicoesTarefa).toEqual([{ estado: "nao_iniciada", motivo: "Obra terminou" }]),
+    );
+  });
+
   it("mostra na linha a inspeção de origem da tarefa de atendimento", async () => {
     servidor.use(
       http.get(`${API}/api/v1/tarefas`, () =>
