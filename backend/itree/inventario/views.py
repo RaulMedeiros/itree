@@ -29,7 +29,7 @@ from itree.contas.acesso import (
     tem_escopo_municipal,
 )
 from itree.contas.permissoes import Permissao
-from itree.core.parametros import uuid_do_parametro
+from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
 from itree.ocorrencias.models import ESTADOS_FINAIS
 
 from . import duplicidades, importacao, referencias
@@ -333,7 +333,13 @@ class ArvoreViewSet(
         validos = qs.filter(situacao=SituacaoArvore.ATIVA, geom__isnull=False).exclude(
             localizacao_origem=""
         )
-        return Response({"total": qs.count(), "validos": validos.count()})
+        return Response(
+            {
+                "total": qs.count(),
+                "validos": validos.count(),
+                "limite_tarefas_em_lote": LIMITE_LOTE,
+            }
+        )
 
     @extend_schema(operation_id="arvores_historico", responses=EventoAuditoriaSerializer(many=True))
     @action(detail=True, pagination_class=None)

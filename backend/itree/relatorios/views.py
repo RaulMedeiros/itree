@@ -591,6 +591,67 @@ def exportar(request: Request):
     return resposta_exportacao(request.user, conjunto, titulo, formato, p, colunas, registros)
 
 
+class ExportarArvoresSerializer(serializers.Serializer):
+    """Exportação do inventário por POST: os ids marcados ou os próprios filtros da lista."""
+
+    formato = serializers.ChoiceField(choices=list(FORMATOS))
+    ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        default=list,
+        max_length=LIMITE_EXPORTACAO,
+        help_text="Árvores marcadas na lista. Sem limite de URL; no máximo o limite do arquivo.",
+    )
+    todos_filtrados = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Exporta todas as árvores dos `filtros`, sem enviar a lista de ids.",
+    )
+    filtros = serializers.DictField(
+        child=serializers.CharField(allow_blank=True),
+        required=False,
+        default=dict,
+        help_text="Mesmos filtros da listagem de árvores; só valem com `todos_filtrados`.",
+    )
+
+    def validate(self, dados):
+        if bool(dados["ids"]) == dados["todos_filtrados"]:
+            raise serializers.ValidationError(
+                "Informe os ids das árvores ou marque todos_filtrados, não os dois nem nenhum."
+            )
+        return dados
+
+
+@extend_schema(
+    operation_id="relatorios_exportar_arvores",
+    request=ExportarArvoresSerializer,
+    responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
+)
+@api_view(["POST"])
+def exportar_arvores(request: Request):
+    """Exporta árvores escolhidas na lista (ids no corpo) ou todas as que os filtros alcançam."""
+    entrada = ExportarArvoresSerializer(data=request.data)
+    entrada.is_valid(raise_exception=True)
+    dados = entrada.validated_data
+    titulo, permissao, fonte_dados = CONJUNTOS["arvores"]
+    if not (
+        request.user.tem_permissao("relatorios.exportar") and request.user.tem_permissao(permissao)
+    ):
+        raise PermissionDenied()
+    if dados["todos_filtrados"]:
+        filtros = {k: v for k, v in dados["filtros"].items() if k not in ("ids", "pagina")}
+        consulta = {**filtros}
+        registro = {**filtros, "selecao": "todos_filtrados"}
+    else:
+        # A seleção vale mesmo para árvores excluídas ou fundidas marcadas na lista.
+        consulta = {"ids": ",".join(str(i) for i in dados["ids"]), "situacao": "todas"}
+        registro = {"selecao": "ids", "quantidade_de_ids": len(dados["ids"])}
+    colunas, registros = fonte_dados(request.user, consulta)
+    return resposta_exportacao(
+        request.user, "arvores", titulo, dados["formato"], registro, colunas, registros
+    )
+
+
 def resposta_exportacao(usuario, conjunto, titulo, formato, p, colunas, registros) -> HttpResponse:
     """Gera o arquivo (CSV, XLSX ou GeoJSON) com metadados e registra a exportação (RF-REL-004).
 

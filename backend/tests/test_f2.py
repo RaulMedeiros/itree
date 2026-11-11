@@ -237,6 +237,19 @@ def test_tarefas_em_lote_pelos_filtros(cliente, coordenador, revisor, tecnico_a)
     )
 
 
+def test_tarefas_em_lote_recusa_acima_do_limite_do_lote(cliente, coordenador, revisor, monkeypatch):
+    from itree.tarefas import views as views_tarefas
+
+    for ponto in (PONTO_A, PONTO_A):
+        cliente.como(revisor).post("/api/v1/arvores", {"localizacao": ponto}, format="json")
+    ids = [str(i) for i in Arvore.objects.values_list("id", flat=True)]
+    monkeypatch.setattr(views_tarefas, "LIMITE_LOTE", 1)
+    r = cliente.como(coordenador).post("/api/v1/tarefas/lote", {"arvore_ids": ids}, format="json")
+    assert r.status_code == 400
+    assert "limite por lote é 1" in str(r.json())
+    assert not Tarefa.objects.exists()
+
+
 def test_enviar_inspecao_conclui_a_tarefa(cliente, coordenador, tecnico_a, arvore_a):
     tarefa = (
         cliente.como(coordenador)

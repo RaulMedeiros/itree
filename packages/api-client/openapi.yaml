@@ -2506,6 +2506,35 @@ paths:
                 type: string
                 format: binary
           description: ''
+  /api/v1/relatorios/exportar-arvores:
+    post:
+      operationId: relatorios_exportar_arvores
+      description: Exporta árvores escolhidas na lista (ids no corpo) ou todas as
+        que os filtros alcançam.
+      tags:
+      - relatorios
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportarArvoresRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExportarArvoresRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExportarArvoresRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/v1/relatorios/painel.pdf:
     get:
       operationId: relatorios_painel_pdf
@@ -3600,7 +3629,11 @@ components:
           type: integer
         validos:
           type: integer
+        limite_tarefas_em_lote:
+          type: integer
+          description: Máximo de árvores por lote de tarefas de inspeção.
       required:
+      - limite_tarefas_em_lote
       - total
       - validos
     ContagemNaoLidas:
@@ -4315,6 +4348,33 @@ components:
       - tamanho
       - tipo_conteudo
       - url
+    ExportarArvoresRequest:
+      type: object
+      description: 'Exportação do inventário por POST: os ids marcados ou os próprios
+        filtros da lista.'
+      properties:
+        formato:
+          $ref: '#/components/schemas/FormatoEnum'
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Árvores marcadas na lista. Sem limite de URL; no máximo o limite
+            do arquivo.
+          maxItems: 50000
+        todos_filtrados:
+          type: boolean
+          default: false
+          description: Exporta todas as árvores dos `filtros`, sem enviar a lista
+            de ids.
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+          description: Mesmos filtros da listagem de árvores; só valem com `todos_filtrados`.
+      required:
+      - formato
     FonteAlertaEnum:
       enum:
       - inpe_focos

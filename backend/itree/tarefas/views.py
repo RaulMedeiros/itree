@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from itree.auditoria.views import EventoAuditoriaSerializer
 from itree.contas.acesso import area_do_escopo, filtrar_por_escopo, ponto_no_escopo, requer
 from itree.contas.permissoes import Permissao
-from itree.core.parametros import uuid_do_parametro
+from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
 from itree.notificacoes import servicos as notificacoes
@@ -36,7 +36,6 @@ from .serializers import (
 )
 
 P = Permissao
-LIMITE_LOTE = 1000
 
 FILTROS = [
     OpenApiParameter("busca", str, description="Código (TAR-000123)"),

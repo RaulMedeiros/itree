@@ -81,6 +81,8 @@ export * from './eventoAuditoria';
 export * from './eventoAuditoriaPai';
 export * from './evidencia';
 export * from './evidenciasListarParams';
+export * from './exportarArvoresRequest';
+export * from './exportarArvoresRequestFiltros';
 export * from './fonteAlertaEnum';
 export * from './formatoEnum';
 export * from './fusaoRequest';

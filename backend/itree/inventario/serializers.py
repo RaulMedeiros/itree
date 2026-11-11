@@ -463,3 +463,6 @@ class ColunasArquivoSerializer(serializers.Serializer):
 class ContadoresSerializer(serializers.Serializer):
     total = serializers.IntegerField()
     validos = serializers.IntegerField()
+    limite_tarefas_em_lote = serializers.IntegerField(
+        help_text="Máximo de árvores por lote de tarefas de inspeção."
+    )

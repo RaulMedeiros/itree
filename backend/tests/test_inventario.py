@@ -1,4 +1,5 @@
 import re
+import uuid
 
 import pytest
 
@@ -71,7 +72,7 @@ def test_contadores_distinguem_total_e_validos(cliente, revisor):
     criar(cliente, revisor)
     Arvore.objects.create(origem_registro="importacao")
     corpo = cliente.como(revisor).get(f"{URL}/contadores").json()
-    assert corpo == {"total": 2, "validos": 1}
+    assert corpo["total"] == 2 and corpo["validos"] == 1
 
 
 def test_busca_por_codigo(cliente, revisor):
@@ -301,3 +302,58 @@ def test_filtro_ids_limita_a_lista_e_a_exportacao(cliente, gestor_municipal, arv
     dados = [ln for ln in r.content.decode("utf-8-sig").splitlines() if not ln.startswith("#")]
     assert len(dados) - 1 == 2
     assert cliente.get(URL, {"ids": "nao-e-uuid"}).status_code == 400
+
+
+def test_exportar_arvores_por_post_com_ids_sem_limite_de_url(
+    cliente, gestor_municipal, arvores_ordenaveis
+):
+    cliente.como(gestor_municipal)
+    ids = [str(a.id) for a in arvores_ordenaveis[:2]]
+    r = cliente.post(
+        "/api/v1/relatorios/exportar-arvores", {"formato": "csv", "ids": ids}, format="json"
+    )
+    assert r.status_code == 200, r.content
+    dados = [ln for ln in r.content.decode("utf-8-sig").splitlines() if not ln.startswith("#")]
+    assert len(dados) - 1 == 2
+    # Mesmo com milhares de ids (que estourariam a URL), o pedido é aceito.
+    muitos = ids + [str(uuid.uuid4()) for _ in range(3000)]
+    r = cliente.post(
+        "/api/v1/relatorios/exportar-arvores", {"formato": "csv", "ids": muitos}, format="json"
+    )
+    assert r.status_code == 200
+    dados = [ln for ln in r.content.decode("utf-8-sig").splitlines() if not ln.startswith("#")]
+    assert len(dados) - 1 == 2
+
+
+def test_exportar_arvores_por_post_usa_os_filtros_quando_todos_filtrados(
+    cliente, gestor_municipal, arvores_ordenaveis
+):
+    cliente.como(gestor_municipal)
+    r = cliente.post(
+        "/api/v1/relatorios/exportar-arvores",
+        {"formato": "csv", "todos_filtrados": True, "filtros": {"condicao_aparente": "ruim"}},
+        format="json",
+    )
+    assert r.status_code == 200
+    dados = [ln for ln in r.content.decode("utf-8-sig").splitlines() if not ln.startswith("#")]
+    assert len(dados) - 1 == 1 and arvores_ordenaveis[1].codigo in dados[1]
+
+
+def test_exportar_arvores_por_post_exige_ids_ou_todos_filtrados_e_permissao(
+    cliente, gestor_municipal, tecnico_a, arvores_ordenaveis
+):
+    url = "/api/v1/relatorios/exportar-arvores"
+    cliente.como(gestor_municipal)
+    assert cliente.post(url, {"formato": "csv"}, format="json").status_code == 400
+    corpo = {"formato": "csv", "todos_filtrados": True, "ids": [str(arvores_ordenaveis[0].id)]}
+    assert cliente.post(url, corpo, format="json").status_code == 400
+    assert cliente.post(url, {"formato": "pdf", "ids": ["x"]}, format="json").status_code == 400
+    corpo = {"formato": "csv", "ids": [str(arvores_ordenaveis[0].id)]}
+    assert cliente.como(tecnico_a).post(url, corpo, format="json").status_code == 403
+
+
+def test_contadores_informam_o_limite_do_lote_de_tarefas(cliente, gestor_municipal):
+    from itree.core.parametros import LIMITE_LOTE
+
+    corpo = cliente.como(gestor_municipal).get(f"{URL}/contadores").json()
+    assert corpo["limite_tarefas_em_lote"] == LIMITE_LOTE

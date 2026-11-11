@@ -9,4 +9,6 @@
 export interface Contadores {
   total: number;
   validos: number;
+  /** Máximo de árvores por lote de tarefas de inspeção. */
+  limite_tarefas_em_lote: number;
 }

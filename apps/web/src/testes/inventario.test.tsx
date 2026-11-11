@@ -76,7 +76,7 @@ const resumo = (extra: Record<string, unknown> = {}) => ({
 });
 
 const consultas: URL[] = [];
-const exportacoes: URL[] = [];
+const exportacoes: Record<string, unknown>[] = [];
 const pedidosLote: Record<string, unknown>[] = [];
 let eu: Eu = REVISOR;
 const decisoes: unknown[] = [];
@@ -95,8 +95,8 @@ const servidor = setupServer(
       { status: 201 },
     );
   }),
-  http.get(`${API}/api/v1/relatorios/exportar`, ({ request }) => {
-    exportacoes.push(new URL(request.url));
+  http.post(`${API}/api/v1/relatorios/exportar-arvores`, async ({ request }) => {
+    exportacoes.push((await request.json()) as Record<string, unknown>);
     return new HttpResponse("codigo\nARV-000001\n", {
       headers: {
         "Content-Type": "text/csv",
@@ -104,7 +104,9 @@ const servidor = setupServer(
       },
     });
   }),
-  http.get(`${API}/api/v1/arvores/contadores`, () => HttpResponse.json({ total: 1, validos: 1 })),
+  http.get(`${API}/api/v1/arvores/contadores`, () =>
+    HttpResponse.json({ total: 1, validos: 1, limite_tarefas_em_lote: 1000 }),
+  ),
   http.get(`${API}/api/v1/arvores/a-1`, () =>
     HttpResponse.json({
       ...resumo(),
@@ -391,9 +393,87 @@ describe("lista de árvores: seleção em lote", () => {
     await usuario.click(within(barra).getByRole("button", { name: /Exportar seleção/ }));
     await usuario.click(await screen.findByRole("menuitem", { name: "CSV" }));
     await vi.waitFor(() => expect(exportacoes).toHaveLength(1));
-    expect(exportacoes[0]!.searchParams.get("conjunto")).toBe("arvores");
-    expect(exportacoes[0]!.searchParams.get("formato")).toBe("csv");
-    expect(exportacoes[0]!.searchParams.get("ids")).toBe("a-1,a-2");
+    expect(exportacoes[0]).toEqual({ formato: "csv", ids: ["a-1", "a-2"] });
+  });
+
+  it("seleciona todos os filtrados, exporta pelos filtros e cria tarefas pelo lote", async () => {
+    eu = COORDENADOR;
+    servidor.use(
+      http.get(`${API}/api/v1/arvores`, ({ request }) => {
+        consultas.push(new URL(request.url));
+        return HttpResponse.json({ ...pagina(DUAS_ARVORES), count: 120 });
+      }),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores?especie_estado=informada");
+    await screen.findByRole("table");
+    await usuario.click(screen.getByRole("checkbox", { name: /Selecionar todas/ }));
+    const barra = await screen.findByRole("region", { name: "Ações da seleção" });
+    await usuario.click(
+      within(barra).getByRole("button", { name: "Selecionar todos os 120 filtrados" }),
+    );
+    expect(within(barra).getByText(/120 árvores selecionadas/)).toBeInTheDocument();
+    await usuario.click(within(barra).getByRole("button", { name: /Exportar seleção/ }));
+    await usuario.click(await screen.findByRole("menuitem", { name: "CSV" }));
+    await vi.waitFor(() => expect(exportacoes).toHaveLength(1));
+    expect(exportacoes[0]).toEqual({
+      formato: "csv",
+      todos_filtrados: true,
+      filtros: { especie_estado: "informada" },
+    });
+    await usuario.click(within(barra).getByRole("button", { name: "Criar tarefas de inspeção" }));
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).getByText(/para 120 árvores/)).toBeInTheDocument();
+    await usuario.click(within(dialogo).getByRole("button", { name: "Criar" }));
+    await vi.waitFor(() =>
+      expect(pedidosLote).toEqual([
+        expect.objectContaining({ filtros_arvores: { especie_estado: "informada" } }),
+      ]),
+    );
+  });
+
+  it("a seleção atravessa as páginas", async () => {
+    eu = COORDENADOR;
+    const outra = resumo({ id: "a-3", codigo: "ARV-000003" });
+    servidor.use(
+      http.get(`${API}/api/v1/arvores`, ({ request }) => {
+        const url = new URL(request.url);
+        consultas.push(url);
+        const segunda = url.searchParams.get("pagina") === "2";
+        return HttpResponse.json({ ...pagina(segunda ? [outra] : DUAS_ARVORES), count: 120 });
+      }),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    await usuario.click(screen.getByRole("checkbox", { name: "Selecionar ARV-000002" }));
+    await usuario.click(await screen.findByRole("button", { name: /Próxima/ }));
+    await usuario.click(await screen.findByRole("checkbox", { name: "Selecionar ARV-000003" }));
+    const barra = await screen.findByRole("region", { name: "Ações da seleção" });
+    expect(within(barra).getByText("2 árvores selecionadas")).toBeInTheDocument();
+    await usuario.click(within(barra).getByRole("button", { name: /Exportar seleção/ }));
+    await usuario.click(await screen.findByRole("menuitem", { name: "CSV" }));
+    await vi.waitFor(() => expect(exportacoes).toHaveLength(1));
+    expect(exportacoes[0]).toEqual({ formato: "csv", ids: ["a-2", "a-3"] });
+  });
+
+  it("avisa e bloqueia a criação de tarefas acima do limite do lote", async () => {
+    eu = COORDENADOR;
+    servidor.use(
+      http.get(`${API}/api/v1/arvores`, () =>
+        HttpResponse.json({ ...pagina(DUAS_ARVORES), count: 1500 }),
+      ),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    await usuario.click(screen.getByRole("checkbox", { name: /Selecionar todas/ }));
+    const barra = await screen.findByRole("region", { name: "Ações da seleção" });
+    await usuario.click(
+      within(barra).getByRole("button", { name: "Selecionar todos os 1.500 filtrados" }),
+    );
+    expect(within(barra).getByText(/limite é de 1\.000 árvores por lote/)).toBeInTheDocument();
+    expect(within(barra).getByRole("button", { name: "Criar tarefas de inspeção" })).toBeDisabled();
   });
 
   it("a seleção some quando os filtros mudam", async () => {
