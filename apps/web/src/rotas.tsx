@@ -191,6 +191,7 @@ const auditoria = createRoute({
     entidade: textoOpcional,
     origem: textoOpcional,
     objeto: textoOpcional,
+    codigo: textoOpcional,
     desde: dataOpcional,
     ate: dataOpcional,
     pagina: paginaOpcional,
