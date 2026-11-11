@@ -2,10 +2,9 @@
 
 Verificação real feita em 2026-11-11, abrindo cada endpoint e olhando o dado. Ela
 substitui as fontes "a verificar" da [T-05](../specs/transversal/05-integracoes.md).
-O relatório completo (comandos, volumes e achados por fonte) é o
-"Relatório de verificação de fontes públicas" de 2026-11-11, produzido na sessão de
-melhoria e ainda não versionado neste repositório. Esta página guarda o resumo
-e o modo de usar o que já está implementado.
+O relatório completo (comandos, volumes e achados por fonte) está em
+[verificacao-fontes-2026-11-11.md](verificacao-fontes-2026-11-11.md). Esta página guarda
+o resumo e o modo de usar o que já está implementado.
 
 Regras que valem para todas as fontes (ver [ciclo de melhoria](../melhoria/README.md)):
 nenhum número ambiental sem fonte e método; toda fonte mostra órgão, licença ou
