@@ -19,6 +19,10 @@ import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { invalidarCaminhos } from "../../util/cache";
 import { formatarDataHora } from "../../util/formatos";
 
+/** Origem em forma de nome ("arquivo sintético" vira "Arquivo sintético"); URLs ficam como estão. */
+const rotuloOrigem = (origem: string) =>
+  /^https?:/i.test(origem) ? origem : origem.charAt(0).toLocaleUpperCase("pt-BR") + origem.slice(1);
+
 /** Estado das integrações de alertas (RF-ADM-006) e ingestão manual. */
 export function IntegracoesPagina() {
   const consulta = useAlertasIngestoes();
@@ -27,7 +31,13 @@ export function IntegracoesPagina() {
     <>
       <CabecalhoPagina
         titulo="Integrações"
-        descricao="Ingestão de alertas ambientais. A coleta automática usa as URLs em ALERTAS_FONTES; licenças e limites de cada fonte devem ser verificados antes do uso produtivo (DP-11)."
+        descricao={
+          <>
+            Ingestão de alertas ambientais. A coleta automática depende de configuração do servidor;
+            licenças e limites de cada fonte devem ser verificados antes do uso produtivo (
+            <span className="whitespace-nowrap">DP-11</span>).
+          </>
+        }
         acoes={
           <Botao onClick={() => setEnviando(true)}>
             <Upload /> Enviar arquivo da fonte
@@ -56,7 +66,7 @@ export function IntegracoesPagina() {
               <Linha key={i.id}>
                 <Td>{ROTULOS_FONTE_ALERTA[i.fonte]}</Td>
                 <Td className="max-w-64 truncate" title={i.origem}>
-                  {i.origem}
+                  {rotuloOrigem(i.origem)}
                 </Td>
                 <Td className="whitespace-nowrap">{formatarDataHora(i.iniciada_em)}</Td>
                 <Td>
