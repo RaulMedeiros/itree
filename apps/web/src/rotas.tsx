@@ -241,6 +241,7 @@ const mapa = createRoute({
     ocorrencias: bandeira("0"),
     bairros: bandeira("0"),
     areas_verdes: bandeira("1"),
+    arborizacao_entorno: bandeira("1"),
     tarefas: bandeira("1"),
     alertas: bandeira("1"),
     sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),

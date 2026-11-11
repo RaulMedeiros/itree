@@ -138,6 +138,50 @@ function paresDoMapa(mapa) {
   return pares;
 }
 
+/** Lê as cores e a opacidade da camada "Arborização do entorno" (`coropletica.ts`). */
+export function lerCoropletica(coropleticaTs) {
+  const lista = coropleticaTs.match(/CORES_ARBORIZACAO\s*=\s*\[([^\]]+)\]/);
+  if (!lista) throw new Error("Não achei CORES_ARBORIZACAO para checar o contraste do mapa.");
+  const cores = [...lista[1].matchAll(/"(#[0-9a-fA-F]{6})"/g)].map((m) => m[1].toLowerCase());
+  const opacidade = coropleticaTs.match(/OPACIDADE_ARBORIZACAO\s*=\s*([0-9.]+)/);
+  if (!opacidade) throw new Error("Não achei OPACIDADE_ARBORIZACAO.");
+  return { cores, opacidade: Number(opacidade[1]) };
+}
+
+/** Separação mínima entre classes vizinhas da rampa: o suficiente para ler a ordem. */
+const ENTRE_CLASSES = 1.4;
+
+/**
+ * Camada coroplética sobre o mapa claro (WCAG 1.4.11 para o que precisa ser lido):
+ * - classes vizinhas se distinguem entre si (≥ 1,4:1) em cada fundo do OSM;
+ * - a classe mais escura contrasta ≥ 3:1 com o mapa base;
+ * - a classe mais clara ("perto de zero") pode se aproximar do fundo, como em toda rampa
+ *   sequencial: o contorno do bairro (verificado acima) delimita o polígono, e a legenda
+ *   nomeia a classe, então a cor nunca é a única pista.
+ */
+function paresDaColoropletica(coro, mapa) {
+  const pares = [];
+  for (const [nome, osm] of FUNDOS_OSM) {
+    const base = pinturaRaster(osm, mapa.raster);
+    const pintadas = coro.cores.map((c) => compor(c, base, coro.opacidade));
+    pintadas.slice(1).forEach((cor, i) =>
+      pares.push({
+        descricao: `arborização do entorno: classe ${i + 2} sobre classe ${i + 1}, sobre ${nome}`,
+        frente: cor,
+        fundo: pintadas[i],
+        minimo: ENTRE_CLASSES,
+      }),
+    );
+    pares.push({
+      descricao: `arborização do entorno: classe mais escura sobre ${nome}`,
+      frente: pintadas.at(-1),
+      fundo: base,
+      minimo: NAO_TEXTO,
+    });
+  }
+  return pares;
+}
+
 const TEXTO = 4.5;
 const NAO_TEXTO = 3;
 const BRANCO = "#ffffff";
@@ -208,7 +252,7 @@ function montarPares(t) {
   return pares.map((x) => ({ ...x, frente: cor(x.frente), fundo: cor(x.fundo) }));
 }
 
-export function verificar(css, mapa) {
+export function verificar(css, mapa, coropletica) {
   const t = lerTokens(css);
   const ausentes = [];
   const exigidos = [
@@ -238,7 +282,11 @@ export function verificar(css, mapa) {
   ];
   for (const n of exigidos) if (!t[n]) ausentes.push(n);
   if (ausentes.length) throw new Error(`Tokens ausentes em tokens.css: ${ausentes.join(", ")}`);
-  const pares = [...montarPares(t), ...(mapa ? paresDoMapa(mapa) : [])];
+  const pares = [
+    ...montarPares(t),
+    ...(mapa ? paresDoMapa(mapa) : []),
+    ...(mapa && coropletica ? paresDaColoropletica(coropletica, mapa) : []),
+  ];
   return pares.map((x) => ({ ...x, razao: razao(x.frente, x.fundo) }));
 }
 
@@ -263,7 +311,8 @@ function principal() {
     readFileSync(join(web, "realce.ts"), "utf8"),
     readFileSync(join(web, "estilo.ts"), "utf8"),
   );
-  const resultados = verificar(css, mapa);
+  const coropletica = lerCoropletica(readFileSync(join(web, "coropletica.ts"), "utf8"));
+  const resultados = verificar(css, mapa, coropletica);
   let falhas = 0;
   for (const r of resultados) {
     const ok = r.razao >= r.minimo;

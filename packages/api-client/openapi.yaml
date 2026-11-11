@@ -1519,6 +1519,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/ColunasArquivo'
           description: ''
+  /api/v1/indicadores/externos/arborizacao-entorno:
+    get:
+      operationId: indicadores_arborizacao_entorno_geojson
+      description: |-
+        Camada coroplética "Arborização do entorno (Censo 2022)": bairros do escopo
+        com o percentual de faces de quadra com árvore e a proveniência do dado.
+      parameters:
+      - in: query
+        name: precisao
+        schema:
+          type: integer
+        description: Casas decimais (padrão 5).
+      tags:
+      - indicadores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/indicadores/painel:
     get:
       operationId: indicadores_painel

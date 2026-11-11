@@ -32,12 +32,20 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
 - **RF-MAPA-006** — Camada indisponível ou desatualizada aparece marcada no
   painel de camadas, com motivo e data da última atualização.
 - **RF-MAPA-007** — Legenda dinâmica das camadas ativas.
+- **RF-MAPA-008** — Camadas de contexto de fontes externas em grupo próprio
+  ("Contexto (fontes externas)"), desligadas por padrão, com fonte, data e
+  definição na legenda. A primeira é "Arborização do entorno (Censo 2022)":
+  bairros pintados pelo percentual de faces de quadra com árvore, em cinco
+  classes de um só matiz com quebras fixas (20, 40, 60 e 80%); bairro sem dado
+  fica hachurado e aparece como "Sem dado" na legenda, nunca como zero.
 
 ### Navegação e busca
 
 - **RF-MAPA-010** — Busca por identificador, endereço, bairro ou coordenada
   (integra com RF-SHELL-003).
-- **RF-MAPA-011** — Ao buscar bairro, enquadrar o polígono e destacá-lo.
+- **RF-MAPA-011** — Ao buscar bairro, enquadrar o polígono e destacá-lo. Escolher
+  o bairro no seletor de território do cabeçalho tem o mesmo efeito; voltar a
+  "todo o escopo" limpa o destaque e enquadra o escopo.
 - **RF-MAPA-012** — Exibir coordenada sob o cursor e escala.
 
 ### Densidade e seleção
@@ -48,7 +56,10 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
   resumo, selo de origem da localização, precisão, última inspeção, ocorrências
   abertas e link para o detalhe.
 - **RF-MAPA-022** — Seleção por área (retângulo/polígono) para ver lista dos
-  itens e enviar para "criar tarefa" (F2) ou exportação (F3).
+  itens e enviar para "criar tarefa" (F2) ou exportação (F3). A área vai para
+  a URL (parâmetro `area`) e é restaurada ao voltar ao mapa; o retângulo
+  funciona com mouse, toque e caneta; com a área ativa, clicar numa árvore abre
+  o painel dela sem perder a área.
 
 ### Filtros
 

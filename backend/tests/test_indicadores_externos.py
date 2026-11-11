@@ -166,3 +166,57 @@ def test_analise_arborizacao_por_bairro(cliente, bairros_ibge):
     assert corpo["unidade"] == "%" and "IBGE" in corpo["fonte"] and corpo["por_bairro"]
     catalogo = cliente.get("/api/v1/relatorios/catalogo").json()["analises"]
     assert "arborizacao_entorno_por_bairro" in {a["id"] for a in catalogo}
+
+
+URL_CAMADA = "/api/v1/indicadores/externos/arborizacao-entorno"
+
+
+def test_camada_geojson_pinta_bairros_com_dado_e_marca_os_sem_dado(cliente, bairros_ibge):
+    _importar()
+    gestor = com_escopo(
+        criar_usuario("g@itree.teste", ["gestor"]),
+        criar_territorio("Fortaleza", tipo="municipio", geom=quadrado(-38.6, -3.8, 0.2)),
+    )
+    resposta = cliente.como(gestor).get(URL_CAMADA)
+    assert resposta.status_code == 200
+    corpo = resposta.json()
+    assert corpo["type"] == "FeatureCollection"
+    por_nome = {f["properties"]["nome"]: f for f in corpo["features"]}
+    # A geometria é a do bairro, com o mesmo id de territorios/geojson.
+    aldeota = por_nome["Aldeota"]
+    assert aldeota["id"] == str(bairros_ibge["aldeota"].pk)
+    assert aldeota["geometry"]["type"] == "MultiPolygon"
+    assert aldeota["properties"] == {
+        "nome": "Aldeota",
+        "valor": 64.73,
+        "faces_com_arvore": 938,
+        "faces": 1449,
+    }
+    # Sem dado do Censo: valor nulo (nunca zero), e o bairro continua na camada.
+    assert por_nome["Sem código"]["properties"]["valor"] is None
+    assert por_nome["Sem código"]["properties"]["faces"] is None
+    # A proveniência vem uma vez, no topo, e não em cada feição.
+    proveniencia = corpo["proveniencia"]
+    assert proveniencia["fonte"] == "IBGE, Censo Demográfico 2022"
+    assert proveniencia["data_referencia"] == "2022-07-31"
+    assert proveniencia["definicao"] and proveniencia["metodo"] and proveniencia["fonte_url"]
+    assert "fonte" not in aldeota["properties"]
+
+
+def test_camada_geojson_respeita_o_escopo_e_a_permissao(cliente, bairros_ibge):
+    _importar()
+    tecnico = com_escopo(criar_usuario("t@itree.teste", ["tecnico"]), bairros_ibge["aldeota"])
+    corpo = cliente.como(tecnico).get(URL_CAMADA).json()
+    assert [f["properties"]["nome"] for f in corpo["features"]] == ["Aldeota"]
+    # Sem escopo: nenhuma feição e nenhuma proveniência.
+    vazio = cliente.como(criar_usuario("s@itree.teste", ["tecnico"])).get(URL_CAMADA).json()
+    assert vazio["features"] == [] and vazio["proveniencia"] is None
+    # Sem a permissão de leitura do mapa, 403.
+    sem_mapa = criar_usuario("n@itree.teste", [])
+    assert cliente.como(sem_mapa).get(URL_CAMADA).status_code == 403
+
+
+def test_camada_geojson_sem_importacao_nao_tem_proveniencia(cliente, bairros_ibge, gestor):
+    corpo = cliente.como(gestor).get(URL_CAMADA, {"precisao": 3}).json()
+    assert corpo["proveniencia"] is None
+    assert all(f["properties"]["valor"] is None for f in corpo["features"])
