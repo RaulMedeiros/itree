@@ -4,7 +4,7 @@
   "private": true,
   "description": "Tokens de design Field Operations compartilhados entre web e app.",
   "scripts": {
-    "test": "node scripts/contraste.mjs"
+    "test": "node scripts/contraste.mjs && node --test scripts/contraste.test.mjs"
   },
   "exports": {
     "./tokens.css": "./src/tokens.css",
