@@ -18,7 +18,8 @@ export function SeloEspecie({ estado }: { estado: keyof typeof ROTULOS_ESTADO_ES
   const tom: Record<string, Tom> = {
     confirmada: "sucesso",
     sugerida_ia: "info",
-    informada: "atencao",
+    // Âmbar é só para "requer ação"; "não validada" é um estado informativo.
+    informada: "neutro",
     nao_identificada: "neutro",
   };
   return <Selo tom={tom[estado]}>{ROTULOS_ESTADO_ESPECIE[estado]}</Selo>;
