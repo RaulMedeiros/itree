@@ -6,7 +6,7 @@ import { Fragment, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Botao } from "../../ui/botao";
-import { EntradaData, Selecao } from "../../ui/campos";
+import { Entrada, EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
