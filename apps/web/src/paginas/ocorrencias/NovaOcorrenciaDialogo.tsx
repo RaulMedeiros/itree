@@ -8,6 +8,7 @@ import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { invalidarCaminhos } from "../../util/cache";
+import { plural } from "../../util/formatos";
 
 /** Registro de ocorrência (W-04). Se vier de uma árvore, herda a localização dela. */
 export function NovaOcorrenciaDialogo({
@@ -88,7 +89,7 @@ export function NovaOcorrenciaDialogo({
               {tipos.data?.data.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.nome}
-                  {t.prazo_padrao_dias ? ` (prazo ${t.prazo_padrao_dias} dias)` : ""}
+                  {t.prazo_padrao_dias ? ` (prazo ${plural(t.prazo_padrao_dias, "dia")})` : ""}
                 </option>
               ))}
             </Selecao>

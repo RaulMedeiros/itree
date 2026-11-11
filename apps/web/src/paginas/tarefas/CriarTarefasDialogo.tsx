@@ -9,9 +9,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Botao } from "../../ui/botao";
-import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
+import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { invalidarCaminhos } from "../../util/cache";
+import { plural } from "../../util/formatos";
 
 type Alvo =
   | { tipo: "lote"; filtros: Record<string, string>; total: number }
@@ -75,9 +76,9 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
 
   const titulo =
     alvo.tipo === "lote"
-      ? `Criar tarefas de inspeção para ${alvo.total} árvore(s)`
+      ? `Criar tarefas de inspeção para ${plural(alvo.total, "árvore")}`
       : alvo.tipo === "selecao"
-        ? `Criar tarefas de inspeção para ${alvo.arvoreIds.length} árvore(s)`
+        ? `Criar tarefas de inspeção para ${plural(alvo.arvoreIds.length, "árvore")}`
         : alvo.tipo === "arvore"
           ? `Tarefa de inspeção para ${alvo.codigo}`
           : `Tarefa de atendimento para ${alvo.codigo}`;
@@ -112,7 +113,8 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
       {resultado ? (
         <div role="status" className="text-sm">
           <p>
-            <strong>{resultado.criadas}</strong> tarefa(s) criada(s).
+            <strong>{resultado.criadas}</strong>{" "}
+            {resultado.criadas === 1 ? "tarefa criada" : "tarefas criadas"}.
           </p>
           {resultado.ignoradas > 0 && (
             <p>{resultado.ignoradas} árvore(s) já tinham tarefa de inspeção aberta.</p>
@@ -171,11 +173,11 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
           </div>
           <Campo rotulo="Prazo">
             {(p) => (
-              <Entrada
+              <EntradaData
                 {...p}
-                type="date"
+
                 value={prazo}
-                onChange={(e) => setPrazo(e.target.value)}
+                onChange={(v) => setPrazo(v)}
               />
             )}
           </Campo>

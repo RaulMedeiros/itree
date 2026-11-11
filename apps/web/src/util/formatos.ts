@@ -45,3 +45,35 @@ export function descreverPrazo(prazo: string, agora?: Date): string {
   if (d > 0) return d === 1 ? "falta 1 dia" : `faltam ${dias}`;
   return `atrasado há ${dias}`;
 }
+
+/** Concordância de número: `plural(1, "dia")` → "1 dia"; `plural(3, "dia")` → "3 dias". */
+export function plural(n: number, singular: string, pluralForma = `${singular}s`): string {
+  return `${n} ${n === 1 ? singular : pluralForma}`;
+}
+
+/** dd/mm/aaaa → AAAA-MM-DD; vazio se a data estiver incompleta ou não existir no calendário. */
+export function dataBrParaIso(texto: string): string {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto);
+  if (!m) return "";
+  const [, d, mes, a] = m;
+  const dt = new Date(Date.UTC(Number(a), Number(mes) - 1, Number(d)));
+  const valida =
+    dt.getUTCFullYear() === Number(a) &&
+    dt.getUTCMonth() === Number(mes) - 1 &&
+    dt.getUTCDate() === Number(d);
+  return valida ? `${a}-${mes}-${d}` : "";
+}
+
+/** AAAA-MM-DD → dd/mm/aaaa (vazio se o valor não for uma data ISO). */
+export function dataIsoParaBr(valor: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+}
+
+/** Aplica a máscara dd/mm/aaaa à medida que a pessoa digita. */
+export function mascararDataBr(texto: string): string {
+  const d = texto.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}`;
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}

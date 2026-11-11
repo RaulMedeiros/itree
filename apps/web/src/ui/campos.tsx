@@ -1,5 +1,8 @@
+import { Paperclip } from "lucide-react";
 import {
   useId,
+  useRef,
+  useState,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -7,6 +10,8 @@ import {
 } from "react";
 
 import { cn } from "../util/cn";
+import { dataBrParaIso, dataIsoParaBr, mascararDataBr } from "../util/formatos";
+import { Botao } from "./botao";
 
 const base =
   "w-full rounded-md border border-borda-campo bg-superficie px-3 text-sm text-texto placeholder:text-texto-suave disabled:opacity-60 aria-invalid:border-perigo";
@@ -16,7 +21,80 @@ export function Entrada({ className, ...props }: InputHTMLAttributes<HTMLInputEl
 }
 
 export function Selecao({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(base, "h-9 pr-8", className)} {...props} />;
+  return <select className={cn(base, "seletor h-9 pr-8", className)} {...props} />;
+}
+
+type PropsData = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
+  /** Data ISO (AAAA-MM-DD) ou vazio. */
+  value: string;
+  /** Recebe a data ISO, ou vazio enquanto a digitação estiver incompleta ou inválida. */
+  onChange: (iso: string) => void;
+};
+
+/**
+ * Data em dd/mm/aaaa. O campo nativo `type="date"` segue o idioma do navegador (mm/dd/yyyy
+ * em inglês), o que induz a trocar dia e mês; aqui o formato é sempre o brasileiro.
+ */
+export function EntradaData({ value, onChange, className, ...props }: PropsData) {
+  const [texto, setTexto] = useState(dataIsoParaBr(value));
+  // Valor alterado por fora (ex.: limpar filtros): reescreve o texto durante a renderização.
+  const [anterior, setAnterior] = useState(value);
+  if (value !== anterior) {
+    setAnterior(value);
+    if (dataBrParaIso(texto) !== value) setTexto(dataIsoParaBr(value));
+  }
+  const invalido = texto.length === 10 && dataBrParaIso(texto) === "";
+  return (
+    <input
+      {...props}
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      placeholder="dd/mm/aaaa"
+      maxLength={10}
+      lang="pt-BR"
+      aria-invalid={invalido || props["aria-invalid"] || undefined}
+      className={cn(base, "h-9", className)}
+      value={texto}
+      onChange={(e) => {
+        const novo = mascararDataBr(e.target.value);
+        setTexto(novo);
+        onChange(dataBrParaIso(novo));
+      }}
+    />
+  );
+}
+
+type PropsArquivo = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "onChange" | "value"> & {
+  onChange: (arquivo: File | null) => void;
+};
+
+/** Escolha de arquivo com botão e texto em português (o campo nativo usa o idioma do navegador). */
+export function EntradaArquivo({ onChange, className, ...props }: PropsArquivo) {
+  const entrada = useRef<HTMLInputElement>(null);
+  const [nome, setNome] = useState("");
+  return (
+    <div className={cn("flex items-center gap-3", className)}>
+      <input
+        {...props}
+        ref={entrada}
+        type="file"
+        tabIndex={-1}
+        className="sr-only"
+        onChange={(e) => {
+          const arquivo = e.target.files?.[0] ?? null;
+          setNome(arquivo?.name ?? "");
+          onChange(arquivo);
+        }}
+      />
+      <Botao variante="secundario" onClick={() => entrada.current?.click()}>
+        <Paperclip /> Escolher arquivo
+      </Botao>
+      <span className="min-w-0 truncate text-sm text-texto-suave" aria-live="polite">
+        {nome || "Nenhum arquivo escolhido"}
+      </span>
+    </div>
+  );
 }
 
 export function AreaTexto({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {

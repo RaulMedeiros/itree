@@ -17,13 +17,13 @@ import { FileUp, Undo2 } from "lucide-react";
 import { useState } from "react";
 
 import { Botao } from "../../ui/botao";
-import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
+import { AreaTexto, Campo, Entrada, EntradaArquivo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarData, formatarDataHora } from "../../util/formatos";
+import { formatarData, formatarDataHora, plural } from "../../util/formatos";
 import { invalidarCaminhos } from "../../util/cache";
 
 const CAMPOS = [
@@ -261,12 +261,10 @@ function AssistenteImportacao({
           erros={erroLeitura ? [erroLeitura] : erros.arquivo}
         >
           {(p) => (
-            <Entrada
+            <EntradaArquivo
               {...p}
-              type="file"
               accept=".csv,.txt,.geojson,.json"
-              className="py-1.5"
-              onChange={(e) => void escolher(e.target.files?.[0] ?? null)}
+              onChange={(arquivo) => void escolher(arquivo)}
             />
           )}
         </Campo>
@@ -287,11 +285,11 @@ function AssistenteImportacao({
               </Campo>
               <Campo rotulo="Data de referência dos dados" erros={erros.data_referencia}>
                 {(p) => (
-                  <Entrada
+                  <EntradaData
                     {...p}
-                    type="date"
+
                     value={dataReferencia}
-                    onChange={(e) => setDataReferencia(e.target.value)}
+                    onChange={(v) => setDataReferencia(v)}
                   />
                 )}
               </Campo>
@@ -391,7 +389,9 @@ function PreVisualizacao({ id, aoFechar }: { id: string; aoFechar: () => void })
                 confirmar.mutate({ id }, { onSuccess: async () => (await atualizar(), aoFechar()) })
               }
             >
-              {confirmar.isPending ? "Importando…" : `Importar ${lote.linhas_validas} árvores`}
+              {confirmar.isPending
+                ? "Importando…"
+                : `Importar ${plural(lote.linhas_validas ?? 0, "árvore")}`}
             </Botao>
           </>
         )
@@ -481,7 +481,7 @@ function DesfazerDialogo({ lote, aoFechar }: { lote: LoteImportacao; aoFechar: (
       aberto
       aoMudar={(v) => !v && aoFechar()}
       titulo={`Desfazer lote nº ${lote.numero}`}
-      descricao={`As ${lote.arvores_criadas} árvores criadas por este lote serão removidas. A ação fica registrada na auditoria.`}
+      descricao={`${lote.arvores_criadas === 1 ? "A árvore criada" : `As ${lote.arvores_criadas} árvores criadas`} por este lote ${lote.arvores_criadas === 1 ? "será removida" : "serão removidas"}. A ação fica registrada na auditoria.`}
       rodape={
         <>
           <Botao variante="secundario" onClick={aoFechar}>

@@ -23,6 +23,7 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
+import { plural } from "../../util/formatos";
 
 export function EspeciesPagina() {
   const [busca, setBusca] = useState("");
@@ -249,7 +250,9 @@ export function TiposOcorrenciaPagina() {
                   </button>
                   {t.descricao && <p className="text-xs text-texto-suave">{t.descricao}</p>}
                 </Td>
-                <Td>{t.prazo_padrao_dias ? `${t.prazo_padrao_dias} dias` : "Sem prazo padrão"}</Td>
+                <Td>
+                  {t.prazo_padrao_dias ? plural(t.prazo_padrao_dias, "dia") : "Sem prazo padrão"}
+                </Td>
                 <Td>{t.ativo ? <Selo tom="sucesso">Ativo</Selo> : <Selo>Inativo</Selo>}</Td>
               </Linha>
             ))}

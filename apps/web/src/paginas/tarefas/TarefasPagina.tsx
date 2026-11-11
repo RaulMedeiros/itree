@@ -16,7 +16,7 @@ import { useState } from "react";
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { SeloEstadoTarefa } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
-import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
+import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
@@ -387,9 +387,7 @@ function ReatribuirDialogo({ tarefa, aoFechar }: { tarefa: Tarefa; aoFechar: () 
           )}
         </Campo>
         <Campo rotulo="Prazo">
-          {(p) => (
-            <Entrada {...p} type="date" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
-          )}
+          {(p) => <EntradaData {...p} value={prazo} onChange={(v) => setPrazo(v)} />}
         </Campo>
         <Campo rotulo="Motivo" obrigatorio>
           {(p) => <AreaTexto {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}

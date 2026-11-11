@@ -3,12 +3,12 @@ import { ROTULOS_CONDICAO, ROTULOS_ESTADO_INSPECAO } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { SeloEstadoInspecao } from "../../componentes/selos";
-import { Entrada, Selecao } from "../../ui/campos";
+import { EntradaData, Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarDataHora } from "../../util/formatos";
+import { formatarDataHora, plural } from "../../util/formatos";
 
 const TAMANHO = 50;
 
@@ -73,19 +73,17 @@ export function InspecoesPagina() {
         </Selecao>
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           De
-          <Entrada
-            type="date"
+          <EntradaData
             value={filtros.desde ?? ""}
-            onChange={(e) => filtrar({ desde: e.target.value || undefined })}
+            onChange={(v) => filtrar({ desde: v || undefined })}
             className="w-40"
           />
         </label>
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           até
-          <Entrada
-            type="date"
+          <EntradaData
             value={filtros.ate ?? ""}
-            onChange={(e) => filtrar({ ate: e.target.value || undefined })}
+            onChange={(v) => filtrar({ ate: v || undefined })}
             className="w-40"
           />
         </label>
@@ -139,7 +137,7 @@ export function InspecoesPagina() {
                     {ROTULOS_CONDICAO[i.condicao_aparente ?? "nao_avaliada"]}
                     {i.sinais?.length ? (
                       <p className="text-xs text-texto-suave">
-                        {i.sinais.length} sinal(is) observado(s)
+                        {plural(i.sinais.length, "sinal observado", "sinais observados")}
                       </p>
                     ) : null}
                     {i.requer_encaminhamento && <Selo tom="atencao">Requer encaminhamento</Selo>}
