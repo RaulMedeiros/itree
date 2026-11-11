@@ -66,11 +66,23 @@ def test_grupo_so_de_nao_avaliadas(cliente, revisor):
     assert b"pior_condicao" in conteudo and b"nao_avaliada" in conteudo
 
 
-def test_celula_de_agrupamento_e_maior_no_zoom_de_municipio():
-    """Os grupos do zoom afastado não podem se sobrepor: a célula cresce ali (C-08)."""
-    from itree.mapa.views import tamanho_da_celula
+def test_celula_de_agrupamento_maior_que_o_icone_em_todo_zoom_agrupado():
+    """Os grupos não podem se sobrepor na tela: a célula tem de passar do maior ícone (R2-07)."""
+    from itree.mapa.views import CIRCUNFERENCIA_3857, TILE_PX, ZOOM_INDIVIDUAL, tamanho_da_celula
 
-    # Mesmo nível de detalhe por tile, só que mais grosseiro no município.
-    assert tamanho_da_celula(10) * 2**10 == pytest.approx(tamanho_da_celula(11) * 2**11)
-    assert tamanho_da_celula(11) * 2**11 == pytest.approx(tamanho_da_celula(12) * 2**12 * 4)
-    assert tamanho_da_celula(12) * 2**12 == pytest.approx(tamanho_da_celula(15) * 2**15)
+    maior_icone_px = 46  # `aoFaltarImagem`, em simbologia.ts, para 1.000 ou mais
+    for z in range(0, ZOOM_INDIVIDUAL):
+        px = tamanho_da_celula(z) / (CIRCUNFERENCIA_3857 / 2**z) * TILE_PX
+        assert px > maior_icone_px, f"zoom {z}: célula de {px:.0f} px"
+
+
+def test_celula_de_agrupamento_e_maior_no_zoom_de_municipio():
+    """Em zoom de município a célula é mais grossa, em pixels de tela, que nos zooms seguintes."""
+    from itree.mapa.views import CIRCUNFERENCIA_3857, TILE_PX, tamanho_da_celula
+
+    def px(z: int) -> float:
+        return tamanho_da_celula(z) / (CIRCUNFERENCIA_3857 / 2**z) * TILE_PX
+
+    assert px(10) == pytest.approx(px(11))
+    assert px(11) > px(12)
+    assert px(12) == pytest.approx(px(15))

@@ -651,3 +651,22 @@ describe("painel de camadas: grupo Filtros (R2-06)", () => {
     expect(within(grupo).getByLabelText("Identificação da espécie")).toBeInTheDocument();
   });
 });
+
+describe("agrupamentos legíveis no zoom afastado (R2-07)", () => {
+  it("ocorrências ficam acima das árvores e nunca cedem lugar; grupos de árvores cedem", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "ocorrencias.ler"] }),
+      ),
+    );
+    const mapa = await abrirMapa();
+    await vi.waitFor(() => expect(mapa.getLayer("ocorrencias-grupos")).toBeDefined());
+    const ordem = mapa.camadas.map((c) => c.id);
+    for (const ocorrencia of ["ocorrencias-grupos", "ocorrencias-pontos"])
+      for (const arvore of ["arvores-pontos", "arvores-grupos"])
+        expect(ordem.indexOf(ocorrencia)).toBeGreaterThan(ordem.indexOf(arvore));
+    expect(mapa.getLayer("arvores-grupos")?.layout?.["icon-allow-overlap"]).toBe(false);
+    expect(mapa.getLayer("ocorrencias-grupos")?.layout?.["icon-allow-overlap"]).toBe(true);
+    expect(mapa.getLayer("ocorrencias-pontos")?.layout?.["icon-allow-overlap"]).toBe(true);
+  });
+});

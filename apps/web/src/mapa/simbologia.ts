@@ -319,3 +319,28 @@ export const iconeGrupo = (camada: "arvores" | "ocorrencias"): ExpressionSpecifi
         ["to-string", ["get", "quantidade"]],
       ]
     : ["concat", "grupo-ocorrencias-", ["to-string", ["get", "quantidade"]]];
+
+/**
+ * Layout das camadas de agrupamento (R2-07). Os grupos de árvores cedem lugar uns aos outros
+ * (`icon-allow-overlap: false`), com prioridade para o de maior quantidade, e encolhem em zoom
+ * baixo. Os de ocorrências nunca são escondidos: a camada fica acima das árvores e, como entra
+ * antes no índice de colisão, são os grupos de árvores que cedem a elas.
+ */
+export function layoutGrupo(camada: "arvores" | "ocorrencias") {
+  const tamanho: ExpressionSpecification = ["interpolate", ["linear"], ["zoom"], 8, 0.7, 13, 1];
+  if (camada === "ocorrencias") {
+    return {
+      "icon-image": iconeGrupo(camada),
+      "icon-allow-overlap": true,
+      "icon-size": tamanho,
+      "symbol-sort-key": ["-", ["get", "quantidade"]] as ExpressionSpecification,
+    };
+  }
+  return {
+    "icon-image": iconeGrupo(camada),
+    "icon-allow-overlap": false,
+    "icon-size": tamanho,
+    // Menor chave é colocada primeiro: o grupo com mais árvores vence a colisão.
+    "symbol-sort-key": ["-", ["get", "quantidade"]] as ExpressionSpecification,
+  };
+}

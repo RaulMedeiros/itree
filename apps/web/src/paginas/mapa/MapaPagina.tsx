@@ -87,7 +87,7 @@ import {
   OPACIDADE_AREA_VERDE,
   OPACIDADE_AREA_VERDE_UC,
   aoFaltarImagem,
-  iconeGrupo,
+  layoutGrupo,
   pinturaArvores,
   registrarIcones,
   type ModoCor,
@@ -498,7 +498,7 @@ export function MapaPagina() {
       source: "arvores",
       "source-layer": "arvores",
       filter: [">", ["get", "quantidade"], 1],
-      layout: { "icon-image": iconeGrupo("arvores"), "icon-allow-overlap": true },
+      layout: layoutGrupo("arvores") as never,
     });
 
     if (podeTarefas) {
@@ -537,7 +537,7 @@ export function MapaPagina() {
         source: "ocorrencias",
         "source-layer": "ocorrencias",
         filter: [">", ["get", "quantidade"], 1],
-        layout: { "icon-image": iconeGrupo("ocorrencias"), "icon-allow-overlap": true },
+        layout: layoutGrupo("ocorrencias") as never,
       });
       m.addLayer({
         id: "ocorrencias-pontos",
