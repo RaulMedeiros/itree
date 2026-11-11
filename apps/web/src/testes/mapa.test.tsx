@@ -253,6 +253,65 @@ describe("realce do bairro buscado (RF-MAPA-011)", () => {
   });
 });
 
+describe("seletor de território no cabeçalho", () => {
+  const MEIRELES = { id: "b-1", nome: "Meireles", tipo: "bairro" } as const;
+  const ALDEOTA = { id: "b-2", nome: "Aldeota", tipo: "bairro" } as const;
+  const LIMITES_ESCOPO = [-38.7, -3.9, -38.4, -3.6];
+
+  beforeEach(() => {
+    localStorage.clear();
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, territorios: [MEIRELES, ALDEOTA] }),
+      ),
+      http.get(`${API}/api/v1/mapa/camadas`, () =>
+        HttpResponse.json({
+          territorios: [],
+          arvores: { total: 3, sem_localizacao: 0, atualizado_em: null },
+          ocorrencias: null,
+          limites_escopo: LIMITES_ESCOPO,
+        }),
+      ),
+    );
+  });
+  afterEach(() => localStorage.clear());
+
+  it("enquadra e realça o bairro escolhido, como na busca", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?lon=-38.5&lat=-3.7&zoom=12");
+    mapa.fitBounds.mockClear();
+    expect(feicoesRealcadas(mapa)).toEqual([]);
+
+    await usuario.selectOptions(await screen.findByRole("combobox", { name: "Território" }), "b-1");
+
+    expect(await screen.findByText("Bairro em destaque:")).toBeInTheDocument();
+    expect(feicoesRealcadas(mapa)[0]!.properties.nome).toBe("Meireles");
+    expect(mapa.fitBounds).toHaveBeenCalledWith([-38.56, -3.76, -38.55, -3.75], expect.anything());
+  });
+
+  it("voltar a todo o escopo limpa o realce e enquadra o escopo", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?lon=-38.5&lat=-3.7&zoom=12");
+    const seletor = await screen.findByRole("combobox", { name: "Território" });
+    await usuario.selectOptions(seletor, "b-1");
+    await vi.waitFor(() => expect(feicoesRealcadas(mapa)).toHaveLength(1));
+    mapa.fitBounds.mockClear();
+
+    await usuario.selectOptions(seletor, "");
+
+    await vi.waitFor(() => expect(feicoesRealcadas(mapa)).toEqual([]));
+    expect(mapa.fitBounds).toHaveBeenCalledWith(LIMITES_ESCOPO, expect.anything());
+  });
+
+  it("abrir o mapa com um território já escolhido não mexe na câmera", async () => {
+    localStorage.setItem("itree:territorio-ativo:u-g", "b-1");
+    const mapa = await abrirMapa("/mapa?lon=-38.5&lat=-3.7&zoom=12");
+    await screen.findByRole("combobox", { name: "Território" });
+    expect(mapa.fitBounds).not.toHaveBeenCalled();
+    expect(feicoesRealcadas(mapa)).toEqual([]);
+  });
+});
+
 describe("áreas verdes (praças, parques e unidades de conservação)", () => {
   const camadasAreas = [
     "areas-verdes-preenchimento",

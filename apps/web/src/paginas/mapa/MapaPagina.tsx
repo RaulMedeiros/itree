@@ -673,6 +673,19 @@ export function MapaPagina() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pronto, limites]);
 
+  // Escolher outro território no cabeçalho enquadra o bairro, como na busca; voltar a "todo o
+  // escopo" limpa o realce e enquadra o escopo. A abertura da tela não mexe na câmera.
+  const territorioAnterior = useRef(territorioAtivo.id);
+  useEffect(() => {
+    if (territorioAnterior.current === territorioAtivo.id) return;
+    territorioAnterior.current = territorioAtivo.id;
+    atualizarBusca({ destaque: territorioAtivo.id });
+    if (!territorioAtivo.id && limites)
+      mapa.current?.fitBounds(limites as [number, number, number, number], { padding: 40 });
+    // `atualizarBusca` e `limites` mudam a cada render; só a escolha do território dispara.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [territorioAtivo.id]);
+
   // Filtros → URLs dos tiles.
   const chaveArvores = JSON.stringify(filtrosArvores);
   const chaveOcorrencias = JSON.stringify(filtrosOcorrencias);
