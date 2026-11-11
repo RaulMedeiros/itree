@@ -366,6 +366,8 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
 
       {podeValidar && (
         <>
+          {/* A barra é fixa na base da janela: este espaço impede que ela cubra o fim do conteúdo. */}
+          <div aria-hidden data-reserva-barra className="h-20" />
           <div
             role="region"
             aria-label="Decisão da revisão"

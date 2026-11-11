@@ -307,6 +307,14 @@ describe("inspeções", () => {
     expect(within(barra).getByRole("button", { name: "Validar…" }).className).toMatch(/bg-marca/);
   });
 
+  it("reserva espaço no fim da página para a barra de decisão não cobrir o conteúdo", async () => {
+    await abrir("/inspecoes/i-1");
+    const barra = await screen.findByRole("region", { name: "Decisão da revisão" });
+    const reserva = barra.previousElementSibling as HTMLElement;
+    expect(reserva).toHaveAttribute("data-reserva-barra");
+    expect(reserva.className).toMatch(/\bh-20\b/);
+  });
+
   it("depois de validada, mostra a ocorrência aberta com link", async () => {
     servidor.use(
       http.get(`${API}/api/v1/inspecoes/i-1`, () =>
