@@ -256,6 +256,7 @@ const mapa = createRoute({
       .catch(undefined),
     cor: z.enum(["origem"]).optional().catch(undefined),
     selecao: textoOpcional,
+    destaque: textoOpcional,
   }),
   component: () => (
     <Exige permissao="mapa.ler">

@@ -56,7 +56,13 @@ export function BuscaGlobal() {
       const [x1, y1, x2, y2] = r.limites;
       void navegar({
         to: "/mapa",
-        search: { lon: (x1! + x2!) / 2, lat: (y1! + y2!) / 2, zoom: 14 },
+        search: {
+          lon: (x1! + x2!) / 2,
+          lat: (y1! + y2!) / 2,
+          zoom: 14,
+          // O mapa realça o território buscado até a próxima interação (RF-MAPA-011).
+          destaque: r.tipo === "territorio" && r.id ? r.id : undefined,
+        },
       });
     } else if (r.localizacao) {
       const loc = r.localizacao as { longitude: number; latitude: number };

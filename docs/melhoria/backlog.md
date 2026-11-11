@@ -12,7 +12,6 @@ quando houver espaço ou decisão.
 | --- | --- | --- | --- | --- |
 | M-03 | P2 | Mapa: seleção por área (RF-MAPA-022) | Criar tarefas ou exportar a partir de uma região. | Desenhar retângulo ou polígono, listar os itens e enviar para "criar tarefas" ou exportação. |
 | M-04 | P2 | Mapa: círculo de incerteza (RN-MAPA-001) | Não sugerir precisão maior que a real. | Ao aproximar, pontos com precisão pior que o limiar mostram o raio. Depende do limiar (DP-06). |
-| M-05 | P2 | Mapa: destacar o bairro buscado (RF-MAPA-011) | Hoje só enquadra. | Polígono realçado até a próxima interação. |
 | M-06 | P2 | Mapa base em vector tiles próprios (dados OSM) | O OSM raster é carregado, e o servidor público tem política de uso restrita para produção. | Estilo claro próprio (Protomaps/PMTiles hospedado ou provedor), com glifos para rótulos nativos. Depende da DP-21 (hospedagem). |
 | M-09 | P3 | Atualização periódica das referências e Flora e Funga do Brasil | Artigos e imagens mudam, e a origem "nativa" tem fonte oficial brasileira. | Tarefa agendada (mensal) e link para a Flora e Funga do Brasil quando houver correspondência exata. |
 
