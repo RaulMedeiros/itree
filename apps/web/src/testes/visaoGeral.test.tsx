@@ -157,3 +157,103 @@ describe("visão geral: árvores sem espécie confirmada (R2-09)", () => {
     expect(screen.queryByRole("link", { name: "Ver catálogo" })).toBeNull();
   });
 });
+
+describe("visão geral: cartões enxutos e sem repetição (R2-02, R2-03)", () => {
+  const dados = painel({
+    indicadores: [
+      indicador({
+        id: "arvores_registros",
+        nome: "Árvores cadastradas (registros)",
+        valor: 243,
+      }),
+      indicador({
+        id: "arvores_validas",
+        nome: "Árvores com registro válido",
+        definicao: "Registros ativos, com localização e origem conhecida.",
+        valor: 200,
+      }),
+      indicador({
+        id: "cobertura_inspecao",
+        nome: "Inspecionadas nos últimos 12 meses",
+        valor: 10,
+        base: 200,
+        unidade: "%",
+      }),
+      indicador({ id: "com_medidas", nome: "Com altura ou DAP", valor: 98.8, unidade: "%" }),
+      indicador({
+        id: "inspecoes_em_revisao",
+        nome: "Inspeções aguardando revisão",
+        valor: 6,
+      }),
+      indicador({ id: "tarefas_atrasadas", nome: "Tarefas atrasadas", valor: 4 }),
+      indicador({ id: "ocorrencias_atrasadas", nome: "Ocorrências atrasadas", valor: 0 }),
+      indicador({
+        id: "tarefas_inspecao_pendentes",
+        nome: "Inspeções pendentes (tarefas)",
+        valor: 13,
+      }),
+    ],
+    pendencias: [
+      {
+        id: "inspecoes_em_revisao",
+        titulo: "Inspeções aguardando revisão",
+        gravidade: "media",
+        quantidade: 6,
+        link: { pagina: "/inspecoes", filtros: { estado: "em_revisao" } },
+      },
+      {
+        id: "tarefas_atrasadas",
+        titulo: "Tarefas com prazo vencido",
+        gravidade: "alta",
+        quantidade: 4,
+        link: { pagina: "/equipes-tarefas", filtros: { atrasadas: "true" } },
+      },
+    ],
+  });
+
+  it("a face do cartão não traz base, critério nem janela: isso fica em “Como é calculado”", async () => {
+    await abrirComPainel(dados);
+    const cartao = await cartaoDe("Inspecionadas nos últimos 12 meses");
+    const detalhes = cartao.querySelector("details")!;
+    for (const texto of [/^Base: 200/, /^Janela: fixa de 12 meses \(ignora o período\)/]) {
+      expect(within(detalhes).getByText(texto)).toBeInTheDocument();
+    }
+    // Fora do <details>, só valor e nome (sem "Situação atual", "Base:" ou "Válido:").
+    const face = cartao.cloneNode(true) as HTMLElement;
+    face.querySelector("details")!.remove();
+    expect(face.textContent).not.toMatch(/Base|ignora o período|Situação atual|Válido/);
+    // O 1º cartão leva a contagem de registros para o "Como é calculado".
+    const validas = await cartaoDe("Árvores com registro válido");
+    expect(
+      within(validas.querySelector("details")!).getByText(/^Base: 243 registros/),
+    ).toBeInTheDocument();
+  });
+
+  it("os cartões esticam para a mesma altura na linha", async () => {
+    await abrirComPainel(dados);
+    for (const nome of ["Árvores com registro válido", "Inspecionadas nos últimos 12 meses"]) {
+      const cartao = await cartaoDe(nome);
+      expect(cartao.className).toMatch(/\bh-full\b/);
+      expect(cartao.className).toMatch(/\bflex-col\b/);
+    }
+  });
+
+  it("“Outros indicadores” não repete cartões nem pendências", async () => {
+    await abrirComPainel(dados);
+    const painelOutros = (await screen.findByRole("heading", { name: "Outros indicadores" }))
+      .parentElement as HTMLElement;
+    const lista = within(painelOutros);
+    expect(lista.getByText("Com altura ou DAP")).toBeInTheDocument();
+    expect(lista.getByText("Inspeções pendentes (tarefas)")).toBeInTheDocument();
+    // Ocorrências atrasadas não está nas pendências (zero): continua aparecendo, com 0.
+    expect(lista.getByText("Ocorrências atrasadas")).toBeInTheDocument();
+    for (const repetido of [
+      "Árvores cadastradas (registros)",
+      "Árvores com registro válido",
+      "Inspeções aguardando revisão",
+      "Tarefas atrasadas",
+    ]) {
+      expect(lista.queryByText(repetido)).toBeNull();
+    }
+  });
+});

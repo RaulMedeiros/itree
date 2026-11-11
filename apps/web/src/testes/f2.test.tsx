@@ -383,8 +383,8 @@ describe("visão geral: período e comparação (C-06, C-07)", () => {
     expect(
       await screen.findByText(/vs\. 01\/09\/26 \(período anterior\) · piorou/),
     ).toBeInTheDocument();
-    // Janela fixa declarada na face do cartão que ignora o filtro.
-    expect(screen.getByText("Janela fixa de 12 meses (ignora o período)")).toBeInTheDocument();
+    // Janela fixa declarada em "Como é calculado" (R2-02), não na face do cartão.
+    expect(screen.getByText("Janela: fixa de 12 meses (ignora o período)")).toBeInTheDocument();
   });
 });
 
