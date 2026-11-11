@@ -257,13 +257,15 @@ export function PainelSelecaoArea({
             <p>
               {arvores && (
                 <>
-                  <strong>{arvores.total.toLocaleString("pt-BR")}</strong> árvore(s)
+                  <strong>{arvores.total.toLocaleString("pt-BR")}</strong>{" "}
+                  {arvores.total === 1 ? "árvore" : "árvores"}
                 </>
               )}
               {arvores && ocorrencias && " e "}
               {ocorrencias && (
                 <>
-                  <strong>{ocorrencias.total.toLocaleString("pt-BR")}</strong> ocorrência(s)
+                  <strong>{ocorrencias.total.toLocaleString("pt-BR")}</strong>{" "}
+                  {ocorrencias.total === 1 ? "ocorrência" : "ocorrências"}
                 </>
               )}{" "}
               na área de {dados.area_km2.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} km².
@@ -364,7 +366,8 @@ export function PainelSelecaoArea({
               {podeCriarTarefas && arvores && arvores.total > 0 && (
                 <div className="flex flex-col gap-1">
                   <Botao disabled={excedeLote} onClick={() => setCriando(true)}>
-                    <ClipboardPlus aria-hidden /> Criar tarefas ({arvores.total} árvore(s))
+                    <ClipboardPlus aria-hidden /> Criar tarefas ({arvores.total}{" "}
+                    {arvores.total === 1 ? "árvore" : "árvores"})
                   </Botao>
                   {excedeLote && (
                     <p className="text-xs text-texto-suave">

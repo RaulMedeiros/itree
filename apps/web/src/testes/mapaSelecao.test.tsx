@@ -321,7 +321,7 @@ describe("seleção por área no mapa (RF-MAPA-022)", () => {
     const mapa = await abrirMapa();
     const painel = await selecionarArea(usuario, mapa);
     await usuario.click(
-      await within(painel).findByRole("button", { name: "Criar tarefas (2 árvore(s))" }),
+      await within(painel).findByRole("button", { name: "Criar tarefas (2 árvores)" }),
     );
     const dialogo = await screen.findByRole("dialog");
     expect(within(dialogo).getByText(/para 2 árvore\(s\)/)).toBeInTheDocument();
