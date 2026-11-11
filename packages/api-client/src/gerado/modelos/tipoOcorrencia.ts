@@ -5,6 +5,7 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { ContagemPorEstado } from './contagemPorEstado';
 
 export interface TipoOcorrencia {
   readonly id: string;
@@ -18,4 +19,6 @@ export interface TipoOcorrencia {
      */
   prazo_padrao_dias?: number | null;
   ativo?: boolean;
+  /** Ocorrências do tipo em cada situação, só as do escopo de quem consulta. Vem preenchido na listagem; nas demais respostas, é calculado para o tipo. */
+  readonly ocorrencias_por_estado: ContagemPorEstado;
 }

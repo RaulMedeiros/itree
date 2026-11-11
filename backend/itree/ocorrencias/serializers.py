@@ -13,10 +13,33 @@ from itree.territorio.serializers import TerritorioResumoSerializer
 from .models import ESTADOS_FINAIS, EstadoOcorrencia, Ocorrencia, Prioridade, TipoOcorrencia
 
 
+class ContagemPorEstadoSerializer(serializers.Serializer):
+    aberta = serializers.IntegerField()
+    em_triagem = serializers.IntegerField()
+    encaminhada = serializers.IntegerField()
+    em_atendimento = serializers.IntegerField()
+    concluida = serializers.IntegerField()
+    cancelada = serializers.IntegerField()
+
+
 class TipoOcorrenciaSerializer(serializers.ModelSerializer):
+    ocorrencias_por_estado = serializers.SerializerMethodField(
+        help_text="Ocorrências do tipo em cada situação, só as do escopo de quem consulta. "
+        "Vem preenchido na listagem; nas demais respostas, é calculado para o tipo."
+    )
+
     class Meta:
         model = TipoOcorrencia
-        fields = ["id", "nome", "descricao", "prazo_padrao_dias", "ativo"]
+        fields = ["id", "nome", "descricao", "prazo_padrao_dias", "ativo", "ocorrencias_por_estado"]
+
+    @extend_schema_field(ContagemPorEstadoSerializer)
+    def get_ocorrencias_por_estado(self, obj) -> dict[str, int]:
+        from itree.ocorrencias.contagens import contar_por_estado
+
+        contagens = self.context.get("contagens_por_tipo")
+        if contagens is None:
+            contagens = contar_por_estado(self.context["request"].user, tipo=obj)
+        return contagens.get(obj.pk) or {e.value: 0 for e in EstadoOcorrencia}
 
 
 class EquipeResumoSerializer(serializers.ModelSerializer):

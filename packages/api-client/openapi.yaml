@@ -3672,6 +3672,28 @@ components:
           type: integer
       required:
       - nao_lidas
+    ContagemPorEstado:
+      type: object
+      properties:
+        aberta:
+          type: integer
+        em_triagem:
+          type: integer
+        encaminhada:
+          type: integer
+        em_atendimento:
+          type: integer
+        concluida:
+          type: integer
+        cancelada:
+          type: integer
+      required:
+      - aberta
+      - cancelada
+      - concluida
+      - em_atendimento
+      - em_triagem
+      - encaminhada
     ConversaoRequest:
       type: object
       properties:
@@ -6991,9 +7013,17 @@ components:
           nullable: true
         ativo:
           type: boolean
+        ocorrencias_por_estado:
+          allOf:
+          - $ref: '#/components/schemas/ContagemPorEstado'
+          readOnly: true
+          description: Ocorrências do tipo em cada situação, só as do escopo de quem
+            consulta. Vem preenchido na listagem; nas demais respostas, é calculado
+            para o tipo.
       required:
       - id
       - nome
+      - ocorrencias_por_estado
     TipoOcorrenciaRequest:
       type: object
       properties:

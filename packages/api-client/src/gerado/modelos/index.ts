@@ -51,6 +51,7 @@ export * from './colunasArquivoRequest';
 export * from './condicaoAparenteEnum';
 export * from './contadores';
 export * from './contagemNaoLidas';
+export * from './contagemPorEstado';
 export * from './conversaoRequest';
 export * from './decisaoDecisaoEnum';
 export * from './decisaoIaEnum';

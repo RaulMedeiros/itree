@@ -42,7 +42,21 @@ const GESTOR: Eu = {
 const OCORRENCIA: Ocorrencia = {
   id: "o-1",
   codigo: "OCO-000007",
-  tipo: { id: "t-1", nome: "Galho caído", descricao: "", prazo_padrao_dias: 3, ativo: true },
+  tipo: {
+    id: "t-1",
+    nome: "Galho caído",
+    descricao: "",
+    prazo_padrao_dias: 3,
+    ativo: true,
+    ocorrencias_por_estado: {
+      aberta: 1,
+      em_triagem: 0,
+      encaminhada: 0,
+      em_atendimento: 0,
+      concluida: 0,
+      cancelada: 0,
+    },
+  },
   arvore: { id: "a-1", codigo: "ARV-000042" },
   localizacao: { longitude: -38.5, latitude: -3.7 },
   bairro: { id: "b-1", nome: "Meireles", tipo: "bairro" },
