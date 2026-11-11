@@ -117,7 +117,7 @@ export function ImportacoesPagina() {
                       search={{ situacao: "todas" }}
                       className="text-marca-escura hover:underline"
                     >
-                      {l.arvores_criadas}
+                      Ver {l.arvores_criadas} {l.arvores_criadas === 1 ? "árvore" : "árvores"}
                     </Link>
                   ) : (
                     "—"
@@ -147,15 +147,22 @@ export function ImportacoesPagina() {
                     </Botao>
                   )}
                   {l.estado === "confirmado" && (
-                    <Botao
-                      tamanho="pequeno"
-                      variante="secundario"
-                      disabled={!l.pode_desfazer}
-                      title={l.motivo_nao_desfazer ?? undefined}
-                      onClick={() => setDesfazendo(l)}
-                    >
-                      <Undo2 /> Desfazer
-                    </Botao>
+                    <>
+                      <Botao
+                        tamanho="pequeno"
+                        variante="secundario"
+                        disabled={!l.pode_desfazer}
+                        onClick={() => setDesfazendo(l)}
+                      >
+                        <Undo2 /> Desfazer
+                      </Botao>
+                      {!l.pode_desfazer && (
+                        <p className="mt-1 ml-auto max-w-56 text-xs text-texto-suave">
+                          Desfazer indisponível:{" "}
+                          {l.motivo_nao_desfazer ?? "o lote não pode ser desfeito."}
+                        </p>
+                      )}
+                    </>
                   )}
                 </Td>
               </Linha>
@@ -175,6 +182,28 @@ export function ImportacoesPagina() {
       {aberto && <PreVisualizacao id={aberto} aoFechar={() => setAberto(null)} />}
       {desfazendo && <DesfazerDialogo lote={desfazendo} aoFechar={() => setDesfazendo(null)} />}
     </>
+  );
+}
+
+const ETAPAS = ["Arquivo", "Fonte e colunas", "Pré-visualização"];
+
+/** Indicador 1-2-3 do assistente; a etapa 3 abre depois de “Pré-visualizar”. */
+function Etapas({ atual }: { atual: number }) {
+  return (
+    <ol aria-label="Etapas da importação" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+      {ETAPAS.map((nome, i) => (
+        <li
+          key={nome}
+          aria-current={atual === i + 1 ? "step" : undefined}
+          className={atual === i + 1 ? "font-semibold" : "text-texto-suave"}
+        >
+          <span className="mr-1.5 inline-flex size-5 items-center justify-center rounded-full border border-borda text-xs">
+            {i + 1}
+          </span>
+          {nome}
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -214,6 +243,17 @@ function AssistenteImportacao({
     }
   };
 
+  const faltando = !arquivo
+    ? "Escolha um arquivo para continuar."
+    : !leitura
+      ? erroLeitura
+        ? "Corrija o arquivo para continuar."
+        : "Lendo o arquivo…"
+      : !fonte.trim()
+        ? "Preencha a fonte dos dados para continuar."
+        : null;
+  const etapa = !leitura ? 1 : 2;
+
   const enviar = () => {
     if (!arquivo) return;
     const campos = Object.fromEntries(
@@ -241,10 +281,11 @@ function AssistenteImportacao({
       aberto
       aoMudar={(v) => !v && aoFechar()}
       titulo="Nova importação"
-      descricao="1. Escolha o arquivo · 2. Informe a fonte e o mapeamento · 3. Revise a pré-visualização e confirme."
+      descricao="Nada é criado antes da confirmação."
       largura="max-w-3xl"
       rodape={
         <>
+          {faltando && <p className="mr-auto self-center text-sm text-texto-suave">{faltando}</p>}
           <Botao variante="secundario" onClick={aoFechar}>
             Cancelar
           </Botao>
@@ -255,6 +296,7 @@ function AssistenteImportacao({
       }
     >
       <div className="flex flex-col gap-4">
+        <Etapas atual={etapa} />
         <Campo
           rotulo="Arquivo (.csv ou .geojson)"
           obrigatorio
