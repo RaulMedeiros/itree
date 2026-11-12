@@ -15,6 +15,12 @@ quando houver espaço ou decisão.
 | M-16 | P3 | Papéis incomuns no mesmo usuário | Acúmulo de papéis (ex.: técnico e revisor) pode exigir atenção. Depende da matriz de perfis (DP-01). | Aviso na administração de usuários quando a combinação for marcada como incomum na DP-01. |
 | M-17 | P3 | Definição oficial de "registro válido" | O cartão marca o critério como provisório. Depende da DP-14. | Texto e cálculo atualizados quando a DP-14 for fechada. |
 | M-18 | P3 | Arborização do entorno: ficha do bairro e cruzamento com o inventário | A camada coroplética mostra só o percentual do Censo 2022, em dica ao passar o cursor. Não há onde ver base, definição e método por bairro, nem a comparação com as árvores cadastradas. | Clique no bairro abre ficha com proveniência completa (método, licença, ingestão). Cruzamento com a densidade do inventário só depois das fórmulas da DP-14. |
+| M-25 | P3 | Resumo de notificações por e-mail e SMTP de produção | Hoje sai um e-mail por evento; o SMTP real depende da hospedagem (DP-21). | Resumo diário opcional, verificação do e-mail e SMTP configurado no ambiente. |
+| M-26 | P3 | Lote acima de 200 registros e "todos os filtrados" em inspeções e alertas | Acima de 200, o servidor recusa. | Execução em tarefa Celery com acompanhamento; seleção de todos os filtrados também em inspeções e alertas. |
+| M-27 | P3 | Notificações por território e silêncio temporário | Preferências valem para todo o escopo. | Preferência por território e "silenciar até" (ex.: férias). |
+| M-28 | P3 | Tarefa de inspeção dentro das cadeias da árvore | As cadeias começam na inspeção; a tarefa que a originou não aparece. | Expor `Inspecao.tarefa` no resumo e mostrar a tarefa no início da cadeia. |
+| M-29 | P3 | Agrupador por bairro no zoom do município | Em zoom muito afastado, um grupo por bairro com o anel da pior condição leria melhor que células. | Grupos por bairro abaixo de um zoom definido, com contagem e anel. |
+| M-30 | P3 | Resultado e foto quando a tarefa fecha pela ocorrência ou pela inspeção | Esses caminhos não passam pela regra de resultado e foto. Os tipos poda, remoção e plantio dependem da DP-17. | Regra decidida e aplicada nos três caminhos. |
 
 ## Áreas verdes
 
@@ -35,6 +41,8 @@ Ver [fontes verificadas](../integracoes/fontes-publicas.md).
 | F-01 | P2 | Vento e chuva (INMET) para risco de queda | A API `apitempo.inmet.gov.br` não estava liberada na rede da verificação. | Host liberado, estação de Fortaleza escolhida, série ingerida com fonte, e alerta meteorológico ligado a ocorrências de queda. |
 | F-02 | P3 | PRODES Caatinga (histórico anual de supressão) | Não há DETER para a Caatinga; o PRODES cobre Fortaleza, em escala regional e anual. | Camada histórica opcional, com a chave `image_date` lida e a escala declarada na legenda. |
 | F-05 | P3 | Flora e Funga do Brasil e MapBiomas Alerta | O site da Flora tem desafio anti-robô; o MapBiomas exige token e host liberado. | Acesso oficial (API ou acordo) e token do MapBiomas em credencial do ambiente (DP-11). |
+| F-06 | P3 | Manejo da URBFOR: gráfico mensal e bairros não identificados | 12,7% das árvores do manejo de 2023 ficaram sem bairro (nomes ambíguos ou digitados de outro jeito), e setembro falta na fonte. | Aliases de bairro documentados; gráfico mensal com paleta validada e o mês ausente marcado. |
+| F-07 | P3 | Códigos CNUC das UCs municipais | APA da Sabiaguaba, ARIE Prof. Abreu Matos e ARIE da Matinha do Pici não casaram com o CNUC. | Código ou ato legal obtido da SEUMA e gravado. |
 
 ## Plataforma e dependências
 
