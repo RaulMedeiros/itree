@@ -11,6 +11,7 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { RAIO_PADRAO_M, SeletorRaio, type RaioM } from "./raio";
 import { AjudaTermo } from "../../componentes/AjudaTermo";
+import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { Botao } from "../../ui/botao";
@@ -99,6 +100,13 @@ export function AlertasPagina() {
       <CabecalhoPagina
         titulo="Alertas ambientais"
         descricao="Sinais de fontes externas para triagem humana. Um alerta não é confirmação de infração."
+        acoes={
+          <BotaoExportarCsv
+            conjunto="alertas"
+            leitura="alertas.ler"
+            filtros={{ ...filtros, bairro, status: filtros.status ?? "abertos" }}
+          />
+        }
       />
       <AbasOcorrencias ativa="alertas" />
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -220,11 +228,13 @@ export function AlertasPagina() {
                     <Link
                       to="/alertas/$id"
                       params={{ id: a.id }}
-                      className="font-mono font-medium text-marca-escura hover:underline"
+                      className="font-mono font-medium whitespace-nowrap text-marca-escura hover:underline"
                     >
                       {a.codigo}
                     </Link>
-                    <p className="font-mono text-xs text-texto-suave">{a.id_externo}</p>
+                    <p className="font-mono text-xs whitespace-nowrap text-texto-suave">
+                      {a.id_externo}
+                    </p>
                   </Td>
                   <Td>
                     {ROTULOS_FONTE_ALERTA[a.fonte]}

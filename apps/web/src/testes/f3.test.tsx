@@ -193,6 +193,11 @@ describe("alertas ambientais", () => {
     expect(link).toHaveAttribute("href", "/inventario/arvores/a-1");
     expect(screen.getByText("42 m")).toBeInTheDocument();
     expect(screen.getByText("88 m")).toBeInTheDocument();
+    // R2-21: a condição usa o mesmo componente e vocabulário das outras listas.
+    expect(within(link.closest("tr")!).getByText("Boa")).toBeInTheDocument();
+    const outra = screen.getByRole("link", { name: "ARV-000002" }).closest("tr")!;
+    expect(within(outra).getByText("Não avaliada")).toBeInTheDocument();
+    expect(screen.queryByText("boa")).toBeNull();
     expect(screen.getByText(/1 ocorrência aberta no mesmo raio/)).toBeInTheDocument();
     expect(screen.getByText("a 0,6 km do Parque Estadual do Cocó")).toBeInTheDocument();
   });

@@ -3,7 +3,8 @@ import { ROTULOS_CONDICAO, ROTULOS_ESTADO_INSPECAO } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { SeloEstadoInspecao } from "../../componentes/selos";
-import { CORES_CONDICAO } from "../../mapa/simbologia";
+import { CondicaoAparente } from "../../componentes/CondicaoAparente";
+import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { Botao } from "../../ui/botao";
@@ -70,6 +71,13 @@ export function InspecoesPagina() {
       <CabecalhoPagina
         titulo="Inspeções"
         descricao="Inspeções feitas em campo pelo aplicativo. A revisão decide o que entra no cadastro da árvore."
+        acoes={
+          <BotaoExportarCsv
+            conjunto="inspecoes"
+            leitura="inspecoes.ler"
+            filtros={{ ...filtros, bairro, estado: filtros.estado ?? "em_revisao" }}
+          />
+        }
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Selecao
@@ -195,7 +203,7 @@ export function InspecoesPagina() {
                     <Link
                       to="/inspecoes/$id"
                       params={{ id: i.id }}
-                      className="font-mono font-medium text-marca-escura hover:underline"
+                      className="font-mono font-medium whitespace-nowrap text-marca-escura hover:underline"
                     >
                       {i.codigo}
                     </Link>
@@ -211,16 +219,7 @@ export function InspecoesPagina() {
                   </Td>
                   <Td>{i.tecnico.nome || i.tecnico.email}</Td>
                   <Td>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span
-                        aria-hidden
-                        className="size-2.5 shrink-0 rounded-full"
-                        style={{
-                          backgroundColor: CORES_CONDICAO[i.condicao_aparente ?? "nao_avaliada"],
-                        }}
-                      />
-                      {ROTULOS_CONDICAO[i.condicao_aparente ?? "nao_avaliada"]}
-                    </span>
+                    <CondicaoAparente condicao={i.condicao_aparente} />
                     {i.sinais?.length ? (
                       <p className="text-xs text-texto-suave">
                         {contar(i.sinais.length, "sinal", "sinais")}

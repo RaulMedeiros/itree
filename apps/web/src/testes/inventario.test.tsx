@@ -332,6 +332,71 @@ describe("lista de árvores: ordenação por inspeção e condição", () => {
   });
 });
 
+describe("lista de árvores: legibilidade (R2-15)", () => {
+  it("o código não quebra no meio e o endereço tem largura mínima", async () => {
+    await abrir("/inventario/arvores");
+    const codigo = await screen.findByRole("link", { name: "ARV-000001" });
+    expect(codigo).toHaveClass("whitespace-nowrap");
+    expect(screen.getByText("Rua 1").closest("td")).toHaveClass("min-w-56");
+  });
+});
+
+describe("lista de árvores: filtros e colunas (R2-16)", () => {
+  it("mostra só os filtros principais; os demais ficam em Mais filtros", async () => {
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    const extras = screen.getByText("Mais filtros").closest("details")!;
+    expect(extras).not.toHaveAttribute("open");
+    for (const rotulo of ["Condição aparente", "Espécie", "Bairro"]) {
+      expect(screen.getByLabelText(rotulo)).toBeInTheDocument();
+      expect(extras).not.toContainElement(screen.getByLabelText(rotulo));
+    }
+    for (const rotulo of [
+      "Situação da identificação",
+      "Origem da localização",
+      "Última inspeção",
+      "Situação do registro",
+    ]) {
+      expect(extras).toContainElement(screen.getByLabelText(rotulo));
+    }
+  });
+
+  it("Mais filtros abre sozinho e diz quantos filtros estão ativos", async () => {
+    await abrir("/inventario/arvores?localizacao_origem=importada&situacao=excluida");
+    const resumo = await screen.findByText("Mais filtros");
+    expect(resumo.closest("details")).toHaveAttribute("open");
+    expect(within(resumo.closest("summary")!).getByText("2 ativos")).toBeInTheDocument();
+  });
+
+  it("a condição filtra pela API e 'Não avaliada' vira 'sem'", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    await usuario.selectOptions(await screen.findByLabelText("Condição aparente"), "Não avaliada");
+    await vi.waitFor(() =>
+      expect(consultas.at(-1)?.searchParams.get("condicao_aparente")).toBe("sem"),
+    );
+  });
+
+  it("a coluna Ocorrências abertas só aparece quando alguma árvore tem ocorrência aberta", async () => {
+    await abrir("/inventario/arvores");
+    await screen.findByRole("table");
+    expect(screen.queryByRole("columnheader", { name: "Ocorrências abertas" })).toBeNull();
+  });
+
+  it("com ocorrência aberta, a coluna aparece com a contagem", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/arvores`, () =>
+        HttpResponse.json(pagina([resumo({ ocorrencias_abertas: 3 })])),
+      ),
+    );
+    await abrir("/inventario/arvores");
+    expect(
+      await screen.findByRole("columnheader", { name: "Ocorrências abertas" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+  });
+});
+
 describe("lista de árvores: seleção em lote", () => {
   beforeEach(() => {
     servidor.use(

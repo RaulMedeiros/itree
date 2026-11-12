@@ -72,6 +72,26 @@ def ordenar_inspecoes(qs, ordem: str):
     return qs.order_by("-realizada_em")
 
 
+def filtrar_inspecoes(qs, p):
+    """Filtros da listagem de inspeções, compartilhados com a exportação."""
+    if estado := p.get("estado"):
+        qs = qs.filter(estado__in=estado.split(","))
+    for campo in ("tecnico", "arvore"):
+        if valor := p.get(campo):
+            qs = qs.filter(**{f"{campo}_id": uuid_do_parametro(valor, campo)})
+    if bairro := p.get("bairro"):
+        qs = qs.filter(arvore__bairro_id=uuid_do_parametro(bairro, "bairro"))
+    if desde := p.get("desde"):
+        qs = qs.filter(realizada_em__date__gte=desde)
+    if ate := p.get("ate"):
+        qs = qs.filter(realizada_em__date__lte=ate)
+    if p.get("requer_encaminhamento") == "true":
+        qs = qs.filter(requer_encaminhamento=True)
+    if condicao := p.get("condicao"):
+        qs = qs.filter(condicao_aparente__in=condicao.split(","))
+    return qs
+
+
 @extend_schema_view(
     list=extend_schema(operation_id="inspecoes_listar", parameters=FILTROS),
     retrieve=extend_schema(operation_id="inspecoes_obter"),
@@ -103,21 +123,7 @@ class InspecaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets
         if self.action != "list":
             return qs
         p = self.request.query_params
-        if estado := p.get("estado"):
-            qs = qs.filter(estado__in=estado.split(","))
-        for campo in ("tecnico", "arvore"):
-            if valor := p.get(campo):
-                qs = qs.filter(**{f"{campo}_id": uuid_do_parametro(valor, campo)})
-        if bairro := p.get("bairro"):
-            qs = qs.filter(arvore__bairro_id=uuid_do_parametro(bairro, "bairro"))
-        if desde := p.get("desde"):
-            qs = qs.filter(realizada_em__date__gte=desde)
-        if ate := p.get("ate"):
-            qs = qs.filter(realizada_em__date__lte=ate)
-        if p.get("requer_encaminhamento") == "true":
-            qs = qs.filter(requer_encaminhamento=True)
-        if condicao := p.get("condicao"):
-            qs = qs.filter(condicao_aparente__in=condicao.split(","))
+        qs = filtrar_inspecoes(qs, p)
         return ordenar_inspecoes(qs, p.get("ordenar", "-realizada_em"))
 
     @extend_schema(

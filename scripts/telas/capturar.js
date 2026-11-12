@@ -159,12 +159,7 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     esperar: "Sem problemas",
     inteira: true,
   });
-  await tela(
-    p,
-    "15-ocorrencias",
-    "/ocorrencias?estado=aberta,em_triagem,encaminhada,em_atendimento,concluida,cancelada",
-    { esperar: /OCO-/ },
-  );
+  await tela(p, "15-ocorrencias", "/ocorrencias", { esperar: /OCO-/ });
   await tela(p, "16-ocorrencia-detalhe", `/ocorrencias/${ids.ocorrencia}`, {
     esperar: /OCO-/,
     inteira: true,

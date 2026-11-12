@@ -224,6 +224,26 @@ def filtrar_por_bairro(qs, bairro):
     return qs.filter(bairros__contains=[{"id": str(uuid_do_parametro(bairro, "bairro"))}])
 
 
+def filtrar_alertas(qs, p):
+    """Filtros da listagem de alertas, compartilhados com a exportação."""
+    situacao = p.get("status", "abertos")
+    if situacao == "abertos":
+        qs = qs.exclude(status__in=FINAIS_ALERTA)
+    elif situacao != "todos":
+        qs = qs.filter(status__in=situacao.split(","))
+    for campo in ("fonte", "tipo"):
+        if valor := p.get(campo):
+            qs = qs.filter(**{campo: valor})
+    qs = filtrar_por_bairro(qs, p.get("bairro"))
+    if v := p.get("deteccao_desde"):
+        qs = qs.filter(data_deteccao__date__gte=v)
+    if v := p.get("deteccao_ate"):
+        qs = qs.filter(data_deteccao__date__lte=v)
+    if v := p.get("ingestao_desde"):
+        qs = qs.filter(ingerido_em__date__gte=v)
+    return qs
+
+
 ORDENS = {
     "data_deteccao": ("data_deteccao", "numero"),
     "-data_deteccao": ("-data_deteccao", "-numero"),
@@ -269,21 +289,7 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
         qs = proximidade.anotar_contagens(qs, self.request.user, raio)
         if self.action != "list":
             return qs
-        situacao = p.get("status", "abertos")
-        if situacao == "abertos":
-            qs = qs.exclude(status__in=FINAIS_ALERTA)
-        elif situacao != "todos":
-            qs = qs.filter(status__in=situacao.split(","))
-        for campo in ("fonte", "tipo"):
-            if valor := p.get(campo):
-                qs = qs.filter(**{campo: valor})
-        qs = filtrar_por_bairro(qs, p.get("bairro"))
-        if v := p.get("deteccao_desde"):
-            qs = qs.filter(data_deteccao__date__gte=v)
-        if v := p.get("deteccao_ate"):
-            qs = qs.filter(data_deteccao__date__lte=v)
-        if v := p.get("ingestao_desde"):
-            qs = qs.filter(ingerido_em__date__gte=v)
+        qs = filtrar_alertas(qs, p)
         ordem = p.get("ordem", "-data_deteccao")
         if ordem not in ORDENS:
             raise ValidationError({"ordem": ["Ordenação inválida."]})

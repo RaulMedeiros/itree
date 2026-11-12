@@ -301,6 +301,9 @@ export const getRelatoriosExportarUrl = (params: RelatoriosExportarParams,) => {
   return stringifiedParams.length > 0 ? `/api/v1/relatorios/exportar?${stringifiedParams}` : `/api/v1/relatorios/exportar`
 }
 
+/**
+ * Os demais parâmetros são os filtros da listagem do conjunto escolhido (sem paginação), sempre dentro do escopo territorial de quem exporta.
+ */
 export const relatoriosExportar = async (params: RelatoriosExportarParams, options?: Parameters<typeof requisicao>[1]): Promise<relatoriosExportarResponse> => {
 
   return requisicao<relatoriosExportarResponse>(getRelatoriosExportarUrl(params),

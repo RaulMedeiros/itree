@@ -112,35 +112,56 @@ function Rotulo({ children }: { children: string }) {
   );
 }
 
-/** Lista rolável e paginada ("mostrar mais"), com link para o detalhe de cada item. */
+/** Altura fixa de cada linha, para a caixa de rolagem mostrar linhas inteiras (nunca cortadas). */
+const ALTURA_LINHA_PX = 52;
+const LINHAS_VISIVEIS = 5;
+// Linhas + 1 px de divisória entre elas + 2 px de borda da caixa.
+const ALTURA_CAIXA_PX = ALTURA_LINHA_PX * LINHAS_VISIVEIS + (LINHAS_VISIVEIS - 1) + 2;
+
+/**
+ * Lista rolável e paginada ("mostrar mais"), com link para o detalhe de cada item. Diz quantos
+ * itens estão carregados na caixa em relação ao total da área, porque só as primeiras linhas
+ * aparecem sem rolar.
+ */
 function Lista<T extends { id: string }>({
   rotulo,
   itens,
+  total,
   linha,
 }: {
   rotulo: string;
   itens: T[];
+  /** Total da área na camada; passa de `itens.length` quando o servidor cortou a lista. */
+  total: number;
   linha: (item: T) => React.ReactNode;
 }) {
   const [mostrando, setMostrando] = useState(TAMANHO_PAGINA);
+  const exibidos = Math.min(mostrando, itens.length);
+  const restantes = itens.length - exibidos;
   return (
     <div className="flex flex-col gap-1.5">
+      <p className="text-xs text-texto-suave">
+        Exibindo {exibidos.toLocaleString("pt-BR")} de {total.toLocaleString("pt-BR")}
+        {exibidos > LINHAS_VISIVEIS && " (role a lista para ver as demais)"}
+      </p>
       <ul
         aria-label={rotulo}
-        className="max-h-56 divide-y divide-borda overflow-y-auto rounded-md border border-borda"
+        style={{ maxHeight: ALTURA_CAIXA_PX }}
+        className="divide-y divide-borda overflow-y-auto rounded-md border border-borda"
       >
         {itens.slice(0, mostrando).map((item) => (
-          <li key={item.id}>{linha(item)}</li>
+          <li key={item.id} style={{ height: ALTURA_LINHA_PX }}>
+            {linha(item)}
+          </li>
         ))}
       </ul>
-      {mostrando < itens.length && (
+      {restantes > 0 && (
         <Botao
           tamanho="pequeno"
           variante="secundario"
           onClick={() => setMostrando((n) => n + TAMANHO_PAGINA)}
         >
-          Mostrar mais ({itens.length - mostrando}{" "}
-          {itens.length - mostrando === 1 ? "restante" : "restantes"})
+          Mostrar mais ({restantes} {restantes === 1 ? "restante" : "restantes"})
         </Botao>
       )}
     </div>
@@ -148,7 +169,7 @@ function Lista<T extends { id: string }>({
 }
 
 const classeLinha =
-  "flex flex-col px-2.5 py-1.5 text-sm hover:bg-neutro-clara focus-visible:outline-offset-[-2px]";
+  "flex h-full flex-col justify-center px-2.5 text-sm hover:bg-neutro-clara focus-visible:outline-offset-[-2px]";
 
 /**
  * Painel com o que há dentro da área desenhada: resumo, listas e as ações
@@ -308,6 +329,7 @@ export function PainelSelecaoArea({
                   <Lista
                     rotulo="Árvores na área"
                     itens={arvores.itens}
+                    total={arvores.total}
                     linha={(a) => (
                       <Link
                         to="/inventario/arvores/$id"
@@ -341,6 +363,7 @@ export function PainelSelecaoArea({
                 <Lista
                   rotulo="Ocorrências na área"
                   itens={ocorrencias.itens}
+                  total={ocorrencias.total}
                   linha={(o) => (
                     <Link to="/ocorrencias/$id" params={{ id: o.id }} className={classeLinha}>
                       <span>

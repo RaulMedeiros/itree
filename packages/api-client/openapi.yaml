@@ -2585,6 +2585,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/Ocorrencia'
           description: ''
+  /api/v1/ocorrencias/lote/prioridade:
+    post:
+      operationId: ocorrencias_prioridade_em_lote
+      description: Define a prioridade operacional das ocorrências marcadas (só a
+        gestão).
+      tags:
+      - ocorrencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrioridadeEmLoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PrioridadeEmLoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PrioridadeEmLoteRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoAcaoEmLote'
+          description: ''
+  /api/v1/ocorrencias/lote/reatribuir:
+    post:
+      operationId: ocorrencias_reatribuir_em_lote
+      description: Muda responsável e/ou equipe das ocorrências marcadas na lista
+        (até o limite do lote).
+      tags:
+      - ocorrencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReatribuicaoEmLoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReatribuicaoEmLoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReatribuicaoEmLoteRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoAcaoEmLote'
+          description: ''
   /api/v1/qualidade/pendencias:
     get:
       operationId: qualidade_pendencias
@@ -2646,12 +2702,14 @@ paths:
   /api/v1/relatorios/exportar:
     get:
       operationId: relatorios_exportar
+      description: Os demais parâmetros são os filtros da listagem do conjunto escolhido
+        (sem paginação), sempre dentro do escopo territorial de quem exporta.
       parameters:
       - in: query
         name: conjunto
         schema:
           type: string
-        description: arvores | ocorrencias | alertas
+        description: arvores | ocorrencias | inspecoes | tarefas | alertas
         required: true
       - in: query
         name: formato
@@ -2986,6 +3044,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResultadoLote'
+          description: ''
+  /api/v1/tarefas/lote/equipe:
+    post:
+      operationId: tarefas_equipe_em_lote
+      description: |-
+        Passa as tarefas marcadas na lista para outra equipe (até o limite do lote).
+
+        O responsável só continua se for membro da nova equipe; senão a tarefa fica sem
+        responsável, para a equipe escolher quem atende. Cada tarefa avisa a nova equipe.
+      tags:
+      - tarefas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipeEmLoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EquipeEmLoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EquipeEmLoteRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoAcaoEmLote'
           description: ''
   /api/v1/territorios:
     get:
@@ -4013,6 +4102,28 @@ components:
       - membros
       - nome
       - territorios
+    EquipeEmLoteRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Registros marcados na lista (de 1 a 200).
+          maxItems: 200
+          minItems: 1
+        motivo:
+          type: string
+          description: Fica no histórico de cada registro alterado.
+          maxLength: 500
+        equipe_id:
+          type: string
+          format: uuid
+          description: Equipe que passa a atender as tarefas marcadas.
+      required:
+      - equipe_id
+      - ids
     EquipeRequest:
       type: object
       properties:
@@ -4767,6 +4878,20 @@ components:
       required:
       - fonte
       - valor
+    IgnoradoEmLote:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        motivo:
+          type: string
+      required:
+      - codigo
+      - id
+      - motivo
     Inferencia:
       type: object
       properties:
@@ -6724,6 +6849,26 @@ components:
       required:
       - completo
       - passos
+    PrioridadeEmLoteRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Registros marcados na lista (de 1 a 200).
+          maxItems: 200
+          minItems: 1
+        motivo:
+          type: string
+          description: Fica no histórico de cada registro alterado.
+          maxLength: 500
+        prioridade:
+          $ref: '#/components/schemas/PrioridadeEnum'
+      required:
+      - ids
+      - prioridade
     PrioridadeEnum:
       enum:
       - baixa
@@ -6746,6 +6891,35 @@ components:
           maxLength: 500
       required:
       - prioridade
+    ReatribuicaoEmLoteRequest:
+      type: object
+      description: |-
+        Responsável e/ou equipe aplicados a todas as ocorrências marcadas.
+
+        Só o que vier no corpo muda; `null` limpa o campo.
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Registros marcados na lista (de 1 a 200).
+          maxItems: 200
+          minItems: 1
+        motivo:
+          type: string
+          description: Fica no histórico de cada registro alterado.
+          maxLength: 500
+        responsavel_id:
+          type: string
+          format: uuid
+          nullable: true
+        equipe_id:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - ids
     Referencia:
       type: object
       properties:
@@ -6794,6 +6968,20 @@ components:
           minLength: 1
       required:
       - motivo
+    ResultadoAcaoEmLote:
+      type: object
+      properties:
+        atualizadas:
+          type: integer
+          description: Registros alterados.
+        ignoradas:
+          type: array
+          items:
+            $ref: '#/components/schemas/IgnoradoEmLote'
+          description: Registros que não foram alterados, com o motivo de cada um.
+      required:
+      - atualizadas
+      - ignoradas
     ResultadoBusca:
       type: object
       properties:
