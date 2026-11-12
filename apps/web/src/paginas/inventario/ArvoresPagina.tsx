@@ -106,6 +106,15 @@ export function ArvoresPagina() {
     return () => clearTimeout(id);
   }, [busca, filtros.busca, navegar]);
 
+  // Filtros fora da fila principal (busca, condição, espécie, bairro) ficam em "Mais filtros".
+  const filtrosExtras = [
+    filtros.especie_estado,
+    filtros.localizacao_origem,
+    filtros.sem_inspecao_dias,
+    filtros.situacao && filtros.situacao !== "ativa" ? filtros.situacao : undefined,
+  ].filter(Boolean).length;
+  const [maisAberto, setMaisAberto] = useState(filtrosExtras > 0);
+
   const { pagina, ordenar, ...semPagina } = filtros;
   const consulta = useArvoresListar({ ...filtros, bairro, tamanho: TAMANHO });
   const contadores = useArvoresContadores({
@@ -141,6 +150,8 @@ export function ArvoresPagina() {
   const totalSelecionado = todosFiltrados ? total : selecionadas.length;
 
   const itens = consulta.data?.data.results ?? [];
+  // A coluna só aparece quando alguma árvore da página tem ocorrência aberta.
+  const temOcorrenciasAbertas = itens.some((a) => a.ocorrencias_abertas > 0);
   const idsDaPagina = itens.map((a) => a.id);
   const marcadasNaPagina = idsDaPagina.filter((id) => todosFiltrados || selecionadas.includes(id));
   const paginaInteira = idsDaPagina.length > 0 && marcadasNaPagina.length === idsDaPagina.length;
@@ -229,6 +240,20 @@ export function ArvoresPagina() {
           className="w-full sm:w-72"
         />
         <Selecao
+          aria-label="Condição aparente"
+          value={filtros.condicao_aparente ?? ""}
+          onChange={(e) => filtrar({ condicao_aparente: e.target.value || undefined })}
+          className="w-full sm:w-48"
+        >
+          <option value="">Qualquer condição</option>
+          {Object.entries(ROTULOS_CONDICAO).map(([v, r]) => (
+            // A API chama "sem avaliação" de "sem".
+            <option key={v} value={v === "nao_avaliada" ? "sem" : v}>
+              {r}
+            </option>
+          ))}
+        </Selecao>
+        <Selecao
           aria-label="Espécie"
           value={filtros.especie ?? ""}
           onChange={(e) => filtrar({ especie: e.target.value || undefined })}
@@ -238,24 +263,6 @@ export function ArvoresPagina() {
           {especies.data?.data.results.map((e) => (
             <option key={e.id} value={e.id}>
               {e.nome_cientifico}
-            </option>
-          ))}
-        </Selecao>
-        <Selecao
-          aria-label="Situação da identificação"
-          value={filtros.especie_estado ?? ""}
-          onChange={(e) =>
-            filtrar({
-              especie_estado: (e.target.value || undefined) as BuscaArvores["especie_estado"],
-            })
-          }
-          className="w-full sm:w-48"
-        >
-          <option value="">Toda identificação</option>
-          <option value="nao_confirmada">Não confirmada</option>
-          {Object.entries(ROTULOS_ESTADO_ESPECIE).map(([v, r]) => (
-            <option key={v} value={v}>
-              {r}
             </option>
           ))}
         </Selecao>
@@ -275,49 +282,83 @@ export function ArvoresPagina() {
             </option>
           ))}
         </Selecao>
-        <Selecao
-          aria-label="Origem da localização"
-          value={filtros.localizacao_origem ?? ""}
-          onChange={(e) =>
-            filtrar({
-              localizacao_origem: (e.target.value || undefined) as
-                OrigemLocalizacaoEnum | undefined,
-            })
-          }
-          className="w-full sm:w-48"
-        >
-          <option value="">Toda localização</option>
-          {Object.entries(ROTULOS_ORIGEM_LOCALIZACAO).map(([v, r]) => (
-            <option key={v} value={v}>
-              {r}
-            </option>
-          ))}
-        </Selecao>
-        <Selecao
-          aria-label="Última inspeção"
-          value={filtros.sem_inspecao_dias ? String(filtros.sem_inspecao_dias) : ""}
-          onChange={(e) =>
-            filtrar({ sem_inspecao_dias: e.target.value ? Number(e.target.value) : undefined })
-          }
-          className="w-full sm:w-48"
-        >
-          <option value="">Toda última inspeção</option>
-          <option value="180">Sem inspeção há 6 meses</option>
-          <option value="365">Sem inspeção há 1 ano</option>
-          <option value="730">Sem inspeção há 2 anos</option>
-        </Selecao>
-        <Selecao
-          aria-label="Situação do registro"
-          value={filtros.situacao ?? "ativa"}
-          onChange={(e) => filtrar({ situacao: e.target.value as BuscaArvores["situacao"] })}
-          className="w-full sm:w-48"
-        >
-          <option value="ativa">Ativas</option>
-          <option value="excluida">Excluídas</option>
-          <option value="fundida">Fundidas</option>
-          <option value="todas">Todas</option>
-        </Selecao>
       </div>
+      <details
+        className="mb-3 rounded-lg border border-borda bg-superficie"
+        open={maisAberto}
+        onToggle={(e) => setMaisAberto(e.currentTarget.open)}
+      >
+        <summary className="cursor-pointer px-3 py-2 text-sm font-medium select-none">
+          Mais filtros
+          {filtrosExtras > 0 && (
+            <Selo tom="marca" className="ml-2">
+              {plural(filtrosExtras, "ativo", "ativos")}
+            </Selo>
+          )}
+        </summary>
+        <div className="flex flex-wrap gap-2 border-t border-borda p-3">
+          <Selecao
+            aria-label="Situação da identificação"
+            value={filtros.especie_estado ?? ""}
+            onChange={(e) =>
+              filtrar({
+                especie_estado: (e.target.value || undefined) as BuscaArvores["especie_estado"],
+              })
+            }
+            className="w-full sm:w-48"
+          >
+            <option value="">Toda identificação</option>
+            <option value="nao_confirmada">Não confirmada</option>
+            {Object.entries(ROTULOS_ESTADO_ESPECIE).map(([v, r]) => (
+              <option key={v} value={v}>
+                {r}
+              </option>
+            ))}
+          </Selecao>
+          <Selecao
+            aria-label="Origem da localização"
+            value={filtros.localizacao_origem ?? ""}
+            onChange={(e) =>
+              filtrar({
+                localizacao_origem: (e.target.value || undefined) as
+                  OrigemLocalizacaoEnum | undefined,
+              })
+            }
+            className="w-full sm:w-48"
+          >
+            <option value="">Toda localização</option>
+            {Object.entries(ROTULOS_ORIGEM_LOCALIZACAO).map(([v, r]) => (
+              <option key={v} value={v}>
+                {r}
+              </option>
+            ))}
+          </Selecao>
+          <Selecao
+            aria-label="Última inspeção"
+            value={filtros.sem_inspecao_dias ? String(filtros.sem_inspecao_dias) : ""}
+            onChange={(e) =>
+              filtrar({ sem_inspecao_dias: e.target.value ? Number(e.target.value) : undefined })
+            }
+            className="w-full sm:w-48"
+          >
+            <option value="">Toda última inspeção</option>
+            <option value="180">Sem inspeção há 6 meses</option>
+            <option value="365">Sem inspeção há 1 ano</option>
+            <option value="730">Sem inspeção há 2 anos</option>
+          </Selecao>
+          <Selecao
+            aria-label="Situação do registro"
+            value={filtros.situacao ?? "ativa"}
+            onChange={(e) => filtrar({ situacao: e.target.value as BuscaArvores["situacao"] })}
+            className="w-full sm:w-48"
+          >
+            <option value="ativa">Ativas</option>
+            <option value="excluida">Excluídas</option>
+            <option value="fundida">Fundidas</option>
+            <option value="todas">Todas</option>
+          </Selecao>
+        </div>
+      </details>
       {filtros.valida && (
         <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-texto-suave">
           Só registros válidos: ativos, com localização e origem registradas (critério provisório),
@@ -470,7 +511,7 @@ export function ArvoresPagina() {
                 >
                   Última inspeção
                 </ThOrdenavel>
-                <Th>Ocorrências abertas</Th>
+                {temOcorrenciasAbertas && <Th>Ocorrências abertas</Th>}
                 <ThOrdenavel
                   direcao={direcaoDe(ordenacao, "atualizado_em")}
                   aoOrdenar={() => ordenarPor("atualizado_em")}
@@ -527,13 +568,15 @@ export function ArvoresPagina() {
                       <span className="text-texto-suave">Nunca</span>
                     )}
                   </Td>
-                  <Td>
-                    {a.ocorrencias_abertas ? (
-                      <Selo tom="atencao">{a.ocorrencias_abertas}</Selo>
-                    ) : (
-                      "—"
-                    )}
-                  </Td>
+                  {temOcorrenciasAbertas && (
+                    <Td>
+                      {a.ocorrencias_abertas ? (
+                        <Selo tom="atencao">{a.ocorrencias_abertas}</Selo>
+                      ) : (
+                        "—"
+                      )}
+                    </Td>
+                  )}
                   <Td className="whitespace-nowrap">{formatarDataHora(a.atualizado_em)}</Td>
                 </Linha>
               ))}
