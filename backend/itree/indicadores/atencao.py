@@ -32,7 +32,7 @@ DEFINICAO = (
     "ocorrências abertas com risco confirmado, ocorrências abertas com prazo vencido, "
     "árvores válidas com condição aparente ruim ou aparentemente morta e árvores válidas "
     "sem inspeção validada nos últimos 12 meses (inclui as nunca inspecionadas). "
-    "Bairros com índice zero não aparecem. Critério provisório, sujeito à DP-14; "
+    "Bairros com índice zero não aparecem. Critério provisório, em definição pela prefeitura; "
     "a ordem não indica culpa nem irregularidade."
 )
 
