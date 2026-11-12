@@ -496,7 +496,7 @@ export function ArvoresPagina() {
                     <Link
                       to="/inventario/arvores/$id"
                       params={{ id: a.id }}
-                      className="font-mono font-medium text-marca-escura hover:underline"
+                      className="font-mono font-medium whitespace-nowrap text-marca-escura hover:underline"
                     >
                       {a.codigo}
                     </Link>
@@ -515,7 +515,7 @@ export function ArvoresPagina() {
                   <Td>
                     <SeloLocalizacao origem={a.localizacao_origem ?? ""} precisao={a.precisao_m} />
                   </Td>
-                  <Td>
+                  <Td className="min-w-56">
                     {a.endereco || <span className="text-texto-suave">—</span>}
                     {a.bairro && <p className="text-xs text-texto-suave">{a.bairro.nome}</p>}
                   </Td>

@@ -332,6 +332,15 @@ describe("lista de árvores: ordenação por inspeção e condição", () => {
   });
 });
 
+describe("lista de árvores: legibilidade (R2-15)", () => {
+  it("o código não quebra no meio e o endereço tem largura mínima", async () => {
+    await abrir("/inventario/arvores");
+    const codigo = await screen.findByRole("link", { name: "ARV-000001" });
+    expect(codigo).toHaveClass("whitespace-nowrap");
+    expect(screen.getByText("Rua 1").closest("td")).toHaveClass("min-w-56");
+  });
+});
+
 describe("lista de árvores: seleção em lote", () => {
   beforeEach(() => {
     servidor.use(

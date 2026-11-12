@@ -203,7 +203,7 @@ export function InspecoesPagina() {
                     <Link
                       to="/inspecoes/$id"
                       params={{ id: i.id }}
-                      className="font-mono font-medium text-marca-escura hover:underline"
+                      className="font-mono font-medium whitespace-nowrap text-marca-escura hover:underline"
                     >
                       {i.codigo}
                     </Link>

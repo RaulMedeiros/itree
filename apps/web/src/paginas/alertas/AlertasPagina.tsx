@@ -228,11 +228,13 @@ export function AlertasPagina() {
                     <Link
                       to="/alertas/$id"
                       params={{ id: a.id }}
-                      className="font-mono font-medium text-marca-escura hover:underline"
+                      className="font-mono font-medium whitespace-nowrap text-marca-escura hover:underline"
                     >
                       {a.codigo}
                     </Link>
-                    <p className="font-mono text-xs text-texto-suave">{a.id_externo}</p>
+                    <p className="font-mono text-xs whitespace-nowrap text-texto-suave">
+                      {a.id_externo}
+                    </p>
                   </Td>
                   <Td>
                     {ROTULOS_FONTE_ALERTA[a.fonte]}

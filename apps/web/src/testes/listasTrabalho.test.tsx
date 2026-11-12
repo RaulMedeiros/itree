@@ -289,3 +289,44 @@ describe("G-08: Exportar CSV nas listas", () => {
     expect(screen.queryByRole("button", { name: "Exportar CSV" })).toBeNull();
   });
 });
+
+describe("R2-15: códigos sem quebra de linha", () => {
+  it("alertas e ocorrências mantêm o código e o ID externo em uma linha", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/alertas`, () =>
+        HttpResponse.json(
+          pagina([
+            {
+              id: "al-1",
+              codigo: "ALR-000002",
+              id_externo: "SINT-DETER-1",
+              fonte: "inpe_deter",
+              tipo: "supressao",
+              area_ha: null,
+              data_deteccao: "2026-10-30T12:00:00Z",
+              ingerido_em: "2026-10-31T12:00:00Z",
+              bairros: [],
+              arvores_proximas: 0,
+              ocorrencias_proximas: 0,
+              ocorrencia: null,
+              area_verde_proxima: null,
+              status: "detectado",
+            },
+          ]),
+        ),
+      ),
+    );
+    await abrir("/alertas");
+    expect(await screen.findByRole("link", { name: "ALR-000002" })).toHaveClass(
+      "whitespace-nowrap",
+    );
+    expect(screen.getByText("SINT-DETER-1")).toHaveClass("whitespace-nowrap");
+  });
+
+  it("o código da ocorrência não quebra", async () => {
+    await abrir("/ocorrencias");
+    expect(await screen.findByRole("link", { name: "OCO-000001" })).toHaveClass(
+      "whitespace-nowrap",
+    );
+  });
+});
