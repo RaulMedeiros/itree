@@ -367,3 +367,26 @@ def test_filtro_especie_nao_confirmada_exclui_so_as_confirmadas(cliente, revisor
     ids = {a["id"] for a in r["results"]}
     assert ids == {informada["id"], sem_especie["id"]}
     assert confirmada["id"] not in ids
+
+
+def test_ordenar_por_atraso_poe_as_nunca_inspecionadas_no_topo(
+    cliente, gestor_municipal, arvores_ordenaveis
+):
+    """M-15: nunca inspecionadas primeiro; depois a inspeção mais antiga para a mais recente."""
+    cliente.como(gestor_municipal)
+    boa, ruim, sem_inspecao, sem_condicao = (a.codigo for a in arvores_ordenaveis)
+    assert _codigos(cliente, ordenar="atraso") == [sem_inspecao, ruim, sem_condicao, boa]
+    # A ordenação por última inspeção segue deixando as nunca inspecionadas no fim.
+    assert _codigos(cliente, ordenar="ultima_inspecao_em")[-1] == sem_inspecao
+
+
+def test_atraso_desempata_as_nunca_inspecionadas_pelo_numero(
+    cliente, gestor_municipal, territorios
+):
+    for _ in range(3):
+        Arvore.objects.create(
+            geom=_ponto(PONTO_A), bairro=territorios["a"], localizacao_origem="estimada_web"
+        )
+    cliente.como(gestor_municipal)
+    codigos = _codigos(cliente, ordenar="atraso")
+    assert codigos == sorted(codigos)

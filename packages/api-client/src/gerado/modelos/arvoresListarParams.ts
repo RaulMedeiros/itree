@@ -17,7 +17,7 @@ export type ArvoresListarParams = {
   especie_estado?: string;
   localizacao_origem?: string;
   lote?: string;
-  /** numero, atualizado_em, ultima_inspecao_em ou condicao_aparente; com '-' na frente, ordem decrescente. Em ultima_inspecao_em, árvores sem inspeção ficam no fim. Em condicao_aparente, a ordem crescente vai da melhor para a pior condição e as não avaliadas ficam no fim, em qualquer direção. */
+  /** numero, atualizado_em, ultima_inspecao_em, condicao_aparente ou atraso; com '-' na frente, ordem decrescente. Em ultima_inspecao_em, árvores sem inspeção ficam no fim. 'atraso' prioriza a inspeção atrasada: as nunca inspecionadas primeiro, depois da inspeção mais antiga para a mais recente. Em condicao_aparente, a ordem crescente vai da melhor para a pior condição e as não avaliadas ficam no fim, em qualquer direção. */
   ordenar?: string;
   /** Um número de página dentro do conjunto de resultados paginado. */
   pagina?: number;

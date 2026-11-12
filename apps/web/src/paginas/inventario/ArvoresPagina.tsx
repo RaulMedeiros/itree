@@ -33,7 +33,13 @@ import { Linha, Tabela, Td, Th, ThOrdenavel } from "../../ui/tabela";
 import { formatarData, formatarDataHora, plural } from "../../util/formatos";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { NovaArvoreDialogo } from "./NovaArvoreDialogo";
-import { direcaoDe, proximaOrdenacao, type CampoOrdenacao, type Ordenacao } from "./ordenacao";
+import {
+  ORDENACAO_ATRASO,
+  direcaoDe,
+  proximaOrdenacao,
+  type CampoOrdenacao,
+  type Ordenacao,
+} from "./ordenacao";
 
 const TAMANHO = 50;
 
@@ -263,6 +269,15 @@ export function ArvoresPagina() {
             </option>
           ))}
         </Selecao>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="size-4 accent-marca"
+            checked={ordenacao === ORDENACAO_ATRASO}
+            onChange={(e) => filtrar({ ordenar: e.target.checked ? ORDENACAO_ATRASO : undefined })}
+          />
+          Nunca inspecionadas primeiro
+        </label>
       </div>
       <details
         className="mb-3 rounded-lg border border-borda bg-superficie"

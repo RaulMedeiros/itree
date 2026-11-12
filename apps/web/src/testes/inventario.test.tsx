@@ -323,6 +323,26 @@ describe("lista de árvores: ordenação por inspeção e condição", () => {
     );
   });
 
+  it("'Nunca inspecionadas primeiro' pede a ordenação por atraso e marca a coluna (M-15)", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/arvores");
+    const opcao = await screen.findByRole("checkbox", { name: "Nunca inspecionadas primeiro" });
+    expect(opcao).not.toBeChecked();
+    await usuario.click(opcao);
+    await vi.waitFor(() => expect(consultas.at(-1)?.searchParams.get("ordenar")).toBe("atraso"));
+    expect(
+      await screen.findByRole("checkbox", { name: "Nunca inspecionadas primeiro" }),
+    ).toBeChecked();
+    expect(await screen.findByRole("columnheader", { name: /Última inspeção/ })).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
+    await usuario.click(
+      await screen.findByRole("checkbox", { name: "Nunca inspecionadas primeiro" }),
+    );
+    await vi.waitFor(() => expect(consultas.at(-1)?.searchParams.get("ordenar")).toBeNull());
+  });
+
   it("mostra a data da última inspeção ou 'Nunca'", async () => {
     servidor.use(http.get(`${API}/api/v1/arvores`, () => HttpResponse.json(pagina(DUAS_ARVORES))));
     await abrir("/inventario/arvores");

@@ -187,8 +187,10 @@ FILTROS_ARVORE = [
         "ordenar",
         str,
         description=(
-            "numero, atualizado_em, ultima_inspecao_em ou condicao_aparente; com '-' na frente, "
-            "ordem decrescente. Em ultima_inspecao_em, árvores sem inspeção ficam no fim. Em "
+            "numero, atualizado_em, ultima_inspecao_em, condicao_aparente ou atraso; com '-' na "
+            "frente, ordem decrescente. Em ultima_inspecao_em, árvores sem inspeção ficam no "
+            "fim. 'atraso' prioriza a inspeção atrasada: as nunca inspecionadas primeiro, "
+            "depois da inspeção mais antiga para a mais recente. Em "
             "condicao_aparente, a ordem crescente vai da melhor para a pior condição e as não "
             "avaliadas ficam no fim, em qualquer direção."
         ),
@@ -255,6 +257,9 @@ def ordenar_arvores(qs, ordem: str):
             else F("ultima_inspecao_em").asc(nulls_last=True),
             "numero",
         )
+    if ordem == "atraso":
+        # Nunca inspecionadas primeiro; depois, da inspeção mais antiga para a mais recente.
+        return qs.order_by(F("ultima_inspecao_em").asc(nulls_first=True), "numero")
     if campo == "condicao_aparente":
         # "Sem avaliação" fica no fim também na ordem decrescente.
         escala = _ORDEM_CONDICAO[::-1] if desc else _ORDEM_CONDICAO
