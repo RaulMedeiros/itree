@@ -125,7 +125,8 @@ const servidor = criarServidor(
         invalidos: 0,
         erro: "",
         orgao: "INPE, Programa Queimadas",
-        licenca: "Não declarada pela fonte (DP-11). Citar: INPE, Programa Queimadas.",
+        licenca:
+          "Não declarada pela fonte; condições de uso em definição pela prefeitura. Citar: INPE, Programa Queimadas.",
         data_referencia: "2026-11-10",
         usuario: null,
       },
@@ -186,11 +187,16 @@ describe("detalhe do usuário", () => {
 });
 
 describe("integrações", () => {
-  it("não expõe nome de variável de ambiente e mantém DP-11 inteiro", async () => {
+  it("não expõe nome de variável de ambiente e deixa o código DP-11 só em detalhes técnicos", async () => {
     await abrir("/administracao/integracoes");
     expect(await screen.findByText("Arquivo sintético")).toBeInTheDocument();
     expect(screen.queryByText(/ALERTAS_FONTES/)).toBeNull();
-    expect(screen.getByText("DP-11")).toHaveClass("whitespace-nowrap");
+    // Fora dos detalhes técnicos, nenhum texto da tela traz o código.
+    const detalhes = screen.getByText("Detalhes técnicos").closest("details")!;
+    expect(detalhes).toHaveTextContent("DP-11");
+    expect(
+      screen.getByRole("main").textContent?.replace(detalhes.textContent ?? "", ""),
+    ).not.toMatch(/\bDP-\d+/);
   });
 
   it("mostra a última e a próxima coleta de cada fonte", async () => {
@@ -218,7 +224,9 @@ describe("territórios", () => {
   it("avisa que os limites não são oficiais e que a tela é somente leitura", async () => {
     await abrir("/administracao/territorios");
     expect(await screen.findByText(/não são oficiais/)).toBeInTheDocument();
-    expect(screen.getByText("DP-10")).toHaveClass("whitespace-nowrap");
+    expect(screen.getByText(/depende de a prefeitura definir as fontes/)).toBeInTheDocument();
+    expect(screen.getByText("Detalhes técnicos").closest("details")).toHaveTextContent("DP-10");
+    expect(screen.queryByText("DP-10")).toBeNull();
   });
 
   it("mostra a coluna Árvores com a contagem de cada território", async () => {

@@ -16,6 +16,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, RefreshCw } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+import { DetalhesTecnicos } from "../../componentes/DetalhesTecnicos";
 import { SeloEstadoOcorrencia } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
@@ -41,6 +42,9 @@ export function EspeciesPagina() {
           </Botao>
         }
       />
+      <DetalhesTecnicos>
+        Decisão pendente DP-02 (taxonomia oficial e catálogo de espécies).
+      </DetalhesTecnicos>
       <Entrada
         type="search"
         aria-label="Buscar espécie"
@@ -241,6 +245,9 @@ export function TiposOcorrenciaPagina() {
           </Botao>
         }
       />
+      <DetalhesTecnicos>
+        Decisão pendente DP-17 (tipos de ocorrência, fluxo de estados e prazos).
+      </DetalhesTecnicos>
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-texto-suave">
         <span id="legenda-situacoes">Situações das ocorrências, na ordem do fluxo:</span>
         <ol aria-labelledby="legenda-situacoes" className="flex flex-wrap items-center gap-2">

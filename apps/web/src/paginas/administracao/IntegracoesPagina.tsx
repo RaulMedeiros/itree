@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Upload } from "lucide-react";
 import { useState } from "react";
 
+import { DetalhesTecnicos } from "../../componentes/DetalhesTecnicos";
 import { Botao } from "../../ui/botao";
 import { Campo, EntradaArquivo, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -104,8 +105,7 @@ export function IntegracoesPagina() {
         descricao={
           <>
             Ingestão de alertas ambientais. A coleta automática depende de configuração do servidor;
-            licenças e limites de cada fonte devem ser verificados antes do uso produtivo (
-            <span className="whitespace-nowrap">DP-11</span>).
+            licenças e limites de cada fonte devem ser verificados antes do uso produtivo.
           </>
         }
         acoes={
@@ -114,6 +114,9 @@ export function IntegracoesPagina() {
           </Botao>
         }
       />
+      <DetalhesTecnicos>
+        Decisão pendente DP-11 (credenciais, limites e condições das APIs externas).
+      </DetalhesTecnicos>
       <EstadoDasFontes />
       <h2 className="mb-2 text-base font-semibold">Execuções recentes</h2>
       {consulta.isPending ? (

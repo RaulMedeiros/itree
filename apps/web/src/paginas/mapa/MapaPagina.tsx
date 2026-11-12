@@ -31,6 +31,7 @@ import { ChevronDown, ClipboardList, Layers, Leaf, List, TriangleAlert, X } from
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
+import { DetalhesTecnicos } from "../../componentes/DetalhesTecnicos";
 import {
   SeloEspecie,
   SeloIlustracao,
@@ -1172,10 +1173,15 @@ export function MapaPagina() {
                     ))}
                   </div>
                   {!satelite && (
-                    <p className="text-xs text-texto-suave">
-                      Imagem de satélite não configurada: o provedor ainda é decisão pendente
-                      (DP-07).
-                    </p>
+                    <div>
+                      <p className="text-xs text-texto-suave">
+                        Imagem de satélite não configurada: o provedor ainda está em definição pela
+                        prefeitura.
+                      </p>
+                      <DetalhesTecnicos>
+                        Decisão pendente DP-07 (provedor de mapas).
+                      </DetalhesTecnicos>
+                    </div>
                   )}
                   {base === "satelite" && satelite && (
                     <p className="text-xs text-texto-suave">

@@ -49,6 +49,7 @@ import { CartaoEspecie } from "../../componentes/especies";
 import { FotoPrincipalArvore } from "../../componentes/FotoPrincipalArvore";
 import type { IdTermo } from "../../ajuda/glossario";
 import { AjudaTermo } from "../../componentes/AjudaTermo";
+import { DetalhesTecnicos } from "../../componentes/DetalhesTecnicos";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { MiniMapaArvore } from "../../componentes/MiniMapaArvore";
 import { SeletorLocalizacao, type Ponto } from "../../componentes/SeletorLocalizacao";
@@ -657,10 +658,14 @@ function SugestoesIA({ arvore }: { arvore: Arvore }) {
   const itens = consulta.data.data;
   return (
     <div className="flex flex-col gap-3">
-      <p className="rounded-md bg-info-clara px-3 py-2 text-sm text-info">
-        Sugestões são inferências de um modelo e não alteram o cadastro sem a decisão de um revisor.
-        Não exibimos percentuais de confiança enquanto a calibração não for validada (DP-13).
-      </p>
+      <div className="rounded-md bg-info-clara px-3 py-2 text-sm text-info">
+        <p>
+          Sugestões são inferências de um modelo e não alteram o cadastro sem a decisão de um
+          revisor. Não exibimos percentuais de confiança enquanto a calibração dos modelos não for
+          validada.
+        </p>
+        <DetalhesTecnicos>Decisão pendente DP-13 (calibração dos modelos de IA).</DetalhesTecnicos>
+      </div>
       {itens.length === 0 ? (
         <Vazio titulo="Nenhuma sugestão registrada">
           O serviço de identificação por imagem ainda não está configurado neste ambiente.
@@ -972,7 +977,7 @@ function MedidaDialogo({ arvore, aoFechar }: { arvore: Arvore; aoFechar: () => v
       aberto
       aoMudar={(v) => !v && aoFechar()}
       titulo="Registrar medida"
-      descricao="Toda medida guarda método, unidade, data, responsável e origem (RN-INV-002)."
+      descricao="Toda medida guarda método, unidade, data, responsável e origem."
       rodape={
         <>
           <Botao variante="secundario" onClick={aoFechar}>

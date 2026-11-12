@@ -230,16 +230,18 @@ TIPO_POR_FONTE = {
 PROVENIENCIA_FONTE = {
     FonteAlerta.INPE_FOCOS: {
         "orgao": "INPE, Programa Queimadas",
-        "licenca": "Não declarada pela fonte (DP-11). Citar: INPE, Programa Queimadas.",
+        "licenca": "Não declarada pela fonte; condições de uso em definição pela prefeitura. "
+        "Citar: INPE, Programa Queimadas.",
     },
     FonteAlerta.INPE_DETER: {
         "orgao": "INPE, TerraBrasilis",
         "licenca": "Não declarada para os dados (o WMS informa Fees e AccessConstraints "
-        "como 'none'). Citar: INPE, TerraBrasilis (DP-11).",
+        "como 'none'). Condições de uso em definição pela prefeitura. Citar: INPE, TerraBrasilis.",
     },
     FonteAlerta.MAPBIOMAS: {
         "orgao": "MapBiomas Alerta",
-        "licenca": "Termos da API do MapBiomas, ainda não verificados (DP-11).",
+        "licenca": "Termos da API do MapBiomas, ainda não verificados; "
+        "condições de uso em definição pela prefeitura.",
     },
 }
 

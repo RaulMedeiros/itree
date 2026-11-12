@@ -22,6 +22,7 @@ from itree.auditoria.views import EventoAuditoriaSerializer
 from itree.contas.acesso import requer
 from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
+from itree.core.textos import sem_codigos_internos
 from itree.ocorrencias.models import Ocorrencia, OrigemOcorrencia, TipoOcorrencia
 
 from . import fontes, proximidade
@@ -134,6 +135,8 @@ class ConversaoSerializer(serializers.Serializer):
 
 class IngestaoSerializer(serializers.ModelSerializer):
     usuario = serializers.SerializerMethodField()
+    # Ingestões antigas gravaram "(DP-11)" na licença: o código não vai ao usuário final.
+    licenca = serializers.SerializerMethodField()
 
     class Meta:
         model = IngestaoAlertas
@@ -158,6 +161,9 @@ class IngestaoSerializer(serializers.ModelSerializer):
 
     def get_usuario(self, obj) -> str | None:
         return (obj.usuario.nome or obj.usuario.email) if obj.usuario else None
+
+    def get_licenca(self, obj) -> str:
+        return sem_codigos_internos(obj.licenca)
 
 
 class FonteEstadoSerializer(serializers.Serializer):

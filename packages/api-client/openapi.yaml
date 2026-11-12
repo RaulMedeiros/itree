@@ -4892,9 +4892,7 @@ components:
           maxLength: 200
         licenca:
           type: string
-          description: Licença ou termos de uso da fonte; registra quando não é declarada
-            (DP-11).
-          maxLength: 300
+          readOnly: true
         data_referencia:
           type: string
           format: date
@@ -4908,6 +4906,7 @@ components:
       - fonte
       - id
       - iniciada_em
+      - licenca
       - origem
       - usuario
     Inspecao:
