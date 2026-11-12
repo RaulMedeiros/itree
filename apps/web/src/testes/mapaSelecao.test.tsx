@@ -280,6 +280,41 @@ describe("seleção por área no mapa (RF-MAPA-022)", () => {
     ]);
   });
 
+  it("a lista diz quantos itens exibe do total e a caixa mostra linhas inteiras (R2-08)", async () => {
+    const usuario = userEvent.setup();
+    const itens = Array.from({ length: 52 }, (_, i) => ({
+      id: `a-${i + 1}`,
+      codigo: `ARV-${String(i + 1).padStart(6, "0")}`,
+      especie: "",
+      condicao: "boa",
+      endereco: "",
+    }));
+    resposta = () =>
+      HttpResponse.json({ ...SELECAO, arvores: { ...SELECAO.arvores, total: 52, itens } });
+    const mapa = await abrirMapa();
+    const painel = await selecionarArea(usuario, mapa);
+    expect(await within(painel).findByText("Exibindo 50 de 52", { exact: false })).toBeVisible();
+    const lista = within(painel).getByRole("list", { name: "Árvores na área" });
+    expect(within(lista).getAllByRole("listitem")).toHaveLength(50);
+    // 5 linhas de 52 px + 4 divisórias + 2 de borda: nenhuma linha cortada ao fim da caixa.
+    expect(lista).toHaveStyle({ maxHeight: "266px" });
+    await usuario.click(within(painel).getByRole("button", { name: "Mostrar mais (2 restantes)" }));
+    expect(within(painel).getByText("Exibindo 52 de 52", { exact: false })).toBeVisible();
+    expect(within(painel).queryByRole("button", { name: /Mostrar mais/ })).toBeNull();
+  });
+
+  it("com o servidor cortando a lista, o total continua o da área inteira", async () => {
+    const usuario = userEvent.setup();
+    resposta = () =>
+      HttpResponse.json({
+        ...SELECAO,
+        arvores: { ...SELECAO.arvores, total: 2500, truncado: true },
+      });
+    const mapa = await abrirMapa();
+    const painel = await selecionarArea(usuario, mapa);
+    expect(await within(painel).findByText("Exibindo 2 de 2.500", { exact: false })).toBeVisible();
+  });
+
   it("avisa quando a lista foi cortada e mostra o erro da API", async () => {
     const usuario = userEvent.setup();
     resposta = () =>
