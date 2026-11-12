@@ -77,6 +77,7 @@ import {
 } from "../../util/formatos";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
+import { CadeiasDaArvore } from "./CadeiasDaArvore";
 import { invalidarCaminhos } from "../../util/cache";
 
 type Aba = "resumo" | "medidas" | "inspecoes" | "ocorrencias" | "evidencias" | "ia" | "historico";
@@ -791,14 +792,40 @@ function SugestoesIA({ arvore }: { arvore: Arvore }) {
   );
 }
 
+type VisaoHistorico = "eventos" | "cadeias";
+
 function Historico({ arvoreId }: { arvoreId: string }) {
   const consulta = useArvoresHistorico(arvoreId);
+  const [visao, setVisao] = useState<VisaoHistorico>("eventos");
+  const opcoes: { id: VisaoHistorico; rotulo: string }[] = [
+    { id: "eventos", rotulo: "Eventos" },
+    { id: "cadeias", rotulo: "Cadeias" },
+  ];
   return (
-    <LinhaDoTempo
-      eventos={consulta.data?.data}
-      carregando={consulta.isPending}
-      erro={consulta.error}
-    />
+    <div className="flex flex-col gap-4">
+      <div role="group" aria-label="Visão do histórico" className="flex gap-1">
+        {opcoes.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            aria-pressed={visao === o.id}
+            onClick={() => setVisao(o.id)}
+            className={`rounded-md border px-3 py-1 text-sm ${visao === o.id ? "border-marca bg-marca-clara font-medium" : "border-borda text-texto-suave hover:text-texto"}`}
+          >
+            {o.rotulo}
+          </button>
+        ))}
+      </div>
+      {visao === "cadeias" ? (
+        <CadeiasDaArvore arvoreId={arvoreId} />
+      ) : (
+        <LinhaDoTempo
+          eventos={consulta.data?.data}
+          carregando={consulta.isPending}
+          erro={consulta.error}
+        />
+      )}
+    </div>
   );
 }
 
