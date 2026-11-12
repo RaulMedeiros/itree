@@ -390,3 +390,46 @@ describe("visão geral: criar tarefas para as árvores sem avaliação", () => {
     expect(screen.queryByRole("button", { name: /Criar tarefas de inspeção/ })).toBeNull();
   });
 });
+
+describe("visão geral: ocorrências em aberto por prioridade", () => {
+  it("cada barra usa a cor da prioridade no mapa e traz o rótulo em texto", async () => {
+    await abrirComPainel(
+      painel({
+        distribuicoes: {
+          ocorrencias_prioridade: {
+            titulo: "Ocorrências em aberto por prioridade",
+            definicao: "d",
+            itens: [
+              { rotulo: "Baixa", quantidade: 9 },
+              { rotulo: "Urgente", quantidade: 2 },
+              { rotulo: "Sem prioridade definida", quantidade: 4 },
+              { rotulo: "Média", quantidade: 6 },
+              { rotulo: "Alta", quantidade: 3 },
+            ],
+          },
+        },
+      }),
+    );
+    const titulo = await screen.findByRole("heading", {
+      name: "Ocorrências em aberto por prioridade",
+    });
+    const itens = within(titulo.parentElement as HTMLElement).getAllByRole("listitem");
+    // Do mais urgente ao menos, cada um com o rótulo em texto e a cor do mapa (simbologia.ts).
+    expect(itens.map((li) => li.textContent)).toEqual([
+      "Urgente2",
+      "Alta3",
+      "Média6",
+      "Baixa9",
+      "Sem prioridade definida4",
+    ]);
+    const corDa = (li: HTMLElement) =>
+      (li.querySelector("span.h-3") as HTMLElement).style.background;
+    expect(itens.map(corDa)).toEqual([
+      "rgb(201, 42, 42)", // #c92a2a
+      "rgb(232, 89, 12)", // #e8590c
+      "rgb(227, 160, 8)", // #e3a008
+      "rgb(28, 126, 214)", // #1c7ed6
+      "rgb(73, 80, 87)", // #495057
+    ]);
+  });
+});

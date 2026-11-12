@@ -25,13 +25,13 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import { ROTULOS_CONDICAO } from "@itree/domain";
+import { ROTULOS_CONDICAO, ROTULOS_PRIORIDADE } from "@itree/domain";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
-import { CORES_CONDICAO } from "../../mapa/simbologia";
+import { CORES_CONDICAO, CORES_PRIORIDADE } from "../../mapa/simbologia";
 import { Botao } from "../../ui/botao";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -605,6 +605,24 @@ const COR_POR_ROTULO: Record<string, { cor: string; textoClaro: boolean }> = {
   [ROTULO_SEM_AVALIACAO]: { cor: CORES_CONDICAO.nao_avaliada, textoClaro: false },
 };
 
+const ROTULO_SEM_PRIORIDADE = "Sem prioridade definida";
+
+/** Cor da prioridade pelo rótulo da API, a mesma do triângulo da ocorrência no mapa. */
+const COR_PRIORIDADE_POR_ROTULO: Record<string, string> = {
+  ...Object.fromEntries(
+    (Object.keys(ROTULOS_PRIORIDADE) as (keyof typeof ROTULOS_PRIORIDADE)[]).map((p) => [
+      ROTULOS_PRIORIDADE[p],
+      CORES_PRIORIDADE[p]!,
+    ]),
+  ),
+  [ROTULO_SEM_PRIORIDADE]: CORES_PRIORIDADE[""]!,
+};
+
+/** Da mais urgente para a menos; sem prioridade por último. */
+const ORDEM_PRIORIDADE = ["Urgente", "Alta", "Média", "Baixa", ROTULO_SEM_PRIORIDADE];
+const ordemPrioridade = (rotulo: string) =>
+  ORDEM_PRIORIDADE.includes(rotulo) ? ORDEM_PRIORIDADE.indexOf(rotulo) : ORDEM_PRIORIDADE.length;
+
 /** Ordem semântica da condição: da melhor para a pior; sem avaliação por último. */
 const ORDEM_CONDICAO = ["Boa", "Regular", "Ruim", "Aparentemente morta", ROTULO_SEM_AVALIACAO];
 const ordemCondicao = (rotulo: string) =>
@@ -822,7 +840,12 @@ function ConteudoPainel({ dados, bairro }: { dados: PainelIndicadores; bairro?: 
               titulo={distribuicoes.ocorrencias_prioridade.titulo}
               definicao={distribuicoes.ocorrencias_prioridade.definicao}
             >
-              <BarrasHorizontais itens={distribuicoes.ocorrencias_prioridade.itens} cor="#eb6834" />
+              <BarrasHorizontais
+                itens={[...distribuicoes.ocorrencias_prioridade.itens]
+                  .sort((a, b) => ordemPrioridade(a.rotulo) - ordemPrioridade(b.rotulo))
+                  .map((o) => ({ ...o, cor: COR_PRIORIDADE_POR_ROTULO[o.rotulo] }))}
+                cor={CORES_PRIORIDADE[""]}
+              />
             </Painel>
           )}
         </div>

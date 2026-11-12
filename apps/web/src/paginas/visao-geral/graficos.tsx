@@ -302,7 +302,8 @@ export function BarrasHorizontais({
   itens,
   cor = "#2a78d6",
 }: {
-  itens: { rotulo: string; quantidade: number; italico?: boolean }[];
+  /** `cor` de um item vale no lugar da cor da série (ex.: prioridade, com a paleta do mapa). */
+  itens: { rotulo: string; quantidade: number; italico?: boolean; cor?: string }[];
   cor?: string;
 }) {
   const maximo = Math.max(1, ...itens.map((i) => i.quantidade));
@@ -318,7 +319,7 @@ export function BarrasHorizontais({
           </span>
           <span
             className="h-3 rounded-r"
-            style={{ width: `${(item.quantidade / maximo) * 100}%`, background: cor }}
+            style={{ width: `${(item.quantidade / maximo) * 100}%`, background: item.cor ?? cor }}
           />
           <span className="w-8 text-right tabular-nums">
             {item.quantidade.toLocaleString("pt-BR")}
