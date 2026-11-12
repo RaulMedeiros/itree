@@ -20,9 +20,7 @@ quando houver espaço ou decisão.
 
 | # | Prio | Item | Por quê | Pronto quando |
 | --- | --- | --- | --- | --- |
-| AV-01 | P2 | Praças separadas de areninhas, calçadões e rotatórias | O mapa 99 mistura equipamentos no mesmo conjunto (18 areninhas, 5 calçadões, 1 rotatória e 27 nomes "Sem Denominação Oficial"), e hoje todos viram "praça". | Subtipo derivado da fonte (prefixo do nome ou campo), exibido na ficha e filtrável, com regra documentada. |
 | AV-02 | P2 | Licença das praças (CKAN sem licença) e citação oficial | A API do Fortaleza em Mapas declara uso livre com citação; o dataset equivalente no CKAN tem licença vazia. Ver DP-10. | SEUMA/URBFOR confirmam a licença e a citação; o texto de `licenca` é ajustado se necessário. |
-| AV-03 | P3 | Conferir UCs com o CNUC (MMA, cc-by) | Código e esfera do CNUC permitem validar nomes e atos legais. A API da prefeitura repete a mesma UC em várias feições (a APA do Estuário do Rio Ceará tem 4). | Código CNUC gravado nas UCs e feições da mesma UC agrupadas na exibição. |
 | AV-04 | P3 | Política para áreas que sumiram da fonte | A reimportação mensal e o aviso de fonte desatualizada (60 dias) já existem, mas `importar_areas_verdes` mantém registros que sumiram da fonte (só avisa). Ver RF-INT-005. | Decidir se a área ausente é marcada como "não vista na última importação" ou removida, com o efeito no mapa e na proximidade dos focos. |
 | AV-06 | P3 | Triagem de focos históricos em lote | `ingerir_focos_historico` cria os focos como "Alerta detectado", e um mês do Ceará pode trazer centenas deles nas pendências de triagem. | Estado inicial ou marca própria para carga histórica (por exemplo, "histórico"), fora das pendências, com a decisão registrada (depende do fluxo da DP-15). |
 | AV-07 | P3 | Focos: distância ao parque pelo contorno e área verde vizinha na lista | A proximidade vem de um raio único (1 km) sobre parques e unidades de conservação; praças ficam de fora. | Raio por tipo de área e filtro "junto de área verde" na lista de alertas, se a triagem pedir. |
@@ -36,8 +34,6 @@ Ver [fontes verificadas](../integracoes/fontes-publicas.md).
 | --- | --- | --- | --- | --- |
 | F-01 | P2 | Vento e chuva (INMET) para risco de queda | A API `apitempo.inmet.gov.br` não estava liberada na rede da verificação. | Host liberado, estação de Fortaleza escolhida, série ingerida com fonte, e alerta meteorológico ligado a ocorrências de queda. |
 | F-02 | P3 | PRODES Caatinga (histórico anual de supressão) | Não há DETER para a Caatinga; o PRODES cobre Fortaleza, em escala regional e anual. | Camada histórica opcional, com a chave `image_date` lida e a escala declarada na legenda. |
-| F-03 | P3 | Equivalência de regionais entre o CKAN e o Fortaleza em Mapas | Os códigos de regional divergem entre as duas fontes. | Tabela de equivalência documentada e usada na importação. |
-| F-04 | P3 | Histórico de manejo da URBFOR (podas e supressões de 2023) e plantios de 2021 | CSVs sem coordenadas e com texto livre, em ISO-8859-1. | Indicador por bairro/regional com fonte; plantios de 2021 como lote de importação de demonstração. |
 | F-05 | P3 | Flora e Funga do Brasil e MapBiomas Alerta | O site da Flora tem desafio anti-robô; o MapBiomas exige token e host liberado. | Acesso oficial (API ou acordo) e token do MapBiomas em credencial do ambiente (DP-11). |
 
 ## Plataforma e dependências
