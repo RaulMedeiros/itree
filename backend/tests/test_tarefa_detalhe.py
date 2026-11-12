@@ -10,6 +10,7 @@ from itree.tarefas.models import (
     TipoTarefa,
 )
 
+from .auditoria_util import eventos_de
 from .conftest import PONTO_A, com_escopo, criar_usuario
 from .test_evidencias_mapa import s3  # noqa: F401 (fixture do armazenamento simulado)
 
@@ -214,7 +215,7 @@ def test_evidencia_da_tarefa_aparece_na_auditoria_com_o_codigo_da_tarefa(
     foto(atendimento["id"], tecnico_a)
     r = cliente.como(admin).get("/api/v1/admin/auditoria", {"codigo": atendimento["codigo"]})
     assert r.status_code == 200
-    eventos = r.json()["results"]
+    eventos = eventos_de(r.json())
     filhos = [e for e in eventos if e["entidade"] == "Evidência"]
     assert filhos and filhos[0]["pai"] == {
         "tipo": "tarefa",

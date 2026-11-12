@@ -267,20 +267,20 @@ describe("códigos TAR com link", () => {
     servidor.use(
       http.get(`${API}/api/v1/admin/auditoria`, () =>
         HttpResponse.json(
-          pagina([
-            {
-              ...evento,
-              id: "x-1",
-            },
-            {
-              ...evento,
-              id: "x-2",
-              entidade: "Evidência",
-              entidade_modelo: "evidencias.EvidenciaEvent",
-              registro: null,
-              pai: { tipo: "tarefa", id: "tf-1", codigo: "TAR-000012" },
-            },
-          ]),
+          // A trilha devolve grupos de eventos (agrupados no servidor).
+          pagina(
+            [
+              { ...evento, id: "x-1" },
+              {
+                ...evento,
+                id: "x-2",
+                entidade: "Evidência",
+                entidade_modelo: "evidencias.EvidenciaEvent",
+                registro: null,
+                pai: { tipo: "tarefa", id: "tf-1", codigo: "TAR-000012" },
+              },
+            ].map((ev) => ({ id: `g-${ev.id}`, quantidade: 1, truncado: false, eventos: [ev] })),
+          ),
         ),
       ),
     );
