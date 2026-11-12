@@ -31,7 +31,10 @@ import type {
   OcorrenciasListarParams,
   PaginatedOcorrenciaList,
   PatchedOcorrenciaRequest,
+  PrioridadeEmLoteRequest,
   PrioridadeRequest,
+  ReatribuicaoEmLoteRequest,
+  ResultadoAcaoEmLote,
   RiscoRequest,
   TransicaoRequest
 } from '../modelos';
@@ -875,4 +878,196 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getOcorrenciasTransicaoMutationOptions(options), queryClient);
+    }
+    export type ocorrenciasPrioridadeEmLoteResponse200 = {
+  data: ResultadoAcaoEmLote
+  status: 200
+}
+
+export type ocorrenciasPrioridadeEmLoteResponseSuccess = (ocorrenciasPrioridadeEmLoteResponse200) & {
+  headers: Headers;
+};
+;
+
+export type ocorrenciasPrioridadeEmLoteResponse = (ocorrenciasPrioridadeEmLoteResponseSuccess)
+
+export const getOcorrenciasPrioridadeEmLoteUrl = () => {
+
+
+
+
+  return `/api/v1/ocorrencias/lote/prioridade`
+}
+
+/**
+ * Define a prioridade operacional das ocorrências marcadas (só a gestão).
+ */
+export const ocorrenciasPrioridadeEmLote = async (prioridadeEmLoteRequest: PrioridadeEmLoteRequest, options?: Parameters<typeof requisicao>[1]): Promise<ocorrenciasPrioridadeEmLoteResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<ocorrenciasPrioridadeEmLoteResponse>(getOcorrenciasPrioridadeEmLoteUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(prioridadeEmLoteRequest)
+  }
+);}
+
+
+
+
+
+export const getOcorrenciasPrioridadeEmLoteMutationKey = () => ['ocorrenciasPrioridadeEmLote'] as const;
+
+export const getOcorrenciasPrioridadeEmLoteMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasPrioridadeEmLote>>, TError,OcorrenciasPrioridadeEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasPrioridadeEmLote>>, TError,OcorrenciasPrioridadeEmLoteMutationVariables, TContext> => {
+
+const mutationKey = getOcorrenciasPrioridadeEmLoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ocorrenciasPrioridadeEmLote>>, OcorrenciasPrioridadeEmLoteMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  ocorrenciasPrioridadeEmLote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OcorrenciasPrioridadeEmLoteMutationResult = NonNullable<Awaited<ReturnType<typeof ocorrenciasPrioridadeEmLote>>>
+    export type OcorrenciasPrioridadeEmLoteMutationBody = PrioridadeEmLoteRequest
+    export type OcorrenciasPrioridadeEmLoteMutationError = unknown
+    export type OcorrenciasPrioridadeEmLoteMutationVariables = {data: PrioridadeEmLoteRequest}
+
+    export const useOcorrenciasPrioridadeEmLote = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasPrioridadeEmLote>>, TError,OcorrenciasPrioridadeEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof ocorrenciasPrioridadeEmLote>>,
+        TError,
+        OcorrenciasPrioridadeEmLoteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getOcorrenciasPrioridadeEmLoteMutationOptions(options), queryClient);
+    }
+    export type ocorrenciasReatribuirEmLoteResponse200 = {
+  data: ResultadoAcaoEmLote
+  status: 200
+}
+
+export type ocorrenciasReatribuirEmLoteResponseSuccess = (ocorrenciasReatribuirEmLoteResponse200) & {
+  headers: Headers;
+};
+;
+
+export type ocorrenciasReatribuirEmLoteResponse = (ocorrenciasReatribuirEmLoteResponseSuccess)
+
+export const getOcorrenciasReatribuirEmLoteUrl = () => {
+
+
+
+
+  return `/api/v1/ocorrencias/lote/reatribuir`
+}
+
+/**
+ * Muda responsável e/ou equipe das ocorrências marcadas na lista (até o limite do lote).
+ */
+export const ocorrenciasReatribuirEmLote = async (reatribuicaoEmLoteRequest: ReatribuicaoEmLoteRequest, options?: Parameters<typeof requisicao>[1]): Promise<ocorrenciasReatribuirEmLoteResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<ocorrenciasReatribuirEmLoteResponse>(getOcorrenciasReatribuirEmLoteUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reatribuicaoEmLoteRequest)
+  }
+);}
+
+
+
+
+
+export const getOcorrenciasReatribuirEmLoteMutationKey = () => ['ocorrenciasReatribuirEmLote'] as const;
+
+export const getOcorrenciasReatribuirEmLoteMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasReatribuirEmLote>>, TError,OcorrenciasReatribuirEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasReatribuirEmLote>>, TError,OcorrenciasReatribuirEmLoteMutationVariables, TContext> => {
+
+const mutationKey = getOcorrenciasReatribuirEmLoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ocorrenciasReatribuirEmLote>>, OcorrenciasReatribuirEmLoteMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  ocorrenciasReatribuirEmLote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OcorrenciasReatribuirEmLoteMutationResult = NonNullable<Awaited<ReturnType<typeof ocorrenciasReatribuirEmLote>>>
+    export type OcorrenciasReatribuirEmLoteMutationBody = ReatribuicaoEmLoteRequest
+    export type OcorrenciasReatribuirEmLoteMutationError = unknown
+    export type OcorrenciasReatribuirEmLoteMutationVariables = {data: ReatribuicaoEmLoteRequest}
+
+    export const useOcorrenciasReatribuirEmLote = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasReatribuirEmLote>>, TError,OcorrenciasReatribuirEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof ocorrenciasReatribuirEmLote>>,
+        TError,
+        OcorrenciasReatribuirEmLoteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getOcorrenciasReatribuirEmLoteMutationOptions(options), queryClient);
     }

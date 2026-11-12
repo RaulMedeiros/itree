@@ -25,9 +25,11 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  EquipeEmLoteRequest,
   EventoAuditoria,
   PaginatedTarefaList,
   PatchedTarefaRequest,
+  ResultadoAcaoEmLote,
   ResultadoLote,
   Tarefa,
   TarefaRequest,
@@ -777,4 +779,103 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getTarefasCriarEmLoteMutationOptions(options), queryClient);
+    }
+    export type tarefasEquipeEmLoteResponse200 = {
+  data: ResultadoAcaoEmLote
+  status: 200
+}
+
+export type tarefasEquipeEmLoteResponseSuccess = (tarefasEquipeEmLoteResponse200) & {
+  headers: Headers;
+};
+;
+
+export type tarefasEquipeEmLoteResponse = (tarefasEquipeEmLoteResponseSuccess)
+
+export const getTarefasEquipeEmLoteUrl = () => {
+
+
+
+
+  return `/api/v1/tarefas/lote/equipe`
+}
+
+/**
+ * Passa as tarefas marcadas na lista para outra equipe (até o limite do lote).
+ *
+ * O responsável só continua se for membro da nova equipe; senão a tarefa fica sem
+ * responsável, para a equipe escolher quem atende. Cada tarefa avisa a nova equipe.
+ */
+export const tarefasEquipeEmLote = async (equipeEmLoteRequest: EquipeEmLoteRequest, options?: Parameters<typeof requisicao>[1]): Promise<tarefasEquipeEmLoteResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<tarefasEquipeEmLoteResponse>(getTarefasEquipeEmLoteUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(equipeEmLoteRequest)
+  }
+);}
+
+
+
+
+
+export const getTarefasEquipeEmLoteMutationKey = () => ['tarefasEquipeEmLote'] as const;
+
+export const getTarefasEquipeEmLoteMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tarefasEquipeEmLote>>, TError,TarefasEquipeEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof tarefasEquipeEmLote>>, TError,TarefasEquipeEmLoteMutationVariables, TContext> => {
+
+const mutationKey = getTarefasEquipeEmLoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof tarefasEquipeEmLote>>, TarefasEquipeEmLoteMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  tarefasEquipeEmLote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TarefasEquipeEmLoteMutationResult = NonNullable<Awaited<ReturnType<typeof tarefasEquipeEmLote>>>
+    export type TarefasEquipeEmLoteMutationBody = EquipeEmLoteRequest
+    export type TarefasEquipeEmLoteMutationError = unknown
+    export type TarefasEquipeEmLoteMutationVariables = {data: EquipeEmLoteRequest}
+
+    export const useTarefasEquipeEmLote = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tarefasEquipeEmLote>>, TError,TarefasEquipeEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof tarefasEquipeEmLote>>,
+        TError,
+        TarefasEquipeEmLoteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTarefasEquipeEmLoteMutationOptions(options), queryClient);
     }

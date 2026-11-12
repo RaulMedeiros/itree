@@ -12,6 +12,7 @@ import { Map as IconeMapa, Plus, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
+import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
@@ -24,6 +25,8 @@ import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarData, formatarDataHora, prazoRestante } from "../../util/formatos";
 import { AbasOcorrencias } from "../alertas/AlertasPagina";
+import { LIMITE_ACOES_EM_LOTE, useSelecaoEmLote } from "../../util/lote";
+import { PrioridadeEmLoteDialogo, ReatribuirEmLoteDialogo } from "./AcoesEmLote";
 import { NovaOcorrenciaDialogo } from "./NovaOcorrenciaDialogo";
 
 const TAMANHO = 50;
@@ -61,7 +64,9 @@ export function OcorrenciasPagina() {
   const filtros = useSearch({ from: "/autenticado/ocorrencias/" });
   const navegar = useNavigate({ from: "/ocorrencias/" });
   const podeRegistrar = usePermissao("ocorrencias.editar");
+  const podePriorizar = usePermissao("ocorrencias.priorizar");
   const [nova, setNova] = useState(false);
+  const [acaoEmLote, setAcaoEmLote] = useState<"reatribuir" | "prioridade" | null>(null);
   const [busca, setBusca] = useState(filtros.busca ?? "");
   const tipos = useTiposOcorrenciaListar();
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
@@ -94,6 +99,11 @@ export function OcorrenciasPagina() {
   });
   const filtrar = (parcial: Partial<BuscaOcorrencias>) =>
     void navegar({ search: (s: BuscaOcorrencias) => ({ ...s, ...parcial, pagina: undefined }) });
+  // A seleção atravessa as páginas, mas só vale para os filtros em que foi feita.
+  const selecao = useSelecaoEmLote(
+    JSON.stringify({ ...filtros, pagina: undefined, bairro, estado }),
+    consulta.data?.data.results.map((o) => o.id) ?? [],
+  );
 
   return (
     <>
@@ -235,9 +245,44 @@ export function OcorrenciasPagina() {
         </ListaVazia>
       ) : (
         <>
+          <BarraAcoesEmLote
+            total={selecao.selecionadas.length}
+            singular="ocorrência selecionada"
+            plural="ocorrências selecionadas"
+            aoLimpar={selecao.limpar}
+          >
+            {podeRegistrar && (
+              <Botao
+                variante="secundario"
+                disabled={selecao.selecionadas.length > LIMITE_ACOES_EM_LOTE}
+                onClick={() => setAcaoEmLote("reatribuir")}
+              >
+                Reatribuir
+              </Botao>
+            )}
+            {podePriorizar && (
+              <Botao
+                variante="secundario"
+                disabled={selecao.selecionadas.length > LIMITE_ACOES_EM_LOTE}
+                onClick={() => setAcaoEmLote("prioridade")}
+              >
+                Alterar prioridade
+              </Botao>
+            )}
+          </BarraAcoesEmLote>
           <Tabela>
             <thead>
               <tr>
+                {(podeRegistrar || podePriorizar) && (
+                  <Th className="w-10">
+                    <CaixaDaPagina
+                      rotulo="Selecionar todas as ocorrências da página"
+                      inteira={selecao.paginaInteira}
+                      parcial={selecao.paginaParcial}
+                      aoAlternar={selecao.alternarPagina}
+                    />
+                  </Th>
+                )}
                 <Th>Código</Th>
                 <Th>Tipo e descrição</Th>
                 <Th>Local</Th>
@@ -252,11 +297,22 @@ export function OcorrenciasPagina() {
             <tbody>
               {consulta.data.data.results.map((o) => (
                 <Linha key={o.id} className="hover:bg-fundo">
+                  {(podeRegistrar || podePriorizar) && (
+                    <Td>
+                      <input
+                        type="checkbox"
+                        aria-label={`Selecionar ${o.codigo}`}
+                        className="size-4 accent-marca"
+                        checked={selecao.marcada(o.id)}
+                        onChange={(e) => selecao.alternar(o.id, e.target.checked)}
+                      />
+                    </Td>
+                  )}
                   <Td>
                     <Link
                       to="/ocorrencias/$id"
                       params={{ id: o.id }}
-                      className="font-mono font-medium text-marca-escura hover:underline"
+                      className="font-mono font-medium whitespace-nowrap text-marca-escura hover:underline"
                     >
                       {o.codigo}
                     </Link>
@@ -312,6 +368,24 @@ export function OcorrenciasPagina() {
         </>
       )}
       {nova && <NovaOcorrenciaDialogo aoFechar={() => setNova(false)} />}
+      {acaoEmLote === "reatribuir" && (
+        <ReatribuirEmLoteDialogo
+          ids={selecao.selecionadas}
+          aoFechar={(alterou) => {
+            setAcaoEmLote(null);
+            if (alterou) selecao.limpar();
+          }}
+        />
+      )}
+      {acaoEmLote === "prioridade" && (
+        <PrioridadeEmLoteDialogo
+          ids={selecao.selecionadas}
+          aoFechar={(alterou) => {
+            setAcaoEmLote(null);
+            if (alterou) selecao.limpar();
+          }}
+        />
+      )}
     </>
   );
 }

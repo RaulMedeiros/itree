@@ -15,6 +15,7 @@ import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
+import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { SeloEstadoTarefa } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
@@ -28,6 +29,8 @@ import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { invalidarCaminhos } from "../../util/cache";
 import { contar, formatarData } from "../../util/formatos";
+import { LIMITE_ACOES_EM_LOTE, useSelecaoEmLote } from "../../util/lote";
+import { EquipeEmLoteDialogo } from "./EquipeEmLoteDialogo";
 
 const TAMANHO = 50;
 
@@ -63,8 +66,14 @@ export function TarefasPagina() {
     null,
   );
   const [atribuindo, setAtribuindo] = useState<Tarefa | null>(null);
+  const [equipeEmLote, setEquipeEmLote] = useState(false);
   const filtrar = (parcial: Partial<BuscaTarefas>) =>
     void navegar({ search: (s: BuscaTarefas) => ({ ...s, ...parcial, pagina: undefined }) });
+  // A seleção atravessa as páginas, mas só vale para os filtros em que foi feita.
+  const selecao = useSelecaoEmLote(
+    JSON.stringify({ ...filtros, pagina: undefined, bairro: territorioAtivo.id }),
+    consulta.data?.data.results.map((t) => t.id) ?? [],
+  );
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -176,9 +185,35 @@ export function TarefasPagina() {
         </ListaVazia>
       ) : (
         <>
+          {podeEditar && (
+            <BarraAcoesEmLote
+              total={selecao.selecionadas.length}
+              singular="tarefa selecionada"
+              plural="tarefas selecionadas"
+              aoLimpar={selecao.limpar}
+            >
+              <Botao
+                variante="secundario"
+                disabled={selecao.selecionadas.length > LIMITE_ACOES_EM_LOTE}
+                onClick={() => setEquipeEmLote(true)}
+              >
+                Reatribuir equipe
+              </Botao>
+            </BarraAcoesEmLote>
+          )}
           <Tabela>
             <thead>
               <tr>
+                {podeEditar && (
+                  <Th className="w-10">
+                    <CaixaDaPagina
+                      rotulo="Selecionar todas as tarefas da página"
+                      inteira={selecao.paginaInteira}
+                      parcial={selecao.paginaParcial}
+                      aoAlternar={selecao.alternarPagina}
+                    />
+                  </Th>
+                )}
                 <Th>Tarefa</Th>
                 <Th>Alvo</Th>
                 <Th>Responsável / equipe</Th>
@@ -190,6 +225,17 @@ export function TarefasPagina() {
             <tbody>
               {consulta.data.data.results.map((t) => (
                 <Linha key={t.id}>
+                  {podeEditar && (
+                    <Td>
+                      <input
+                        type="checkbox"
+                        aria-label={`Selecionar ${t.codigo}`}
+                        className="size-4 accent-marca"
+                        checked={selecao.marcada(t.id)}
+                        onChange={(e) => selecao.alternar(t.id, e.target.checked)}
+                      />
+                    </Td>
+                  )}
                   <Td>
                     <p className="font-mono font-medium whitespace-nowrap">{t.codigo}</p>
                     <p className="text-xs text-texto-suave">{ROTULOS_TIPO_TAREFA[t.tipo]}</p>
@@ -270,6 +316,15 @@ export function TarefasPagina() {
       )}
       {transicao && <TransicaoDialogo {...transicao} aoFechar={() => setTransicao(null)} />}
       {atribuindo && <ReatribuirDialogo tarefa={atribuindo} aoFechar={() => setAtribuindo(null)} />}
+      {equipeEmLote && (
+        <EquipeEmLoteDialogo
+          ids={selecao.selecionadas}
+          aoFechar={(alterou) => {
+            setEquipeEmLote(false);
+            if (alterou) selecao.limpar();
+          }}
+        />
+      )}
     </div>
   );
 }

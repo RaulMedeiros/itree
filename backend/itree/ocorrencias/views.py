@@ -14,6 +14,11 @@ from rest_framework.response import Response
 from itree.auditoria.views import EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo, ponto_no_escopo, requer
 from itree.contas.permissoes import Permissao
+from itree.core.lote import (
+    MOTIVO_ENCERRADA,
+    ResultadoAcaoEmLoteSerializer,
+    ignorados_fora_do_escopo,
+)
 from itree.core.parametros import uuid_do_parametro
 from itree.notificacoes import servicos as notificacoes
 
@@ -28,7 +33,9 @@ from .models import (
 )
 from .serializers import (
     OcorrenciaSerializer,
+    PrioridadeEmLoteSerializer,
     PrioridadeSerializer,
+    ReatribuicaoEmLoteSerializer,
     RiscoSerializer,
     TipoOcorrenciaSerializer,
     TransicaoSerializer,
@@ -162,6 +169,7 @@ class OcorrenciaViewSet(
             "retrieve": P.OCORRENCIAS_LER,
             "historico": P.OCORRENCIAS_LER,
             "prioridade": P.OCORRENCIAS_PRIORIZAR,
+            "prioridade_em_lote": P.OCORRENCIAS_PRIORIZAR,
             "risco": P.OCORRENCIAS_CONFIRMAR_RISCO,
         }
         return [requer(mapa.get(self.action, P.OCORRENCIAS_EDITAR))()]
@@ -281,6 +289,88 @@ class OcorrenciaViewSet(
                 ]
             )
         return self._responder(request)
+
+    def _alterar_em_lote(self, ids, motivo: str, evento: str, alterar):
+        """Aplica ``alterar(ocorrencia)`` às ocorrências abertas do escopo, em uma transação.
+
+        O que não pôde ser alterado volta em ``ignoradas``, com o motivo. A auditoria de
+        cada ocorrência recebe o motivo e o nome do evento em lote.
+        """
+        atualizadas = 0
+        with transaction.atomic(), pghistory.context(motivo=motivo or None, evento=evento):
+            encontradas = {
+                o.pk: o
+                for o in self.get_queryset().filter(pk__in=ids).select_for_update(of=("self",))
+            }
+            ignoradas = ignorados_fora_do_escopo(ids, encontradas)
+            for pk in ids:
+                ocorrencia = encontradas.get(pk)
+                if ocorrencia is None:
+                    continue
+                if ocorrencia.estado in ESTADOS_FINAIS:
+                    ignoradas.append(
+                        {"id": pk, "codigo": ocorrencia.codigo, "motivo": MOTIVO_ENCERRADA}
+                    )
+                    continue
+                alterar(ocorrencia)
+                atualizadas += 1
+        return Response({"atualizadas": atualizadas, "ignoradas": ignoradas})
+
+    @extend_schema(
+        operation_id="ocorrencias_reatribuir_em_lote",
+        request=ReatribuicaoEmLoteSerializer,
+        responses=ResultadoAcaoEmLoteSerializer,
+    )
+    @action(detail=False, methods=["post"], url_path="lote/reatribuir", pagination_class=None)
+    def reatribuir_em_lote(self, request):
+        """Muda responsável e/ou equipe das ocorrências marcadas na lista (até o limite do lote)."""
+        dados = ReatribuicaoEmLoteSerializer(data=request.data)
+        dados.is_valid(raise_exception=True)
+        v = dados.validated_data
+        campos = [
+            (campo, v[chave])
+            for campo, chave in (("responsavel", "responsavel_id"), ("equipe", "equipe_id"))
+            if chave in v
+        ]
+
+        def alterar(ocorrencia):
+            for campo, valor in campos:
+                setattr(ocorrencia, campo, valor)
+            ocorrencia.save(update_fields=[*(c for c, _ in campos), "atualizado_em"])
+
+        return self._alterar_em_lote(
+            v["ids"], v.get("motivo", "").strip(), "ocorrencias_reatribuidas_em_lote", alterar
+        )
+
+    @extend_schema(
+        operation_id="ocorrencias_prioridade_em_lote",
+        request=PrioridadeEmLoteSerializer,
+        responses=ResultadoAcaoEmLoteSerializer,
+    )
+    @action(detail=False, methods=["post"], url_path="lote/prioridade", pagination_class=None)
+    def prioridade_em_lote(self, request):
+        """Define a prioridade operacional das ocorrências marcadas (só a gestão)."""
+        dados = PrioridadeEmLoteSerializer(data=request.data)
+        dados.is_valid(raise_exception=True)
+        v = dados.validated_data
+        agora = timezone.now()
+
+        def alterar(ocorrencia):
+            ocorrencia.prioridade = v["prioridade"]
+            ocorrencia.prioridade_definida_por = request.user
+            ocorrencia.prioridade_definida_em = agora
+            ocorrencia.save(
+                update_fields=[
+                    "prioridade",
+                    "prioridade_definida_por",
+                    "prioridade_definida_em",
+                    "atualizado_em",
+                ]
+            )
+
+        return self._alterar_em_lote(
+            v["ids"], v.get("motivo", "").strip(), "prioridade_definida_em_lote", alterar
+        )
 
     @extend_schema(
         operation_id="ocorrencias_risco", request=RiscoSerializer, responses=OcorrenciaSerializer

@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from itree.contas.models import Equipe, Usuario
 from itree.contas.serializers import UsuarioResumoSerializer
+from itree.core.lote import IdsEmLoteSerializer
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.serializers import CampoLocalizacao
 from itree.ocorrencias.models import ESTADOS_FINAIS, Ocorrencia
@@ -183,3 +184,10 @@ class ResultadoLoteSerializer(serializers.Serializer):
         help_text="Árvores que já tinham tarefa de inspeção aberta."
     )
     fora_do_escopo_do_responsavel = serializers.IntegerField()
+
+
+class EquipeEmLoteSerializer(IdsEmLoteSerializer):
+    equipe_id = serializers.PrimaryKeyRelatedField(
+        queryset=Equipe.objects.filter(ativa=True),
+        help_text="Equipe que passa a atender as tarefas marcadas.",
+    )

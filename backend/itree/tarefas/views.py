@@ -13,6 +13,11 @@ from rest_framework.response import Response
 from itree.auditoria.views import EventoAuditoriaSerializer
 from itree.contas.acesso import area_do_escopo, filtrar_por_escopo, ponto_no_escopo, requer
 from itree.contas.permissoes import Permissao
+from itree.core.lote import (
+    MOTIVO_ENCERRADA,
+    ResultadoAcaoEmLoteSerializer,
+    ignorados_fora_do_escopo,
+)
 from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
@@ -29,6 +34,7 @@ from .models import (
     TipoTarefa,
 )
 from .serializers import (
+    EquipeEmLoteSerializer,
     ResultadoLoteSerializer,
     TarefasEmLoteSerializer,
     TarefaSerializer,
@@ -50,6 +56,39 @@ FILTROS = [
     OpenApiParameter("ocorrencia", str),
     OpenApiParameter("atrasadas", bool),
 ]
+
+
+def filtrar_tarefas(qs, usuario, p):
+    """Filtros da listagem de tarefas, compartilhados com a exportação."""
+    if busca := p.get("busca", "").strip():
+        if m := re.fullmatch(r"(?i)(?:tar-?)?0*(\d+)", busca):
+            qs = qs.filter(numero=int(m.group(1)))
+    estado = p.get("estado", "abertas")
+    if estado == "abertas":
+        qs = qs.exclude(estado__in=ESTADOS_FINAIS_TAREFA)
+    elif estado != "todas":
+        qs = qs.filter(estado__in=estado.split(","))
+    if tipo := p.get("tipo"):
+        qs = qs.filter(tipo=tipo)
+    if responsavel := p.get("responsavel"):
+        qs = qs.filter(
+            responsavel=usuario
+            if responsavel == "eu"
+            else uuid_do_parametro(responsavel, "responsavel")
+        )
+    for campo in ("equipe", "arvore", "ocorrencia"):
+        if valor := p.get(campo):
+            qs = qs.filter(**{f"{campo}_id": uuid_do_parametro(valor, campo)})
+    if bairro := p.get("bairro"):
+        area = (
+            Territorio.objects.filter(pk=uuid_do_parametro(bairro, "bairro"))
+            .values_list("geom", flat=True)
+            .first()
+        )
+        qs = qs.filter(geom__intersects=area) if area else qs.none()
+    if p.get("atrasadas") == "true":
+        qs = qs.exclude(estado__in=ESTADOS_FINAIS_TAREFA).filter(prazo__lt=timezone.localdate())
+    return qs
 
 
 def _verificar_escopo_responsavel(tarefa_geom, responsavel):
@@ -103,36 +142,7 @@ class TarefaViewSet(
         qs = filtrar_por_escopo(qs, self.request.user)
         if self.action != "list":
             return qs
-        p = self.request.query_params
-        if busca := p.get("busca", "").strip():
-            if m := re.fullmatch(r"(?i)(?:tar-?)?0*(\d+)", busca):
-                qs = qs.filter(numero=int(m.group(1)))
-        estado = p.get("estado", "abertas")
-        if estado == "abertas":
-            qs = qs.exclude(estado__in=ESTADOS_FINAIS_TAREFA)
-        elif estado != "todas":
-            qs = qs.filter(estado__in=estado.split(","))
-        if tipo := p.get("tipo"):
-            qs = qs.filter(tipo=tipo)
-        if responsavel := p.get("responsavel"):
-            qs = qs.filter(
-                responsavel=self.request.user
-                if responsavel == "eu"
-                else uuid_do_parametro(responsavel, "responsavel")
-            )
-        for campo in ("equipe", "arvore", "ocorrencia"):
-            if valor := p.get(campo):
-                qs = qs.filter(**{f"{campo}_id": uuid_do_parametro(valor, campo)})
-        if bairro := p.get("bairro"):
-            area = (
-                Territorio.objects.filter(pk=uuid_do_parametro(bairro, "bairro"))
-                .values_list("geom", flat=True)
-                .first()
-            )
-            qs = qs.filter(geom__intersects=area) if area else qs.none()
-        if p.get("atrasadas") == "true":
-            qs = qs.exclude(estado__in=ESTADOS_FINAIS_TAREFA).filter(prazo__lt=timezone.localdate())
-        return qs
+        return filtrar_tarefas(qs, self.request.user, self.request.query_params)
 
     def _pode_atuar(self, tarefa) -> bool:
         return pode_atuar(self.request.user, tarefa)
@@ -256,6 +266,50 @@ class TarefaViewSet(
             },
             status=status.HTTP_201_CREATED,
         )
+
+    @extend_schema(
+        operation_id="tarefas_equipe_em_lote",
+        request=EquipeEmLoteSerializer,
+        responses=ResultadoAcaoEmLoteSerializer,
+    )
+    @action(detail=False, methods=["post"], url_path="lote/equipe", pagination_class=None)
+    def equipe_em_lote(self, request):
+        """Passa as tarefas marcadas na lista para outra equipe (até o limite do lote).
+
+        O responsável só continua se for membro da nova equipe; senão a tarefa fica sem
+        responsável, para a equipe escolher quem atende. Cada tarefa avisa a nova equipe.
+        """
+        dados = EquipeEmLoteSerializer(data=request.data)
+        dados.is_valid(raise_exception=True)
+        v = dados.validated_data
+        ids, equipe, motivo = v["ids"], v["equipe_id"], v.get("motivo", "").strip()
+        membros = set(equipe.membros.values_list("pk", flat=True))
+        atualizadas = 0
+        with (
+            transaction.atomic(),
+            pghistory.context(motivo=motivo or None, evento="tarefas_equipe_em_lote"),
+        ):
+            encontradas = {
+                t.pk: t
+                for t in self.get_queryset().filter(pk__in=ids).select_for_update(of=("self",))
+            }
+            ignoradas = ignorados_fora_do_escopo(ids, encontradas)
+            for pk in ids:
+                tarefa = encontradas.get(pk)
+                if tarefa is None:
+                    continue
+                if tarefa.estado in ESTADOS_FINAIS_TAREFA:
+                    ignoradas.append(
+                        {"id": pk, "codigo": tarefa.codigo, "motivo": MOTIVO_ENCERRADA}
+                    )
+                    continue
+                tarefa.equipe = equipe
+                if tarefa.responsavel_id and tarefa.responsavel_id not in membros:
+                    tarefa.responsavel = None
+                tarefa.save(update_fields=["equipe", "responsavel", "atualizado_em"])
+                notificacoes.tarefa_atribuida(tarefa, autor=request.user)
+                atualizadas += 1
+        return Response({"atualizadas": atualizadas, "ignoradas": ignoradas})
 
     @extend_schema(operation_id="tarefas_historico", responses=EventoAuditoriaSerializer(many=True))
     @action(detail=True, pagination_class=None)

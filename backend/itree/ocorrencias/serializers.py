@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from itree.contas.models import Equipe, Usuario
 from itree.contas.serializers import UsuarioResumoSerializer
+from itree.core.lote import IdsEmLoteSerializer
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.serializers import CampoLocalizacao
 from itree.tarefas.models import EstadoTarefa
@@ -237,3 +238,26 @@ class PrioridadeSerializer(serializers.Serializer):
 
 class RiscoSerializer(serializers.Serializer):
     descricao = serializers.CharField(max_length=2000)
+
+
+class ReatribuicaoEmLoteSerializer(IdsEmLoteSerializer):
+    """Responsável e/ou equipe aplicados a todas as ocorrências marcadas.
+
+    Só o que vier no corpo muda; `null` limpa o campo.
+    """
+
+    responsavel_id = serializers.PrimaryKeyRelatedField(
+        queryset=Usuario.objects.filter(is_active=True), required=False, allow_null=True
+    )
+    equipe_id = serializers.PrimaryKeyRelatedField(
+        queryset=Equipe.objects.filter(ativa=True), required=False, allow_null=True
+    )
+
+    def validate(self, attrs):
+        if "responsavel_id" not in attrs and "equipe_id" not in attrs:
+            raise serializers.ValidationError("Informe o responsável, a equipe ou os dois.")
+        return attrs
+
+
+class PrioridadeEmLoteSerializer(IdsEmLoteSerializer):
+    prioridade = serializers.ChoiceField(choices=Prioridade.choices)
