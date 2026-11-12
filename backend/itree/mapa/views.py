@@ -395,6 +395,15 @@ def camadas(request: Request):
             ),
             "data_referencia_mais_antiga": linha["referencia"],
             "ingerido_em": linha["ingerido"],
+            # Só as praças têm subtipo (areninha, calçadão...): quantidade de cada um.
+            "subtipos": {
+                sub: n
+                for sub, n in AreaVerde.objects.filter(tipo=linha["tipo"])
+                .exclude(subtipo="")
+                .order_by()
+                .values_list("subtipo")
+                .annotate(n=Count("id"))
+            },
         }
         for linha in AreaVerde.objects.order_by()
         .values("tipo")

@@ -1,0 +1,128 @@
+[
+ {
+  "id": 6,
+  "Nome": "APA do Rio Maranguapinho",
+  "Esfera": "Estadual",
+  "Tipo": "APA",
+  "Área  (m²)": 17801942.97
+ },
+ {
+  "id": 14,
+  "Nome": "APA da Sabiaguaba",
+  "Esfera": "Municipal",
+  "Tipo": "APA",
+  "Área  (m²)": 14313149.22
+ },
+ {
+  "id": 9,
+  "Nome": "ARIE do Sítio Curió",
+  "Esfera": "Estadual",
+  "Tipo": "ARIE",
+  "Área  (m²)": 573598.59
+ },
+ {
+  "id": 10,
+  "Nome": "Parque Estadual do Cocó",
+  "Esfera": "Estadual",
+  "Tipo": "PARQUE",
+  "Área  (m²)": 15712922.03
+ },
+ {
+  "id": 17,
+  "Nome": "ARIE Prof. Abreu Matos",
+  "Esfera": "Municipal",
+  "Tipo": "ARIE",
+  "Área  (m²)": 188371.5
+ },
+ {
+  "id": 11,
+  "Nome": "Parque Estadual Marinho da Pedra da Risca do Meio - ZA",
+  "Esfera": "Estadual",
+  "Tipo": "PARQUE",
+  "Área  (m²)": 206134508.99
+ },
+ {
+  "id": 12,
+  "Nome": "Parque Estadual Marinho da Pedra da Risca do Meio - ZP",
+  "Esfera": "Estadual",
+  "Tipo": "PARQUE",
+  "Área  (m²)": 9565989.68
+ },
+ {
+  "id": 13,
+  "Nome": "Parque Estadual Marinho da Pedra da Risca do Meio - ZC",
+  "Esfera": "Estadual",
+  "Tipo": "PARQUE",
+  "Área  (m²)": 38337516.76
+ },
+ {
+  "id": 8,
+  "Nome": "ARIE do Cambeba",
+  "Esfera": "Estadual",
+  "Tipo": "ARIE",
+  "Área  (m²)": 110143.59
+ },
+ {
+  "id": 1,
+  "Nome": "APA da Lagoa da Precabura",
+  "Esfera": "Estadual",
+  "Tipo": "APA",
+  "Área  (m²)": 6289775.51
+ },
+ {
+  "id": 2,
+  "Nome": "APA do Estuário do Rio Ceará",
+  "Esfera": "Estadual",
+  "Tipo": "APA",
+  "Área  (m²)": 26945928.66
+ },
+ {
+  "id": 3,
+  "Nome": "APA do Estuário do Rio Ceará",
+  "Esfera": "Estadual",
+  "Tipo": "APA",
+  "Área  (m²)": 22818.88
+ },
+ {
+  "id": 4,
+  "Nome": "APA do Estuário do Rio Ceará",
+  "Esfera": "Estadual",
+  "Tipo": "APA",
+  "Área  (m²)": 79834.17
+ },
+ {
+  "id": 5,
+  "Nome": "APA do Estuário do Rio Ceará",
+  "Esfera": "Estadual",
+  "Tipo": "APA",
+  "Área  (m²)": 301345.4
+ },
+ {
+  "id": 7,
+  "Nome": "APA do Rio Pacoti",
+  "Esfera": "Estadual",
+  "Tipo": "APA",
+  "Área  (m²)": 29149533.17
+ },
+ {
+  "id": 15,
+  "Nome": "APA da Lagoa da Maraponga",
+  "Esfera": "Municipal",
+  "Tipo": "APA",
+  "Área  (m²)": 313917.23
+ },
+ {
+  "id": 16,
+  "Nome": "ARIE da Matinha do Pici",
+  "Esfera": "Municipal",
+  "Tipo": "ARIE",
+  "Área  (m²)": 426230.07
+ },
+ {
+  "id": 18,
+  "Nome": "Parque Natural Municipal das Dunas de Sabiaguaba",
+  "Esfera": "Municipal",
+  "Tipo": "PARQUE",
+  "Área  (m²)": 4676014.53
+ }
+]

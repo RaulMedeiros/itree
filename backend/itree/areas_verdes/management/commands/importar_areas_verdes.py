@@ -9,6 +9,9 @@ com o nome como chave só quando a fonte não traz código.
     manage.py importar_areas_verdes --tipo praca    # só as praças
     manage.py importar_areas_verdes --tipo parque --arquivo parques.geojson
 
+O subtipo das praças (praça, areninha, calçadão, rotatória, sem denominação) sai do
+nome oficial; a regra está em ``itree.areas_verdes.subtipos``.
+
 Não importa nenhum campo de pessoa (o mapa 622, "Adoção de Praças", traz o
 nome do adotante, que é dado pessoal e fica de fora).
 """
@@ -26,6 +29,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from itree.areas_verdes.models import AreaVerde, TipoAreaVerde
+from itree.areas_verdes.subtipos import subtipo_da_praca
 
 API = "https://mapas.fortaleza.ce.gov.br"
 LICENCA = (
@@ -99,8 +103,10 @@ def _praca(props: dict) -> dict:
     base["metadados"].update(
         bairro=_texto(props.get("bairro")), codigo_bairro=props.get("cod_bairro")
     )
+    nome = _texto(props.get("nome"))
     return {
-        "nome": _texto(props.get("nome")),
+        "nome": nome,
+        "subtipo": subtipo_da_praca(nome),
         "nome_popular": "" if popular.lower() == "sem informação" else popular,
         "codigo_externo": _texto(props.get("id")),
         "orgao_gestor": _texto(props.get("fonte")),
@@ -117,6 +123,7 @@ def _parque(props: dict) -> dict:
     base["metadados"]["nome_original"] = original
     return {
         "nome": nome_legivel(original),
+        "subtipo": "",
         "nome_popular": "",
         "codigo_externo": _texto(props.get("id")),
         "orgao_gestor": _texto(props.get("Fonte")),
@@ -136,6 +143,7 @@ def _unidade(props: dict) -> dict:
     )
     return {
         "nome": _texto(props.get("Nome")),
+        "subtipo": "",
         "nome_popular": "",
         "codigo_externo": _texto(props.get("id")),
         "orgao_gestor": _texto(props.get("Fonte")),

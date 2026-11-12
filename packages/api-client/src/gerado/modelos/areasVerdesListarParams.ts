@@ -11,6 +11,8 @@ export type AreasVerdesListarParams = {
   bbox?: string;
   /** Casas decimais da geometria (padrão 5). */
   precisao?: number;
+  /** Só das praças: praca | areninha | calcadao | rotatoria | sem_denominacao. */
+  subtipo?: string;
   /** praca | parque | unidade_conservacao */
   tipo?: string;
 };

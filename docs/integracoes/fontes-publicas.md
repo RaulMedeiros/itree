@@ -28,7 +28,7 @@ comando ou ingestão no código.
 | Limite municipal (CKAN) | SEFIN | dataset `limite-municipal-fortaleza` | CSV | `cc-by` | 2023-10 | A | Não implementada |
 | Praças (CKAN) | URBFOR | dataset `pracas-e-areas-verdes-pracas-de-fortaleza` | GeoJSON, 484 feições | vazia no CKAN | 2024-02 | V | Backlog |
 | Parques e UCs (CKAN; Mapas ids 737 e 86) | SEUMA, CEUC/SEMA | CKAN `parques-uc`; Mapas `?id=737`, `?id=86` | KMZ; GeoJSON | `other-open`; termos da API | 2026-01; ano_ref 2023 | V | Backlog (falta tipo "área verde") |
-| Podas, recolhimento e supressão (CKAN) | URBFOR | dataset `podas_recolhimento_supressao` | CSV mensal, sem coordenadas | vazia | 2023 (falta setembro) | V parcial | Backlog |
+| Podas, recolhimento e supressão (CKAN) | URBFOR | dataset `podas_recolhimento_supressao` | CSV mensal, sem coordenadas | vazia | 2023 (falta setembro) | V | Implementada (parte segura): `importar_manejo_urbfor`, agregado por bairro e mês |
 | Doação de mudas e plantio (CKAN) | URBFOR | dataset `doacao-mudas-pf` | XLSX | `cc-by-sa` | 2022-12 | V | Backlog |
 | Atendimentos Plano de Arborização (Mapas, id 534) | SEUMA | `/api/v1/geojson?id=534` | GeoJSON, 577 pontos | termos da API | 2021 | V | Backlog |
 | Adoção de Praças e Áreas Verdes (Mapas, id 622) | SEUMA | `/api/v1/geojson?id=622` | GeoJSON, 490 pontos; traz nome do adotante (dado pessoal) | termos da API | 2023 | V | Backlog |
@@ -51,7 +51,8 @@ comando ou ingestão no código.
 Fontes com órgão e licença próprios entram sempre com a citação pedida pela fonte.
 Os códigos de regional divergem entre CKAN e Mapas (por exemplo, "SER VI" contra
 "Secretaria Executiva Regional 8"); por isso a importação oficial usa só o Mapas,
-que traz bairro e regional na mesma fonte.
+que traz bairro e regional na mesma fonte. A [tabela de equivalência](#equivalência-das-regionais-ckan--fortaleza-em-mapas)
+abaixo traduz uma fonte na outra.
 
 ## Como usar o que está implementado
 
@@ -79,6 +80,81 @@ uv run python manage.py importar_limites_fortaleza
 - Se já existirem bairros importados por `importar_territorios` com outro código
   (por exemplo, do CKAN), a importação oficial cria registros novos pelo código do IBGE.
   Limpe os antigos antes, ou use só uma das fontes.
+
+### Equivalência das regionais (CKAN e Fortaleza em Mapas)
+
+Verificada com o dado real em 2026-11-12 (12 polígonos e 121 bairros do CKAN contra os mapas
+17 e 21) e codificada em `backend/itree/territorio/regionais.py`. O **número** é o "SER n" do
+Mapas, o que o iTree grava como código da regional. O **nome do polígono** no CKAN é o mesmo
+número em romano. O **código** (campo `Regional` do KMZ do CKAN, `novas_regionais` dos bairros
+do CKAN e "Código da  Região" dos bairros do Mapas) é outra numeração e não coincide com o
+número.
+
+| Número (Mapas "SER n") | Nome do polígono no CKAN | Código (CKAN `Regional` e `novas_regionais`; Mapas "Código da  Região") |
+| --- | --- | --- |
+| SER 1 | I | II |
+| SER 2 | II | III |
+| SER 3 | III | IV |
+| SER 4 | IV | V |
+| SER 5 | V | XII |
+| SER 6 | VI | VIII |
+| SER 7 | VII | VII |
+| SER 8 | VIII | VI |
+| SER 9 | IX | IX |
+| SER 10 | X | X |
+| SER 11 | XI | XI |
+| SER 12 | XII | I |
+
+- Provas: a área dos polígonos (SER 8 tem 35,55 km² no Mapas e 35,53 km² no polígono `VIII`
+  do CKAN) e os 119 bairros que casam pelo nome nas duas fontes, todos com o código esperado.
+- O campo `regional` dos bairros do CKAN ("SER I" a "SER VI" e "SERCE") e "Regional Antiga"
+  do Mapas são a divisão anterior a 2019 e não têm correspondência 1 a 1 com as 12 atuais; não
+  servem para agregar.
+- A coluna "Regional" dos CSVs de poda da URBFOR usa o número ("SER 01", "SER 8").
+- `importar_limites_fortaleza` usa a tabela: grava o nome e o código do CKAN em
+  `metadados` de cada regional (`ckan_nome`, `ckan_codigo`), grava `codigo_regiao_ckan` em cada
+  bairro e confere esse código contra a regional atual. Se a regional atual faltar, a regional
+  sai do código da região; se os dois divergirem, vale a regional atual e o relatório avisa.
+  Com o dado real não há divergência.
+
+### Manejo de árvores da URBFOR (podas, recolhimento e supressão de 2023)
+
+```bash
+cd backend
+uv run python manage.py importar_manejo_urbfor                       # baixa os CSVs pelo CKAN
+uv run python manage.py importar_manejo_urbfor --arquivo jan2023.csv --arquivo fev2023.csv
+```
+
+- Fonte: dataset `podas_recolhimento_supressao` do CKAN de Fortaleza (URBFOR), 11 planilhas
+  mensais de 2023 (falta setembro; não há 2024 em diante). Licença vazia no CKAN: gravada como
+  "não declarada (DP-10)" e mostrada ao usuário como "não declarada (em definição pela prefeitura)".
+- Exige o município e os bairros cadastrados (`importar_limites_fortaleza`).
+- **Não geocodifica e não cria árvore, ocorrência nem tarefa.** Os plantios (doação de mudas) não
+  são importados.
+- Leitura (ISO-8859-1, `;`): linha de serviço é a que começa com data, nos formatos reais
+  ("04/01/2023", "19/05/23", "0412/2023", "27/1//2023"); as linhas TOTAL e as colunas soltas são
+  ignoradas. O mês é o do título do arquivo ("JANEIRO (2023)"), não o da data da linha (quatro
+  linhas de junho trazem data de julho). As quantidades são as colunas Poda, Supressão e
+  Recolhimento; a soma de cada planilha bate com a linha TOTAL dela (conferido nas 10 que a têm).
+- Bairro: lido do fim de cada trecho da descrição ("... - Bairro" ou "..., Bairro.") e comparado
+  com os bairros cadastrados, sem acento nem caixa, com poucas variações de grafia da URBFOR
+  (`APELIDOS` em `itree/indicadores/manejo_urbfor.py`). O serviço só vai a um bairro se todos os
+  trechos apontam para ele. "Praia do Futuro" e "Conjunto Ceará" servem a dois bairros (I e II) e
+  ficam **ambíguos**; o que não se reconhece fica **sem bairro identificado**. Esses dois totais
+  ficam no município, para a soma nunca perder árvore.
+- Gravação: `IndicadorTerritorialExterno`, um por bairro, mês e ação
+  (`manejo_urbfor_poda_202301`, `..._supressao_...`, `..._recolhimento_...`; `manejo_urbfor_sem_bairro_...`
+  no município), em árvores, com fonte, URL, licença, data de referência (último dia do mês) e
+  data de ingestão. Só há linha onde houve registro: bairro que não aparece não tem manejo
+  identificado, o que não é o mesmo que zero. Reimportar um mês troca as linhas do mês.
+- Aparece em Análises e relatórios, na análise "Manejo registrado pela URBFOR (2023)": total por
+  bairro com poda, supressão e recolhimento, "Sem bairro identificado" (só no escopo municipal),
+  fonte e ressalvas. Não depende do período escolhido e não entra nos indicadores da visão geral.
+- Validação com o dado real (2026-11-12, 11 arquivos): 20.305 árvores (poda 18.056, supressão
+  1.636 e recolhimento 613). Com bairro identificado: 87,3%; ambíguo: 6,2%; sem bairro: 6,5%.
+  182 árvores vêm de serviços cuja "SER n" difere da regional do bairro cadastrado (mantido o
+  bairro). A coluna "Regional" usa a numeração "SER n" do Fortaleza em Mapas (ver a equivalência
+  das regionais).
 
 ### Focos de calor diários do INPE
 
@@ -129,6 +205,63 @@ uv run python manage.py ingerir_focos_historico --desde 2023-01 --ate 2023-03
   verde. O escopo dos focos (lista, mapa, painel, relatórios e notificações) ganha o mesmo
   buffer; os outros tipos de alerta seguem o escopo exato.
 - Depende de `importar_areas_verdes` ter rodado; sem áreas, nenhum foco ganha a marca.
+
+### Praças: subtipo (areninha, calçadão, rotatória)
+
+A camada de praças (mapa 99) mistura equipamentos e não tem campo próprio para
+distingui-los. `importar_areas_verdes` grava `AreaVerde.subtipo` (só nas praças) pela
+**primeira palavra do nome oficial**, sem distinguir caixa nem acento
+(`itree/areas_verdes/subtipos.py`):
+
+| Nome começa com | Subtipo |
+| --- | --- |
+| "Areninha" (ou o erro de digitação "Arenina") | areninha |
+| "Calçadão" | calçadão |
+| "Rotatória" | rotatória |
+| "Sem Denominação Oficial" | sem denominação oficial |
+| qualquer outro | praça (inclui "Largo", "Área Verde", "Jardim", "Canteiro", "Polo" e "Triângulo") |
+
+- O apelido (`nome_pop`) não entra na regra.
+- Conferido nas 484 feições reais: 432 praças, 19 areninhas (18 "Areninha" e a
+  "Arenina Thauzer Parente"; a verificação contou 18), 5 calçadões, 1 rotatória e
+  27 sem denominação. O teste usa os nomes reais (`tests/dados/fortaleza_em_mapas_99_praca_nomes.json`).
+- A API de áreas verdes traz `subtipo` e `subtipo_rotulo` e aceita `?subtipo=`; o mapa
+  de camadas informa a quantidade de cada subtipo. No mapa, o seletor "Subtipo das praças"
+  esconde as praças dos outros subtipos (parques e unidades de conservação seguem à vista), e o
+  painel da área mostra o subtipo.
+- A migração preenche o subtipo das praças já importadas.
+
+### Unidades de conservação: conferência com o CNUC
+
+```bash
+cd backend
+uv run python manage.py conferir_ucs_cnuc                     # baixa o CSV do CNUC (MMA)
+uv run python manage.py conferir_ucs_cnuc --arquivo cnuc.csv  # CSV local (ISO-8859-1, ";")
+uv run python manage.py conferir_ucs_cnuc --simular           # só o relatório
+```
+
+- Fonte: MMA, Cadastro Nacional de Unidades de Conservação (`cnuc_2026_07.csv`), licença
+  CC BY. Só as unidades da UF pedida entram (`--uf`, padrão CE), porque há nomes parecidos
+  em outros estados (a APA da Fortaleza de Santa Cruz é do Rio de Janeiro).
+- Casa pelo **nome normalizado**: sem acento nem caixa, sem pontuação nem artigos, com APA
+  e ARIE por extenso e sem o sufixo de zona ("- ZA", "- ZP", "- ZC"). Nome que casa com
+  mais de uma unidade do CNUC não é gravado e aparece como ambíguo.
+- Quem casa recebe `codigo_cnuc` (coluna "Código UC"), `esfera_cnuc` e `cnuc_conferido_em`.
+  A esfera da prefeitura (`esfera`) não é trocada: a divergência vai para o relatório. A
+  reimportação mensal das áreas verdes preserva esses campos; reexecutar o comando refaz o
+  cruzamento (quem deixa de casar perde o código).
+- O relatório lista as unidades casadas (com a quantidade de feições), as unidades do mapa
+  **sem correspondente no CNUC**, as ambíguas, as divergências de esfera e as unidades do
+  CNUC no município que o mapa não traz.
+- Na exibição, a API de áreas verdes traz `feicoes_da_unidade` e `area_total_da_unidade_m2`
+  nas unidades de conservação: as feições da mesma unidade (mesmo código do CNUC ou, sem ele,
+  mesmo nome normalizado) são contadas juntas, dentro do escopo do usuário. O painel da área
+  mostra o código do CNUC e "Esta unidade aparece em 4 feições no mapa; área somada: ...".
+- Validação com o dado real (2026-11-12): 18 feições do mapa 737 e 114 unidades do CNUC no
+  Ceará. Casaram 15 feições de 10 unidades (a APA do Estuário do Rio Ceará, com 4 feições, e o
+  Parque Estadual Marinho da Pedra da Risca do Meio, com 3 zonas). Sem correspondente: APA da
+  Sabiaguaba, ARIE Prof. Abreu Matos e ARIE da Matinha do Pici (unidades municipais que o
+  CNUC não lista). Nenhuma divergência de esfera.
 
 ### Validação contra o dado real (2026-11-11)
 

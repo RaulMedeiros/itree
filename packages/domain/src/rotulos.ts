@@ -70,6 +70,15 @@ export const ROTULOS_TIPO_AREA_VERDE: Record<TipoAreaVerdeEnum, string> = {
   unidade_conservacao: "Unidade de conservação",
 };
 
+/** Subtipo das praças, derivado do nome oficial na importação (`areas_verdes/subtipos.py`). */
+export const ROTULOS_SUBTIPO_PRACA: Record<string, string> = {
+  praca: "Praça",
+  areninha: "Areninha",
+  calcadao: "Calçadão",
+  rotatoria: "Rotatória",
+  sem_denominacao: "Sem denominação oficial",
+};
+
 export const ROTULOS_ACAO_AUDITORIA: Record<string, string> = {
   criacao: "Criação",
   alteracao: "Alteração",

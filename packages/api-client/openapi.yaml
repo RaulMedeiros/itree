@@ -510,6 +510,11 @@ paths:
           type: integer
         description: Casas decimais da geometria (padrão 5).
       - in: query
+        name: subtipo
+        schema:
+          type: string
+        description: 'Só das praças: praca | areninha | calcadao | rotatoria | sem_denominacao.'
+      - in: query
         name: tipo
         schema:
           type: string
@@ -2762,8 +2767,9 @@ paths:
         name: analise
         schema:
           type: string
-        description: arvores_por_bairro, arborizacao_entorno_por_bairro, ocorrencias_por_tipo,
-          ocorrencias_por_estado, tempo_atendimento_por_tipo, inspecoes_por_mes, alertas_por_fonte
+        description: arvores_por_bairro, arborizacao_entorno_por_bairro, manejo_urbfor_por_bairro,
+          ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo,
+          inspecoes_por_mes, alertas_por_fonte
         required: true
       - in: query
         name: fim

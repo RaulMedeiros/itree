@@ -198,7 +198,11 @@ def contexto_externo(usuario: Usuario, bairro: Territorio | None = None) -> list
     if bairro is not None:
         bairros = bairros.filter(pk=bairro.pk)
     ids = list(bairros.values_list("pk", flat=True))
-    linhas = IndicadorTerritorialExterno.objects.filter(territorio_id__in=ids)
+    # Só os indicadores de contexto da visão geral; o manejo da URBFOR (um indicador por mês e
+    # ação) aparece na análise própria, não aqui.
+    linhas = IndicadorTerritorialExterno.objects.filter(
+        territorio_id__in=ids, indicador__in=list(NOMES)
+    )
     por_indicador: dict[str, list[IndicadorTerritorialExterno]] = {}
     for linha in linhas.order_by("indicador", "territorio__nome"):
         por_indicador.setdefault(linha.indicador, []).append(linha)

@@ -34,6 +34,8 @@ interface LinhaAnalise {
   valor: number;
   base?: number;
   numerador?: number;
+  /** Composição do valor (por exemplo, poda, supressão e recolhimento), em texto. */
+  detalhe?: string;
 }
 
 export function AnalisesPagina() {
@@ -219,6 +221,7 @@ export function AnalisesPagina() {
                             {percentual ? "%" : ""}
                           </span>
                         </div>
+                        {l.detalhe && <p className="text-xs text-texto-suave">{l.detalhe}</p>}
                         {l.base !== undefined && (
                           <p className="text-xs text-texto-suave">
                             {l.numerador !== undefined

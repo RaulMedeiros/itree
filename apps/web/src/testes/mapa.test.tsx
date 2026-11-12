@@ -134,6 +134,7 @@ const servidor = criarServidor(
           ],
           data_referencia_mais_antiga: "2019-01-01",
           ingerido_em: "2026-11-11T12:00:00Z",
+          subtipos: { praca: 432, areninha: 19, calcadao: 5, rotatoria: 1, sem_denominacao: 27 },
         },
       ],
       arvores: { total: 3, sem_localizacao: 0, atualizado_em: null },
@@ -651,6 +652,154 @@ describe("áreas verdes (praças, parques e unidades de conservação)", () => {
 
     await usuario.click(within(painel).getByRole("button", { name: "Fechar detalhes" }));
     expect(screen.queryByRole("complementary", { name: "Detalhes da área verde" })).toBeNull();
+  });
+
+  it("filtra as praças por subtipo, com a contagem de cada um, sem esconder parques e unidades", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?areas_verdes=1");
+    const seletor = await screen.findByRole("combobox", { name: "Subtipo das praças" });
+    expect(within(seletor).getByRole("option", { name: "Areninha (19)" })).toBeInTheDocument();
+    expect(within(seletor).getByRole("option", { name: "Calçadão (5)" })).toBeInTheDocument();
+    expect(
+      within(seletor).getByRole("option", { name: "Sem denominação oficial (27)" }),
+    ).toBeInTheDocument();
+    const contorno = () =>
+      mapa.setFilter.mock.calls.filter((c) => c[0] === "areas-verdes-contorno").at(-1)?.[1];
+    const semFiltroDeSubtipo = ["!=", ["get", "tipo"], "unidade_conservacao"];
+    // Sem escolha, nenhum filtro de subtipo na camada.
+    await vi.waitFor(() => expect(contorno()).toEqual(semFiltroDeSubtipo));
+
+    await usuario.selectOptions(seletor, "areninha");
+    const esconderOutrasPracas = [
+      "any",
+      ["!=", ["get", "tipo"], "praca"],
+      ["==", ["get", "subtipo"], "areninha"],
+    ];
+    await vi.waitFor(() => {
+      expect(mapa.setFilter).toHaveBeenCalledWith(
+        "areas-verdes-preenchimento",
+        esconderOutrasPracas,
+      );
+      expect(mapa.setFilter).toHaveBeenCalledWith("areas-verdes-contorno", [
+        "all",
+        ["!=", ["get", "tipo"], "unidade_conservacao"],
+        esconderOutrasPracas,
+      ]);
+    });
+
+    await usuario.selectOptions(seletor, "");
+    await vi.waitFor(() => expect(contorno()).toEqual(semFiltroDeSubtipo));
+  });
+
+  it("o filtro de subtipo vem da URL e só aparece com a camada ligada", async () => {
+    const mapa = await abrirMapa("/mapa?areas_verdes=1&subtipo_praca=calcadao");
+    expect(await screen.findByRole("combobox", { name: "Subtipo das praças" })).toHaveValue(
+      "calcadao",
+    );
+    await vi.waitFor(() =>
+      expect(mapa.setFilter).toHaveBeenCalledWith("areas-verdes-preenchimento", [
+        "any",
+        ["!=", ["get", "tipo"], "praca"],
+        ["==", ["get", "subtipo"], "calcadao"],
+      ]),
+    );
+  });
+
+  it("não mostra o filtro de subtipo com a camada desligada", async () => {
+    await abrirMapa();
+    expect(screen.queryByRole("combobox", { name: "Subtipo das praças" })).toBeNull();
+  });
+
+  it("o painel da área mostra o subtipo da praça quando não é uma praça comum", async () => {
+    const mapa = await abrirMapa("/mapa?areas_verdes=1");
+    await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));
+    act(() =>
+      mapa.emitir(
+        "click",
+        {
+          point: { x: 1, y: 1 },
+          features: [
+            {
+              properties: {
+                ...AREAS_VERDES.features[0]!.properties,
+                nome: "Areninha do Pici",
+                subtipo: "areninha",
+                subtipo_rotulo: "Areninha",
+              },
+            },
+          ],
+        },
+        "areas-verdes-preenchimento",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da área verde" });
+    expect(within(painel).getByText("Praça · Areninha")).toBeInTheDocument();
+  });
+
+  it("o painel da unidade de conservação mostra o código do CNUC e agrupa as feições", async () => {
+    const mapa = await abrirMapa("/mapa?areas_verdes=1");
+    await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));
+    act(() =>
+      mapa.emitir(
+        "click",
+        {
+          point: { x: 1, y: 1 },
+          features: [
+            {
+              properties: {
+                ...AREAS_VERDES.features[1]!.properties,
+                nome: "APA do Estuário do Rio Ceará",
+                esfera: "Estadual",
+                codigo_cnuc: "0000.23.0951",
+                esfera_cnuc: "Estadual",
+                area_m2: 22818.88,
+                feicoes_da_unidade: 4,
+                area_total_da_unidade_m2: 27349927.15,
+              },
+            },
+          ],
+        },
+        "areas-verdes-preenchimento",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da área verde" });
+    expect(within(painel).getByText(/Código no CNUC:/)).toHaveTextContent(
+      "Código no CNUC: 0000.23.0951 · esfera estadual",
+    );
+    expect(within(painel).getByText(/Esta unidade aparece em 4 feições no mapa/)).toHaveTextContent(
+      "Esta unidade aparece em 4 feições no mapa; área somada: 27.349.927 m².",
+    );
+    expect(within(painel).getByText("Área informada: 22.819 m²")).toBeInTheDocument();
+    expect(
+      within(painel).getByText(/conferidos com o CNUC \(MMA\), licença CC BY/),
+    ).toBeInTheDocument();
+  });
+
+  it("unidade com uma só feição e sem conferência não mostra agrupamento nem código", async () => {
+    const mapa = await abrirMapa("/mapa?areas_verdes=1");
+    await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));
+    act(() =>
+      mapa.emitir(
+        "click",
+        {
+          point: { x: 1, y: 1 },
+          features: [
+            {
+              properties: {
+                ...AREAS_VERDES.features[1]!.properties,
+                codigo_cnuc: "",
+                feicoes_da_unidade: 1,
+                area_total_da_unidade_m2: 188371.5,
+              },
+            },
+          ],
+        },
+        "areas-verdes-preenchimento",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da área verde" });
+    expect(within(painel).queryByText(/Código no CNUC/)).toBeNull();
+    expect(within(painel).queryByText(/aparece em/)).toBeNull();
   });
 
   it("árvore sob o clique tem prioridade sobre a área verde", async () => {

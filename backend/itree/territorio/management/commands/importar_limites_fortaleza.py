@@ -8,12 +8,16 @@ atualiza geometria e proveniência pelo código (regional: ``id`` da fonte;
 bairro: "Código do IBGE"), sem duplicar. A hierarquia fica município > regional
 > bairro, com a regional atual informada pela fonte.
 
+A equivalência entre os códigos de regional do CKAN e do Fortaleza em Mapas está em
+``itree.territorio.regionais``: cada regional grava o nome e o código do CKAN, e cada bairro
+tem o código da região conferido contra a regional atual (e, se a regional atual faltar,
+a regional sai desse código).
+
 Para testar sem rede, use ``--arquivo-regionais`` e ``--arquivo-bairros`` com os
 GeoJSON baixados da API.
 """
 
 import json
-import re
 from datetime import date
 from pathlib import Path
 
@@ -31,6 +35,11 @@ from itree.territorio.importacao import (
     obter_ou_criar_municipio,
 )
 from itree.territorio.models import Territorio, TipoTerritorio
+from itree.territorio.regionais import (
+    numero_da_regional,
+    regional_por_codigo_ckan,
+    regional_por_numero,
+)
 
 API_GEOJSON = "https://mapas.fortaleza.ce.gov.br/api/v1/geojson?id="
 ID_REGIONAIS = 17
@@ -47,6 +56,7 @@ PAGINAS = {
 # O nome real do campo na fonte tem dois espaços.
 CAMPO_CODIGO_BAIRRO = "Código do  IBGE"
 CAMPO_REGIONAL_BAIRRO = "Regional Atual"
+CAMPO_CODIGO_REGIAO = "Código da  Região"  # também com dois espaços
 ESPERADOS = {ID_REGIONAIS: 12, ID_BAIRROS: 121}
 
 
@@ -88,12 +98,6 @@ def _data(texto) -> date | None:
         return date.fromisoformat(str(texto)[:10])
     except ValueError:
         return None
-
-
-def _numero_regional(texto) -> str | None:
-    """'Secretaria Executiva Regional 8' ou 'SER 8' -> '8'."""
-    achado = re.search(r"(\d+)\s*$", str(texto or ""))
-    return achado.group(1) if achado else None
 
 
 class Command(BaseCommand):
@@ -141,6 +145,7 @@ class Command(BaseCommand):
             # Regionais: a fonte só informa o ano de referência (ano_ref).
             importadas = []
             por_numero = {}
+            fora_da_tabela = []
             anos = [
                 f["properties"].get("ano_ref")
                 for f in regionais["features"]
@@ -151,6 +156,9 @@ class Command(BaseCommand):
             for f in regionais["features"]:
                 p = f["properties"]
                 geom = _geometria(f)
+                equivalente = regional_por_numero(numero_da_regional(p["regiao_adm"]))
+                if equivalente is None:
+                    fora_da_tabela.append(str(p["regiao_adm"]))
                 territorio, criado = gravar_territorio(
                     TipoTerritorio.REGIONAL,
                     str(p["id"]),
@@ -164,10 +172,14 @@ class Command(BaseCommand):
                         "ano_ref": p.get("ano_ref"),
                         "data_referencia_precisao": "ano",
                         "fonte_dado": p.get("fonte"),
+                        # Equivalência com o CKAN (F-03): nome do polígono e código em romano.
+                        "ckan_nome": equivalente.ckan_nome if equivalente else None,
+                        "ckan_codigo": equivalente.codigo if equivalente else None,
                     },
                 )
                 importadas.append(territorio)
-                por_numero[_numero_regional(p["regiao_adm"])] = territorio
+                if equivalente:
+                    por_numero[equivalente.numero] = territorio
                 contagem["regional"][0 if criado else 1] += 1
 
             municipio = obter_ou_criar_municipio(
@@ -180,18 +192,35 @@ class Command(BaseCommand):
             data_bai = max((d for d in datas if d), default=None)
             comuns_bai = comuns(ID_BAIRROS, data_bai)
             sem_regional = []
+            recuperados = []
+            divergentes = []
             for f in bairros["features"]:
                 p = f["properties"]
                 codigo = p.get(CAMPO_CODIGO_BAIRRO)
                 if codigo in (None, ""):
                     raise CommandError(f"Bairro {p.get('Nome')!r} sem '{CAMPO_CODIGO_BAIRRO}'.")
-                regional = por_numero.get(_numero_regional(p.get(CAMPO_REGIONAL_BAIRRO)))
+                nome = str(p["Nome"]).strip()
+                codigo_regiao = p.get(CAMPO_CODIGO_REGIAO)
+                atual = regional_por_numero(numero_da_regional(p.get(CAMPO_REGIONAL_BAIRRO)))
+                if atual is not None:
+                    # O código da região da fonte precisa ser o da regional atual (F-03).
+                    if codigo_regiao and atual.codigo != str(codigo_regiao).strip().upper():
+                        divergentes.append(
+                            f"{nome}: {atual.mapas_nome}, código da região {codigo_regiao}"
+                        )
+                    equivalente = atual
+                else:
+                    # Sem regional atual reconhecida: tenta pelo código da região.
+                    equivalente = regional_por_codigo_ckan(codigo_regiao)
+                    if equivalente is not None:
+                        recuperados.append(nome)
+                regional = por_numero.get(equivalente.numero) if equivalente else None
                 if regional is None:
-                    sem_regional.append(str(p.get("Nome")))
+                    sem_regional.append(nome)
                 territorio, criado = gravar_territorio(
                     TipoTerritorio.BAIRRO,
                     str(codigo),
-                    str(p["Nome"]).strip(),
+                    nome,
                     _geometria(f),
                     comuns_bai,
                     {
@@ -201,6 +230,7 @@ class Command(BaseCommand):
                         "ano_ref": p.get("ano_ref"),
                         "regional_atual": p.get(CAMPO_REGIONAL_BAIRRO),
                         "regional_antiga": p.get("Regional Antiga"),
+                        "codigo_regiao_ckan": codigo_regiao,
                         "territorio": p.get("Território"),
                         "fonte_dado": p.get("Fonte"),
                     },
@@ -210,6 +240,25 @@ class Command(BaseCommand):
 
         for tipo, (c, a) in contagem.items():
             self.stdout.write(f"{tipo}: {c} criado(s), {a} atualizado(s).")
+        if fora_da_tabela:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"{len(fora_da_tabela)} regional(is) fora da tabela de equivalência "
+                    f"(SER 1 a 12): {', '.join(fora_da_tabela)}."
+                )
+            )
+        if recuperados:
+            self.stdout.write(
+                f"{len(recuperados)} bairro(s) ligados à regional pelo código da região "
+                f"(sem regional atual reconhecida): {', '.join(recuperados)}."
+            )
+        if divergentes:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"{len(divergentes)} bairro(s) com código da região diferente do esperado "
+                    f"para a regional atual (mantida a regional atual): {'; '.join(divergentes)}."
+                )
+            )
         if sem_regional:
             self.stdout.write(
                 self.style.WARNING(
