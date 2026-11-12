@@ -51,7 +51,8 @@ comando ou ingestão no código.
 Fontes com órgão e licença próprios entram sempre com a citação pedida pela fonte.
 Os códigos de regional divergem entre CKAN e Mapas (por exemplo, "SER VI" contra
 "Secretaria Executiva Regional 8"); por isso a importação oficial usa só o Mapas,
-que traz bairro e regional na mesma fonte.
+que traz bairro e regional na mesma fonte. A [tabela de equivalência](#equivalência-das-regionais-ckan--fortaleza-em-mapas)
+abaixo traduz uma fonte na outra.
 
 ## Como usar o que está implementado
 
@@ -79,6 +80,42 @@ uv run python manage.py importar_limites_fortaleza
 - Se já existirem bairros importados por `importar_territorios` com outro código
   (por exemplo, do CKAN), a importação oficial cria registros novos pelo código do IBGE.
   Limpe os antigos antes, ou use só uma das fontes.
+
+### Equivalência das regionais (CKAN e Fortaleza em Mapas)
+
+Verificada com o dado real em 2026-11-12 (12 polígonos e 121 bairros do CKAN contra os mapas
+17 e 21) e codificada em `backend/itree/territorio/regionais.py`. O **número** é o "SER n" do
+Mapas, o que o iTree grava como código da regional. O **nome do polígono** no CKAN é o mesmo
+número em romano. O **código** (campo `Regional` do KMZ do CKAN, `novas_regionais` dos bairros
+do CKAN e "Código da  Região" dos bairros do Mapas) é outra numeração e não coincide com o
+número.
+
+| Número (Mapas "SER n") | Nome do polígono no CKAN | Código (CKAN `Regional` e `novas_regionais`; Mapas "Código da  Região") |
+| --- | --- | --- |
+| SER 1 | I | II |
+| SER 2 | II | III |
+| SER 3 | III | IV |
+| SER 4 | IV | V |
+| SER 5 | V | XII |
+| SER 6 | VI | VIII |
+| SER 7 | VII | VII |
+| SER 8 | VIII | VI |
+| SER 9 | IX | IX |
+| SER 10 | X | X |
+| SER 11 | XI | XI |
+| SER 12 | XII | I |
+
+- Provas: a área dos polígonos (SER 8 tem 35,55 km² no Mapas e 35,53 km² no polígono `VIII`
+  do CKAN) e os 119 bairros que casam pelo nome nas duas fontes, todos com o código esperado.
+- O campo `regional` dos bairros do CKAN ("SER I" a "SER VI" e "SERCE") e "Regional Antiga"
+  do Mapas são a divisão anterior a 2019 e não têm correspondência 1 a 1 com as 12 atuais; não
+  servem para agregar.
+- A coluna "Regional" dos CSVs de poda da URBFOR usa o número ("SER 01", "SER 8").
+- `importar_limites_fortaleza` usa a tabela: grava o nome e o código do CKAN em
+  `metadados` de cada regional (`ckan_nome`, `ckan_codigo`), grava `codigo_regiao_ckan` em cada
+  bairro e confere esse código contra a regional atual. Se a regional atual faltar, a regional
+  sai do código da região; se os dois divergirem, vale a regional atual e o relatório avisa.
+  Com o dado real não há divergência.
 
 ### Focos de calor diários do INPE
 

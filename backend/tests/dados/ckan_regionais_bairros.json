@@ -1,0 +1,671 @@
+{
+"regionais": [
+{
+"name": "I",
+"Regional": "II",
+"area_km2": "20.76"
+},
+{
+"name": "II",
+"Regional": "III",
+"area_km2": "23.44"
+},
+{
+"name": "III",
+"Regional": "IV",
+"area_km2": "16.01"
+},
+{
+"name": "IV",
+"Regional": "V",
+"area_km2": "24.08"
+},
+{
+"name": "IX",
+"Regional": "IX",
+"area_km2": "31.61"
+},
+{
+"name": "V",
+"Regional": "XII",
+"area_km2": "19.05"
+},
+{
+"name": "VI",
+"Regional": "VIII",
+"area_km2": "44.44"
+},
+{
+"name": "VII",
+"Regional": "VII",
+"area_km2": "49.6"
+},
+{
+"name": "VIII",
+"Regional": "VI",
+"area_km2": "35.53"
+},
+{
+"name": "X",
+"Regional": "X",
+"area_km2": "22.87"
+},
+{
+"name": "XI",
+"Regional": "XI",
+"area_km2": "18.96"
+},
+{
+"name": "XII",
+"Regional": "I",
+"area_km2": "5.85"
+}
+],
+"bairros": [
+{
+"bairro": "AEROLÂNDIA",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "AEROPORTO",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "ALDEOTA",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "ALTO DA BALANÇA",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "AMADEU FURTADO",
+"regional": "SER III",
+"novas_regionais": "IV"
+},
+{
+"bairro": "ANCURI",
+"regional": "SER VI",
+"novas_regionais": "IX"
+},
+{
+"bairro": "ANTÔNIO BEZERRA",
+"regional": "SER III",
+"novas_regionais": "IV"
+},
+{
+"bairro": "ARACAPÉ",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "AUTRAN NUNES",
+"regional": "SER III",
+"novas_regionais": "XI"
+},
+{
+"bairro": "BARRA DO CEARÁ",
+"regional": "SER I",
+"novas_regionais": "II"
+},
+{
+"bairro": "BARROSO",
+"regional": "SER VI",
+"novas_regionais": "IX"
+},
+{
+"bairro": "BELA VISTA",
+"regional": "SER III",
+"novas_regionais": "XI"
+},
+{
+"bairro": "BENFICA",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "BOA VISTA/CASTELÃO",
+"regional": "SER VI",
+"novas_regionais": "VI"
+},
+{
+"bairro": "BOM FUTURO",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "BOM JARDIM",
+"regional": "SER V",
+"novas_regionais": "XII"
+},
+{
+"bairro": "BONSUCESSO",
+"regional": "SER III",
+"novas_regionais": "XII"
+},
+{
+"bairro": "CAIS DO PORTO",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "CAJAZEIRAS",
+"regional": "SER VI",
+"novas_regionais": "IX"
+},
+{
+"bairro": "CAMBEBA",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "CANINDEZINHO",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "CARLITO PAMPLONA",
+"regional": "SER I",
+"novas_regionais": "II"
+},
+{
+"bairro": "CENTRO",
+"regional": "SERCE",
+"novas_regionais": "I"
+},
+{
+"bairro": "CIDADE 2000",
+"regional": "SER II",
+"novas_regionais": "VII"
+},
+{
+"bairro": "CIDADE DOS FUNCIONÁRIOS",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "COAÇU",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "COCÓ",
+"regional": "SER II",
+"novas_regionais": "VII"
+},
+{
+"bairro": "CONJUNTO CEARÁ I",
+"regional": "SER V",
+"novas_regionais": "XI"
+},
+{
+"bairro": "CONJUNTO CEARÁ II",
+"regional": "SER V",
+"novas_regionais": "XI"
+},
+{
+"bairro": "CONJUNTO ESPERANÇA",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "CONJUNTO PALMEIRAS",
+"regional": "SER VI",
+"novas_regionais": "IX"
+},
+{
+"bairro": "COUTO FERNANDES",
+"regional": "SER IV",
+"novas_regionais": "XI"
+},
+{
+"bairro": "CRISTO REDENTOR",
+"regional": "SER I",
+"novas_regionais": "II"
+},
+{
+"bairro": "CURIÓ",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "DAMAS",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "DE LOURDES",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "DEMÓCRITO ROCHA",
+"regional": "SER IV",
+"novas_regionais": "XI"
+},
+{
+"bairro": "DIAS MACÊDO",
+"regional": "SER VI",
+"novas_regionais": "VI"
+},
+{
+"bairro": "DIONÍSIO TORRES",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "DOM LUSTOSA",
+"regional": "SER III",
+"novas_regionais": "XI"
+},
+{
+"bairro": "EDSON QUEIROZ",
+"regional": "SER VI",
+"novas_regionais": "VII"
+},
+{
+"bairro": "ELLERY",
+"regional": "SER I",
+"novas_regionais": "IV"
+},
+{
+"bairro": "ENGENHEIRO LUCIANO CAVALCANTE",
+"regional": "SER II",
+"novas_regionais": "VII"
+},
+{
+"bairro": "FARIAS BRITO",
+"regional": "SER I",
+"novas_regionais": "IV"
+},
+{
+"bairro": "FLORESTA",
+"regional": "SER I",
+"novas_regionais": "II"
+},
+{
+"bairro": "FÁTIMA",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "GRANJA LISBOA",
+"regional": "SER V",
+"novas_regionais": "XII"
+},
+{
+"bairro": "GRANJA PORTUGAL",
+"regional": "SER V",
+"novas_regionais": "XII"
+},
+{
+"bairro": "GUAJERU",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "GUARARAPES",
+"regional": "SER II",
+"novas_regionais": "VII"
+},
+{
+"bairro": "HENRIQUE JORGE",
+"regional": "SER III",
+"novas_regionais": "XI"
+},
+{
+"bairro": "ITAOCA",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "ITAPERI",
+"regional": "SER IV",
+"novas_regionais": "VI"
+},
+{
+"bairro": "JACARECANGA",
+"regional": "SER I",
+"novas_regionais": "II"
+},
+{
+"bairro": "JANGURUSSU",
+"regional": "SER VI",
+"novas_regionais": "IX"
+},
+{
+"bairro": "JARDIM AMÉRICA",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "JARDIM CEARENSE",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "JARDIM DAS OLIVEIRAS",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "JARDIM GUANABARA",
+"regional": "SER I",
+"novas_regionais": "II"
+},
+{
+"bairro": "JARDIM IRACEMA",
+"regional": "SER I",
+"novas_regionais": "II"
+},
+{
+"bairro": "JOAQUIM TÁVORA",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "JOSÉ BONIFÁCIO",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "JOSÉ DE ALENCAR",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "JOÃO XXIII",
+"regional": "SER III",
+"novas_regionais": "XI"
+},
+{
+"bairro": "JÓQUEI CLUBE",
+"regional": "SER III",
+"novas_regionais": "XI"
+},
+{
+"bairro": "LAGOA REDONDA",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "MANOEL SÁTIRO",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "MANUEL DIAS BRANCO",
+"regional": "SER II",
+"novas_regionais": "VII"
+},
+{
+"bairro": "MARAPONGA",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "MEIRELES",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "MESSEJANA",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "MONDUBIM",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "MONTE CASTELO",
+"regional": "SER I",
+"novas_regionais": "IV"
+},
+{
+"bairro": "MONTESE",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "MOURA BRASIL",
+"regional": "SER I",
+"novas_regionais": "I"
+},
+{
+"bairro": "MUCURIPE",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "NOVO MONDUBIM",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "OLAVO OLIVEIRA",
+"regional": "SER III",
+"novas_regionais": "IV"
+},
+{
+"bairro": "PADRE ANDRADE",
+"regional": "SER III",
+"novas_regionais": "IV"
+},
+{
+"bairro": "PANAMERICANO",
+"regional": "SER IV",
+"novas_regionais": "XI"
+},
+{
+"bairro": "PAPICU",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "PARANGABA",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "PARQUE ARAXÁ",
+"regional": "SER III",
+"novas_regionais": "IV"
+},
+{
+"bairro": "PARQUE DOIS IRMÃOS",
+"regional": "SER VI",
+"novas_regionais": "VI"
+},
+{
+"bairro": "GENIBAÚ",
+"regional": "SER V",
+"novas_regionais": "XI"
+},
+{
+"bairro": "PARQUE IRACEMA",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "PARQUE MANIBURA",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "PARQUE PRESIDENTE VARGAS",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "PARQUE SANTA MARIA",
+"regional": "SER VI",
+"novas_regionais": "IX"
+},
+{
+"bairro": "PARQUE SANTA ROSA",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "PARQUE SÃO JOSÉ",
+"regional": "SER V",
+"novas_regionais": "X"
+},
+{
+"bairro": "PARQUELÂNDIA",
+"regional": "SER III",
+"novas_regionais": "IV"
+},
+{
+"bairro": "PARREÃO",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "PASSARÉ",
+"regional": "SER VI",
+"novas_regionais": "VI"
+},
+{
+"bairro": "PAUPINA",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "PEDRAS",
+"regional": "SER VI",
+"novas_regionais": "IX"
+},
+{
+"bairro": "PICI",
+"regional": "SER III",
+"novas_regionais": "XI"
+},
+{
+"bairro": "PIRAMBU",
+"regional": "SER I",
+"novas_regionais": "II"
+},
+{
+"bairro": "PLANALTO AYRTON SENNA",
+"regional": "SER V",
+"novas_regionais": "VI"
+},
+{
+"bairro": "PRAIA DE IRACEMA",
+"regional": "SER II",
+"novas_regionais": "I"
+},
+{
+"bairro": "PRAIA DO FUTURO I",
+"regional": "SER II",
+"novas_regionais": "VII"
+},
+{
+"bairro": "PRAIA DO FUTURO II",
+"regional": "SER II",
+"novas_regionais": "VII"
+},
+{
+"bairro": "PREFEITO JOSÉ WALTER",
+"regional": "SER V",
+"novas_regionais": "VI"
+},
+{
+"bairro": "PRESIDENTE KENNEDY",
+"regional": "SER III",
+"novas_regionais": "IV"
+},
+{
+"bairro": "QUINTINO CUNHA",
+"regional": "SER III",
+"novas_regionais": "IV"
+},
+{
+"bairro": "DENDÊ",
+"regional": "SER IV",
+"novas_regionais": "VI"
+},
+{
+"bairro": "RODOLFO TEÓFILO",
+"regional": "SER III",
+"novas_regionais": "IV"
+},
+{
+"bairro": "SABIAGUABA",
+"regional": "SER VI",
+"novas_regionais": "VII"
+},
+{
+"bairro": "SALINAS",
+"regional": "SER II",
+"novas_regionais": "VII"
+},
+{
+"bairro": "SAPIRANGA / COITÉ",
+"regional": "SER VI",
+"novas_regionais": "VII"
+},
+{
+"bairro": "SERRINHA",
+"regional": "SER IV",
+"novas_regionais": "VI"
+},
+{
+"bairro": "SIQUEIRA",
+"regional": "SER V",
+"novas_regionais": "XII"
+},
+{
+"bairro": "SÃO BENTO",
+"regional": "SER VI",
+"novas_regionais": "VIII"
+},
+{
+"bairro": "SÃO GERARDO",
+"regional": "SER I",
+"novas_regionais": "IV"
+},
+{
+"bairro": "TAUAPE",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "VARJOTA",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "VICENTE PINZÓN",
+"regional": "SER II",
+"novas_regionais": "III"
+},
+{
+"bairro": "VILA PERI",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "VILA UNIÃO",
+"regional": "SER IV",
+"novas_regionais": "V"
+},
+{
+"bairro": "VILA VELHA",
+"regional": "SER I",
+"novas_regionais": "II"
+},
+{
+"bairro": "ÁLVARO WEYNE",
+"regional": "SER I",
+"novas_regionais": "II"
+}
+]
+}
