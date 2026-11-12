@@ -28,7 +28,7 @@ comando ou ingestão no código.
 | Limite municipal (CKAN) | SEFIN | dataset `limite-municipal-fortaleza` | CSV | `cc-by` | 2023-10 | A | Não implementada |
 | Praças (CKAN) | URBFOR | dataset `pracas-e-areas-verdes-pracas-de-fortaleza` | GeoJSON, 484 feições | vazia no CKAN | 2024-02 | V | Backlog |
 | Parques e UCs (CKAN; Mapas ids 737 e 86) | SEUMA, CEUC/SEMA | CKAN `parques-uc`; Mapas `?id=737`, `?id=86` | KMZ; GeoJSON | `other-open`; termos da API | 2026-01; ano_ref 2023 | V | Backlog (falta tipo "área verde") |
-| Podas, recolhimento e supressão (CKAN) | URBFOR | dataset `podas_recolhimento_supressao` | CSV mensal, sem coordenadas | vazia | 2023 (falta setembro) | V parcial | Backlog |
+| Podas, recolhimento e supressão (CKAN) | URBFOR | dataset `podas_recolhimento_supressao` | CSV mensal, sem coordenadas | vazia | 2023 (falta setembro) | V | Implementada (parte segura): `importar_manejo_urbfor`, agregado por bairro e mês |
 | Doação de mudas e plantio (CKAN) | URBFOR | dataset `doacao-mudas-pf` | XLSX | `cc-by-sa` | 2022-12 | V | Backlog |
 | Atendimentos Plano de Arborização (Mapas, id 534) | SEUMA | `/api/v1/geojson?id=534` | GeoJSON, 577 pontos | termos da API | 2021 | V | Backlog |
 | Adoção de Praças e Áreas Verdes (Mapas, id 622) | SEUMA | `/api/v1/geojson?id=622` | GeoJSON, 490 pontos; traz nome do adotante (dado pessoal) | termos da API | 2023 | V | Backlog |
@@ -116,6 +116,45 @@ número.
   bairro e confere esse código contra a regional atual. Se a regional atual faltar, a regional
   sai do código da região; se os dois divergirem, vale a regional atual e o relatório avisa.
   Com o dado real não há divergência.
+
+### Manejo de árvores da URBFOR (podas, recolhimento e supressão de 2023)
+
+```bash
+cd backend
+uv run python manage.py importar_manejo_urbfor                       # baixa os CSVs pelo CKAN
+uv run python manage.py importar_manejo_urbfor --arquivo jan2023.csv --arquivo fev2023.csv
+```
+
+- Fonte: dataset `podas_recolhimento_supressao` do CKAN de Fortaleza (URBFOR), 11 planilhas
+  mensais de 2023 (falta setembro; não há 2024 em diante). Licença vazia no CKAN: gravada como
+  "não declarada (DP-10)" e mostrada ao usuário como "não declarada (em definição pela prefeitura)".
+- Exige o município e os bairros cadastrados (`importar_limites_fortaleza`).
+- **Não geocodifica e não cria árvore, ocorrência nem tarefa.** Os plantios (doação de mudas) não
+  são importados.
+- Leitura (ISO-8859-1, `;`): linha de serviço é a que começa com data, nos formatos reais
+  ("04/01/2023", "19/05/23", "0412/2023", "27/1//2023"); as linhas TOTAL e as colunas soltas são
+  ignoradas. O mês é o do título do arquivo ("JANEIRO (2023)"), não o da data da linha (quatro
+  linhas de junho trazem data de julho). As quantidades são as colunas Poda, Supressão e
+  Recolhimento; a soma de cada planilha bate com a linha TOTAL dela (conferido nas 10 que a têm).
+- Bairro: lido do fim de cada trecho da descrição ("... - Bairro" ou "..., Bairro.") e comparado
+  com os bairros cadastrados, sem acento nem caixa, com poucas variações de grafia da URBFOR
+  (`APELIDOS` em `itree/indicadores/manejo_urbfor.py`). O serviço só vai a um bairro se todos os
+  trechos apontam para ele. "Praia do Futuro" e "Conjunto Ceará" servem a dois bairros (I e II) e
+  ficam **ambíguos**; o que não se reconhece fica **sem bairro identificado**. Esses dois totais
+  ficam no município, para a soma nunca perder árvore.
+- Gravação: `IndicadorTerritorialExterno`, um por bairro, mês e ação
+  (`manejo_urbfor_poda_202301`, `..._supressao_...`, `..._recolhimento_...`; `manejo_urbfor_sem_bairro_...`
+  no município), em árvores, com fonte, URL, licença, data de referência (último dia do mês) e
+  data de ingestão. Só há linha onde houve registro: bairro que não aparece não tem manejo
+  identificado, o que não é o mesmo que zero. Reimportar um mês troca as linhas do mês.
+- Aparece em Análises e relatórios, na análise "Manejo registrado pela URBFOR (2023)": total por
+  bairro com poda, supressão e recolhimento, "Sem bairro identificado" (só no escopo municipal),
+  fonte e ressalvas. Não depende do período escolhido e não entra nos indicadores da visão geral.
+- Validação com o dado real (2026-11-12, 11 arquivos): 20.305 árvores (poda 18.056, supressão
+  1.636 e recolhimento 613). Com bairro identificado: 87,3%; ambíguo: 6,2%; sem bairro: 6,5%.
+  182 árvores vêm de serviços cuja "SER n" difere da regional do bairro cadastrado (mantido o
+  bairro). A coluna "Regional" usa a numeração "SER n" do Fortaleza em Mapas (ver a equivalência
+  das regionais).
 
 ### Focos de calor diários do INPE
 

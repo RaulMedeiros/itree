@@ -520,6 +520,48 @@ describe("análises", () => {
     expect(screen.getByRole("cell", { name: "out/26" })).toBeInTheDocument();
   });
 
+  it("mostra a composição de cada linha, a fonte e as ressalvas do manejo da URBFOR", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/relatorios/analise`, () =>
+        HttpResponse.json({
+          id: "manejo_urbfor_por_bairro",
+          titulo: "Manejo registrado pela URBFOR (2023)",
+          definicao:
+            "Árvores com poda, supressão ou recolhimento registrados pela URBFOR em 2023. Ressalvas: (1) a URBFOR publicou planilhas mensais sem coordenadas.",
+          fonte:
+            "URBFOR (Autarquia de Urbanismo e Paisagismo de Fortaleza), dados abertos de Fortaleza (https://dados.fortaleza.ce.gov.br/dataset/podas_recolhimento_supressao). Licença: não declarada (em definição pela prefeitura).",
+          periodo: { inicio: "2025-11-10", fim: "2026-11-10" },
+          calculado_em: "2026-11-10T12:00:00Z",
+          por_bairro: true,
+          unidade: "",
+          base_rotulo: "árvores",
+          linhas: [
+            { rotulo: "Aldeota", valor: 298, detalhe: "Poda 278 · Supressão 18 · Recolhimento 2" },
+            {
+              rotulo: "Sem bairro identificado",
+              valor: 120,
+              detalhe: "Poda 100 · Supressão 20",
+              territorio_id: null,
+            },
+          ],
+          total: 418,
+        }),
+      ),
+    );
+    await abrir("/analises");
+    expect(
+      await screen.findByRole("heading", { name: "Manejo registrado pela URBFOR (2023)" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Poda 278 · Supressão 18 · Recolhimento 2")).toBeInTheDocument();
+    expect(screen.getByText("Sem bairro identificado")).toBeInTheDocument();
+    expect(screen.getByText("Poda 100 · Supressão 20")).toBeInTheDocument();
+    expect(screen.getByText(/sem coordenadas/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Licença: não declarada \(em definição pela prefeitura\)/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("418")).toBeInTheDocument();
+  });
+
   it("sem série mensal (análise sem dimensão temporal) não desenha o gráfico", async () => {
     await abrir("/analises");
     await screen.findByText("Total");

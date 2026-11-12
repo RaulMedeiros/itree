@@ -22,8 +22,9 @@ from rest_framework.response import Response
 from itree.alertas.escopo import filtrar_alertas_por_escopo
 from itree.alertas.models import AlertaAmbiental
 from itree.alertas.views import filtrar_alertas
-from itree.contas.acesso import filtrar_por_escopo
-from itree.indicadores import externos
+from itree.contas.acesso import filtrar_por_escopo, tem_escopo_municipal
+from itree.core.textos import sem_codigos_internos
+from itree.indicadores import externos, manejo_urbfor
 from itree.indicadores.models import IndicadorTerritorialExterno
 from itree.inspecoes.models import EstadoInspecao, Inspecao
 from itree.inspecoes.views import filtrar_inspecoes
@@ -70,6 +71,27 @@ ANALISES = {
         "fonte": f"{externos.FONTE_CENSO} ({externos.URL_CENSO_FACES})",
         "unidade": "%",
         "base_rotulo": "faces de quadra",
+    },
+    "manejo_urbfor_por_bairro": {
+        "titulo": manejo_urbfor.NOME_ANALISE,
+        "definicao": (
+            "Árvores com poda, supressão ou recolhimento registrados pela URBFOR em 2023, somadas "
+            "por bairro (as três ações juntas; uma mesma árvore pode ter mais de uma). "
+            "Ressalvas: (1) a URBFOR publicou planilhas mensais sem coordenadas, e o bairro foi "
+            "lido do texto livre de cada serviço; o que não foi reconhecido, ou que serve a dois "
+            'bairros (Praia do Futuro e Conjunto Ceará), aparece em "Sem bairro identificado", '
+            "visível só com escopo municipal; (2) bairro fora da lista não teve manejo "
+            "identificado, o que não é o mesmo que zero; (3) só há 2023, sem setembro, e os "
+            "números são os informados pela URBFOR, sem conferência em campo; (4) não altera o "
+            "inventário de árvores. Dado de 2023: não depende do período escolhido."
+        ),
+        "permissao": "inventario.ler",
+        "por_bairro": True,
+        "fonte": (
+            f"{manejo_urbfor.FONTE}, dados abertos de Fortaleza ({manejo_urbfor.FONTE_URL}). "
+            f"Licença: {sem_codigos_internos(manejo_urbfor.LICENCA)}."
+        ),
+        "base_rotulo": "árvores",
     },
     "ocorrencias_por_tipo": {
         "titulo": "Ocorrências registradas por tipo no período",
@@ -145,6 +167,8 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             }
             for i in sorted(dados, key=lambda i: (-i.valor, i.territorio.nome))
         ]
+    if chave == "manejo_urbfor_por_bairro":
+        return _linhas_manejo(usuario)
     if chave == "ocorrencias_por_tipo":
         return [
             {"rotulo": r["tipo__nome"], "valor": r["n"]}
@@ -200,6 +224,59 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             .order_by("fonte", "status")
         ]
     raise NotFound("Análise desconhecida.")
+
+
+def _detalhe_manejo(acoes: dict[str, int]) -> str:
+    return " · ".join(
+        f"{rotulo} {acoes[acao]:,}".replace(",", ".")
+        for acao, rotulo in manejo_urbfor.ACOES.items()
+        if acoes.get(acao)
+    )
+
+
+def _linhas_manejo(usuario) -> list[dict]:
+    """Manejo da URBFOR por bairro do escopo (soma dos meses), mais o que ficou sem bairro.
+
+    Bairro sem registro não aparece (nunca zero). O total sem bairro identificado está no
+    município e só aparece para quem tem escopo municipal."""
+    bairros = {b.pk: b for b in externos.bairros_do_escopo(usuario)}
+    municipal = tem_escopo_municipal(usuario)
+    por_bairro: dict = {}
+    sem_bairro = dict.fromkeys(manejo_urbfor.ACOES, 0)
+    linhas_banco = IndicadorTerritorialExterno.objects.filter(
+        indicador__startswith=manejo_urbfor.PREFIXO
+    )
+    for i in linhas_banco.select_related("territorio"):
+        interpretado = manejo_urbfor.interpretar_indicador(i.indicador)
+        if interpretado is None:
+            continue
+        acao, _ano, _mes, sem = interpretado
+        if sem:
+            if municipal:
+                sem_bairro[acao] += i.numerador
+        elif i.territorio_id in bairros:
+            acoes = por_bairro.setdefault(i.territorio_id, dict.fromkeys(manejo_urbfor.ACOES, 0))
+            acoes[acao] += i.numerador
+    linhas = [
+        {
+            "rotulo": bairros[pk].nome,
+            "valor": sum(acoes.values()),
+            "detalhe": _detalhe_manejo(acoes),
+            "territorio_id": str(pk),
+        }
+        for pk, acoes in por_bairro.items()
+    ]
+    linhas.sort(key=lambda linha: (-linha["valor"], linha["rotulo"]))
+    if sum(sem_bairro.values()):
+        linhas.append(
+            {
+                "rotulo": "Sem bairro identificado",
+                "valor": sum(sem_bairro.values()),
+                "detalhe": _detalhe_manejo(sem_bairro),
+                "territorio_id": None,
+            }
+        )
+    return linhas
 
 
 def _meses_do_periodo(inicio: date, fim: date) -> list[date]:
