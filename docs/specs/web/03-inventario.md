@@ -44,7 +44,7 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
 | Ocorrências    | Ocorrências e intervenções relacionadas.                        |
 | Evidências     | Fotografias e documentos, vinculados à inspeção de origem.      |
 | Sugestões de IA | Inferências pendentes/aceitas/rejeitadas (T-04).               |
-| Histórico      | Auditoria de alterações (quem, quando, o quê, origem).          |
+| Histórico      | Auditoria de alterações (quem, quando, o quê, origem). A visão "Cadeias" mostra cada inspeção com a ocorrência que gerou e as tarefas dela, em linha do tempo, com links e estados. |
 
 - **RF-INV-005** — Identificador único interno imutável; identificadores
   externos listados com sua fonte.

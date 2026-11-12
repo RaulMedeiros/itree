@@ -24,6 +24,11 @@ Organizar a execução das atividades de campo: quem faz o quê, onde e até qua
   inspeção vinculada chega a `Em revisão`; o vínculo é visível.
 - **RF-EQP-009** — Acompanhamento de pendências e produtividade por equipe e
   período, com definição explícita de cada métrica.
+- **RF-EQP-010** — Detalhe da tarefa (`/equipes-tarefas/:id`, com migalhas):
+  origem e alvo com link (ocorrência, árvore e a inspeção que gerou a
+  ocorrência), equipe, responsável, prazo, estado, ações coerentes com o estado,
+  resultado, evidências e histórico legível. O código `TAR-` tem link nas
+  listas, na ocorrência, na inspeção e na auditoria.
 
 ## 3. Regras
 
@@ -32,6 +37,17 @@ Organizar a execução das atividades de campo: quem faz o quê, onde e até qua
 - **RN-EQP-002** — Métricas de produtividade não ranqueiam pessoas por padrão;
   exibição individual depende de permissão (DP-09).
 - **RN-EQP-003** — Rotas são recurso futuro (P2), fora do escopo.
+- **RN-EQP-004** — Concluir uma tarefa pelo andamento exige o **resultado**
+  (texto: o que foi feito), que fica na tarefa e no histórico. A tarefa
+  encerrada junto com a ocorrência ou pelo envio da inspeção (RF-EQP-008) não
+  passa por essa tela e não leva resultado próprio.
+- **RN-EQP-005** — Tarefas de **execução em campo** só concluem com ao menos uma
+  **foto** disponível anexada à própria tarefa (evidência, com o mesmo envio
+  direto ao armazenamento das demais). A regra é conferida no servidor. Quais
+  tipos exigem foto é configuração em `TIPOS_COM_EVIDENCIA_OBRIGATORIA`
+  (`backend/itree/tarefas/models.py`); hoje é o atendimento de ocorrência. Poda,
+  remoção e plantio entram na lista quando forem tipos próprios de tarefa (DP-17).
+  Depois de concluída ou cancelada, a tarefa não recebe nem perde evidências.
 
 ## 4. Critérios de aceite
 

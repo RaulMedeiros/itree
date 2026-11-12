@@ -53,7 +53,7 @@ const PLURAL_ACAO: Record<string, string> = {
 };
 
 interface PaiEvento {
-  tipo: "arvore" | "inspecao" | "ocorrencia";
+  tipo: "arvore" | "inspecao" | "ocorrencia" | "tarefa";
   id: string;
   codigo: string;
 }
@@ -117,6 +117,12 @@ function Registro({ ev, nomes }: { ev: EventoAuditoria; nomes?: Map<string, stri
     case "inspecao":
       return (
         <Link to="/inspecoes/$id" params={{ id }} className={classe}>
+          {rotulo}
+        </Link>
+      );
+    case "tarefa":
+      return (
+        <Link to="/equipes-tarefas/$id" params={{ id }} className={classe}>
           {rotulo}
         </Link>
       );

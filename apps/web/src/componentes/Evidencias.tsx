@@ -22,7 +22,7 @@ import { SeloIlustracao } from "./selos";
 const TIPOS_ACEITOS = Object.values(TipoConteudoEnum).join(",");
 const TAMANHO_MAXIMO = 25 * 1024 * 1024;
 
-type Alvo = { arvore: string } | { ocorrencia: string } | { inspecao: string };
+type Alvo = { arvore: string } | { ocorrencia: string } | { inspecao: string } | { tarefa: string };
 
 async function enviarArquivo(alvo: Alvo, arquivo: File, descricao: string) {
   if (!(Object.values(TipoConteudoEnum) as string[]).includes(arquivo.type)) {
@@ -48,7 +48,7 @@ async function enviarArquivo(alvo: Alvo, arquivo: File, descricao: string) {
   await evidenciasConfirmarEnvio(data.evidencia.id);
 }
 
-/** Fotografias e documentos de uma árvore ou ocorrência. */
+/** Fotografias e documentos de uma árvore, ocorrência, inspeção ou tarefa. */
 export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boolean }) {
   const consulta = useEvidenciasListar(alvo);
   const cliente = useQueryClient();

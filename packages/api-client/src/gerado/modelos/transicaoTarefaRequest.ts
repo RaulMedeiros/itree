@@ -11,4 +11,9 @@ export interface TransicaoTarefaRequest {
   estado: EstadoTarefaEnum;
   /** @maxLength 500 */
   motivo?: string;
+  /**
+     * O que foi feito. Obrigatório ao concluir.
+     * @maxLength 2000
+     */
+  resultado?: string;
 }

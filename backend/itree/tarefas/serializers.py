@@ -5,6 +5,7 @@ from rest_framework import serializers
 from itree.contas.models import Equipe, Usuario
 from itree.contas.serializers import UsuarioResumoSerializer
 from itree.core.lote import IdsEmLoteSerializer
+from itree.evidencias.models import EstadoEvidencia
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.serializers import CampoLocalizacao
 from itree.ocorrencias.models import ESTADOS_FINAIS, Ocorrencia
@@ -53,6 +54,13 @@ class TarefaSerializer(serializers.ModelSerializer):
         help_text="De onde a tarefa veio: a inspeção que originou a ocorrência atendida."
     )
     transicoes_possiveis = serializers.SerializerMethodField()
+    exige_evidencia = serializers.BooleanField(
+        read_only=True,
+        help_text="Tarefa de execução em campo: só conclui com evidência fotográfica anexada.",
+    )
+    total_evidencias = serializers.SerializerMethodField(
+        help_text="Evidências disponíveis anexadas à tarefa."
+    )
     motivo = serializers.CharField(
         write_only=True, required=False, allow_blank=True, max_length=500
     )
@@ -77,6 +85,9 @@ class TarefaSerializer(serializers.ModelSerializer):
             "prioridade",
             "estado",
             "motivo_estado",
+            "resultado",
+            "exige_evidencia",
+            "total_evidencias",
             "transicoes_possiveis",
             "atrasada",
             "criada_por",
@@ -85,7 +96,7 @@ class TarefaSerializer(serializers.ModelSerializer):
             "concluida_em",
             "motivo",
         ]
-        read_only_fields = ["estado", "motivo_estado", "concluida_em"]
+        read_only_fields = ["estado", "motivo_estado", "resultado", "concluida_em"]
 
     @extend_schema_field(serializers.DictField())
     def get_alvo(self, obj):
@@ -103,6 +114,13 @@ class TarefaSerializer(serializers.ModelSerializer):
                 "codigo": ocorrencia.inspecao.codigo,
             }
         return None
+
+    def get_total_evidencias(self, obj) -> int:
+        # A listagem e o detalhe trazem a contagem anotada; nos demais casos, conta aqui.
+        total = getattr(obj, "total_evidencias", None)
+        if total is None:
+            total = obj.evidencias.filter(estado=EstadoEvidencia.DISPONIVEL).count()
+        return total
 
     def get_atrasada(self, obj) -> bool:
         return bool(
@@ -155,6 +173,12 @@ class TarefaSerializer(serializers.ModelSerializer):
 class TransicaoTarefaSerializer(serializers.Serializer):
     estado = serializers.ChoiceField(choices=EstadoTarefa.choices)
     motivo = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    resultado = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=2000,
+        help_text="O que foi feito. Obrigatório ao concluir.",
+    )
 
 
 class TarefasEmLoteSerializer(serializers.Serializer):

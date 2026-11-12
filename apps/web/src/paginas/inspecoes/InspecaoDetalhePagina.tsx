@@ -131,7 +131,18 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
               {i.tecnico.nome || i.tecnico.email} · {ROTULOS_ORIGEM_INSPECAO[i.origem ?? "app"]}
               {i.dispositivo ? ` (${i.dispositivo})` : ""} · recebida em{" "}
               {formatarDataHora(i.recebida_em)}
-              {i.tarefa ? ` · tarefa ${String(i.tarefa.codigo)}` : ""}
+              {i.tarefa && (
+                <>
+                  {" · tarefa "}
+                  <Link
+                    to="/equipes-tarefas/$id"
+                    params={{ id: String(i.tarefa.id) }}
+                    className="font-mono text-marca-escura hover:underline"
+                  >
+                    {String(i.tarefa.codigo)}
+                  </Link>
+                </>
+              )}
             </span>
           </span>
         }

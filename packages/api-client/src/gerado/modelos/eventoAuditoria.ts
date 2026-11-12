@@ -20,7 +20,7 @@ export interface EventoAuditoria {
      */
   readonly registro: string | null;
   /**
-     * Registro pai (árvore, inspeção ou ocorrência) de medidas, evidências e sugestões de IA: {tipo, id, codigo}.
+     * Registro pai (árvore, inspeção, ocorrência ou tarefa) de medidas, evidências e sugestões de IA: {tipo, id, codigo}.
      * @nullable
      */
   readonly pai: EventoAuditoriaPai;

@@ -10,4 +10,5 @@ export type EvidenciasListarParams = {
   arvore?: string;
   inspecao?: string;
   ocorrencia?: string;
+  tarefa?: string;
 };

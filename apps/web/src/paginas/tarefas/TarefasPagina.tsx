@@ -8,7 +8,7 @@ import {
   useTarefasTransicao,
   type Tarefa,
 } from "@itree/api-client";
-import { ACOES_ESTADO_TAREFA, ROTULOS_ESTADO_TAREFA, ROTULOS_TIPO_TAREFA } from "@itree/domain";
+import { ROTULOS_ESTADO_TAREFA, ROTULOS_TIPO_TAREFA } from "@itree/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
@@ -32,14 +32,9 @@ import { invalidarCaminhos } from "../../util/cache";
 import { contar, formatarData } from "../../util/formatos";
 import { LIMITE_ACOES_EM_LOTE, useSelecaoEmLote } from "../../util/lote";
 import { EquipeEmLoteDialogo } from "./EquipeEmLoteDialogo";
+import { rotuloDaAcao } from "./rotulos";
 
 const TAMANHO = 50;
-
-/** Rótulo da ação de levar a tarefa a `estado`. Sair de "Bloqueada" é desbloquear, não iniciar. */
-function rotuloDaAcao(tarefa: Tarefa, estado: EstadoTarefaEnum): string {
-  if (tarefa.estado === "bloqueada" && estado === "nao_iniciada") return "Desbloquear";
-  return ACOES_ESTADO_TAREFA[estado];
-}
 
 export interface BuscaTarefas {
   responsavel?: "eu";
@@ -51,8 +46,8 @@ export interface BuscaTarefas {
 }
 
 export function TarefasPagina() {
-  const filtros = useSearch({ from: "/autenticado/equipes-tarefas" });
-  const navegar = useNavigate({ from: "/equipes-tarefas" });
+  const filtros = useSearch({ from: "/autenticado/equipes-tarefas/" });
+  const navegar = useNavigate({ from: "/equipes-tarefas/" });
   const podeEditar = usePermissao("tarefas.editar");
   const equipes = useEquipesListar({ ativa: true, tamanho: 200 });
   const territorioAtivo = useTerritorioAtivo();
@@ -249,7 +244,13 @@ export function TarefasPagina() {
                     </Td>
                   )}
                   <Td>
-                    <p className="font-mono font-medium whitespace-nowrap">{t.codigo}</p>
+                    <Link
+                      to="/equipes-tarefas/$id"
+                      params={{ id: t.id }}
+                      className="font-mono font-medium whitespace-nowrap text-marca-escura hover:underline"
+                    >
+                      {t.codigo}
+                    </Link>
                     <p className="text-xs text-texto-suave">{ROTULOS_TIPO_TAREFA[t.tipo]}</p>
                     {t.descricao && <p className="text-xs">{t.descricao}</p>}
                   </Td>
@@ -382,20 +383,30 @@ function AcoesTarefa({
   );
 }
 
-function TransicaoDialogo({
+export function TransicaoDialogo({
   tarefa,
   estado,
   aoFechar,
+  fotos,
+  naPaginaDaTarefa = false,
 }: {
   tarefa: Tarefa;
   estado: EstadoTarefaEnum;
   aoFechar: () => void;
+  /** Fotos já anexadas, quando quem chama as conhece (a página da tarefa); senão, o total da lista. */
+  fotos?: number;
+  naPaginaDaTarefa?: boolean;
 }) {
   const [motivo, setMotivo] = useState("");
+  const [resultado, setResultado] = useState("");
   const mutacao = useTarefasTransicao<ErroApi>();
   const cliente = useQueryClient();
   const desbloqueio = tarefa.estado === "bloqueada";
+  const concluindo = estado === "concluida";
   const exige = estado === "bloqueada" || estado === "cancelada" || desbloqueio;
+  // A regra vale no servidor; aqui só se evita o envio que seria recusado.
+  const faltaFoto =
+    concluindo && tarefa.exige_evidencia && (fotos ?? tarefa.total_evidencias) === 0;
   return (
     <Dialogo
       aberto
@@ -407,13 +418,25 @@ function TransicaoDialogo({
             Voltar
           </Botao>
           <Botao
-            disabled={(exige && !motivo.trim()) || mutacao.isPending}
+            disabled={
+              (exige && !motivo.trim()) ||
+              (concluindo && !resultado.trim()) ||
+              faltaFoto ||
+              mutacao.isPending
+            }
             onClick={() =>
               mutacao.mutate(
-                { id: tarefa.id, data: { estado, motivo: motivo.trim() } },
+                {
+                  id: tarefa.id,
+                  data: {
+                    estado,
+                    motivo: motivo.trim(),
+                    ...(concluindo ? { resultado: resultado.trim() } : {}),
+                  },
+                },
                 {
                   onSuccess: async () => (
-                    await invalidarCaminhos(cliente, "/api/v1/tarefas"),
+                    await invalidarCaminhos(cliente, "/api/v1/tarefas", "/api/v1/ocorrencias"),
                     aoFechar()
                   ),
                 },
@@ -426,7 +449,7 @@ function TransicaoDialogo({
       }
     >
       {mutacao.error && (
-        <p className="mb-3 text-sm text-perigo">
+        <p role="alert" className="mb-3 text-sm text-perigo">
           {Object.values(mutacao.error.errosDeCampo).flat()[0] ?? mutacao.error.message}
         </p>
       )}
@@ -435,19 +458,49 @@ function TransicaoDialogo({
           Bloqueada por: {tarefa.motivo_estado}
         </p>
       )}
-      <Campo
-        rotulo={
-          desbloqueio ? "Por que o bloqueio acabou" : exige ? "Motivo" : "Observação (opcional)"
-        }
-        obrigatorio={exige}
-      >
-        {(p) => <AreaTexto {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
-      </Campo>
+      {faltaFoto && (
+        <p role="alert" className="mb-3 rounded-md bg-atencao-clara px-3 py-2 text-sm text-atencao">
+          Esta é uma tarefa de execução em campo: anexe ao menos uma foto do serviço antes de
+          concluir.{" "}
+          {naPaginaDaTarefa ? (
+            "Use a seção Evidências desta página."
+          ) : (
+            <Link
+              to="/equipes-tarefas/$id"
+              params={{ id: tarefa.id }}
+              className="font-medium underline"
+            >
+              Abrir a tarefa para anexar a foto
+            </Link>
+          )}
+        </p>
+      )}
+      <div className="flex flex-col gap-3">
+        {concluindo && (
+          <Campo
+            rotulo="Resultado"
+            obrigatorio
+            ajuda="O que foi feito. Fica no histórico da tarefa."
+          >
+            {(p) => (
+              <AreaTexto {...p} value={resultado} onChange={(e) => setResultado(e.target.value)} />
+            )}
+          </Campo>
+        )}
+        <Campo
+          rotulo={
+            desbloqueio ? "Por que o bloqueio acabou" : exige ? "Motivo" : "Observação (opcional)"
+          }
+          obrigatorio={exige}
+        >
+          {(p) => <AreaTexto {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}
+        </Campo>
+      </div>
     </Dialogo>
   );
 }
 
-function ReatribuirDialogo({ tarefa, aoFechar }: { tarefa: Tarefa; aoFechar: () => void }) {
+export function ReatribuirDialogo({ tarefa, aoFechar }: { tarefa: Tarefa; aoFechar: () => void }) {
   const equipes = useEquipesListar({ ativa: true, tamanho: 200 });
   const [equipe, setEquipe] = useState(tarefa.equipe?.id ?? "");
   const [responsavel, setResponsavel] = useState(tarefa.responsavel?.id ?? "");

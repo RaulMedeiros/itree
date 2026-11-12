@@ -39,5 +39,10 @@ export interface Evidencia {
   arvore?: string | null;
   /** @nullable */
   ocorrencia?: string | null;
+  /**
+     * Evidência do resultado, anexada ao concluir uma tarefa de campo (M-20).
+     * @nullable
+     */
+  tarefa?: string | null;
   readonly criado_em: string;
 }

@@ -56,7 +56,7 @@ CODIGO_RE = re.compile(r"^\s*([A-Za-z]{3})-?0*(\d+)\s*$")
 # de precedência: o primeiro vínculo preenchido é o pai mostrado e buscado.
 PAIS_DOS_FILHOS = {
     "inventario.MedidaEvent": ("inspecao_id", "arvore_id"),
-    "evidencias.EvidenciaEvent": ("inspecao_id", "arvore_id", "ocorrencia_id"),
+    "evidencias.EvidenciaEvent": ("inspecao_id", "arvore_id", "ocorrencia_id", "tarefa_id"),
     "qualidade.InferenciaIAEvent": ("inspecao_id", "arvore_id"),
 }
 # Campo de vínculo -> (tipo do pai, prefixo do código).
@@ -64,6 +64,7 @@ TIPOS_DE_PAI = {
     "inspecao_id": ("inspecao", "INS"),
     "arvore_id": ("arvore", "ARV"),
     "ocorrencia_id": ("ocorrencia", "OCO"),
+    "tarefa_id": ("tarefa", "TAR"),
 }
 
 
@@ -71,6 +72,7 @@ MODELOS_DE_PAI = {
     "inspecao_id": "inspecoes.Inspecao",
     "arvore_id": "inventario.Arvore",
     "ocorrencia_id": "ocorrencias.Ocorrencia",
+    "tarefa_id": "tarefas.Tarefa",
 }
 
 
@@ -123,7 +125,7 @@ class EventoAuditoriaSerializer(serializers.Serializer):
         help_text="Código legível do registro afetado (ARV-, OCO-, INS-, TAR-, ALR-), se houver."
     )
     pai = serializers.SerializerMethodField(
-        help_text="Registro pai (árvore, inspeção ou ocorrência) de medidas, evidências e "
+        help_text="Registro pai (árvore, inspeção, ocorrência ou tarefa) de medidas, evidências e "
         "sugestões de IA: {tipo, id, codigo}."
     )
     acao = serializers.SerializerMethodField()
