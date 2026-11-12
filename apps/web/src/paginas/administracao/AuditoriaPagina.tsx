@@ -18,7 +18,7 @@ import {
   autorDoEvento,
   type ContextoEvento,
 } from "../../componentes/Historico";
-import { agruparEventos, usuarioAfetado } from "./auditoria";
+import { usuarioAfetado } from "./auditoria";
 import { useOpcoesUsuario } from "./dados";
 
 const TAMANHO = 50;
@@ -170,7 +170,9 @@ export function AuditoriaPagina() {
     tamanho: TAMANHO,
   });
 
-  const linhas = consulta.data ? agruparEventos(consulta.data.data.results) : [];
+  // O servidor já devolve os eventos iguais agrupados e pagina por grupo.
+  const grupos = consulta.data?.data.results ?? [];
+  const eventosNaPagina = grupos.reduce((soma, g) => soma + g.quantidade, 0);
 
   const filtrar = (parcial: Partial<BuscaAuditoria>) =>
     void navegar({ search: (s: BuscaAuditoria) => ({ ...s, ...parcial, pagina: undefined }) });
@@ -179,7 +181,7 @@ export function AuditoriaPagina() {
     <>
       <CabecalhoPagina
         titulo="Auditoria"
-        descricao="Toda alteração em usuários, equipes, territórios, árvores, ocorrências e demais registros, com autor, origem e justificativa. Eventos seguidos e iguais aparecem agrupados numa linha. Os registros não podem ser alterados."
+        descricao="Toda alteração em usuários, equipes, territórios, árvores, ocorrências e demais registros, com autor, origem e justificativa. Eventos iguais do mesmo minuto aparecem agrupados numa linha. Os registros não podem ser alterados."
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Selecao
@@ -277,20 +279,21 @@ export function AuditoriaPagina() {
               </tr>
             </thead>
             <tbody>
-              {linhas.map(({ eventos }) => {
+              {grupos.map((grupo) => {
+                const { eventos, quantidade } = grupo;
                 const ev = eventos[0]!;
-                const lote = eventos.length > 1;
+                const lote = quantidade > 1;
                 const ctx = (ev.contexto ?? {}) as ContextoEvento;
-                const aberto = expandido === ev.id;
+                const aberto = expandido === grupo.id;
                 return (
-                  <Fragment key={ev.id}>
+                  <Fragment key={grupo.id}>
                     <Linha className="hover:bg-fundo">
                       <Td>
                         <button
                           aria-expanded={aberto}
                           aria-label={aberto ? "Ocultar detalhes" : "Ver detalhes"}
                           className="rounded p-0.5 hover:bg-neutro-clara"
-                          onClick={() => setExpandido(aberto ? null : ev.id)}
+                          onClick={() => setExpandido(aberto ? null : grupo.id)}
                         >
                           {aberto ? (
                             <ChevronDown className="size-4" />
@@ -304,7 +307,7 @@ export function AuditoriaPagina() {
                       <Td>
                         {lote ? (
                           <span className="text-texto-suave">
-                            {eventos.length} registros
+                            {quantidade} registros
                             {ev.pai ? (
                               <>
                                 {" "}
@@ -327,7 +330,7 @@ export function AuditoriaPagina() {
                           }
                         >
                           {lote
-                            ? `${eventos.length} ${PLURAL_ACAO[ev.acao] ?? "eventos"}`
+                            ? `${quantidade} ${PLURAL_ACAO[ev.acao] ?? "eventos"}`
                             : (ROTULOS_ACAO_AUDITORIA[ev.acao] ?? ev.acao)}
                         </Selo>
                       </Td>
@@ -341,6 +344,13 @@ export function AuditoriaPagina() {
                       <tr>
                         <td colSpan={8} className="border-b border-borda bg-fundo px-4 py-3">
                           <div className="flex flex-col gap-3">
+                            {grupo.truncado && (
+                              <p className="text-xs text-texto-suave">
+                                Mostrando os {eventos.length.toLocaleString("pt-BR")} eventos mais
+                                recentes de {quantidade.toLocaleString("pt-BR")}. Filtre por período
+                                ou por código para ver os demais.
+                              </p>
+                            )}
                             {eventos.map((e) => (
                               <div key={e.id}>
                                 {lote && (
@@ -365,10 +375,10 @@ export function AuditoriaPagina() {
             pagina={filtros.pagina ?? 1}
             total={consulta.data.data.count}
             tamanho={TAMANHO}
-            unidade="eventos"
+            unidade="grupos de eventos"
             nota={
-              linhas.length < consulta.data.data.results.length
-                ? `agrupados em ${plural(linhas.length, "linha")}`
+              eventosNaPagina > grupos.length
+                ? `${plural(eventosNaPagina, "evento")} nesta página`
                 : undefined
             }
             aoMudar={(pagina) =>

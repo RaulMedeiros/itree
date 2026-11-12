@@ -527,6 +527,14 @@ describe("análises", () => {
   });
 });
 
+/** Grupo de auditoria como o servidor devolve: eventos iguais, com a contagem total. */
+const grupo = <T extends { id: string }>(eventos: T[], quantidade = eventos.length) => ({
+  id: eventos[0]!.id,
+  quantidade,
+  truncado: quantidade > eventos.length,
+  eventos,
+});
+
 describe("auditoria", () => {
   const evento = (id: string, parcial: Record<string, unknown>) => ({
     id,
@@ -552,12 +560,14 @@ describe("auditoria", () => {
       http.get(`${API}/api/v1/admin/auditoria`, () =>
         HttpResponse.json(
           pagina([
-            evento("m-1", { pai: { tipo: "arvore", id: "a-1", codigo: "ARV-000010" } }),
-            evento("e-1", {
-              entidade: "Evidência",
-              entidade_modelo: "evidencias.Evidencia",
-              pai: { tipo: "inspecao", id: "i-1", codigo: "INS-000001" },
-            }),
+            grupo([evento("m-1", { pai: { tipo: "arvore", id: "a-1", codigo: "ARV-000010" } })]),
+            grupo([
+              evento("e-1", {
+                entidade: "Evidência",
+                entidade_modelo: "evidencias.Evidencia",
+                pai: { tipo: "inspecao", id: "i-1", codigo: "INS-000001" },
+              }),
+            ]),
           ]),
         ),
       ),
@@ -573,7 +583,7 @@ describe("auditoria", () => {
 });
 
 describe("auditoria: lote de filhos", () => {
-  it("rotula o lote com o pai e não junta medidas de árvores diferentes", async () => {
+  it("rotula cada grupo vindo do servidor com o pai e a contagem", async () => {
     const medida = (id: string, pai: string, codigo: string) => ({
       id,
       momento: "2026-11-10T21:17:10Z",
@@ -595,10 +605,8 @@ describe("auditoria: lote de filhos", () => {
       http.get(`${API}/api/v1/admin/auditoria`, () =>
         HttpResponse.json(
           pagina([
-            medida("m-1", "a-1", "ARV-000010"),
-            medida("m-2", "a-1", "ARV-000010"),
-            medida("m-3", "a-2", "ARV-000011"),
-            medida("m-4", "a-2", "ARV-000011"),
+            grupo([medida("m-1", "a-1", "ARV-000010"), medida("m-2", "a-1", "ARV-000010")]),
+            grupo([medida("m-3", "a-2", "ARV-000011"), medida("m-4", "a-2", "ARV-000011")]),
           ]),
         ),
       ),
@@ -634,14 +642,16 @@ describe("auditoria: usuário afetado e contagem (R2-18)", () => {
       http.get(`${API}/api/v1/admin/auditoria`, () =>
         HttpResponse.json(
           pagina([
-            eventoUsuario(
-              "1",
-              { nome: "Bia Souza", email: "bia@itree.teste" },
-              {
-                evento: "vinculo_oidc",
-              },
-            ),
-            eventoUsuario("2", { nome: "", email: "caio@itree.teste" }),
+            grupo([
+              eventoUsuario(
+                "1",
+                { nome: "Bia Souza", email: "bia@itree.teste" },
+                {
+                  evento: "vinculo_oidc",
+                },
+              ),
+            ]),
+            grupo([eventoUsuario("2", { nome: "", email: "caio@itree.teste" })]),
           ]),
         ),
       ),
@@ -656,7 +666,7 @@ describe("auditoria: usuário afetado e contagem (R2-18)", () => {
     expect(screen.queryByText(/Primeiro acesso \(provedor de login\)/)).toBeNull();
   });
 
-  it("o rodapé conta eventos e diz quando as linhas são grupos deles", async () => {
+  it("o rodapé conta grupos e diz quantos eventos a página tem", async () => {
     const lote = (id: string) => eventoUsuario(id, { nome: "Ana", email: "a@itree.teste" });
     servidor.use(
       http.get(`${API}/api/v1/eu`, () =>
@@ -667,13 +677,48 @@ describe("auditoria: usuário afetado e contagem (R2-18)", () => {
           count: 2022,
           next: null,
           previous: null,
-          results: [lote("1"), lote("1")],
+          results: [grupo([lote("1"), lote("2")], 7)],
         }),
       ),
     );
     await abrir("/administracao/auditoria");
     expect(
-      await screen.findByText("1–50 de 2.022 eventos (agrupados em 1 linha)"),
+      await screen.findByText("1–50 de 2.022 grupos de eventos (7 eventos nesta página)"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("7 alterados")).toBeInTheDocument();
+  });
+
+  it("o cliente não agrupa: grupos vizinhos iguais continuam em linhas separadas", async () => {
+    const igual = (id: string) => eventoUsuario(id, { nome: "Ana", email: "a@itree.teste" });
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "admin.auditoria"] }),
+      ),
+      http.get(`${API}/api/v1/admin/auditoria`, () =>
+        HttpResponse.json(pagina([grupo([igual("1")]), grupo([igual("2")])])),
+      ),
+    );
+    await abrir("/administracao/auditoria");
+    await screen.findAllByRole("link", { name: "Ana" });
+    expect(screen.getAllByRole("link", { name: "Ana" })).toHaveLength(2);
+    expect(screen.queryByText(/\d+ registros/)).toBeNull();
+  });
+
+  it("avisa quando o grupo traz só os eventos mais recentes", async () => {
+    const usuario = userEvent.setup();
+    const igual = (id: string) => eventoUsuario(id, { nome: "Ana", email: "a@itree.teste" });
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "admin.auditoria"] }),
+      ),
+      http.get(`${API}/api/v1/admin/auditoria`, () =>
+        HttpResponse.json(pagina([grupo([igual("1"), igual("2")], 250)])),
+      ),
+    );
+    await abrir("/administracao/auditoria");
+    await usuario.click(await screen.findByRole("button", { name: "Ver detalhes" }));
+    expect(
+      await screen.findByText(/Mostrando os 2 eventos mais recentes de 250/),
     ).toBeInTheDocument();
   });
 });

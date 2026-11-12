@@ -22,7 +22,7 @@ import type {
 
 import type {
   AuditoriaListarParams,
-  PaginatedEventoAuditoriaList
+  PaginatedGrupoAuditoriaList
 } from '../modelos';
 
 import { requisicao } from '../../cliente';
@@ -48,7 +48,7 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
 };
 
 export type auditoriaListarResponse200 = {
-  data: PaginatedEventoAuditoriaList
+  data: PaginatedGrupoAuditoriaList
   status: 200
 }
 
@@ -75,8 +75,9 @@ export const getAuditoriaListarUrl = (params?: AuditoriaListarParams,) => {
 }
 
 /**
- * Trilha de auditoria (RF-ADM-003). Somente leitura: eventos não podem ser
- * alterados nem removidos pela aplicação (RNF-SEG-004).
+ * Trilha de auditoria (RF-ADM-003), agrupada no servidor: eventos iguais do mesmo
+ * minuto viram um grupo, e `count` e a paginação contam grupos. Somente leitura:
+ * eventos não podem ser alterados nem removidos pela aplicação (RNF-SEG-004).
  */
 export const auditoriaListar = async (params?: AuditoriaListarParams, options?: Parameters<typeof requisicao>[1]): Promise<auditoriaListarResponse> => {
 

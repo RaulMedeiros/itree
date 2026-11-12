@@ -8,6 +8,7 @@ from itree.contas.acesso import filtrar_por_escopo
 from itree.contas.models import EscopoUsuario
 from itree.territorio.models import Territorio
 
+from .auditoria_util import eventos_de
 from .conftest import com_escopo, criar_territorio, criar_usuario, quadrado
 
 pytestmark = pytest.mark.django_db
@@ -121,10 +122,10 @@ def test_filtro_por_escopo_territorial():
 
 def test_auditoria_resume_geometria(cliente, admin, tmp_path):
     _importar(_geojson_utm(tmp_path))
-    eventos = (
+    eventos = eventos_de(
         cliente.como(admin)
         .get("/api/v1/admin/auditoria", {"entidade": "territorio.TerritorioEvent"})
-        .json()["results"]
+        .json()
     )
     assert eventos and all(e["dados"]["geom"] == "(geometria)" for e in eventos)
     assert eventos[0]["contexto"]["evento"] == "importacao_territorios"

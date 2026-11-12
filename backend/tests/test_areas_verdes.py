@@ -25,6 +25,7 @@ from itree.areas_verdes.tasks import reimportar_areas_verdes
 from itree.contas.models import EscopoUsuario
 from itree.inventario.models import Arvore
 
+from .auditoria_util import eventos_de
 from .conftest import com_escopo, criar_territorio, criar_usuario, quadrado
 
 pytestmark = pytest.mark.django_db
@@ -256,10 +257,10 @@ def test_falha_da_api_nao_deixa_importacao_parcial():
 
 
 def test_auditoria_resume_geometria(cliente, admin, importadas):
-    eventos = (
+    eventos = eventos_de(
         cliente.como(admin)
         .get("/api/v1/admin/auditoria", {"entidade": "areas_verdes.AreaVerdeEvent"})
-        .json()["results"]
+        .json()
     )
     assert len(eventos) == 7 and all(e["dados"]["geom"] == "(geometria)" for e in eventos)
     assert eventos[0]["contexto"]["evento"] == "importacao_areas_verdes"
