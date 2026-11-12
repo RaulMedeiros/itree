@@ -155,6 +155,38 @@ distingui-los. `importar_areas_verdes` grava `AreaVerde.subtipo` (só nas praça
   painel da área mostra o subtipo.
 - A migração preenche o subtipo das praças já importadas.
 
+### Unidades de conservação: conferência com o CNUC
+
+```bash
+cd backend
+uv run python manage.py conferir_ucs_cnuc                     # baixa o CSV do CNUC (MMA)
+uv run python manage.py conferir_ucs_cnuc --arquivo cnuc.csv  # CSV local (ISO-8859-1, ";")
+uv run python manage.py conferir_ucs_cnuc --simular           # só o relatório
+```
+
+- Fonte: MMA, Cadastro Nacional de Unidades de Conservação (`cnuc_2026_07.csv`), licença
+  CC BY. Só as unidades da UF pedida entram (`--uf`, padrão CE), porque há nomes parecidos
+  em outros estados (a APA da Fortaleza de Santa Cruz é do Rio de Janeiro).
+- Casa pelo **nome normalizado**: sem acento nem caixa, sem pontuação nem artigos, com APA
+  e ARIE por extenso e sem o sufixo de zona ("- ZA", "- ZP", "- ZC"). Nome que casa com
+  mais de uma unidade do CNUC não é gravado e aparece como ambíguo.
+- Quem casa recebe `codigo_cnuc` (coluna "Código UC"), `esfera_cnuc` e `cnuc_conferido_em`.
+  A esfera da prefeitura (`esfera`) não é trocada: a divergência vai para o relatório. A
+  reimportação mensal das áreas verdes preserva esses campos; reexecutar o comando refaz o
+  cruzamento (quem deixa de casar perde o código).
+- O relatório lista as unidades casadas (com a quantidade de feições), as unidades do mapa
+  **sem correspondente no CNUC**, as ambíguas, as divergências de esfera e as unidades do
+  CNUC no município que o mapa não traz.
+- Na exibição, a API de áreas verdes traz `feicoes_da_unidade` e `area_total_da_unidade_m2`
+  nas unidades de conservação: as feições da mesma unidade (mesmo código do CNUC ou, sem ele,
+  mesmo nome normalizado) são contadas juntas, dentro do escopo do usuário. O painel da área
+  mostra o código do CNUC e "Esta unidade aparece em 4 feições no mapa; área somada: ...".
+- Validação com o dado real (2026-11-12): 18 feições do mapa 737 e 114 unidades do CNUC no
+  Ceará. Casaram 15 feições de 10 unidades (a APA do Estuário do Rio Ceará, com 4 feições, e o
+  Parque Estadual Marinho da Pedra da Risca do Meio, com 3 zonas). Sem correspondente: APA da
+  Sabiaguaba, ARIE Prof. Abreu Matos e ARIE da Matinha do Pici (unidades municipais que o
+  CNUC não lista). Nenhuma divergência de esfera.
+
 ### Validação contra o dado real (2026-11-11)
 
 - `importar_limites_fortaleza` na API real: 12 regionais e 121 bairros criados; segunda

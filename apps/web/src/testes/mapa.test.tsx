@@ -736,6 +736,72 @@ describe("áreas verdes (praças, parques e unidades de conservação)", () => {
     expect(within(painel).getByText("Praça · Areninha")).toBeInTheDocument();
   });
 
+  it("o painel da unidade de conservação mostra o código do CNUC e agrupa as feições", async () => {
+    const mapa = await abrirMapa("/mapa?areas_verdes=1");
+    await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));
+    act(() =>
+      mapa.emitir(
+        "click",
+        {
+          point: { x: 1, y: 1 },
+          features: [
+            {
+              properties: {
+                ...AREAS_VERDES.features[1]!.properties,
+                nome: "APA do Estuário do Rio Ceará",
+                esfera: "Estadual",
+                codigo_cnuc: "0000.23.0951",
+                esfera_cnuc: "Estadual",
+                area_m2: 22818.88,
+                feicoes_da_unidade: 4,
+                area_total_da_unidade_m2: 27349927.15,
+              },
+            },
+          ],
+        },
+        "areas-verdes-preenchimento",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da área verde" });
+    expect(within(painel).getByText(/Código no CNUC:/)).toHaveTextContent(
+      "Código no CNUC: 0000.23.0951 · esfera estadual",
+    );
+    expect(within(painel).getByText(/Esta unidade aparece em 4 feições no mapa/)).toHaveTextContent(
+      "Esta unidade aparece em 4 feições no mapa; área somada: 27.349.927 m².",
+    );
+    expect(within(painel).getByText("Área informada: 22.819 m²")).toBeInTheDocument();
+    expect(
+      within(painel).getByText(/conferidos com o CNUC \(MMA\), licença CC BY/),
+    ).toBeInTheDocument();
+  });
+
+  it("unidade com uma só feição e sem conferência não mostra agrupamento nem código", async () => {
+    const mapa = await abrirMapa("/mapa?areas_verdes=1");
+    await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));
+    act(() =>
+      mapa.emitir(
+        "click",
+        {
+          point: { x: 1, y: 1 },
+          features: [
+            {
+              properties: {
+                ...AREAS_VERDES.features[1]!.properties,
+                codigo_cnuc: "",
+                feicoes_da_unidade: 1,
+                area_total_da_unidade_m2: 188371.5,
+              },
+            },
+          ],
+        },
+        "areas-verdes-preenchimento",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da área verde" });
+    expect(within(painel).queryByText(/Código no CNUC/)).toBeNull();
+    expect(within(painel).queryByText(/aparece em/)).toBeNull();
+  });
+
   it("árvore sob o clique tem prioridade sobre a área verde", async () => {
     const mapa = await abrirMapa("/mapa?areas_verdes=1");
     await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));

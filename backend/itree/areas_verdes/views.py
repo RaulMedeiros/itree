@@ -11,6 +11,7 @@ from rest_framework.response import Response
 
 from itree.contas.acesso import filtrar_por_escopo, requer
 
+from .cnuc import chave_da_uc
 from .models import AreaVerde, SubtipoAreaVerde, TipoAreaVerde
 from .servico import situacao_da_fonte
 
@@ -39,7 +40,31 @@ def _bbox(texto: str) -> Polygon:
     return caixa
 
 
-def _feicao(a: AreaVerde) -> dict:
+def _grupos_de_unidades(usuario) -> dict[str, tuple[int, float | None]]:
+    """Feições e área somada de cada unidade de conservação visível para ``usuario``.
+
+    A API da prefeitura repete a mesma unidade em várias feições (a APA do Estuário do Rio
+    Ceará tem 4; o Parque Estadual Marinho, 3 zonas). A chave é o código do CNUC, quando
+    há, ou o nome normalizado sem o sufixo de zona."""
+    grupos: dict[str, list] = {}
+    unidades = filtrar_por_escopo(
+        AreaVerde.objects.filter(tipo=TipoAreaVerde.UNIDADE_CONSERVACAO), usuario
+    )
+    for nome, codigo, area in unidades.values_list("nome", "codigo_cnuc", "area_m2"):
+        grupo = grupos.setdefault(codigo or chave_da_uc(nome), [0, None])
+        grupo[0] += 1
+        if area is not None:
+            grupo[1] = (grupo[1] or 0) + area
+    return {
+        chave: (n, None if total is None else round(total, 2))
+        for chave, (n, total) in grupos.items()
+    }
+
+
+def _feicao(a: AreaVerde, grupos: dict[str, tuple[int, float | None]]) -> dict:
+    unidade = grupos.get(a.codigo_cnuc or chave_da_uc(a.nome))
+    if a.tipo != TipoAreaVerde.UNIDADE_CONSERVACAO:
+        unidade = None
     return {
         "type": "Feature",
         "id": str(a.id),
@@ -54,8 +79,13 @@ def _feicao(a: AreaVerde) -> dict:
             "codigo_externo": a.codigo_externo,
             "orgao_gestor": a.orgao_gestor,
             "esfera": a.esfera,
+            "codigo_cnuc": a.codigo_cnuc,
+            "esfera_cnuc": a.esfera_cnuc,
             "ato_legal": a.ato_legal,
             "area_m2": a.area_m2,
+            # Só nas unidades de conservação: feições da mesma unidade e a área somada delas.
+            "feicoes_da_unidade": unidade[0] if unidade else None,
+            "area_total_da_unidade_m2": unidade[1] if unidade else None,
             "fonte": a.fonte,
             "fonte_url": a.fonte_url,
             "licenca": a.licenca,
@@ -112,7 +142,8 @@ class AreaVerdeViewSet(viewsets.ReadOnlyModelViewSet):
 
     def list(self, request: Request, *args, **kwargs) -> Response:
         """FeatureCollection com fonte, licença e datas em cada feição (RN-PROV-003)."""
-        feicoes = [_feicao(a) for a in self.get_queryset()]
+        grupos = _grupos_de_unidades(request.user)
+        feicoes = [_feicao(a, grupos) for a in self.get_queryset()]
         return Response(
             {
                 "type": "FeatureCollection",
@@ -123,4 +154,4 @@ class AreaVerdeViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
     def retrieve(self, request: Request, *args, **kwargs) -> Response:
-        return Response(_feicao(self.get_object()))
+        return Response(_feicao(self.get_object(), _grupos_de_unidades(request.user)))

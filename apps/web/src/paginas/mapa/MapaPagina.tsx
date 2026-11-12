@@ -196,8 +196,14 @@ interface AreaVerdeSelecionada {
   subtipo_rotulo?: string;
   orgao_gestor?: string;
   esfera?: string;
+  /** Código e esfera no Cadastro Nacional de Unidades de Conservação (MMA), quando conferidos. */
+  codigo_cnuc?: string;
+  esfera_cnuc?: string;
   ato_legal?: string;
   area_m2?: number | null;
+  /** Só nas unidades de conservação: feições da mesma unidade e a área somada delas. */
+  feicoes_da_unidade?: number | null;
+  area_total_da_unidade_m2?: number | null;
   fonte: string;
   licenca?: string;
   data_referencia?: string | null;
@@ -1875,9 +1881,24 @@ function PainelAreaVerde({ area, aoFechar }: { area: AreaVerdeSelecionada; aoFec
         </p>
       </div>
       {area.ato_legal && <p>Ato legal: {area.ato_legal}</p>}
+      {area.codigo_cnuc && (
+        <p>
+          Código no CNUC: <span className="tabular-nums">{area.codigo_cnuc}</span>
+          {area.esfera_cnuc ? ` · esfera ${area.esfera_cnuc.toLowerCase()}` : ""}
+        </p>
+      )}
       {area.area_m2 ? (
         <p>Área informada: {Math.round(area.area_m2).toLocaleString("pt-BR")} m²</p>
       ) : null}
+      {(area.feicoes_da_unidade ?? 0) > 1 && (
+        <p>
+          Esta unidade aparece em {area.feicoes_da_unidade} feições no mapa
+          {area.area_total_da_unidade_m2
+            ? `; área somada: ${Math.round(area.area_total_da_unidade_m2).toLocaleString("pt-BR")} m²`
+            : ""}
+          .
+        </p>
+      )}
       <div className="border-t border-borda pt-2 text-xs text-texto-suave">
         <p>
           <span className="font-medium">Fonte:</span> {area.fonte}
@@ -1886,6 +1907,7 @@ function PainelAreaVerde({ area, aoFechar }: { area: AreaVerdeSelecionada; aoFec
           <p>Órgão: {[area.orgao_gestor, area.esfera].filter(Boolean).join(" · ")}</p>
         )}
         {area.licenca && <p>{area.licenca}</p>}
+        {area.codigo_cnuc && <p>Código e esfera conferidos com o CNUC (MMA), licença CC BY.</p>}
         <p>
           {area.data_referencia
             ? `Dados de ${anoDaData(area.data_referencia)}`
