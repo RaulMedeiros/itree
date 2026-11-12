@@ -60,7 +60,12 @@ import {
   type FormaArea,
   type PoligonoGeoJson,
 } from "../../mapa/desenho";
-import { codificarArea, decodificarArea } from "../../mapa/areaUrl";
+import {
+  codificarArea,
+  decodificarArea,
+  simplificarArea,
+  type AreaSimplificada,
+} from "../../mapa/areaUrl";
 import {
   CAMADAS_ARBORIZACAO,
   COR_POR_VALOR,
@@ -240,6 +245,7 @@ export function MapaPagina() {
   // Seleção por área (RF-MAPA-022): forma em desenho e área concluída (abre o painel). A área
   // concluída mora na URL (M-12): abrir um item da lista e voltar, ou recarregar, a restaura.
   const [formaArea, setFormaArea] = useState<FormaArea | null>(null);
+  const [avisoSimplificacao, setAvisoSimplificacao] = useState<AreaSimplificada | null>(null);
   const area = useMemo(() => decodificarArea(busca.area), [busca.area]);
   const botaoSelecionarArea = useRef<HTMLButtonElement>(null);
   const devolverFocoAoBotao = useRef(false);
@@ -772,13 +778,19 @@ export function MapaPagina() {
 
   const definirAreaNaUrl = (nova: PoligonoGeoJson | null) =>
     atualizarBusca({ area: nova ? codificarArea(nova) : undefined });
+  // Polígono com mais vértices que o endereço comporta é simplificado, e a perda é avisada (M-19).
+  const concluirArea = (concluida: PoligonoGeoJson) => {
+    const simplificada = simplificarArea(concluida);
+    definirAreaNaUrl(simplificada.area);
+    setAvisoSimplificacao(simplificada.toleranciaM === null ? null : simplificada);
+  };
   // Modo de desenho da área: ativo enquanto houver forma escolhida.
   useEffect(() => {
     const m = mapa.current;
     if (!pronto || !m || !formaArea) return;
     return iniciarDesenho(m, formaArea, {
       aoConcluir: (concluida) => {
-        definirAreaNaUrl(concluida);
+        concluirArea(concluida);
         setFormaArea(null);
       },
       aoCancelar: () => setFormaArea(null),
@@ -801,10 +813,12 @@ export function MapaPagina() {
   }, [formaArea, area]);
 
   const iniciarSelecaoPorArea = (forma: FormaArea) => {
+    setAvisoSimplificacao(null);
     definirAreaNaUrl(null);
     setFormaArea(forma);
   };
   const fecharSelecaoPorArea = () => {
+    setAvisoSimplificacao(null);
     devolverFocoAoBotao.current = true;
     definirAreaNaUrl(null);
     setFormaArea(null);
@@ -1334,6 +1348,26 @@ export function MapaPagina() {
             aoEscolherForma={iniciarSelecaoPorArea}
             aoUsarAreaVisivel={usarAreaVisivel}
           />
+          {avisoSimplificacao && area && (
+            <div
+              role="status"
+              className="pointer-events-auto flex max-w-md items-start gap-2 rounded-lg border border-atencao bg-superficie px-3 py-1.5 text-sm shadow"
+            >
+              <span>
+                A área tinha {avisoSimplificacao.verticesAntes.toLocaleString("pt-BR")} vértices e
+                foi simplificada para {avisoSimplificacao.verticesDepois.toLocaleString("pt-BR")}{" "}
+                (tolerância de até {avisoSimplificacao.toleranciaM} m) para caber no endereço da
+                página. Pequenos detalhes do contorno se perderam.
+              </span>
+              <button
+                className="rounded-full p-0.5 hover:bg-fundo"
+                aria-label="Dispensar aviso"
+                onClick={() => setAvisoSimplificacao(null)}
+              >
+                <X className="size-3.5" aria-hidden />
+              </button>
+            </div>
+          )}
           {feicaoDestaque && (
             <div
               role="status"
