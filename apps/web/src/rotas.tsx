@@ -322,6 +322,8 @@ const arvores = createRoute({
     situacao: z.enum(["ativa", "excluida", "fundida", "todas"]).optional().catch(undefined),
     sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),
     condicao_aparente: textoOpcional,
+    // Área do mapa (M-24): mesmo formato compacto do parâmetro `area` da URL do mapa.
+    area: textoOpcional,
     ordenar: z.enum(ORDENACOES_ARVORES).optional().catch(undefined),
     pagina: paginaOpcional,
   }),

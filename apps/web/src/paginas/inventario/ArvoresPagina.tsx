@@ -54,6 +54,8 @@ export interface BuscaArvores {
   situacao?: "ativa" | "excluida" | "fundida" | "todas";
   sem_inspecao_dias?: number;
   condicao_aparente?: string;
+  /** Área desenhada no mapa, no formato compacto da URL do mapa (M-24). */
+  area?: string;
   ordenar?: Ordenacao;
   pagina?: number;
 }
@@ -279,6 +281,19 @@ export function ArvoresPagina() {
           Nunca inspecionadas primeiro
         </label>
       </div>
+      {filtros.area && (
+        <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-texto-suave">
+          Só as árvores dentro da área desenhada no mapa.
+          <Botao variante="fantasma" asChild>
+            <Link to="/mapa" search={{ area: filtros.area }}>
+              <IconeMapa /> Ver a área no mapa
+            </Link>
+          </Botao>
+          <Botao variante="fantasma" onClick={() => filtrar({ area: undefined })}>
+            Remover a área
+          </Botao>
+        </p>
+      )}
       <details
         className="mb-3 rounded-lg border border-borda bg-superficie"
         open={maisAberto}

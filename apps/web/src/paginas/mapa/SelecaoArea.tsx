@@ -10,6 +10,7 @@ import { Link } from "@tanstack/react-router";
 import {
   ClipboardPlus,
   Download,
+  List,
   Pentagon,
   RectangleHorizontal,
   ScanEye,
@@ -20,9 +21,11 @@ import { useEffect, useRef, useState, type KeyboardEvent, type Ref } from "react
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import type { FormaArea, PoligonoGeoJson } from "../../mapa/desenho";
+import { codificarArea } from "../../mapa/areaUrl";
 import { CORES_CONDICAO } from "../../mapa/simbologia";
 import { Botao } from "../../ui/botao";
 import { Carregando } from "../../ui/estados";
+import type { BuscaArvores } from "../inventario/ArvoresPagina";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 
 const TAMANHO_PAGINA = 50;
@@ -168,6 +171,25 @@ function Lista<T extends { id: string }>({
   );
 }
 
+/** Filtros do mapa que a lista de árvores também entende (M-24), mais a própria área. */
+function buscaDaListaDeArvores(
+  area: PoligonoGeoJson,
+  filtros: Record<string, string>,
+): BuscaArvores {
+  const { bairro, especie_estado, localizacao_origem, condicao_aparente, sem_inspecao_dias } =
+    filtros;
+  const busca = {
+    bairro,
+    especie_estado,
+    localizacao_origem,
+    condicao_aparente,
+    sem_inspecao_dias: sem_inspecao_dias ? Number(sem_inspecao_dias) : undefined,
+    area: codificarArea(area),
+  };
+  // A lista só recebe o que está preenchido, como a URL do mapa.
+  return Object.fromEntries(Object.entries(busca).filter(([, v]) => v)) as BuscaArvores;
+}
+
 const classeLinha =
   "flex h-full flex-col justify-center px-2.5 text-sm hover:bg-neutro-clara focus-visible:outline-offset-[-2px]";
 
@@ -190,6 +212,7 @@ export function PainelSelecaoArea({
   const { mutate } = consulta;
   const titulo = useRef<HTMLHeadingElement>(null);
   const podeCriarTarefas = usePermissao("tarefas.editar");
+  const podeVerLista = usePermissao("inventario.ler");
   const podeExportarArvores = usePermissao("relatorios.exportar", "inventario.ler");
   const podeExportarOcorrencias = usePermissao("relatorios.exportar", "ocorrencias.ler");
   const [criando, setCriando] = useState(false);
@@ -349,6 +372,14 @@ export function PainelSelecaoArea({
                       </Link>
                     )}
                   />
+                  {podeVerLista && (
+                    <Botao variante="secundario" tamanho="pequeno" asChild>
+                      <Link to="/inventario/arvores" search={buscaDaListaDeArvores(area, filtros)}>
+                        <List aria-hidden /> Ver todas em lista (
+                        {arvores.total.toLocaleString("pt-BR")})
+                      </Link>
+                    </Botao>
+                  )}
                 </>
               )}
             </section>

@@ -29,6 +29,7 @@ from itree.contas.acesso import (
     tem_escopo_municipal,
 )
 from itree.contas.permissoes import Permissao
+from itree.core.geo import decodificar_area
 from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
 from itree.ocorrencias.models import ESTADOS_FINAIS
 
@@ -184,6 +185,12 @@ FILTROS_ARVORE = [
     ),
     OpenApiParameter("condicao_aparente", str, description="Use 'sem' para sem avaliação."),
     OpenApiParameter(
+        "area",
+        str,
+        description="Área desenhada no mapa, no formato compacto do parâmetro `area` da URL "
+        "do mapa: só as árvores dentro do polígono.",
+    ),
+    OpenApiParameter(
         "ordenar",
         str,
         description=(
@@ -229,6 +236,11 @@ def filtrar_arvores(qs, params):
         qs = qs.filter(Q(ultima_inspecao_em__isnull=True) | Q(ultima_inspecao_em__lt=limite))
     if condicao := params.get("condicao_aparente"):
         qs = qs.filter(condicao_aparente="" if condicao == "sem" else condicao)
+    if texto_area := params.get("area"):
+        try:
+            qs = qs.filter(geom__intersects=decodificar_area(texto_area))
+        except ValueError as exc:
+            raise ValidationError({"area": [str(exc)]}) from exc
     situacao = params.get("situacao", "ativa")
     if situacao != "todas":
         qs = qs.filter(situacao=situacao)

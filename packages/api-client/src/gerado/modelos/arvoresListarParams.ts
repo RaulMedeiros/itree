@@ -7,6 +7,8 @@
  */
 
 export type ArvoresListarParams = {
+  /** Área desenhada no mapa, no formato compacto do parâmetro `area` da URL do mapa: só as árvores dentro do polígono. */
+  area?: string;
   bairro?: string;
   /** Código (ARV-000123), identificador externo ou endereço. */
   busca?: string;
