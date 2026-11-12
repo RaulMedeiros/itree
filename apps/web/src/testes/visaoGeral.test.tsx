@@ -2,6 +2,7 @@ import { configurarCliente, type Eu } from "@itree/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -319,5 +320,116 @@ describe("visão geral: bairros que pedem atenção (G-02)", () => {
     await abrirComPainel(painel());
     expect(await screen.findByText("Nenhum bairro com pendência no momento.")).toBeInTheDocument();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+});
+
+describe("visão geral: criar tarefas para as árvores sem avaliação", () => {
+  const condicao = painel({
+    distribuicoes: {
+      condicao_aparente: {
+        titulo: "Condição aparente registrada",
+        definicao: "d",
+        itens: [
+          { rotulo: "Boa", quantidade: 5 },
+          { rotulo: "Sem avaliação registrada", quantidade: 40 },
+        ],
+      },
+    },
+  });
+  const comTarefas = () =>
+    http.get(`${API}/api/v1/eu`, () =>
+      HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "tarefas.editar"] }),
+    );
+  const contadores = (limite: number) =>
+    http.get(`${API}/api/v1/arvores/contadores`, () =>
+      HttpResponse.json({ total: 40, validos: 40, limite_tarefas_em_lote: limite }),
+    );
+
+  it("abre o diálogo de lote com os filtros das sem avaliação", async () => {
+    const usuario = userEvent.setup();
+    const corpos: { filtros_arvores?: Record<string, string> }[] = [];
+    servidor.use(
+      comTarefas(),
+      contadores(500),
+      http.get(`${API}/api/v1/equipes`, () =>
+        HttpResponse.json({ count: 0, next: null, previous: null, results: [] }),
+      ),
+      http.post(`${API}/api/v1/tarefas/lote`, async ({ request }) => {
+        corpos.push((await request.json()) as never);
+        return HttpResponse.json({ criadas: 40, ignoradas: 0, fora_do_escopo_do_responsavel: 0 });
+      }),
+    );
+    await abrirComPainel(condicao);
+    await usuario.click(
+      await screen.findByRole("button", {
+        name: "Criar tarefas de inspeção para as 40 sem avaliação",
+      }),
+    );
+    const dialogo = await screen.findByRole("dialog", {
+      name: "Criar tarefas de inspeção para 40 árvores",
+    });
+    await usuario.click(within(dialogo).getByRole("button", { name: "Criar" }));
+    await vi.waitFor(() =>
+      expect(corpos[0]?.filtros_arvores).toEqual({ condicao_aparente: "sem", valida: "true" }),
+    );
+  });
+
+  it("acima do limite do lote, desabilita a ação e explica", async () => {
+    servidor.use(comTarefas(), contadores(30));
+    await abrirComPainel(condicao);
+    const botao = await screen.findByRole("button", {
+      name: "Criar tarefas de inspeção para as 40 sem avaliação",
+    });
+    await vi.waitFor(() => expect(botao).toBeDisabled());
+    expect(screen.getByText(/O limite é de 30 árvores por lote/)).toBeInTheDocument();
+  });
+
+  it("sem permissão de editar tarefas, não oferece a ação", async () => {
+    await abrirComPainel(condicao);
+    await screen.findByText("Sem avaliação registrada");
+    expect(screen.queryByRole("button", { name: /Criar tarefas de inspeção/ })).toBeNull();
+  });
+});
+
+describe("visão geral: ocorrências em aberto por prioridade", () => {
+  it("cada barra usa a cor da prioridade no mapa e traz o rótulo em texto", async () => {
+    await abrirComPainel(
+      painel({
+        distribuicoes: {
+          ocorrencias_prioridade: {
+            titulo: "Ocorrências em aberto por prioridade",
+            definicao: "d",
+            itens: [
+              { rotulo: "Baixa", quantidade: 9 },
+              { rotulo: "Urgente", quantidade: 2 },
+              { rotulo: "Sem prioridade definida", quantidade: 4 },
+              { rotulo: "Média", quantidade: 6 },
+              { rotulo: "Alta", quantidade: 3 },
+            ],
+          },
+        },
+      }),
+    );
+    const titulo = await screen.findByRole("heading", {
+      name: "Ocorrências em aberto por prioridade",
+    });
+    const itens = within(titulo.parentElement as HTMLElement).getAllByRole("listitem");
+    // Do mais urgente ao menos, cada um com o rótulo em texto e a cor do mapa (simbologia.ts).
+    expect(itens.map((li) => li.textContent)).toEqual([
+      "Urgente2",
+      "Alta3",
+      "Média6",
+      "Baixa9",
+      "Sem prioridade definida4",
+    ]);
+    const corDa = (li: HTMLElement) =>
+      (li.querySelector("span.h-3") as HTMLElement).style.background;
+    expect(itens.map(corDa)).toEqual([
+      "rgb(201, 42, 42)", // #c92a2a
+      "rgb(232, 89, 12)", // #e8590c
+      "rgb(227, 160, 8)", // #e3a008
+      "rgb(28, 126, 214)", // #1c7ed6
+      "rgb(73, 80, 87)", // #495057
+    ]);
   });
 });

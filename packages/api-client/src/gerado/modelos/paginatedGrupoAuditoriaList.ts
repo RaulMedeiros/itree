@@ -5,13 +5,13 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
-import type { EventoAuditoria } from './eventoAuditoria';
+import type { GrupoAuditoria } from './grupoAuditoria';
 
-export interface PaginatedEventoAuditoriaList {
+export interface PaginatedGrupoAuditoriaList {
   count: number;
   /** @nullable */
   next?: string | null;
   /** @nullable */
   previous?: string | null;
-  results: EventoAuditoria[];
+  results: GrupoAuditoria[];
 }

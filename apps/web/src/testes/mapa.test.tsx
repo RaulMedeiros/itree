@@ -463,6 +463,74 @@ describe("arborização do entorno (Censo 2022)", () => {
     );
     expect(await screen.findByText("Sem Censo · sem dado do Censo 2022")).toBeInTheDocument();
   });
+
+  it("clicar no bairro abre o painel com percentual, base e toda a proveniência (M-18)", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?arborizacao_entorno=1");
+    await vi.waitFor(() => expect(mapa.dadosDe("arborizacao-entorno").features).toHaveLength(2));
+    await vi.waitFor(() => expect(pedidos).toHaveLength(1));
+    // Espera a proveniência chegar ao estado (a legenda a mostra).
+    await screen.findByText(/IBGE, Censo Demográfico 2022 · Não declarada/);
+
+    act(() =>
+      mapa.emitir(
+        "click",
+        { point: { x: 5, y: 5 }, features: [{ properties: DADOS.features[0]!.properties }] },
+        "arborizacao-entorno-preenchimento",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", {
+      name: "Arborização do entorno do bairro",
+    });
+    expect(within(painel).getByText("Aldeota")).toBeInTheDocument();
+    expect(within(painel).getByText("64,7%")).toBeInTheDocument();
+    expect(within(painel).getByText("938 de 1.449 faces")).toBeInTheDocument();
+    expect(within(painel).getByText(/Definição vinda da API/)).toBeInTheDocument();
+    expect(within(painel).getByText(/Fonte:/).parentElement).toHaveTextContent(
+      "IBGE, Censo Demográfico 2022",
+    );
+    expect(within(painel).getByText(/Licença:/).parentElement).toHaveTextContent(
+      "Não declarada no FTP do IBGE",
+    );
+    expect(within(painel).getByText(/Data de referência:/).parentElement).toHaveTextContent(
+      "31/07/2022 · ingerido em",
+    );
+
+    await usuario.click(within(painel).getByRole("button", { name: "Fechar detalhes" }));
+    expect(
+      screen.queryByRole("complementary", { name: "Arborização do entorno do bairro" }),
+    ).toBeNull();
+  });
+
+  it("bairro sem dado diz isso, sem 0%, e árvore sob o clique tem prioridade", async () => {
+    const mapa = await abrirMapa("/mapa?arborizacao_entorno=1");
+    await vi.waitFor(() => expect(pedidos).toHaveLength(1));
+    mapa.renderizadas = [{ properties: { id: "a-1", quantidade: 1 } }];
+    act(() =>
+      mapa.emitir(
+        "click",
+        { point: { x: 5, y: 5 }, features: [{ properties: DADOS.features[1]!.properties }] },
+        "arborizacao-entorno-sem-dado",
+      ),
+    );
+    expect(
+      screen.queryByRole("complementary", { name: "Arborização do entorno do bairro" }),
+    ).toBeNull();
+
+    mapa.renderizadas = [];
+    act(() =>
+      mapa.emitir(
+        "click",
+        { point: { x: 5, y: 5 }, features: [{ properties: DADOS.features[1]!.properties }] },
+        "arborizacao-entorno-sem-dado",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", {
+      name: "Arborização do entorno do bairro",
+    });
+    expect(within(painel).getByText(/Sem dado do Censo 2022 para este bairro/)).toBeInTheDocument();
+    expect(within(painel).queryByText(/%/)).toBeNull();
+  });
 });
 
 describe("áreas verdes (praças, parques e unidades de conservação)", () => {

@@ -60,7 +60,12 @@ import {
   type FormaArea,
   type PoligonoGeoJson,
 } from "../../mapa/desenho";
-import { codificarArea, decodificarArea } from "../../mapa/areaUrl";
+import {
+  codificarArea,
+  decodificarArea,
+  simplificarArea,
+  type AreaSimplificada,
+} from "../../mapa/areaUrl";
 import {
   CAMADAS_ARBORIZACAO,
   COR_POR_VALOR,
@@ -240,6 +245,7 @@ export function MapaPagina() {
   // Seleção por área (RF-MAPA-022): forma em desenho e área concluída (abre o painel). A área
   // concluída mora na URL (M-12): abrir um item da lista e voltar, ou recarregar, a restaura.
   const [formaArea, setFormaArea] = useState<FormaArea | null>(null);
+  const [avisoSimplificacao, setAvisoSimplificacao] = useState<AreaSimplificada | null>(null);
   const area = useMemo(() => decodificarArea(busca.area), [busca.area]);
   const botaoSelecionarArea = useRef<HTMLButtonElement>(null);
   const devolverFocoAoBotao = useRef(false);
@@ -259,6 +265,8 @@ export function MapaPagina() {
     "inicial",
   );
   const [proveniencia, setProveniencia] = useState<ProvenienciaIndicador | null>(null);
+  // Bairro clicado na camada do Censo: abre o painel com o dado e a proveniência (M-18).
+  const [bairroCenso, setBairroCenso] = useState<DicaArborizacao | null>(null);
   const arborizacaoIniciada = useRef(false);
   const [dica, setDica] = useState<{ x: number; y: number; texto: string } | null>(null);
   const [cursor, setCursor] = useState<{ lon: number; lat: number } | null>(null);
@@ -406,6 +414,19 @@ export function MapaPagina() {
         setDica({ x: e.point.x, y: e.point.y, texto });
       });
       m.on("mouseleave", camada, () => setDica(null));
+      m.on("click", camada, (e: MapLayerMouseEvent) => {
+        if (desenhando.current || areaAtiva.current) return;
+        // Árvores, ocorrências e áreas verdes por cima têm o próprio clique.
+        const porCima = [...CAMADAS_COM_CLIQUE, "areas-verdes-preenchimento"].filter((id) =>
+          m.getLayer(id),
+        );
+        if (porCima.length && m.queryRenderedFeatures(e.point, { layers: porCima }).length) return;
+        const p = e.features?.[0]?.properties;
+        if (!p) return;
+        setBairroCenso(p as DicaArborizacao);
+        setAreaVerde(null);
+        atualizarBusca({ selecao: undefined });
+      });
     }
 
     // Áreas verdes: abaixo das árvores e dos alertas, desligadas até o usuário pedir.
@@ -637,6 +658,7 @@ export function MapaPagina() {
       const p = e.features?.[0]?.properties;
       if (!p) return;
       setAreaVerde(p as unknown as AreaVerdeSelecionada);
+      setBairroCenso(null);
       atualizarBusca({ selecao: undefined });
     });
     // Qualquer clique no mapa encerra o realce do bairro buscado (RF-MAPA-011).
@@ -707,6 +729,8 @@ export function MapaPagina() {
 
   // Desligar a camada ou selecionar uma árvore/ocorrência fecha o painel da área verde.
   if (areaVerde && (!mostrarAreasVerdes || tipoSelecao)) setAreaVerde(null);
+  // O mesmo vale para o painel do bairro do Censo, que também cede a vez a uma área verde.
+  if (bairroCenso && (!mostrarArborizacao || tipoSelecao || areaVerde)) setBairroCenso(null);
 
   // Limites e nomes dos bairros (contexto territorial).
   useEffect(() => {
@@ -754,13 +778,19 @@ export function MapaPagina() {
 
   const definirAreaNaUrl = (nova: PoligonoGeoJson | null) =>
     atualizarBusca({ area: nova ? codificarArea(nova) : undefined });
+  // Polígono com mais vértices que o endereço comporta é simplificado, e a perda é avisada (M-19).
+  const concluirArea = (concluida: PoligonoGeoJson) => {
+    const simplificada = simplificarArea(concluida);
+    definirAreaNaUrl(simplificada.area);
+    setAvisoSimplificacao(simplificada.toleranciaM === null ? null : simplificada);
+  };
   // Modo de desenho da área: ativo enquanto houver forma escolhida.
   useEffect(() => {
     const m = mapa.current;
     if (!pronto || !m || !formaArea) return;
     return iniciarDesenho(m, formaArea, {
       aoConcluir: (concluida) => {
-        definirAreaNaUrl(concluida);
+        concluirArea(concluida);
         setFormaArea(null);
       },
       aoCancelar: () => setFormaArea(null),
@@ -783,10 +813,12 @@ export function MapaPagina() {
   }, [formaArea, area]);
 
   const iniciarSelecaoPorArea = (forma: FormaArea) => {
+    setAvisoSimplificacao(null);
     definirAreaNaUrl(null);
     setFormaArea(forma);
   };
   const fecharSelecaoPorArea = () => {
+    setAvisoSimplificacao(null);
     devolverFocoAoBotao.current = true;
     definirAreaNaUrl(null);
     setFormaArea(null);
@@ -1316,6 +1348,26 @@ export function MapaPagina() {
             aoEscolherForma={iniciarSelecaoPorArea}
             aoUsarAreaVisivel={usarAreaVisivel}
           />
+          {avisoSimplificacao && area && (
+            <div
+              role="status"
+              className="pointer-events-auto flex max-w-md items-start gap-2 rounded-lg border border-atencao bg-superficie px-3 py-1.5 text-sm shadow"
+            >
+              <span>
+                A área tinha {avisoSimplificacao.verticesAntes.toLocaleString("pt-BR")} vértices e
+                foi simplificada para {avisoSimplificacao.verticesDepois.toLocaleString("pt-BR")}{" "}
+                (tolerância de até {avisoSimplificacao.toleranciaM} m) para caber no endereço da
+                página. Pequenos detalhes do contorno se perderam.
+              </span>
+              <button
+                className="rounded-full p-0.5 hover:bg-fundo"
+                aria-label="Dispensar aviso"
+                onClick={() => setAvisoSimplificacao(null)}
+              >
+                <X className="size-3.5" aria-hidden />
+              </button>
+            </div>
+          )}
           {feicaoDestaque && (
             <div
               role="status"
@@ -1367,6 +1419,13 @@ export function MapaPagina() {
         )}
         {areaVerde && !area && !tipoSelecao && (
           <PainelAreaVerde area={areaVerde} aoFechar={() => setAreaVerde(null)} />
+        )}
+        {bairroCenso && !area && !tipoSelecao && !areaVerde && (
+          <PainelArborizacaoEntorno
+            bairro={bairroCenso}
+            proveniencia={proveniencia}
+            aoFechar={() => setBairroCenso(null)}
+          />
         )}
         {tipoSelecao && idSelecao && (
           <PainelContextual
@@ -1784,6 +1843,107 @@ function PainelAreaVerde({ area, aoFechar }: { area: AreaVerdeSelecionada; aoFec
             : "Data dos dados não informada"}
           {area.ingerido_em ? ` · ingerido em ${formatarDataHora(area.ingerido_em)}` : ""}
         </p>
+      </div>
+    </aside>
+  );
+}
+
+/**
+ * Bairro clicado na camada "Arborização do entorno": o percentual e a base (faces com árvore e
+ * total de faces) e, na proveniência, a definição, o método, a fonte, a licença, a data de
+ * referência e a ingestão (RN-PROV-003). Bairro sem dado diz isso, nunca "0%". O cruzamento com o
+ * inventário fica de fora até as fórmulas da DP-14.
+ */
+function PainelArborizacaoEntorno({
+  bairro,
+  proveniencia,
+  aoFechar,
+}: {
+  bairro: DicaArborizacao;
+  proveniencia: ProvenienciaIndicador | null;
+  aoFechar: () => void;
+}) {
+  const temDado = bairro.valor !== null && bairro.valor !== undefined;
+  const pct = temDado
+    ? Number(bairro.valor).toLocaleString("pt-BR", { maximumFractionDigits: 1 })
+    : null;
+  return (
+    <aside
+      aria-label="Arborização do entorno do bairro"
+      className="absolute top-3 right-3 z-10 flex max-h-[calc(100%-1.5rem)] w-96 flex-col gap-2 overflow-y-auto rounded-xl border border-borda bg-superficie p-4 text-sm shadow-lg"
+    >
+      <button
+        className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo"
+        aria-label="Fechar detalhes"
+        onClick={aoFechar}
+      >
+        <X className="size-4" />
+      </button>
+      <div className="pr-8">
+        <p className="text-lg font-semibold">{bairro.nome ?? "Bairro"}</p>
+        <p className="text-xs text-texto-suave">
+          {proveniencia?.nome ?? "Arborização do entorno (Censo 2022)"}
+        </p>
+      </div>
+      {temDado ? (
+        <div>
+          <p className="text-2xl font-semibold tabular-nums">{pct}%</p>
+          <p>das faces de quadra têm árvore no entorno.</p>
+          {bairro.faces ? (
+            <p className="text-texto-suave">
+              {(bairro.faces_com_arvore ?? 0).toLocaleString("pt-BR")} de{" "}
+              {bairro.faces.toLocaleString("pt-BR")} faces
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p>
+          Sem dado do Censo 2022 para este bairro. Isso não significa que não haja árvores no
+          entorno.
+        </p>
+      )}
+      <div className="flex flex-col gap-1 border-t border-borda pt-2 text-xs text-texto-suave">
+        <p>
+          <span className="font-medium">Definição:</span>{" "}
+          {proveniencia?.definicao ?? DEFINICAO_ARBORIZACAO}
+        </p>
+        {proveniencia?.metodo && (
+          <p>
+            <span className="font-medium">Método:</span> {proveniencia.metodo}
+          </p>
+        )}
+        {proveniencia && (
+          <>
+            <p>
+              <span className="font-medium">Fonte:</span>{" "}
+              {proveniencia.fonte_url ? (
+                <a
+                  href={proveniencia.fonte_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-marca-escura underline"
+                >
+                  {proveniencia.fonte}
+                </a>
+              ) : (
+                proveniencia.fonte
+              )}
+            </p>
+            <p>
+              <span className="font-medium">Licença:</span>{" "}
+              {proveniencia.licenca || "não informada pela fonte"}
+            </p>
+            <p>
+              <span className="font-medium">Data de referência:</span>{" "}
+              {proveniencia.data_referencia
+                ? formatarData(proveniencia.data_referencia)
+                : "não informada"}
+              {proveniencia.ingerido_em
+                ? ` · ingerido em ${formatarDataHora(proveniencia.ingerido_em)}`
+                : ""}
+            </p>
+          </>
+        )}
       </div>
     </aside>
   );

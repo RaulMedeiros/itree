@@ -791,6 +791,35 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
     );
   });
 
+  it('aba Evidências: o menu "⋯" do cartão amplia e remove, sem lixeira de hover', async () => {
+    const usuario = userEvent.setup();
+    const remocoes: unknown[] = [];
+    servidor.use(
+      http.post(`${API}/api/v1/evidencias/:id/remover`, async ({ request, params }) => {
+        remocoes.push({ id: params.id, corpo: await request.json() });
+        return HttpResponse.json({});
+      }),
+    );
+    await abrir("/inventario/arvores/a-1");
+    await usuario.click(await screen.findByRole("tab", { name: "Evidências" }));
+    expect(screen.queryByRole("button", { name: /^Remover / })).toBeNull();
+    const menu = await screen.findByRole("button", { name: "Ações de antiga.jpg" });
+    await usuario.click(menu);
+    expect(await screen.findByRole("menuitem", { name: "Ampliar" })).toBeInTheDocument();
+    await usuario.click(screen.getByRole("menuitem", { name: "Ampliar" }));
+    const ampliada = await screen.findByRole("dialog");
+    expect(within(ampliada).getByRole("img")).toBeInTheDocument();
+    expect(within(ampliada).getByText(/Enviada por .* em /)).toBeInTheDocument();
+    await usuario.keyboard("{Escape}");
+
+    await usuario.click(menu);
+    await usuario.click(await screen.findByRole("menuitem", { name: "Remover" }));
+    const dialogo = await screen.findByRole("dialog", { name: "Remover evidência" });
+    await usuario.type(within(dialogo).getByLabelText(/Justificativa/), "Foto de outra árvore");
+    await usuario.click(within(dialogo).getByRole("button", { name: "Remover" }));
+    await vi.waitFor(() => expect(remocoes).toHaveLength(1));
+  });
+
   it("sugestão de IA não vem pré-selecionada e só confirma após a escolha", async () => {
     const usuario = userEvent.setup();
     await abrir("/inventario/arvores/a-1");

@@ -4,7 +4,7 @@
  * de 8 px com anel da superfície, grade fina, legenda para ≥ 2 séries, rótulo
  * só no fim da linha, tooltip com cruz e tabela equivalente.
  */
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import { formatarDataCurta } from "../../util/formatos";
 
@@ -236,7 +236,14 @@ export function GraficoMensal({ meses, series }: { meses: string[]; series: Seri
 export function BarraSegmentada({
   partes,
 }: {
-  partes: { rotulo: string; quantidade: number; cor: string; textoClaro?: boolean }[];
+  partes: {
+    rotulo: string;
+    quantidade: number;
+    cor: string;
+    textoClaro?: boolean;
+    /** Ação própria da parte (ex.: criar tarefas), mostrada sob o seu item da legenda. */
+    acao?: ReactNode;
+  }[];
 }) {
   const total = partes.reduce((s, p) => s + p.quantidade, 0);
   if (!total) return <p className="text-sm text-texto-suave">Sem árvores válidas.</p>;
@@ -271,15 +278,18 @@ export function BarraSegmentada({
       </div>
       <ul className="mt-3 flex flex-col gap-1.5 text-sm">
         {partes.map((p) => (
-          <li key={p.rotulo} className="flex items-center gap-2">
-            <span
-              className="inline-block size-2.5 shrink-0 rounded-sm"
-              style={{ background: p.cor }}
-            />
-            <span className="flex-1 truncate">{p.rotulo}</span>
-            <span className="tabular-nums text-texto-suave">
-              {p.quantidade.toLocaleString("pt-BR")}
-            </span>
+          <li key={p.rotulo}>
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block size-2.5 shrink-0 rounded-sm"
+                style={{ background: p.cor }}
+              />
+              <span className="flex-1 truncate">{p.rotulo}</span>
+              <span className="tabular-nums text-texto-suave">
+                {p.quantidade.toLocaleString("pt-BR")}
+              </span>
+            </div>
+            {p.acao && <div className="mt-1 pl-[18px]">{p.acao}</div>}
           </li>
         ))}
       </ul>
@@ -292,7 +302,8 @@ export function BarrasHorizontais({
   itens,
   cor = "#2a78d6",
 }: {
-  itens: { rotulo: string; quantidade: number; italico?: boolean }[];
+  /** `cor` de um item vale no lugar da cor da série (ex.: prioridade, com a paleta do mapa). */
+  itens: { rotulo: string; quantidade: number; italico?: boolean; cor?: string }[];
   cor?: string;
 }) {
   const maximo = Math.max(1, ...itens.map((i) => i.quantidade));
@@ -308,7 +319,7 @@ export function BarrasHorizontais({
           </span>
           <span
             className="h-3 rounded-r"
-            style={{ width: `${(item.quantidade / maximo) * 100}%`, background: cor }}
+            style={{ width: `${(item.quantidade / maximo) * 100}%`, background: item.cor ?? cor }}
           />
           <span className="w-8 text-right tabular-nums">
             {item.quantidade.toLocaleString("pt-BR")}

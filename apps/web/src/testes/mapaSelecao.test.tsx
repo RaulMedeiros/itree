@@ -443,6 +443,42 @@ describe("área na URL e árvore com área ativa (M-12)", () => {
     expect(areaDaUrl()).toBeNull();
   });
 
+  it("polígono com mais de 200 vértices é simplificado antes de ir para a URL, com aviso (M-19)", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await usuario.click(await screen.findByRole("button", { name: "Selecionar área" }));
+    await usuario.click(screen.getByRole("button", { name: "Polígono" }));
+    act(() => {
+      for (let i = 0; i < 300; i++) {
+        const ang = (2 * Math.PI * i) / 300;
+        mapa.emitir("click", {
+          point: { x: 400 + 300 * Math.cos(ang), y: 400 + 300 * Math.sin(ang) },
+          lngLat: { lng: -38.52 + 0.005 * Math.cos(ang), lat: -3.73 + 0.005 * Math.sin(ang) },
+        });
+      }
+      mapa.emitir("dblclick", {});
+    });
+    const { decodificarArea } = await import("../mapa/areaUrl");
+    await vi.waitFor(() => expect(areaDaUrl()).toBeTruthy());
+    const area = decodificarArea(areaDaUrl()!);
+    expect(area).not.toBeNull();
+    expect(area!.coordinates[0]!.length - 1).toBeLessThanOrEqual(200);
+    const aviso = await screen.findByText(/A área tinha 300 vértices e foi simplificada para/);
+    expect(aviso).toHaveTextContent(/tolerância de até \d+ m/);
+    expect(aviso).toHaveTextContent(/Pequenos detalhes do contorno se perderam/);
+    // A seleção usa a área simplificada, a mesma da URL.
+    await vi.waitFor(() => expect(pedidosSelecao.length).toBeGreaterThan(0));
+    const enviada = pedidosSelecao[0]!.geometria as { coordinates: unknown[][] };
+    expect(enviada.coordinates[0]!.length - 1).toBeLessThanOrEqual(200);
+  });
+
+  it("retângulo não gera aviso de simplificação", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await selecionarArea(usuario, mapa);
+    expect(screen.queryByText(/foi simplificada/)).toBeNull();
+  });
+
   it("restaura a área da URL: painel, contorno no mapa e o mesmo pedido à API", async () => {
     const { codificarArea } = await import("../mapa/areaUrl");
     const { poligonoDeVertices } = await import("../mapa/desenho");

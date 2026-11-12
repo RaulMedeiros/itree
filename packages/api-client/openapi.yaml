@@ -8,8 +8,9 @@ paths:
     get:
       operationId: auditoria_listar
       description: |-
-        Trilha de auditoria (RF-ADM-003). Somente leitura: eventos não podem ser
-        alterados nem removidos pela aplicação (RNF-SEG-004).
+        Trilha de auditoria (RF-ADM-003), agrupada no servidor: eventos iguais do mesmo
+        minuto viram um grupo, e `count` e a paginação contam grupos. Somente leitura:
+        eventos não podem ser alterados nem removidos pela aplicação (RNF-SEG-004).
       parameters:
       - in: query
         name: ate
@@ -73,7 +74,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedEventoAuditoriaList'
+                $ref: '#/components/schemas/PaginatedGrupoAuditoriaList'
           description: ''
   /api/v1/admin/usuarios:
     get:
@@ -4824,6 +4825,28 @@ components:
       required:
       - descartar
       - motivo
+    GrupoAuditoria:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador do evento mais recente do grupo.
+        quantidade:
+          type: integer
+          description: Total de eventos do grupo.
+        truncado:
+          type: boolean
+          description: Verdadeiro quando `eventos` traz só os mais recentes (no máximo
+            100).
+        eventos:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventoAuditoria'
+      required:
+      - eventos
+      - id
+      - quantidade
+      - truncado
     GrupoNotificacoes:
       type: object
       description: Notificações do mesmo tipo no mesmo dia, para o menu do sino.
@@ -6250,7 +6273,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Especie'
-    PaginatedEventoAuditoriaList:
+    PaginatedGrupoAuditoriaList:
       type: object
       required:
       - count
@@ -6272,7 +6295,7 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/EventoAuditoria'
+            $ref: '#/components/schemas/GrupoAuditoria'
     PaginatedInspecaoResumoList:
       type: object
       required:

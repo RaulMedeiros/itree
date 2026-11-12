@@ -2,7 +2,10 @@ import re
 from datetime import datetime
 
 from django.apps import apps
-from django.db.models import Q
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db.models import Case, Count, DateTimeField, Max, Q, TextField, Value, When
+from django.db.models.fields.json import KT
+from django.db.models.functions import Coalesce, Trunc
 from drf_spectacular.utils import (
     OpenApiParameter,
     extend_schema,
@@ -99,6 +102,44 @@ def _resolver_pais(eventos) -> dict[tuple[str, str], int]:
     }
 
 
+# Eventos iguais (mesma entidade, ação, autor, origem, justificativa, minuto e registro pai)
+# formam um grupo; a listagem pagina por grupo e devolve no máximo este número de eventos de cada.
+LIMITE_EVENTOS_POR_GRUPO = 100
+
+
+VAZIO = Value("", output_field=TextField())
+
+
+class _MaisRecentes(ArrayAgg):
+    """ARRAY_AGG cortado no banco: um grupo de milhares de eventos não vem inteiro."""
+
+    template = "(%(function)s(%(distinct)s%(expressions)s %(order_by)s))[1:%(limite)d]"
+
+
+def _chaves_do_grupo() -> dict:
+    """Expressões que definem o grupo, calculadas sobre os eventos."""
+    pai = Case(
+        *(
+            When(
+                pgh_model=modelo,
+                then=Coalesce(*(KT(f"pgh_data__{v}") for v in vinculos), VAZIO),
+            )
+            for modelo, vinculos in PAIS_DOS_FILHOS.items()
+        ),
+        default=VAZIO,
+    )
+    return {
+        "g_pai": pai,
+        "g_autor": Coalesce(KT("pgh_context__user"), KT("pgh_context__evento"), VAZIO),
+        "g_origem": Coalesce(KT("pgh_context__origem"), VAZIO),
+        "g_motivo": Coalesce(KT("pgh_context__motivo"), VAZIO),
+        "g_minuto": Trunc("pgh_created_at", "minute", output_field=DateTimeField()),
+    }
+
+
+CHAVES_DO_GRUPO = ("pgh_model", "pgh_label", "g_pai", "g_autor", "g_origem", "g_motivo", "g_minuto")
+
+
 ACOES = {"insert": "criacao", "update": "alteracao", "delete": "exclusao"}
 
 
@@ -188,6 +229,16 @@ class EventoAuditoriaSerializer(serializers.Serializer):
         return ACOES.get(obj.pgh_label, obj.pgh_label)
 
 
+class GrupoAuditoriaSerializer(serializers.Serializer):
+    id = serializers.CharField(help_text="Identificador do evento mais recente do grupo.")
+    quantidade = serializers.IntegerField(help_text="Total de eventos do grupo.")
+    truncado = serializers.BooleanField(
+        help_text="Verdadeiro quando `eventos` traz só os mais recentes "
+        f"(no máximo {LIMITE_EVENTOS_POR_GRUPO})."
+    )
+    eventos = EventoAuditoriaSerializer(many=True)
+
+
 def _data(valor: str | None, nome: str):
     if not valor:
         return None
@@ -212,10 +263,11 @@ def _data(valor: str | None, nome: str):
     )
 )
 class AuditoriaListView(generics.ListAPIView):
-    """Trilha de auditoria (RF-ADM-003). Somente leitura: eventos não podem ser
-    alterados nem removidos pela aplicação (RNF-SEG-004)."""
+    """Trilha de auditoria (RF-ADM-003), agrupada no servidor: eventos iguais do mesmo
+    minuto viram um grupo, e `count` e a paginação contam grupos. Somente leitura:
+    eventos não podem ser alterados nem removidos pela aplicação (RNF-SEG-004)."""
 
-    serializer_class = EventoAuditoriaSerializer
+    serializer_class = GrupoAuditoriaSerializer
     permission_classes = [requer(Permissao.ADMIN_AUDITORIA)]
 
     @staticmethod
@@ -236,13 +288,60 @@ class AuditoriaListView(generics.ListAPIView):
                 filtro |= Q(pgh_model=modelo, **{f"pgh_data__{campo}": str(pai.pk)}, **vazios)
         return filtro
 
-    def paginate_queryset(self, queryset):
-        pagina = super().paginate_queryset(queryset)
-        self._pais = _resolver_pais(pagina or [])
-        return pagina
-
     def get_serializer_context(self):
         return {**super().get_serializer_context(), "pais": getattr(self, "_pais", {})}
+
+    def list(self, request, *args, **kwargs):
+        grupos = self._agrupar(self.filter_queryset(self.get_queryset()))
+        pagina = self.paginate_queryset(grupos)
+        membros = self._membros(pagina)
+        self._pais = _resolver_pais([ev for lista in membros for ev in lista])
+        itens = [
+            {
+                "id": lista[0].pgh_slug,
+                "quantidade": g["quantidade"],
+                "truncado": g["quantidade"] > len(lista),
+                "eventos": lista,
+            }
+            for g, lista in zip(pagina, membros, strict=True)
+        ]
+        dados = GrupoAuditoriaSerializer(itens, many=True, context=self.get_serializer_context())
+        return self.get_paginated_response(dados.data)
+
+    @staticmethod
+    def _agrupar(qs):
+        """Um registro por grupo de eventos iguais, do mais recente ao mais antigo. A
+        paginação conta grupos, então nenhum é partido entre páginas."""
+        return (
+            qs.annotate(**_chaves_do_grupo())
+            .values(*CHAVES_DO_GRUPO)
+            .annotate(
+                quantidade=Count("pgh_id"),
+                ultimo=Max("pgh_created_at"),
+                recentes=_MaisRecentes(
+                    "pgh_id",
+                    order_by=("-pgh_created_at", "-pgh_id"),
+                    limite=LIMITE_EVENTOS_POR_GRUPO,
+                ),
+            )
+            .order_by("-ultimo", *CHAVES_DO_GRUPO)
+        )
+
+    def _membros(self, grupos) -> list[list]:
+        """Eventos de cada grupo da página (os mais recentes primeiro), em uma consulta."""
+        por_modelo: dict[str, set[int]] = {}
+        for g in grupos:
+            por_modelo.setdefault(g["pgh_model"], set()).update(g["recentes"])
+        if not por_modelo:
+            return []
+        filtro = Q()
+        for modelo, ids in por_modelo.items():
+            filtro |= Q(pgh_model=modelo, pgh_id__in=ids)
+        eventos = {
+            (ev.pgh_model, ev.pgh_id): ev
+            for ev in Events.objects.across(*por_modelo).filter(filtro)
+        }
+        return [[eventos[(g["pgh_model"], i)] for i in g["recentes"]] for g in grupos]
 
     def get_queryset(self):
         p = self.request.query_params

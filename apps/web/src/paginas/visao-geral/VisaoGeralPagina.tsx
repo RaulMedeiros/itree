@@ -1,4 +1,5 @@
 import {
+  useArvoresContadores,
   useEquipesListar,
   useIndicadoresPainel,
   useTerritoriosListar,
@@ -22,15 +23,16 @@ import {
   TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
-import { ROTULOS_CONDICAO } from "@itree/domain";
+import { ROTULOS_CONDICAO, ROTULOS_PRIORIDADE } from "@itree/domain";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
-import { CORES_CONDICAO } from "../../mapa/simbologia";
+import { CORES_CONDICAO, CORES_PRIORIDADE } from "../../mapa/simbologia";
+import { Botao } from "../../ui/botao";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Tabela, Td, Th, Linha } from "../../ui/tabela";
@@ -50,6 +52,7 @@ import {
   type PontoSerie,
   type Serie,
 } from "./graficos";
+import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { MapaResumo } from "./MapaResumo";
 import { PrimeirosPassos } from "./PrimeirosPassos";
 
@@ -541,6 +544,56 @@ function BairrosQuePedemAtencao({ dados }: { dados: BairrosAtencao }) {
 
 const FONTE_REGISTROS = "Registros da plataforma";
 
+const ROTULO_SEM_AVALIACAO = "Sem avaliação registrada";
+
+/**
+ * Parte "sem avaliação" da condição aparente: cria uma tarefa de inspeção para cada árvore válida
+ * sem avaliação (no bairro escolhido, se houver), pelo mesmo diálogo da lista de árvores. O lote
+ * respeita o limite do servidor: acima dele a ação fica desabilitada e pede para refinar o bairro.
+ */
+function AcaoSemAvaliacao({ quantidade, bairro }: { quantidade: number; bairro?: string }) {
+  const podeTarefas = usePermissao("tarefas.editar");
+  const [aberto, setAberto] = useState(false);
+  const filtros: Record<string, string> = {
+    condicao_aparente: "sem",
+    valida: "true",
+    ...(bairro ? { bairro } : {}),
+  };
+  const contadores = useArvoresContadores(
+    { condicao_aparente: "sem", valida: true, bairro },
+    { query: { enabled: podeTarefas && quantidade > 0 } },
+  );
+  if (!podeTarefas || quantidade === 0) return null;
+  const limite = contadores.data?.data.limite_tarefas_em_lote;
+  const acima = limite !== undefined && quantidade > limite;
+  return (
+    <>
+      <Botao
+        variante="secundario"
+        tamanho="pequeno"
+        disabled={acima}
+        onClick={() => setAberto(true)}
+      >
+        {quantidade === 1
+          ? "Criar tarefa de inspeção para a árvore sem avaliação"
+          : `Criar tarefas de inspeção para as ${quantidade.toLocaleString("pt-BR")} sem avaliação`}
+      </Botao>
+      {acima && (
+        <p className="mt-1 text-xs text-texto-suave">
+          O limite é de {limite.toLocaleString("pt-BR")} árvores por lote. Escolha um bairro para
+          dividir o trabalho.
+        </p>
+      )}
+      {aberto && (
+        <CriarTarefasDialogo
+          alvo={{ tipo: "lote", filtros, total: quantidade }}
+          aoFechar={() => setAberto(false)}
+        />
+      )}
+    </>
+  );
+}
+
 /** Cor da condição pelo rótulo devolvido pela API; texto da barra por luminância. */
 const COR_POR_ROTULO: Record<string, { cor: string; textoClaro: boolean }> = {
   ...Object.fromEntries(
@@ -549,17 +602,29 @@ const COR_POR_ROTULO: Record<string, { cor: string; textoClaro: boolean }> = {
       { cor: CORES_CONDICAO[c], textoClaro: c === "morta" },
     ]),
   ),
-  "Sem avaliação registrada": { cor: CORES_CONDICAO.nao_avaliada, textoClaro: false },
+  [ROTULO_SEM_AVALIACAO]: { cor: CORES_CONDICAO.nao_avaliada, textoClaro: false },
 };
 
+const ROTULO_SEM_PRIORIDADE = "Sem prioridade definida";
+
+/** Cor da prioridade pelo rótulo da API, a mesma do triângulo da ocorrência no mapa. */
+const COR_PRIORIDADE_POR_ROTULO: Record<string, string> = {
+  ...Object.fromEntries(
+    (Object.keys(ROTULOS_PRIORIDADE) as (keyof typeof ROTULOS_PRIORIDADE)[]).map((p) => [
+      ROTULOS_PRIORIDADE[p],
+      CORES_PRIORIDADE[p]!,
+    ]),
+  ),
+  [ROTULO_SEM_PRIORIDADE]: CORES_PRIORIDADE[""]!,
+};
+
+/** Da mais urgente para a menos; sem prioridade por último. */
+const ORDEM_PRIORIDADE = ["Urgente", "Alta", "Média", "Baixa", ROTULO_SEM_PRIORIDADE];
+const ordemPrioridade = (rotulo: string) =>
+  ORDEM_PRIORIDADE.includes(rotulo) ? ORDEM_PRIORIDADE.indexOf(rotulo) : ORDEM_PRIORIDADE.length;
+
 /** Ordem semântica da condição: da melhor para a pior; sem avaliação por último. */
-const ORDEM_CONDICAO = [
-  "Boa",
-  "Regular",
-  "Ruim",
-  "Aparentemente morta",
-  "Sem avaliação registrada",
-];
+const ORDEM_CONDICAO = ["Boa", "Regular", "Ruim", "Aparentemente morta", ROTULO_SEM_AVALIACAO];
 const ordemCondicao = (rotulo: string) =>
   ORDEM_CONDICAO.includes(rotulo) ? ORDEM_CONDICAO.indexOf(rotulo) : ORDEM_CONDICAO.length;
 
@@ -694,13 +759,13 @@ export function VisaoGeralPagina() {
       ) : consulta.isError ? (
         <Erro erro={consulta.error} aoTentarNovamente={() => void consulta.refetch()} />
       ) : (
-        <ConteudoPainel dados={dados!} />
+        <ConteudoPainel dados={dados!} bairro={bairro} />
       )}
     </div>
   );
 }
 
-function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
+function ConteudoPainel({ dados, bairro }: { dados: PainelIndicadores; bairro?: string }) {
   const indicadores = dados.indicadores as unknown as Indicador[];
   const porId = Object.fromEntries(indicadores.map((i) => [i.id, i]));
   const distribuicoes = dados.distribuicoes as unknown as Record<string, Distribuicao>;
@@ -762,6 +827,10 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
                     rotulo: c.rotulo,
                     quantidade: c.quantidade,
                     ...(COR_POR_ROTULO[c.rotulo] ?? { cor: "#a3ada7", textoClaro: false }),
+                    acao:
+                      c.rotulo === ROTULO_SEM_AVALIACAO ? (
+                        <AcaoSemAvaliacao quantidade={c.quantidade} bairro={bairro} />
+                      ) : undefined,
                   }))}
               />
             </Painel>
@@ -771,7 +840,12 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
               titulo={distribuicoes.ocorrencias_prioridade.titulo}
               definicao={distribuicoes.ocorrencias_prioridade.definicao}
             >
-              <BarrasHorizontais itens={distribuicoes.ocorrencias_prioridade.itens} cor="#eb6834" />
+              <BarrasHorizontais
+                itens={[...distribuicoes.ocorrencias_prioridade.itens]
+                  .sort((a, b) => ordemPrioridade(a.rotulo) - ordemPrioridade(b.rotulo))
+                  .map((o) => ({ ...o, cor: COR_PRIORIDADE_POR_ROTULO[o.rotulo] }))}
+                cor={CORES_PRIORIDADE[""]}
+              />
             </Painel>
           )}
         </div>
