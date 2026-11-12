@@ -14,7 +14,8 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
-import { BotaoExportarCsv, filtrosParaExportar } from "../../componentes/BotaoExportarCsv";
+import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
+import { filtrosParaExportar } from "../../componentes/filtrosExportacao";
 import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
 import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { PrazoEmLoteDialogo } from "../../componentes/PrazoEmLoteDialogo";

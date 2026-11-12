@@ -4,23 +4,7 @@ import { useState } from "react";
 
 import { usePermissao } from "../acesso/ContextoUsuario";
 import { Botao } from "../ui/botao";
-
-/** Parâmetros da lista em texto, como a exportação espera: sem vazios e sem página nem ordem. */
-export function filtrosParaExportar(
-  filtros: Record<string, string | number | boolean | undefined | null>,
-): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(filtros)
-      .filter(
-        ([k, v]) =>
-          v !== undefined &&
-          v !== null &&
-          v !== "" &&
-          !["pagina", "tamanho", "ordenar", "ordem"].includes(k),
-      )
-      .map(([k, v]) => [k, String(v)]),
-  );
-}
+import { filtrosParaExportar } from "./filtrosExportacao";
 
 /**
  * "Exportar CSV" de uma lista: baixa o que os filtros atuais alcançam, dentro do escopo de

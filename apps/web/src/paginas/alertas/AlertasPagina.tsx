@@ -9,7 +9,8 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { useBairroDoFiltro } from "../../layout/territorio";
-import { RAIO_PADRAO_M, SeletorRaio, type RaioM } from "./raio";
+import { RAIO_PADRAO_M, type RaioM } from "./opcoesRaio";
+import { SeletorRaio } from "./raio";
 import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { SeloStatusAlerta } from "../../componentes/selos";
