@@ -11,6 +11,7 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { RAIO_PADRAO_M, SeletorRaio, type RaioM } from "./raio";
 import { AjudaTermo } from "../../componentes/AjudaTermo";
+import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { Botao } from "../../ui/botao";
@@ -99,6 +100,13 @@ export function AlertasPagina() {
       <CabecalhoPagina
         titulo="Alertas ambientais"
         descricao="Sinais de fontes externas para triagem humana. Um alerta não é confirmação de infração."
+        acoes={
+          <BotaoExportarCsv
+            conjunto="alertas"
+            leitura="alertas.ler"
+            filtros={{ ...filtros, bairro, status: filtros.status ?? "abertos" }}
+          />
+        }
       />
       <AbasOcorrencias ativa="alertas" />
       <div className="mb-3 flex flex-wrap items-center gap-2">

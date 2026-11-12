@@ -14,6 +14,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
+import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
 import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { SeloEstadoTarefa } from "../../componentes/selos";
@@ -81,11 +82,22 @@ export function TarefasPagina() {
         titulo="Equipes e tarefas"
         descricao="Tarefas de campo por responsável, equipe e prazo. Crie tarefas de inspeção em lote a partir do inventário."
         acoes={
-          podeEditar && (
-            <Botao variante="secundario" asChild>
-              <Link to="/inventario/arvores">Criar tarefas a partir do inventário</Link>
-            </Botao>
-          )
+          <>
+            <BotaoExportarCsv
+              conjunto="tarefas"
+              leitura="tarefas.ler"
+              filtros={{
+                ...filtros,
+                bairro: territorioAtivo.id,
+                estado: filtros.estado ?? "abertas",
+              }}
+            />
+            {podeEditar && (
+              <Botao variante="secundario" asChild>
+                <Link to="/inventario/arvores">Criar tarefas a partir do inventário</Link>
+              </Botao>
+            )}
+          </>
         }
       />
       {equipes.data && equipes.data.data.count > 0 && (

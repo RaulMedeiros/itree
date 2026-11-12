@@ -97,6 +97,7 @@ const equipes = [
   },
 ];
 
+const exportacoes: URLSearchParams[] = [];
 const corpos: { caminho: string; corpo: unknown }[] = [];
 const registrar = (caminho: string, resultado: Record<string, unknown>) =>
   http.post(`${API}${caminho}`, async ({ request }) => {
@@ -116,6 +117,17 @@ const servidor = criarServidor(
   http.get(`${API}/api/v1/tarefas`, () =>
     HttpResponse.json(pagina([tarefa(1), tarefa(2), tarefa(3)])),
   ),
+  http.get(`${API}/api/v1/inspecoes`, () => HttpResponse.json(pagina([]))),
+  http.get(`${API}/api/v1/alertas`, () => HttpResponse.json(pagina([]))),
+  http.get(`${API}/api/v1/relatorios/exportar`, ({ request }) => {
+    exportacoes.push(new URL(request.url).searchParams);
+    return new HttpResponse("a;b\n", {
+      headers: {
+        "Content-Type": "text/csv",
+        "Content-Disposition": 'attachment; filename="itree-teste.csv"',
+      },
+    });
+  }),
   registrar("/api/v1/ocorrencias/lote/prioridade", { atualizadas: 2, ignoradas: [] }),
   registrar("/api/v1/ocorrencias/lote/reatribuir", {
     atualizadas: 1,
@@ -125,12 +137,15 @@ const servidor = criarServidor(
 );
 
 beforeAll(() => {
+  URL.createObjectURL = () => "blob:teste";
+  URL.revokeObjectURL = () => undefined;
   servidor.listen({ onUnhandledRequest: "error" });
   configurarCliente({ urlBase: API, origem: "web", obterToken: () => "t" });
 });
 afterEach(() => {
   servidor.resetHandlers();
   corpos.length = 0;
+  exportacoes.length = 0;
   eu = COORDENADOR;
 });
 afterAll(() => servidor.close());
@@ -239,5 +254,38 @@ describe("G-07: ações em lote nas tarefas", () => {
     await abrir("/equipes-tarefas");
     await screen.findByText("TAR-000001");
     expect(screen.queryByRole("checkbox", { name: /Selecionar/ })).toBeNull();
+  });
+});
+
+describe("G-08: Exportar CSV nas listas", () => {
+  it.each([
+    ["/ocorrencias", "ocorrencias", { estado: "abertas" }],
+    [
+      "/ocorrencias?prioridade=alta&atrasadas=true",
+      "ocorrencias",
+      { prioridade: "alta", atrasadas: "true", estado: "abertas" },
+    ],
+    ["/inspecoes?condicao=ruim", "inspecoes", { condicao: "ruim", estado: "em_revisao" }],
+    ["/equipes-tarefas?atrasadas=true", "tarefas", { atrasadas: "true", estado: "abertas" }],
+    ["/alertas?fonte=inpe_focos", "alertas", { fonte: "inpe_focos", status: "abertos" }],
+  ])("%s exporta o conjunto com os filtros atuais", async (caminho, conjunto, esperados) => {
+    const usuario = userEvent.setup();
+    await abrir(caminho);
+    await usuario.click(await screen.findByRole("button", { name: "Exportar CSV" }));
+    await vi.waitFor(() => expect(exportacoes).toHaveLength(1));
+    const params = Object.fromEntries(exportacoes[0]!.entries());
+    expect(params).toMatchObject({ conjunto, formato: "csv", ...esperados });
+    expect(params).not.toHaveProperty("pagina");
+    expect(params).not.toHaveProperty("tamanho");
+  });
+
+  it("não aparece sem a permissão de exportar", async () => {
+    eu = {
+      ...COORDENADOR,
+      permissoes: COORDENADOR.permissoes.filter((p) => p !== "relatorios.exportar"),
+    };
+    await abrir("/ocorrencias");
+    await screen.findByText("OCO-000001");
+    expect(screen.queryByRole("button", { name: "Exportar CSV" })).toBeNull();
   });
 });

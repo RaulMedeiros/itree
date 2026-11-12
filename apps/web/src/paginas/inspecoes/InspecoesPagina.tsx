@@ -3,6 +3,7 @@ import { ROTULOS_CONDICAO, ROTULOS_ESTADO_INSPECAO } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { SeloEstadoInspecao } from "../../componentes/selos";
+import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { CORES_CONDICAO } from "../../mapa/simbologia";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
@@ -70,6 +71,13 @@ export function InspecoesPagina() {
       <CabecalhoPagina
         titulo="Inspeções"
         descricao="Inspeções feitas em campo pelo aplicativo. A revisão decide o que entra no cadastro da árvore."
+        acoes={
+          <BotaoExportarCsv
+            conjunto="inspecoes"
+            leitura="inspecoes.ler"
+            filtros={{ ...filtros, bairro, estado: filtros.estado ?? "em_revisao" }}
+          />
+        }
       />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Selecao

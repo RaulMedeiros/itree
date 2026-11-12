@@ -12,6 +12,7 @@ import { Map as IconeMapa, Plus, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
+import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
@@ -117,6 +118,11 @@ export function OcorrenciasPagina() {
                 <IconeMapa /> Ver no mapa
               </Link>
             </Botao>
+            <BotaoExportarCsv
+              conjunto="ocorrencias"
+              leitura="ocorrencias.ler"
+              filtros={{ ...filtros, bairro, estado }}
+            />
             {podeRegistrar && (
               <Botao onClick={() => setNova(true)}>
                 <Plus /> Registrar ocorrência

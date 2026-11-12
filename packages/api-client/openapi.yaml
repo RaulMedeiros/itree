@@ -2646,12 +2646,14 @@ paths:
   /api/v1/relatorios/exportar:
     get:
       operationId: relatorios_exportar
+      description: Os demais parâmetros são os filtros da listagem do conjunto escolhido
+        (sem paginação), sempre dentro do escopo territorial de quem exporta.
       parameters:
       - in: query
         name: conjunto
         schema:
           type: string
-        description: arvores | ocorrencias | alertas
+        description: arvores | ocorrencias | inspecoes | tarefas | alertas
         required: true
       - in: query
         name: formato

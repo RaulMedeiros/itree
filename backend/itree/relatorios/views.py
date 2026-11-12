@@ -21,14 +21,18 @@ from rest_framework.response import Response
 
 from itree.alertas.escopo import filtrar_alertas_por_escopo
 from itree.alertas.models import AlertaAmbiental
+from itree.alertas.views import filtrar_alertas
 from itree.contas.acesso import filtrar_por_escopo
 from itree.indicadores import externos
 from itree.indicadores.models import IndicadorTerritorialExterno
 from itree.inspecoes.models import EstadoInspecao, Inspecao
+from itree.inspecoes.views import filtrar_inspecoes
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
 from itree.ocorrencias.models import EstadoOcorrencia, Ocorrencia
 from itree.ocorrencias.views import filtrar_ocorrencias
+from itree.tarefas.models import ESTADOS_FINAIS_TAREFA, Tarefa
+from itree.tarefas.views import filtrar_tarefas
 from itree.territorio.models import Territorio, TipoTerritorio
 
 from .models import Exportacao
@@ -471,10 +475,104 @@ def tabela_ocorrencias(qs):
     return colunas, [(linha(o), o.geom) for o in qs.order_by("numero")[: LIMITE_EXPORTACAO + 1]]
 
 
+def _dados_inspecoes(usuario, params):
+    qs = filtrar_inspecoes(
+        filtrar_por_escopo(
+            Inspecao.objects.select_related("arvore", "arvore__bairro", "tecnico", "revisor"),
+            usuario,
+            campo_geom="arvore__geom",
+        ),
+        params,
+    )
+    colunas = [
+        "codigo",
+        "arvore",
+        "bairro",
+        "tecnico",
+        "realizada_em",
+        "condicao_aparente",
+        "sinais",
+        "requer_encaminhamento",
+        "estado",
+        "revisor",
+        "validada_em",
+        "recebida_em",
+        "origem",
+    ]
+
+    def linha(i):
+        return {
+            "codigo": i.codigo,
+            "arvore": i.arvore.codigo,
+            "bairro": i.arvore.bairro.nome if i.arvore.bairro else "",
+            "tecnico": i.tecnico.nome or i.tecnico.email,
+            "realizada_em": i.realizada_em.isoformat(),
+            "condicao_aparente": i.condicao_aparente,
+            "sinais": ", ".join(i.sinais),
+            "requer_encaminhamento": i.requer_encaminhamento,
+            "estado": i.estado,
+            "revisor": (i.revisor.nome or i.revisor.email) if i.revisor else "",
+            "validada_em": i.validada_em.isoformat() if i.validada_em else "",
+            "recebida_em": i.recebida_em.isoformat(),
+            "origem": i.origem,
+        }
+
+    # A geometria é a da árvore inspecionada (a do GPS pode faltar e é só conferência).
+    return colunas, [
+        (linha(i), i.arvore.geom) for i in qs.order_by("numero")[: LIMITE_EXPORTACAO + 1]
+    ]
+
+
+def _dados_tarefas(usuario, params):
+    qs = filtrar_tarefas(
+        filtrar_por_escopo(
+            Tarefa.objects.select_related("arvore", "ocorrencia", "responsavel", "equipe"), usuario
+        ),
+        usuario,
+        params,
+    )
+    colunas = [
+        "codigo",
+        "tipo",
+        "alvo",
+        "descricao",
+        "responsavel",
+        "equipe",
+        "prazo",
+        "prioridade",
+        "estado",
+        "atrasada",
+        "motivo_estado",
+        "criada_em",
+        "concluida_em",
+    ]
+    hoje = timezone.localdate()
+
+    def linha(t):
+        alvo = t.arvore or t.ocorrencia
+        return {
+            "codigo": t.codigo,
+            "tipo": t.tipo,
+            "alvo": alvo.codigo if alvo else "",
+            "descricao": t.descricao,
+            "responsavel": (t.responsavel.nome or t.responsavel.email) if t.responsavel else "",
+            "equipe": t.equipe.nome if t.equipe else "",
+            "prazo": t.prazo.isoformat() if t.prazo else "",
+            "prioridade": t.prioridade,
+            "estado": t.estado,
+            "atrasada": bool(t.prazo and t.estado not in ESTADOS_FINAIS_TAREFA and t.prazo < hoje),
+            "motivo_estado": t.motivo_estado,
+            "criada_em": t.criado_em.isoformat(),
+            "concluida_em": t.concluida_em.isoformat() if t.concluida_em else "",
+        }
+
+    return colunas, [(linha(t), t.geom) for t in qs.order_by("numero")[: LIMITE_EXPORTACAO + 1]]
+
+
 def _dados_alertas(usuario, params):
     qs = filtrar_alertas_por_escopo(AlertaAmbiental.objects.all(), usuario)
-    if s := params.get("status"):
-        qs = qs.filter(status__in=s.split(","))
+    # Sem `status`, exporta todos (a lista da tela sempre envia o filtro que está vendo).
+    qs = filtrar_alertas(qs, {"status": "todos", **params})
     colunas = [
         "codigo",
         "fonte",
@@ -506,6 +604,8 @@ def _dados_alertas(usuario, params):
 CONJUNTOS = {
     "arvores": ("Inventário de árvores", "inventario.ler", _dados_arvores),
     "ocorrencias": ("Ocorrências", "ocorrencias.ler", _dados_ocorrencias),
+    "inspecoes": ("Inspeções", "inspecoes.ler", _dados_inspecoes),
+    "tarefas": ("Tarefas", "tarefas.ler", _dados_tarefas),
     "alertas": (
         "Alertas ambientais (sinais para análise, não confirmação de infração)",
         "alertas.ler",
@@ -564,7 +664,10 @@ def _metadados(usuario, titulo: str, params: dict, linhas: int) -> dict:
     operation_id="relatorios_exportar",
     parameters=[
         OpenApiParameter(
-            "conjunto", str, required=True, description="arvores | ocorrencias | alertas"
+            "conjunto",
+            str,
+            required=True,
+            description="arvores | ocorrencias | inspecoes | tarefas | alertas",
         ),
         OpenApiParameter("formato", str, required=True, description="csv | xlsx | geojson"),
         OpenApiParameter(
@@ -573,11 +676,17 @@ def _metadados(usuario, titulo: str, params: dict, linhas: int) -> dict:
             description="Só para o conjunto arvores: IDs separados por vírgula (seleção na lista).",
         ),
     ],
+    description="Os demais parâmetros são os filtros da listagem do conjunto escolhido "
+    "(sem paginação), sempre dentro do escopo territorial de quem exporta.",
     responses={(200, "application/octet-stream"): OpenApiTypes.BINARY},
 )
 @api_view(["GET"])
 def exportar(request: Request):
-    p = {k: v for k, v in request.query_params.items() if k not in ("conjunto", "formato")}
+    p = {
+        k: v
+        for k, v in request.query_params.items()
+        if k not in ("conjunto", "formato", "pagina", "tamanho")
+    }
     conjunto, formato = request.query_params.get("conjunto"), request.query_params.get("formato")
     if conjunto not in CONJUNTOS:
         raise ValidationError({"conjunto": ["Conjunto desconhecido."]})
