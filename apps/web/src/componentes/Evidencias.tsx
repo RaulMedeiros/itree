@@ -7,16 +7,18 @@ import {
   useEvidenciasRemover,
   type EvidenciasIniciarEnvioMutationBody,
   TipoConteudoEnum,
+  type Evidencia,
 } from "@itree/api-client";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileText, ImagePlus, Trash2 } from "lucide-react";
+import { FileText, ImagePlus } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Botao } from "../ui/botao";
 import { AreaTexto, Campo } from "../ui/campos";
 import { Dialogo } from "../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../ui/estados";
-import { formatarDataHora } from "../util/formatos";
+import { MenuAcoes, type ItemMenu } from "../ui/menu";
+import { formatarData, formatarDataHora } from "../util/formatos";
 import { SeloIlustracao } from "./selos";
 
 const TIPOS_ACEITOS = Object.values(TipoConteudoEnum).join(",");
@@ -58,6 +60,7 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [removendo, setRemovendo] = useState<string | null>(null);
+  const [ampliada, setAmpliada] = useState<Evidencia | null>(null);
 
   const atualizar = () =>
     cliente.invalidateQueries({ queryKey: getEvidenciasListarQueryKey(alvo) });
@@ -106,7 +109,7 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
           {consulta.data.data.map((ev) => (
             <li
               key={ev.id}
-              className="group overflow-hidden rounded-lg border border-borda bg-superficie"
+              className="overflow-hidden rounded-lg border border-borda bg-superficie"
             >
               <a
                 href={ev.url ?? undefined}
@@ -155,15 +158,10 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
                     </p>
                   )}
                 </div>
-                {podeEnviar && (
-                  <button
-                    className="rounded p-1 text-texto-suave hover:bg-perigo-clara hover:text-perigo focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
-                    aria-label={`Remover ${ev.nome_original}`}
-                    onClick={() => setRemovendo(ev.id)}
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                )}
+                <MenuAcoes
+                  rotulo={`Ações de ${ev.nome_original}`}
+                  itens={itensDoMenu(ev, podeEnviar, setAmpliada, setRemovendo)}
+                />
               </div>
             </li>
           ))}
@@ -206,12 +204,75 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
         </Campo>
       </Dialogo>
 
+      <AmpliarEvidenciaDialogo evidencia={ampliada} aoFechar={() => setAmpliada(null)} />
       <RemoverEvidenciaDialogo
         evidenciaId={removendo}
         aoFechar={() => setRemovendo(null)}
         aoRemover={() => void atualizar()}
       />
     </div>
+  );
+}
+
+/** "Ampliar" vale para imagens; documentos abrem em nova aba. "Remover" só para quem edita. */
+function itensDoMenu(
+  ev: Evidencia,
+  podeRemover: boolean,
+  ampliar: (e: Evidencia) => void,
+  remover: (id: string) => void,
+): ItemMenu[] {
+  const itens: ItemMenu[] = [];
+  if (ev.url) {
+    const url = ev.url;
+    itens.push(
+      ev.eh_imagem
+        ? { rotulo: "Ampliar", aoEscolher: () => ampliar(ev) }
+        : {
+            rotulo: "Abrir em nova aba",
+            aoEscolher: () => void window.open(url, "_blank", "noopener,noreferrer"),
+          },
+    );
+  }
+  if (podeRemover)
+    itens.push({ rotulo: "Remover", perigo: true, aoEscolher: () => remover(ev.id) });
+  return itens;
+}
+
+/** Imagem da evidência em tamanho grande, com a descrição, a autoria e as datas. */
+function AmpliarEvidenciaDialogo({
+  evidencia,
+  aoFechar,
+}: {
+  evidencia: Evidencia | null;
+  aoFechar: () => void;
+}) {
+  return (
+    <Dialogo
+      aberto={evidencia !== null}
+      aoMudar={(v) => !v && aoFechar()}
+      titulo={evidencia ? evidencia.descricao || evidencia.nome_original : "Evidência"}
+      largura="max-w-4xl"
+    >
+      {evidencia?.url && (
+        <>
+          <img
+            src={evidencia.url}
+            alt={evidencia.descricao || evidencia.nome_original}
+            className="max-h-[70vh] w-full rounded object-contain"
+          />
+          <p className="mt-3 text-sm">{evidencia.descricao || "Sem descrição."}</p>
+          <p className="text-xs text-texto-suave">
+            Enviada por {evidencia.enviada_por_nome || "autor não informado"} em{" "}
+            {formatarData(evidencia.criado_em)}. Arquivo: {evidencia.nome_original}.
+          </p>
+          {evidencia.capturada_em && (
+            <p className="text-xs text-texto-suave">
+              Capturada em {formatarData(evidencia.capturada_em)}.
+            </p>
+          )}
+        </>
+      )}
+    </Dialogo>
   );
 }
 
