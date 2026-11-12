@@ -234,7 +234,7 @@ class NovaInferenciaSerializer(serializers.Serializer):
             chave in texto for chave in ("confianca", "confidence", "probabilidade", "probability")
         ):
             raise serializers.ValidationError(
-                "Envie o resultado sem percentuais de confiança: a calibração ainda não foi validada (DP-13)."
+                "Envie o resultado sem percentuais de confiança: a calibração ainda não foi validada."
             )
         return valor
 

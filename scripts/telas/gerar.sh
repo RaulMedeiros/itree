@@ -9,6 +9,10 @@ AQUI="$(cd "$(dirname "$0")" && pwd)"
 RAIZ="$(cd "$AQUI/../.." && pwd)"
 cd "$RAIZ/infra/docker"
 
+# Os dados das capturas são sintéticos: a pilha sobe em ambiente de demonstração, para a
+# API declarar isso e o painel exibir a faixa de aviso (sobreposição, sem mudar o compose padrão).
+export COMPOSE_FILE="compose.yml:compose.demonstracao.yml"
+
 docker compose --profile completo down -v
 docker compose --profile completo up -d --no-build
 until curl -sf http://localhost:8080/realms/itree/.well-known/openid-configuration >/dev/null; do sleep 3; done

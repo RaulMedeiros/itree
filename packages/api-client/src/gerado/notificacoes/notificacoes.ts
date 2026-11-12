@@ -26,7 +26,10 @@ import type {
 
 import type {
   ContagemNaoLidas,
+  GrupoNotificacoes,
+  LerGrupoRequest,
   Notificacao,
+  NotificacoesAgrupadasParams,
   NotificacoesListarParams,
   PaginatedNotificacaoList
 } from '../modelos';
@@ -251,7 +254,125 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getNotificacoesLerMutationOptions(options), queryClient);
     }
-    export type notificacoesContarResponse200 = {
+    export type notificacoesAgrupadasResponse200 = {
+  data: GrupoNotificacoes[]
+  status: 200
+}
+
+export type notificacoesAgrupadasResponseSuccess = (notificacoesAgrupadasResponse200) & {
+  headers: Headers;
+};
+;
+
+export type notificacoesAgrupadasResponse = (notificacoesAgrupadasResponseSuccess)
+
+export const getNotificacoesAgrupadasUrl = (params?: NotificacoesAgrupadasParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/notificacoes/agrupadas?${stringifiedParams}` : `/api/v1/notificacoes/agrupadas`
+}
+
+/**
+ * Eventos do mesmo tipo no mesmo dia viram um item ("5 inspeções aguardando revisão").
+ *
+ * Grupos com não lidas vêm primeiro; dentro de cada faixa, o mais recente antes.
+ */
+export const notificacoesAgrupadas = async (params?: NotificacoesAgrupadasParams, options?: Parameters<typeof requisicao>[1]): Promise<notificacoesAgrupadasResponse> => {
+
+  return requisicao<notificacoesAgrupadasResponse>(getNotificacoesAgrupadasUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getNotificacoesAgrupadasQueryKey = (params?: NotificacoesAgrupadasParams,) => {
+    return [
+    `/api/v1/notificacoes/agrupadas`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getNotificacoesAgrupadasQueryOptions = <TData = Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError = unknown>(params?: NotificacoesAgrupadasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getNotificacoesAgrupadasQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof notificacoesAgrupadas>>> = ({ signal }) => notificacoesAgrupadas(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type NotificacoesAgrupadasQueryResult = NonNullable<Awaited<ReturnType<typeof notificacoesAgrupadas>>>
+export type NotificacoesAgrupadasQueryError = unknown
+
+
+export function useNotificacoesAgrupadas<TData = Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError = unknown>(
+ params: undefined |  NotificacoesAgrupadasParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof notificacoesAgrupadas>>,
+          TError,
+          Awaited<ReturnType<typeof notificacoesAgrupadas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useNotificacoesAgrupadas<TData = Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError = unknown>(
+ params?: NotificacoesAgrupadasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof notificacoesAgrupadas>>,
+          TError,
+          Awaited<ReturnType<typeof notificacoesAgrupadas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useNotificacoesAgrupadas<TData = Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError = unknown>(
+ params?: NotificacoesAgrupadasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useNotificacoesAgrupadas<TData = Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError = unknown>(
+ params?: NotificacoesAgrupadasParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAgrupadas>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getNotificacoesAgrupadasQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type notificacoesContarResponse200 = {
   data: ContagemNaoLidas
   status: 200
 }
@@ -360,7 +481,103 @@ export function useNotificacoesContar<TData = Awaited<ReturnType<typeof notifica
 
 
 
-export type notificacoesLerTodasResponse200 = {
+export type notificacoesLerGrupoResponse200 = {
+  data: ContagemNaoLidas
+  status: 200
+}
+
+export type notificacoesLerGrupoResponseSuccess = (notificacoesLerGrupoResponse200) & {
+  headers: Headers;
+};
+;
+
+export type notificacoesLerGrupoResponse = (notificacoesLerGrupoResponseSuccess)
+
+export const getNotificacoesLerGrupoUrl = () => {
+
+
+
+
+  return `/api/v1/notificacoes/ler-grupo`
+}
+
+/**
+ * Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
+ */
+export const notificacoesLerGrupo = async (lerGrupoRequest: LerGrupoRequest, options?: Parameters<typeof requisicao>[1]): Promise<notificacoesLerGrupoResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<notificacoesLerGrupoResponse>(getNotificacoesLerGrupoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(lerGrupoRequest)
+  }
+);}
+
+
+
+
+
+export const getNotificacoesLerGrupoMutationKey = () => ['notificacoesLerGrupo'] as const;
+
+export const getNotificacoesLerGrupoMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificacoesLerGrupo>>, TError,NotificacoesLerGrupoMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof notificacoesLerGrupo>>, TError,NotificacoesLerGrupoMutationVariables, TContext> => {
+
+const mutationKey = getNotificacoesLerGrupoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof notificacoesLerGrupo>>, NotificacoesLerGrupoMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  notificacoesLerGrupo(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type NotificacoesLerGrupoMutationResult = NonNullable<Awaited<ReturnType<typeof notificacoesLerGrupo>>>
+    export type NotificacoesLerGrupoMutationBody = LerGrupoRequest
+    export type NotificacoesLerGrupoMutationError = unknown
+    export type NotificacoesLerGrupoMutationVariables = {data: LerGrupoRequest}
+
+    export const useNotificacoesLerGrupo = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificacoesLerGrupo>>, TError,NotificacoesLerGrupoMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof notificacoesLerGrupo>>,
+        TError,
+        NotificacoesLerGrupoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getNotificacoesLerGrupoMutationOptions(options), queryClient);
+    }
+    export type notificacoesLerTodasResponse200 = {
   data: ContagemNaoLidas
   status: 200
 }

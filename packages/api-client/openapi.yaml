@@ -436,6 +436,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/Alerta'
           description: ''
+  /api/v1/alertas/fontes:
+    get:
+      operationId: alertas_fontes
+      description: Última coleta e próxima coleta de cada fonte, pelo agendamento
+        configurado.
+      tags:
+      - alertas
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FonteEstado'
+          description: ''
   /api/v1/alertas/ingestoes:
     get:
       operationId: alertas_ingestoes
@@ -1343,6 +1361,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/Evidencia'
           description: ''
+  /api/v1/implantacao/primeiros-passos:
+    get:
+      operationId: implantacao_primeiros_passos
+      description: Checklist "Primeiros passos" da implantação; `completo` esconde
+        o cartão na visão geral.
+      tags:
+      - implantacao
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrimeirosPassos'
+          description: ''
   /api/v1/importacoes:
     get:
       operationId: importacoes_listar
@@ -2119,6 +2153,11 @@ paths:
       operationId: notificacoes_listar
       description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
       parameters:
+      - in: query
+        name: lida
+        schema:
+          type: boolean
+        description: true = só lidas; false = só não lidas.
       - name: pagina
         required: false
         in: query
@@ -2131,6 +2170,11 @@ paths:
         description: Número de resultados a serem retornados por página.
         schema:
           type: integer
+      - in: query
+        name: tipo
+        schema:
+          type: string
+        description: Um tipo de notificação.
       tags:
       - notificacoes
       security:
@@ -2165,12 +2209,65 @@ paths:
               schema:
                 $ref: '#/components/schemas/Notificacao'
           description: ''
+  /api/v1/notificacoes/agrupadas:
+    get:
+      operationId: notificacoes_agrupadas
+      description: |-
+        Eventos do mesmo tipo no mesmo dia viram um item ("5 inspeções aguardando revisão").
+
+        Grupos com não lidas vêm primeiro; dentro de cada faixa, o mais recente antes.
+      parameters:
+      - in: query
+        name: limite
+        schema:
+          type: integer
+        description: Máximo de grupos (padrão 8).
+      tags:
+      - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GrupoNotificacoes'
+          description: ''
   /api/v1/notificacoes/contagem:
     get:
       operationId: notificacoes_contar
       description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
       tags:
       - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContagemNaoLidas'
+          description: ''
+  /api/v1/notificacoes/ler-grupo:
+    post:
+      operationId: notificacoes_ler_grupo
+      description: Notificações do próprio usuário (RF-SHELL-002). Não lidas primeiro.
+      tags:
+      - notificacoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LerGrupoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LerGrupoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LerGrupoRequest'
+        required: true
       security:
       - oidc: []
       responses:
@@ -4541,6 +4638,43 @@ components:
         * `inpe_focos` - INPE — BDQueimadas (focos de calor)
         * `inpe_deter` - INPE — TerraBrasilis/DETER
         * `mapbiomas` - MapBiomas Alerta
+    FonteEstado:
+      type: object
+      description: 'Estado de cada fonte externa de alertas: coleta feita e coleta
+        prevista.'
+      properties:
+        fonte:
+          $ref: '#/components/schemas/FonteAlertaEnum'
+        rotulo:
+          type: string
+        automatica:
+          type: boolean
+          description: A fonte tem URL em ALERTAS_FONTES e é coletada pelo agendador.
+        intervalo_horas:
+          type: integer
+          nullable: true
+        ultima_coleta:
+          type: string
+          format: date-time
+          nullable: true
+          description: Início da última execução, automática ou manual.
+        ultima_coleta_sucesso:
+          type: boolean
+          nullable: true
+        proxima_coleta:
+          type: string
+          format: date-time
+          nullable: true
+          description: Última coleta automática mais o intervalo configurado. Nulo
+            se a fonte não é automática ou se o agendador ainda não a executou.
+      required:
+      - automatica
+      - fonte
+      - intervalo_horas
+      - proxima_coleta
+      - rotulo
+      - ultima_coleta
+      - ultima_coleta_sucesso
     FormatoEnum:
       enum:
       - csv
@@ -4569,6 +4703,44 @@ components:
       required:
       - descartar
       - motivo
+    GrupoNotificacoes:
+      type: object
+      description: Notificações do mesmo tipo no mesmo dia, para o menu do sino.
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoNotificacaoEnum'
+        dia:
+          type: string
+          format: date
+          description: Dia no fuso de Fortaleza.
+        quantidade:
+          type: integer
+        nao_lidas:
+          type: integer
+        lida:
+          type: boolean
+          description: Verdadeiro quando não resta nenhuma não lida.
+        titulo:
+          type: string
+          description: 'Com mais de uma: "5 inspeções aguardando revisão"; com uma,
+            o título dela.'
+        texto:
+          type: string
+        link:
+          type: string
+        ultima_em:
+          type: string
+          format: date-time
+      required:
+      - dia
+      - lida
+      - link
+      - nao_lidas
+      - quantidade
+      - texto
+      - tipo
+      - titulo
+      - ultima_em
     IdentificadorExterno:
       type: object
       properties:
@@ -4720,9 +4892,7 @@ components:
           maxLength: 200
         licenca:
           type: string
-          description: Licença ou termos de uso da fonte; registra quando não é declarada
-            (DP-11).
-          maxLength: 300
+          readOnly: true
         data_referencia:
           type: string
           format: date
@@ -4736,6 +4906,7 @@ components:
       - fonte
       - id
       - iniciada_em
+      - licenca
       - origem
       - usuario
     Inspecao:
@@ -5080,6 +5251,17 @@ components:
       - prioridade
       - risco_confirmado
       - tipo
+    LerGrupoRequest:
+      type: object
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoNotificacaoEnum'
+        dia:
+          type: string
+          format: date
+      required:
+      - dia
+      - tipo
     LinhaImportacao:
       type: object
       properties:
@@ -5404,7 +5586,7 @@ components:
           readOnly: true
         tipo:
           allOf:
-          - $ref: '#/components/schemas/NotificacaoTipoEnum'
+          - $ref: '#/components/schemas/TipoNotificacaoEnum'
           readOnly: true
         titulo:
           type: string
@@ -5437,24 +5619,6 @@ components:
       - texto
       - tipo
       - titulo
-    NotificacaoTipoEnum:
-      enum:
-      - tarefa_atribuida
-      - tarefa_concluida
-      - tarefa_bloqueada
-      - risco_confirmado
-      - inspecao_devolvida
-      - inspecao_para_revisao
-      - alerta_novo
-      type: string
-      description: |-
-        * `tarefa_atribuida` - Tarefa atribuída
-        * `tarefa_concluida` - Tarefa concluída
-        * `tarefa_bloqueada` - Tarefa bloqueada
-        * `risco_confirmado` - Risco confirmado
-        * `inspecao_devolvida` - Inspeção devolvida
-        * `inspecao_para_revisao` - Inspeção para revisão
-        * `alerta_novo` - Alerta ambiental novo
     NovaEvidenciaRequest:
       type: object
       properties:
@@ -6235,6 +6399,29 @@ components:
       required:
       - arvore_a
       - arvore_b
+    Passo:
+      type: object
+      properties:
+        id:
+          type: string
+        titulo:
+          type: string
+        descricao:
+          type: string
+        concluido:
+          type: boolean
+        detalhe:
+          type: string
+        link:
+          type: string
+          description: Caminho da tela onde o passo é feito.
+      required:
+      - concluido
+      - descricao
+      - detalhe
+      - id
+      - link
+      - titulo
     PatchedArvoreRequest:
       type: object
       description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).
@@ -6525,6 +6712,18 @@ components:
         * `admin.auditoria` - Consultar auditoria
         * `admin.territorios` - Administrar territórios
         * `admin.configuracao` - Administrar catálogos e integrações
+    PrimeirosPassos:
+      type: object
+      properties:
+        completo:
+          type: boolean
+        passos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Passo'
+      required:
+      - completo
+      - passos
     PrioridadeEnum:
       enum:
       - baixa
@@ -7200,6 +7399,24 @@ components:
         * `cap` - CAP (circunferência à altura do peito)
         * `diametro_copa` - Diâmetro da copa
         * `altura_bifurcacao` - Altura da 1ª bifurcação
+    TipoNotificacaoEnum:
+      enum:
+      - tarefa_atribuida
+      - tarefa_concluida
+      - tarefa_bloqueada
+      - risco_confirmado
+      - inspecao_devolvida
+      - inspecao_para_revisao
+      - alerta_novo
+      type: string
+      description: |-
+        * `tarefa_atribuida` - Tarefa atribuída
+        * `tarefa_concluida` - Tarefa concluída
+        * `tarefa_bloqueada` - Tarefa bloqueada
+        * `risco_confirmado` - Risco confirmado
+        * `inspecao_devolvida` - Inspeção devolvida
+        * `inspecao_para_revisao` - Inspeção para revisão
+        * `alerta_novo` - Alerta ambiental novo
     TipoOcorrencia:
       type: object
       properties:

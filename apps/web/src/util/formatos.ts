@@ -194,3 +194,25 @@ function contracao(nome: string): string {
   if (SIGLAS_FEMININAS.has(primeira) || /(a|ã|ção|são)$/.test(primeira)) return "da";
   return "de";
 }
+
+/** Intervalo em linguagem corrente: "5 minutos", "3 horas", "2 dias" (arredonda para baixo). */
+function descreverIntervalo(ms: number): string {
+  const minutos = Math.floor(ms / 60_000);
+  if (minutos < 1) return "menos de 1 minuto";
+  if (minutos < 60) return plural(minutos, "minuto");
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return plural(horas, "hora");
+  return plural(Math.floor(horas / 24), "dia");
+}
+
+/** "há 3 horas": tempo desde um instante passado. */
+export function descreverHa(instante: string, agora: Date = new Date()): string {
+  const ms = agora.getTime() - new Date(instante).getTime();
+  return ms < 60_000 ? "agora há pouco" : `há ${descreverIntervalo(ms)}`;
+}
+
+/** "em 3 horas", ou "prevista e ainda não executada" quando o horário previsto já passou. */
+export function descreverProxima(instante: string, agora: Date = new Date()): string {
+  const ms = new Date(instante).getTime() - agora.getTime();
+  return ms <= 0 ? "prevista e ainda não executada" : `em ${descreverIntervalo(ms)}`;
+}

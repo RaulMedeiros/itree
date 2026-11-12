@@ -154,7 +154,7 @@ def test_ingestao_filtra_pelo_municipio_do_escopo_e_registra_licenca():
         "39516737-e8e1-3624-a8e6-4907cd3cb6c9",
     }
     assert r.orgao == "INPE, Programa Queimadas"
-    assert "Não declarada" in r.licenca and "DP-11" in r.licenca
+    assert "Não declarada" in r.licenca and "DP-" not in r.licenca
     assert r.data_referencia == date(2026, 11, 9)
     # Idempotência por UUID do foco.
     r2 = fontes.ingerir("inpe_focos", FOCOS_REAIS, "focos_inpe_trecho.csv")

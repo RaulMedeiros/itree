@@ -51,6 +51,7 @@ import {
   type Serie,
 } from "./graficos";
 import { MapaResumo } from "./MapaResumo";
+import { PrimeirosPassos } from "./PrimeirosPassos";
 
 export interface BuscaVisaoGeral {
   inicio?: string;
@@ -621,10 +622,11 @@ export function VisaoGeralPagina() {
         titulo="Visão geral"
         descricao={
           dados
-            ? `Período de ${formatarData(String(dados.periodo.inicio))} a ${formatarData(String(dados.periodo.fim))} · calculado em ${formatarDataHora(dados.calculado_em)} · indicadores oficiais ainda em definição (DP-14)`
+            ? `Período de ${formatarData(String(dados.periodo.inicio))} a ${formatarData(String(dados.periodo.fim))} · calculado em ${formatarDataHora(dados.calculado_em)} · indicadores oficiais ainda em definição pela prefeitura`
             : "Indicadores do seu escopo territorial."
         }
       />
+      <PrimeirosPassos />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           De
@@ -862,7 +864,7 @@ function ConteudoPainel({ dados }: { dados: PainelIndicadores }) {
             </tbody>
           </Tabela>
           <p className="mt-1 text-xs text-texto-suave">
-            Números da equipe, sem ranqueamento individual (RN-EQP-002).
+            Números da equipe, sem ranqueamento individual.
           </p>
         </section>
       )}

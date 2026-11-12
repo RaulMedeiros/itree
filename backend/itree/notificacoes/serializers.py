@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Notificacao
+from .models import Notificacao, TipoNotificacao
 
 
 class NotificacaoSerializer(serializers.ModelSerializer):
@@ -17,3 +17,24 @@ class NotificacaoSerializer(serializers.ModelSerializer):
 
 class ContagemNaoLidasSerializer(serializers.Serializer):
     nao_lidas = serializers.IntegerField()
+
+
+class GrupoNotificacoesSerializer(serializers.Serializer):
+    """Notificações do mesmo tipo no mesmo dia, para o menu do sino."""
+
+    tipo = serializers.ChoiceField(choices=TipoNotificacao.choices)
+    dia = serializers.DateField(help_text="Dia no fuso de Fortaleza.")
+    quantidade = serializers.IntegerField()
+    nao_lidas = serializers.IntegerField()
+    lida = serializers.BooleanField(help_text="Verdadeiro quando não resta nenhuma não lida.")
+    titulo = serializers.CharField(
+        help_text='Com mais de uma: "5 inspeções aguardando revisão"; com uma, o título dela.'
+    )
+    texto = serializers.CharField(allow_blank=True)
+    link = serializers.CharField(allow_blank=True)
+    ultima_em = serializers.DateTimeField()
+
+
+class LerGrupoSerializer(serializers.Serializer):
+    tipo = serializers.ChoiceField(choices=TipoNotificacao.choices)
+    dia = serializers.DateField()

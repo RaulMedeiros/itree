@@ -387,3 +387,95 @@ def test_retencao_apaga_lidas_antigas_e_nao_lidas_muito_antigas(tecnico_a, setti
 def test_retencao_esta_agendada_diariamente(settings):
     agenda = settings.CELERY_BEAT_SCHEDULE["limpar-notificacoes"]
     assert agenda["task"] == "itree.notificacoes.tasks.limpar_notificacoes_antigas"
+
+
+# --- Central de notificações: filtros e agrupamento (G-09) -------------------------
+
+
+def criar_tipo(usuario, tipo, titulo, n=1, dias_atras=0, **extras):
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    itens = [
+        Notificacao.objects.create(usuario=usuario, tipo=tipo, titulo=f"{titulo} {i}", **extras)
+        for i in range(n)
+    ]
+    Notificacao.objects.filter(pk__in=[i.pk for i in itens]).update(
+        criado_em=timezone.now() - timedelta(days=dias_atras)
+    )
+    return itens
+
+
+def test_listar_filtra_por_tipo_e_por_lida(cliente, tecnico_a):
+    criar_tipo(tecnico_a, "alerta_novo", "Alerta", 2)
+    (tarefa,) = criar_tipo(tecnico_a, "tarefa_atribuida", "Tarefa")
+    cliente.como(tecnico_a).post(f"{URL}/{tarefa.id}/ler")
+    por_tipo = cliente.get(URL, {"tipo": "alerta_novo"}).json()
+    assert por_tipo["count"] == 2
+    assert {i["tipo"] for i in por_tipo["results"]} == {"alerta_novo"}
+    assert cliente.get(URL, {"lida": "true"}).json()["count"] == 1
+    assert cliente.get(URL, {"lida": "false"}).json()["count"] == 2
+    assert cliente.get(URL, {"tipo": "tarefa_atribuida", "lida": "false"}).json()["count"] == 0
+    assert cliente.get(URL, {"tipo": "inexistente"}).status_code == 400
+    assert cliente.get(URL, {"lida": "talvez"}).status_code == 400
+
+
+def test_filtros_nao_vazam_notificacoes_de_outro_usuario(cliente, tecnico_a, revisor):
+    criar_tipo(revisor, "alerta_novo", "Alerta", 3)
+    assert cliente.como(tecnico_a).get(URL, {"tipo": "alerta_novo"}).json()["count"] == 0
+
+
+def test_agrupadas_juntam_o_mesmo_tipo_no_mesmo_dia(cliente, revisor):
+    criar_tipo(revisor, "inspecao_para_revisao", "Inspeção", 5, link="/inspecoes/x")
+    criar_tipo(revisor, "inspecao_para_revisao", "Inspeção antiga", 2, dias_atras=3)
+    (unica,) = criar_tipo(revisor, "risco_confirmado", "Risco", link="/ocorrencias/1")
+    grupos = cliente.como(revisor).get(f"{URL}/agrupadas").json()
+    assert len(grupos) == 3
+    por_tipo = {(g["tipo"], g["quantidade"]): g for g in grupos}
+    revisao = por_tipo[("inspecao_para_revisao", 5)]
+    assert revisao["titulo"] == "5 inspeções aguardando revisão"
+    assert revisao["link"] == "/inspecoes" and revisao["nao_lidas"] == 5
+    assert por_tipo[("inspecao_para_revisao", 2)]["titulo"] == "2 inspeções aguardando revisão"
+    # Um só evento mantém título e link próprios.
+    risco = por_tipo[("risco_confirmado", 1)]
+    assert risco["titulo"] == unica.titulo and risco["link"] == "/ocorrencias/1"
+
+
+def test_agrupadas_trazem_nao_lidas_primeiro_e_respeitam_o_limite(cliente, revisor):
+    lidas = criar_tipo(revisor, "alerta_novo", "Alerta", 2, dias_atras=0)
+    cliente.como(revisor)
+    for n in lidas:
+        cliente.post(f"{URL}/{n.id}/ler")
+    criar_tipo(revisor, "tarefa_concluida", "Tarefa", 1, dias_atras=5)
+    grupos = cliente.get(f"{URL}/agrupadas").json()
+    # O grupo com não lidas vem antes, mesmo sendo mais antigo.
+    assert [g["tipo"] for g in grupos] == ["tarefa_concluida", "alerta_novo"]
+    assert [g["lida"] for g in grupos] == [False, True]
+    assert len(cliente.get(f"{URL}/agrupadas", {"limite": 1}).json()) == 1
+    assert cliente.get(f"{URL}/agrupadas", {"limite": "x"}).status_code == 400
+
+
+def test_agrupadas_so_do_proprio_usuario(cliente, tecnico_a, revisor):
+    criar_tipo(revisor, "alerta_novo", "Alerta", 4)
+    assert cliente.como(tecnico_a).get(f"{URL}/agrupadas").json() == []
+
+
+def test_ler_grupo_marca_so_o_tipo_e_o_dia_pedidos(cliente, revisor, tecnico_a):
+    from django.utils import timezone
+
+    criar_tipo(revisor, "inspecao_para_revisao", "Hoje", 3)
+    criar_tipo(revisor, "inspecao_para_revisao", "Ontem", 2, dias_atras=1)
+    criar_tipo(revisor, "alerta_novo", "Outro tipo", 1)
+    criar_tipo(tecnico_a, "inspecao_para_revisao", "De outro", 1)
+    hoje = timezone.localdate().isoformat()
+    r = cliente.como(revisor).post(
+        f"{URL}/ler-grupo", {"tipo": "inspecao_para_revisao", "dia": hoje}, format="json"
+    )
+    assert r.status_code == 200 and r.json() == {"nao_lidas": 3}
+    assert Notificacao.objects.filter(usuario=revisor, lida_em__isnull=True).count() == 3
+    assert Notificacao.objects.get(usuario=tecnico_a).lida_em is None
+    assert (
+        cliente.post(f"{URL}/ler-grupo", {"tipo": "x", "dia": hoje}, format="json").status_code
+        == 400
+    )

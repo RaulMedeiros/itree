@@ -74,7 +74,6 @@ export function DuplicidadesPagina() {
     <>
       <CabecalhoPagina
         titulo="Possíveis duplicidades"
-        migalhas={[{ rotulo: "Inventário", para: "/inventario" }, { rotulo: "Duplicidades" }]}
         descricao="Árvores ativas a até 3 m uma da outra, com espécies compatíveis. Cada par precisa de decisão humana."
       />
       {consulta.isPending ? (

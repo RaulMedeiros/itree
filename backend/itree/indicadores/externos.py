@@ -47,9 +47,7 @@ URL_CENSO_FACES = (
 )
 # O FTP do IBGE não declara licença; a política de dados abertos do órgão ainda
 # precisa ser confirmada (DP-11). Enquanto isso, o texto diz exatamente isso.
-LICENCA_CENSO = (
-    "Não declarada no FTP do IBGE; política de dados abertos do órgão a confirmar (DP-11)"
-)
+LICENCA_CENSO = "Não declarada no FTP do IBGE; política de dados abertos do órgão a confirmar"
 # Data de referência do Censo Demográfico 2022 (noite de 31/07 para 01/08/2022;
 # a coleta começou em 1º de agosto). A interface mostra só o ano.
 DATA_REFERENCIA_CENSO = date(2022, 7, 31)

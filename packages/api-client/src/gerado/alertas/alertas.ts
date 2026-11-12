@@ -32,6 +32,7 @@ import type {
   ArvoreProxima,
   ConversaoRequest,
   EventoAuditoria,
+  FonteEstado,
   Ingestao,
   NovaIngestaoRequest,
   PaginatedAlertaList,
@@ -728,7 +729,116 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getAlertasTriagemMutationOptions(options), queryClient);
     }
-    export type alertasIngestoesResponse200 = {
+    export type alertasFontesResponse200 = {
+  data: FonteEstado[]
+  status: 200
+}
+
+export type alertasFontesResponseSuccess = (alertasFontesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type alertasFontesResponse = (alertasFontesResponseSuccess)
+
+export const getAlertasFontesUrl = () => {
+
+
+
+
+  return `/api/v1/alertas/fontes`
+}
+
+/**
+ * Última coleta e próxima coleta de cada fonte, pelo agendamento configurado.
+ */
+export const alertasFontes = async ( options?: Parameters<typeof requisicao>[1]): Promise<alertasFontesResponse> => {
+
+  return requisicao<alertasFontesResponse>(getAlertasFontesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAlertasFontesQueryKey = () => {
+    return [
+    `/api/v1/alertas/fontes`
+    ] as const;
+    }
+
+
+export const getAlertasFontesQueryOptions = <TData = Awaited<ReturnType<typeof alertasFontes>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasFontes>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAlertasFontesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof alertasFontes>>> = ({ signal }) => alertasFontes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof alertasFontes>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AlertasFontesQueryResult = NonNullable<Awaited<ReturnType<typeof alertasFontes>>>
+export type AlertasFontesQueryError = unknown
+
+
+export function useAlertasFontes<TData = Awaited<ReturnType<typeof alertasFontes>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasFontes>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof alertasFontes>>,
+          TError,
+          Awaited<ReturnType<typeof alertasFontes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAlertasFontes<TData = Awaited<ReturnType<typeof alertasFontes>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasFontes>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof alertasFontes>>,
+          TError,
+          Awaited<ReturnType<typeof alertasFontes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAlertasFontes<TData = Awaited<ReturnType<typeof alertasFontes>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasFontes>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useAlertasFontes<TData = Awaited<ReturnType<typeof alertasFontes>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof alertasFontes>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getAlertasFontesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type alertasIngestoesResponse200 = {
   data: Ingestao[]
   status: 200
 }

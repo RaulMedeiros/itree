@@ -5,11 +5,11 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
-import type { NotificacaoTipoEnum } from './notificacaoTipoEnum';
+import type { TipoNotificacaoEnum } from './tipoNotificacaoEnum';
 
 export interface Notificacao {
   readonly id: string;
-  readonly tipo: NotificacaoTipoEnum;
+  readonly tipo: TipoNotificacaoEnum;
   readonly titulo: string;
   readonly texto: string;
   /** Caminho interno da tela. */

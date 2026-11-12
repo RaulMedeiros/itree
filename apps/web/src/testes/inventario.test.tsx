@@ -563,6 +563,14 @@ describe("medidas pendentes na ficha (C-16)", () => {
   });
 });
 
+describe("migalhas nas listas do inventário (R2-01)", () => {
+  it("a lista de árvores não repete a migalha: o título e a aba já dizem onde está", async () => {
+    await abrir("/inventario/arvores");
+    expect(await screen.findByRole("heading", { name: "Árvores", level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Migalhas" })).toBeNull();
+  });
+});
+
 describe("ficha da árvore (C-15, C-17, C-18)", () => {
   it("põe os selos do mini-mapa no canto superior, longe da atribuição do OpenStreetMap", async () => {
     await abrir("/inventario/arvores/a-1");

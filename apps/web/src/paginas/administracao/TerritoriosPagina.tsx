@@ -2,6 +2,7 @@ import { useTerritoriosListar } from "@itree/api-client";
 import { ROTULOS_TIPO_TERRITORIO } from "@itree/domain";
 import { ExternalLink } from "lucide-react";
 
+import { DetalhesTecnicos } from "../../componentes/DetalhesTecnicos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
@@ -13,14 +14,15 @@ export function TerritoriosPagina() {
     <>
       <CabecalhoPagina
         titulo="Territórios"
-        migalhas={[{ rotulo: "Administração", para: "/administracao" }, { rotulo: "Territórios" }]}
         descricao="Limites administrativos usados no escopo de usuários e equipes, com fonte e data de cada dado. A coluna Árvores conta as árvores ativas do território que estão no seu escopo. Esta tela é somente leitura."
       />
-      <p className="mb-3 rounded-md bg-info-clara px-3 py-2 text-sm text-info">
-        Os limites vêm de fonte aberta e não são oficiais. A importação dos limites oficiais depende
-        da definição das fontes municipais e dos responsáveis (
-        <span className="whitespace-nowrap">DP-10</span>).
-      </p>
+      <div className="mb-3 rounded-md bg-info-clara px-3 py-2 text-sm text-info">
+        <p>
+          Os limites vêm de fonte aberta e não são oficiais. A importação dos limites oficiais
+          depende de a prefeitura definir as fontes municipais e os responsáveis.
+        </p>
+        <DetalhesTecnicos>Decisão pendente DP-10 (fontes municipais oficiais).</DetalhesTecnicos>
+      </div>
       {consulta.isPending ? (
         <Carregando />
       ) : consulta.isError ? (

@@ -7,8 +7,12 @@
  */
 
 export type NotificacoesListarParams = {
+  /** true = só lidas; false = só não lidas. */
+  lida?: boolean;
   /** Um número de página dentro do conjunto de resultados paginado. */
   pagina?: number;
   /** Número de resultados a serem retornados por página. */
   tamanho?: number;
+  /** Um tipo de notificação. */
+  tipo?: string;
 };

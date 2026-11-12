@@ -1,5 +1,5 @@
 import type { PermissaoEnum } from "@itree/api-client";
-import { PapelEnum } from "@itree/api-client";
+import { PapelEnum, TipoNotificacaoEnum } from "@itree/api-client";
 import {
   Link,
   Navigate,
@@ -45,6 +45,8 @@ import { VisaoGeralPagina } from "./paginas/visao-geral/VisaoGeralPagina";
 import { AlertaDetalhePagina } from "./paginas/alertas/AlertaDetalhePagina";
 import { AlertasPagina } from "./paginas/alertas/AlertasPagina";
 import { AnalisesPagina } from "./paginas/analises/AnalisesPagina";
+import { AjudaPagina } from "./paginas/ajuda/AjudaPagina";
+import { NotificacoesPagina } from "./paginas/notificacoes/NotificacoesPagina";
 import { IntegracoesPagina } from "./paginas/administracao/IntegracoesPagina";
 import { QualidadePagina } from "./paginas/inventario/QualidadePagina";
 import { SemPermissao } from "./ui/estados";
@@ -551,6 +553,29 @@ const modulosFuturos = MODULOS.filter((m) => !ENTREGUES.has(m.id)).map((m) =>
   }),
 );
 
+const notificacoes = createRoute({
+  getParentRoute: () => autenticado,
+  path: "notificacoes",
+  validateSearch: z.object({
+    tipo: z
+      .enum(Object.values(TipoNotificacaoEnum) as [TipoNotificacaoEnum, ...TipoNotificacaoEnum[]])
+      .optional()
+      .catch(undefined),
+    lida: z
+      .preprocess((v) => (v === undefined ? v : String(v)), z.enum(["true", "false"]))
+      .optional()
+      .catch(undefined),
+    pagina: paginaOpcional,
+  }),
+  component: NotificacoesPagina,
+});
+
+const ajuda = createRoute({
+  getParentRoute: () => autenticado,
+  path: "ajuda",
+  component: AjudaPagina,
+});
+
 const arvore = raiz.addChildren([
   autenticado.addChildren([
     inicio,
@@ -582,6 +607,8 @@ const arvore = raiz.addChildren([
     tarefas,
     alertas.addChildren([alertasLista, alertaDetalhe]),
     analises,
+    notificacoes,
+    ajuda,
     ...modulosFuturos,
   ]),
 ]);

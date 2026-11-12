@@ -1,0 +1,16 @@
+# Sobreposição para o ambiente de demonstração: a API passa a declarar que os dados
+# são sintéticos e o painel mostra a faixa de aviso (RN-PROV-008). Não altera o compose
+# padrão; usada pelo scripts/telas/gerar.sh:
+#
+#   docker compose -f compose.yml -f compose.demonstracao.yml --profile completo up -d
+
+services:
+  api:
+    environment:
+      ITREE_AMBIENTE: demonstracao
+  worker:
+    environment:
+      ITREE_AMBIENTE: demonstracao
+  beat:
+    environment:
+      ITREE_AMBIENTE: demonstracao

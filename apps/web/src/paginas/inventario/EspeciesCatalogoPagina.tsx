@@ -51,7 +51,6 @@ export function EspeciesCatalogoPagina() {
     <>
       <CabecalhoPagina
         titulo="Espécies"
-        migalhas={[{ rotulo: "Inventário", para: "/inventario" }, { rotulo: "Espécies" }]}
         descricao="Espécies do catálogo, com as árvores do seu escopo e referências externas (Wikipedia, Wikimedia Commons, GBIF, Flora e Funga do Brasil)."
       />
       <div className="mb-4 flex flex-wrap items-center gap-3">

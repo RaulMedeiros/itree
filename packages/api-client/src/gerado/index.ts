@@ -6,6 +6,7 @@ export * from './equipes/equipes';
 export * from './especies/especies';
 export * from './eu/eu';
 export * from './evidencias/evidencias';
+export * from './implantacao/implantacao';
 export * from './importacoes/importacoes';
 export * from './indicadores/indicadores';
 export * from './inferencias/inferencias';

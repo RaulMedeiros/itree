@@ -30,3 +30,44 @@ class Notificacao(ModeloBase):
         ordering = ["-criado_em", "-id"]
         verbose_name_plural = "notificações"
         indexes = [models.Index(fields=["usuario", "lida_em", "-criado_em"])]
+
+
+# Texto de um grupo (mesmo tipo, mesmo dia) e tela que abre a lista inteira. O singular vale
+# para um só evento no grupo com o título gravado; o plural para dois ou mais.
+GRUPOS: dict[str, tuple[str, str, str]] = {
+    TipoNotificacao.TAREFA_ATRIBUIDA: (
+        "tarefa atribuída",
+        "tarefas atribuídas",
+        "/equipes-tarefas?responsavel=eu",
+    ),
+    TipoNotificacao.TAREFA_CONCLUIDA: (
+        "tarefa concluída",
+        "tarefas concluídas",
+        "/equipes-tarefas",
+    ),
+    TipoNotificacao.TAREFA_BLOQUEADA: (
+        "tarefa bloqueada",
+        "tarefas bloqueadas",
+        "/equipes-tarefas",
+    ),
+    TipoNotificacao.RISCO_CONFIRMADO: (
+        "risco confirmado",
+        "riscos confirmados",
+        "/ocorrencias",
+    ),
+    TipoNotificacao.INSPECAO_DEVOLVIDA: (
+        "inspeção devolvida para correção",
+        "inspeções devolvidas para correção",
+        "/inspecoes?estado=devolvida",
+    ),
+    TipoNotificacao.INSPECAO_PARA_REVISAO: (
+        "inspeção aguardando revisão",
+        "inspeções aguardando revisão",
+        "/inspecoes",
+    ),
+    TipoNotificacao.ALERTA_NOVO: (
+        "aviso de alerta ambiental novo",
+        "avisos de alertas ambientais novos",
+        "/alertas",
+    ),
+}

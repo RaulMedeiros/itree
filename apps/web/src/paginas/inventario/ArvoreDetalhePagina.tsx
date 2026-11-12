@@ -47,6 +47,9 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
 import { CartaoEspecie } from "../../componentes/especies";
 import { FotoPrincipalArvore } from "../../componentes/FotoPrincipalArvore";
+import type { IdTermo } from "../../ajuda/glossario";
+import { AjudaTermo } from "../../componentes/AjudaTermo";
+import { DetalhesTecnicos } from "../../componentes/DetalhesTecnicos";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { MiniMapaArvore } from "../../componentes/MiniMapaArvore";
 import { SeletorLocalizacao, type Ponto } from "../../componentes/SeletorLocalizacao";
@@ -266,10 +269,21 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
   );
 }
 
-function Item({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+function Item({
+  rotulo,
+  ajuda,
+  children,
+}: {
+  rotulo: string;
+  ajuda?: IdTermo;
+  children: ReactNode;
+}) {
   return (
     <div>
-      <dt className="text-xs font-medium tracking-wide text-texto-suave uppercase">{rotulo}</dt>
+      <dt className="text-xs font-medium tracking-wide text-texto-suave uppercase">
+        {rotulo}
+        {ajuda && <AjudaTermo id={ajuda} className="ml-1 normal-case" />}
+      </dt>
       <dd className="mt-0.5 text-sm">{children}</dd>
     </div>
   );
@@ -291,7 +305,7 @@ function Resumo({ arvore }: { arvore: Arvore }) {
               <SeloEspecie estado={arvore.especie_estado ?? "nao_identificada"} />
             </div>
           </Item>
-          <Item rotulo="Localização">
+          <Item rotulo="Localização" ajuda="origem_localizacao">
             {arvore.localizacao ? (
               <span className="font-mono text-xs">
                 {formatarPontoGeografico(arvore.localizacao.latitude, arvore.localizacao.longitude)}
@@ -358,7 +372,7 @@ function Resumo({ arvore }: { arvore: Arvore }) {
             <Item rotulo="Cadastrado por">{arvore.criado_por_nome || "—"}</Item>
             <Item rotulo="Cadastrado em">{formatarDataHora(arvore.criado_em)}</Item>
             <Item rotulo="Última alteração">{formatarDataHora(arvore.atualizado_em)}</Item>
-            <Item rotulo="Condição aparente">
+            <Item rotulo="Condição aparente" ajuda="condicao_aparente">
               {arvore.condicao_aparente ? (
                 <>
                   {ROTULOS_CONDICAO[arvore.condicao_aparente as keyof typeof ROTULOS_CONDICAO]}
@@ -644,10 +658,14 @@ function SugestoesIA({ arvore }: { arvore: Arvore }) {
   const itens = consulta.data.data;
   return (
     <div className="flex flex-col gap-3">
-      <p className="rounded-md bg-info-clara px-3 py-2 text-sm text-info">
-        Sugestões são inferências de um modelo e não alteram o cadastro sem a decisão de um revisor.
-        Não exibimos percentuais de confiança enquanto a calibração não for validada (DP-13).
-      </p>
+      <div className="rounded-md bg-info-clara px-3 py-2 text-sm text-info">
+        <p>
+          Sugestões são inferências de um modelo e não alteram o cadastro sem a decisão de um
+          revisor. Não exibimos percentuais de confiança enquanto a calibração dos modelos não for
+          validada.
+        </p>
+        <DetalhesTecnicos>Decisão pendente DP-13 (calibração dos modelos de IA).</DetalhesTecnicos>
+      </div>
       {itens.length === 0 ? (
         <Vazio titulo="Nenhuma sugestão registrada">
           O serviço de identificação por imagem ainda não está configurado neste ambiente.
@@ -665,6 +683,7 @@ function SugestoesIA({ arvore }: { arvore: Arvore }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">Sugestão de espécie</span>
                 <Selo tom="info">Sugestão de IA</Selo>
+                <AjudaTermo id="sugestao_ia" />
                 <Selo
                   tom={
                     s.decisao === "aceita"
@@ -958,7 +977,7 @@ function MedidaDialogo({ arvore, aoFechar }: { arvore: Arvore; aoFechar: () => v
       aberto
       aoMudar={(v) => !v && aoFechar()}
       titulo="Registrar medida"
-      descricao="Toda medida guarda método, unidade, data, responsável e origem (RN-INV-002)."
+      descricao="Toda medida guarda método, unidade, data, responsável e origem."
       rodape={
         <>
           <Botao variante="secundario" onClick={aoFechar}>

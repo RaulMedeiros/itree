@@ -1,6 +1,8 @@
 import json
+from datetime import timedelta
 
 import pghistory
+from django.conf import settings
 from django.contrib.gis.db.models.functions import AsGeoJSON
 from django.db import transaction
 from drf_spectacular.utils import (
@@ -20,6 +22,7 @@ from itree.auditoria.views import EventoAuditoriaSerializer
 from itree.contas.acesso import requer
 from itree.contas.permissoes import Permissao
 from itree.core.parametros import uuid_do_parametro
+from itree.core.textos import sem_codigos_internos
 from itree.ocorrencias.models import Ocorrencia, OrigemOcorrencia, TipoOcorrencia
 
 from . import fontes, proximidade
@@ -132,6 +135,8 @@ class ConversaoSerializer(serializers.Serializer):
 
 class IngestaoSerializer(serializers.ModelSerializer):
     usuario = serializers.SerializerMethodField()
+    # Ingestões antigas gravaram "(DP-11)" na licença: o código não vai ao usuário final.
+    licenca = serializers.SerializerMethodField()
 
     class Meta:
         model = IngestaoAlertas
@@ -156,6 +161,31 @@ class IngestaoSerializer(serializers.ModelSerializer):
 
     def get_usuario(self, obj) -> str | None:
         return (obj.usuario.nome or obj.usuario.email) if obj.usuario else None
+
+    def get_licenca(self, obj) -> str:
+        return sem_codigos_internos(obj.licenca)
+
+
+class FonteEstadoSerializer(serializers.Serializer):
+    """Estado de cada fonte externa de alertas: coleta feita e coleta prevista."""
+
+    fonte = serializers.ChoiceField(choices=FonteAlerta.choices)
+    rotulo = serializers.CharField()
+    automatica = serializers.BooleanField(
+        help_text="A fonte tem URL em ALERTAS_FONTES e é coletada pelo agendador."
+    )
+    intervalo_horas = serializers.IntegerField(allow_null=True)
+    ultima_coleta = serializers.DateTimeField(
+        allow_null=True, help_text="Início da última execução, automática ou manual."
+    )
+    ultima_coleta_sucesso = serializers.BooleanField(allow_null=True)
+    proxima_coleta = serializers.DateTimeField(
+        allow_null=True,
+        help_text=(
+            "Última coleta automática mais o intervalo configurado. Nulo se a fonte não é "
+            "automática ou se o agendador ainda não a executou."
+        ),
+    )
 
 
 class NovaIngestaoSerializer(serializers.Serializer):
@@ -217,7 +247,7 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
     def get_permissions(self):
         if self.action in ("triagem", "converter"):
             return [requer(P.ALERTAS_TRIAR)()]
-        if self.action in ("ingestoes", "enviar_arquivo"):
+        if self.action in ("ingestoes", "estado_fontes", "enviar_arquivo"):
             return (
                 [requer(P.ADMIN_CONFIGURACAO)()]
                 if self.request.method == "POST"
@@ -383,6 +413,35 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
                 IngestaoAlertas.objects.select_related("usuario")[:50], many=True
             ).data
         )
+
+    @extend_schema(operation_id="alertas_fontes", responses=FonteEstadoSerializer(many=True))
+    @action(detail=False, url_path="fontes", pagination_class=None)
+    def estado_fontes(self, request):
+        """Última coleta e próxima coleta de cada fonte, pelo agendamento configurado."""
+        intervalo = timedelta(hours=settings.ALERTAS_INTERVALO_HORAS)
+        configuradas = set(settings.ALERTAS_FONTES or {})
+        resultado = []
+        for fonte, rotulo in FonteAlerta.choices:
+            execucoes = IngestaoAlertas.objects.filter(fonte=fonte)
+            ultima = execucoes.order_by("-iniciada_em").first()
+            automatica = fonte in configuradas
+            ultima_auto = (
+                execucoes.filter(usuario__isnull=True).order_by("-iniciada_em").first()
+                if automatica
+                else None
+            )
+            resultado.append(
+                {
+                    "fonte": fonte,
+                    "rotulo": rotulo,
+                    "automatica": automatica,
+                    "intervalo_horas": settings.ALERTAS_INTERVALO_HORAS if automatica else None,
+                    "ultima_coleta": ultima.iniciada_em if ultima else None,
+                    "ultima_coleta_sucesso": ultima.sucesso if ultima else None,
+                    "proxima_coleta": ultima_auto.iniciada_em + intervalo if ultima_auto else None,
+                }
+            )
+        return Response(FonteEstadoSerializer(resultado, many=True).data)
 
     @extend_schema(
         operation_id="alertas_enviar_arquivo",

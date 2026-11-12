@@ -109,7 +109,7 @@ def test_backfill_de_um_mes_zip_ingere_so_o_ceara_dentro_do_municipio(fortaleza,
     # Ceará: 5 (3 de Fortaleza e 2 de Caucaia, fora do município); o resto nem foi lido.
     assert (ingestao.recebidos, ingestao.novos, ingestao.fora_do_municipio) == (5, 3, 2)
     assert ingestao.origem == BASE + "focos_mensal_br_202301.zip"
-    assert ingestao.orgao == "INPE, Programa Queimadas" and "DP-11" in ingestao.licenca
+    assert ingestao.orgao == "INPE, Programa Queimadas" and "DP-" not in ingestao.licenca
     saida = capsys.readouterr().out
     assert "2023-01: 9 focos no Brasil, 5 em Ceará: 3 novos" in saida
 

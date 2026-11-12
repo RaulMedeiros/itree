@@ -1,7 +1,7 @@
 import { configurarCliente, type Eu, type Ingestao } from "@itree/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { criarServidor } from "./servidorPadrao";
@@ -59,6 +59,7 @@ let ingestoes: Ingestao[] = [];
 const servidor = criarServidor(
   http.get(`${API}/api/v1/eu`, () => HttpResponse.json(eu)),
   http.get(`${API}/api/v1/alertas/ingestoes`, () => HttpResponse.json(ingestoes)),
+  http.get(`${API}/api/v1/alertas/fontes`, () => HttpResponse.json([])),
 );
 
 beforeAll(() => {
@@ -205,14 +206,17 @@ describe("cabeçalho", () => {
     expect(screen.queryByText(/fonte externa com problema/)).not.toBeInTheDocument();
   });
 
-  it("mostra as migalhas nas sub-abas, com link de volta ao módulo", async () => {
+  it("não repete a migalha numa lista com aba ativa (R2-01)", async () => {
     await abrir("/administracao/integracoes");
-    const nav = await screen.findByRole("navigation", { name: "Migalhas" });
-    expect(nav).toHaveTextContent("Administração›Integrações");
-    expect(within(nav).getByRole("link", { name: "Administração" })).toHaveAttribute(
-      "href",
-      "/administracao",
+    expect(
+      await screen.findByRole("heading", { name: "Integrações", level: 1 }),
+    ).toBeInTheDocument();
+    // A aba ativa e o título já dizem onde a pessoa está.
+    expect(screen.getByRole("link", { name: "Integrações" })).toHaveAttribute(
+      "aria-current",
+      "page",
     );
+    expect(screen.queryByRole("navigation", { name: "Migalhas" })).toBeNull();
   });
 
   it("a tecla / leva o foco para a busca global", async () => {

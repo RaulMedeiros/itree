@@ -26,6 +26,8 @@ import { ArrowLeft, Map as IconeMapa, ShieldAlert } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
+import type { IdTermo } from "../../ajuda/glossario";
+import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { Evidencias } from "../../componentes/Evidencias";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
@@ -81,10 +83,12 @@ function Cartao({
   subtitulo,
   children,
   acao,
+  ajuda,
   variante = "normal",
 }: {
   titulo: string;
   subtitulo: string;
+  ajuda?: IdTermo;
   children: ReactNode;
   acao?: ReactNode;
   variante?: "destaque" | "normal" | "secundario";
@@ -100,6 +104,7 @@ function Cartao({
         <div>
           <h2 className={variante === "secundario" ? "text-sm font-medium" : "font-semibold"}>
             {titulo}
+            {ajuda && <AjudaTermo id={ajuda} className="ml-1" />}
           </h2>
           <p className="text-xs text-texto-suave">{subtitulo}</p>
         </div>
@@ -259,6 +264,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
         <Cartao
           variante="secundario"
           titulo="Condição aparente"
+          ajuda="condicao_aparente"
           subtitulo="O que foi observado. Não é diagnóstico."
         >
           <p className="whitespace-pre-wrap">
@@ -268,6 +274,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
         <Cartao
           variante="secundario"
           titulo="Risco confirmado"
+          ajuda="risco_confirmado"
           subtitulo="Conclusão de avaliação técnica competente."
           acao={
             podeRisco && (
