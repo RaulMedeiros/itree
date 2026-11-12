@@ -101,7 +101,6 @@ export function IntegracoesPagina() {
     <>
       <CabecalhoPagina
         titulo="Integrações"
-        migalhas={[{ rotulo: "Administração", para: "/administracao" }, { rotulo: "Integrações" }]}
         descricao={
           <>
             Ingestão de alertas ambientais. A coleta automática depende de configuração do servidor;

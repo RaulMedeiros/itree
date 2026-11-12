@@ -232,3 +232,24 @@ describe("territórios", () => {
     expect(contagem("Bairro A")).toBe("0");
   });
 });
+
+describe("migalhas (R2-01)", () => {
+  it.each([
+    ["/administracao/usuarios", "Usuários"],
+    ["/administracao/territorios", "Territórios"],
+    ["/administracao/integracoes", "Integrações"],
+  ])("%s é lista com aba ativa e não repete a migalha", async (caminho, titulo) => {
+    await abrir(caminho);
+    expect(await screen.findByRole("heading", { name: titulo, level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Migalhas" })).toBeNull();
+  });
+
+  it("o detalhe mantém as migalhas, com o caminho de volta à lista", async () => {
+    await abrir("/administracao/usuarios/u-tec");
+    const nav = await screen.findByRole("navigation", { name: "Migalhas" });
+    expect(within(nav).getByRole("link", { name: "Usuários" })).toHaveAttribute(
+      "href",
+      "/administracao/usuarios",
+    );
+  });
+});

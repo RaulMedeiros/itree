@@ -34,11 +34,7 @@ export function EspeciesPagina() {
     <>
       <CabecalhoPagina
         titulo="Catálogo de espécies"
-        migalhas={[
-          { rotulo: "Administração", para: "/administracao" },
-          { rotulo: "Catálogo de espécies" },
-        ]}
-        descricao="A taxonomia oficial ainda é decisão pendente (DP-02). Espécies não são excluídas: ficam inativas, com indicação do nome aceito."
+        descricao="A taxonomia oficial ainda está em definição pela prefeitura. Espécies não são excluídas: ficam inativas, com indicação do nome aceito."
         acoes={
           <Botao onClick={() => setEditando("nova")}>
             <Plus /> Nova espécie
@@ -238,11 +234,7 @@ export function TiposOcorrenciaPagina() {
     <>
       <CabecalhoPagina
         titulo="Tipos de ocorrência"
-        migalhas={[
-          { rotulo: "Administração", para: "/administracao" },
-          { rotulo: "Tipos de ocorrência" },
-        ]}
-        descricao="A lista oficial e os prazos ainda são decisão pendente (DP-17). Tipos não são excluídos: ficam inativos."
+        descricao="A lista oficial e os prazos ainda estão em definição pela prefeitura. Tipos não são excluídos: ficam inativos."
         acoes={
           <Botao onClick={() => setEditando("novo")}>
             <Plus /> Novo tipo

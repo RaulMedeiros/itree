@@ -65,7 +65,6 @@ export function QualidadePagina() {
     <>
       <CabecalhoPagina
         titulo="Qualidade de dados"
-        migalhas={[{ rotulo: "Inventário", para: "/inventario" }, { rotulo: "Qualidade de dados" }]}
         descricao={
           consulta.data
             ? `Regras explícitas de verificação; nada é corrigido automaticamente · calculado em ${formatarDataHora(consulta.data.data.calculado_em)}`

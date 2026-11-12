@@ -57,7 +57,6 @@ export function UsuariosPagina() {
     <>
       <CabecalhoPagina
         titulo="Usuários"
-        migalhas={[{ rotulo: "Administração", para: "/administracao" }, { rotulo: "Usuários" }]}
         descricao="A identidade e a senha são do provedor de login; papéis e escopo territorial são definidos aqui."
         acoes={
           <Botao onClick={() => setPreCadastro(true)}>
