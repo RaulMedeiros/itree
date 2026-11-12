@@ -14,9 +14,10 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
-import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
+import { BotaoExportarCsv, filtrosParaExportar } from "../../componentes/BotaoExportarCsv";
 import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
 import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
+import { PrazoEmLoteDialogo } from "../../componentes/PrazoEmLoteDialogo";
 import { SeloEstadoTarefa } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
@@ -62,14 +63,21 @@ export function TarefasPagina() {
     null,
   );
   const [atribuindo, setAtribuindo] = useState<Tarefa | null>(null);
-  const [equipeEmLote, setEquipeEmLote] = useState(false);
+  const [acaoEmLote, setAcaoEmLote] = useState<"equipe" | "prazo" | null>(null);
   const filtrar = (parcial: Partial<BuscaTarefas>) =>
     void navegar({ search: (s: BuscaTarefas) => ({ ...s, ...parcial, pagina: undefined }) });
   // A seleção atravessa as páginas, mas só vale para os filtros em que foi feita.
   const selecao = useSelecaoEmLote(
     JSON.stringify({ ...filtros, pagina: undefined, bairro: territorioAtivo.id }),
     consulta.data?.data.results.map((t) => t.id) ?? [],
+    consulta.data?.data.count ?? 0,
   );
+  // Os mesmos filtros da lista, para "todas as filtradas" valer exatamente o que ela mostra.
+  const filtrosDoLote = filtrosParaExportar({
+    ...filtros,
+    bairro: territorioAtivo.id,
+    estado: filtros.estado ?? "abertas",
+  });
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -194,17 +202,29 @@ export function TarefasPagina() {
         <>
           {podeEditar && (
             <BarraAcoesEmLote
-              total={selecao.selecionadas.length}
+              total={selecao.total}
               singular="tarefa selecionada"
               plural="tarefas selecionadas"
               aoLimpar={selecao.limpar}
+              todosFiltrados={selecao.todosFiltrados}
+              totalFiltrado={consulta.data.data.count}
+              aoSelecionarTodos={
+                selecao.podeSelecionarTodos ? selecao.selecionarTodosFiltrados : undefined
+              }
             >
               <Botao
                 variante="secundario"
-                disabled={selecao.selecionadas.length > LIMITE_ACOES_EM_LOTE}
-                onClick={() => setEquipeEmLote(true)}
+                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
+                onClick={() => setAcaoEmLote("equipe")}
               >
                 Reatribuir equipe
+              </Botao>
+              <Botao
+                variante="secundario"
+                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
+                onClick={() => setAcaoEmLote("prazo")}
+              >
+                Definir prazo
               </Botao>
             </BarraAcoesEmLote>
           )}
@@ -329,11 +349,23 @@ export function TarefasPagina() {
       )}
       {transicao && <TransicaoDialogo {...transicao} aoFechar={() => setTransicao(null)} />}
       {atribuindo && <ReatribuirDialogo tarefa={atribuindo} aoFechar={() => setAtribuindo(null)} />}
-      {equipeEmLote && (
+      {acaoEmLote === "equipe" && (
         <EquipeEmLoteDialogo
-          ids={selecao.selecionadas}
+          alvo={selecao.alvo(filtrosDoLote)}
+          total={selecao.total}
           aoFechar={(alterou) => {
-            setEquipeEmLote(false);
+            setAcaoEmLote(null);
+            if (alterou) selecao.limpar();
+          }}
+        />
+      )}
+      {acaoEmLote === "prazo" && (
+        <PrazoEmLoteDialogo
+          recurso="tarefas"
+          alvo={selecao.alvo(filtrosDoLote)}
+          total={selecao.total}
+          aoFechar={(alterou) => {
+            setAcaoEmLote(null);
             if (alterou) selecao.limpar();
           }}
         />

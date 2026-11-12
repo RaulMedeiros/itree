@@ -38,3 +38,22 @@ class GrupoNotificacoesSerializer(serializers.Serializer):
 class LerGrupoSerializer(serializers.Serializer):
     tipo = serializers.ChoiceField(choices=TipoNotificacao.choices)
     dia = serializers.DateField()
+
+
+class PreferenciaNotificacaoSerializer(serializers.Serializer):
+    tipo = serializers.ChoiceField(choices=TipoNotificacao.choices)
+    rotulo = serializers.CharField(read_only=True)
+    ativa = serializers.BooleanField(help_text="Recebe este tipo no sino.")
+    email = serializers.BooleanField(
+        help_text="Recebe também por e-mail. Só vale com a notificação ativa."
+    )
+
+
+class AtualizarPreferenciasSerializer(serializers.Serializer):
+    preferencias = PreferenciaNotificacaoSerializer(many=True)
+
+    def validate_preferencias(self, valor):
+        tipos = [p["tipo"] for p in valor]
+        if len(tipos) != len(set(tipos)):
+            raise serializers.ValidationError("Cada tipo pode aparecer uma só vez.")
+        return valor

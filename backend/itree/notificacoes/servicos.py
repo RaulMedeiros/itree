@@ -14,7 +14,7 @@ from itree.contas.acesso import area_do_escopo
 from itree.contas.models import Usuario
 from itree.contas.permissoes import Permissao
 
-from .models import Notificacao, TipoNotificacao
+from .models import Notificacao, PreferenciaNotificacao, TipoNotificacao
 
 
 def destinatarios(permissao: str, geom, excluir=()) -> list[Usuario]:
@@ -29,18 +29,43 @@ def _alcanca(usuario: Usuario, geom) -> bool:
     return area is not None and (geom is None or area.intersects(geom))
 
 
+def preferencias_do_usuario(usuario) -> dict[str, tuple[bool, bool]]:
+    """Por tipo, ``(ativa, email)``. Tipos sem registro seguem o padrão: sino sim, e-mail não."""
+    escolhas = {t: (True, False) for t in TipoNotificacao.values}
+    for p in PreferenciaNotificacao.objects.filter(usuario=usuario):
+        escolhas[p.tipo] = (p.ativa, p.ativa and p.email)
+    return escolhas
+
+
 def _agendar(usuarios: Iterable[Usuario], tipo: str, titulo: str, texto: str, link: str) -> None:
     ids = [u.pk for u in usuarios]
     if not ids:
         return
 
     def gravar() -> None:
-        Notificacao.objects.bulk_create(
+        # A preferência vale na hora de gravar: quem silenciou o tipo não recebe nada.
+        silenciam = set(
+            PreferenciaNotificacao.objects.filter(
+                usuario_id__in=ids, tipo=tipo, ativa=False
+            ).values_list("usuario_id", flat=True)
+        )
+        por_email = set(
+            PreferenciaNotificacao.objects.filter(
+                usuario_id__in=ids, tipo=tipo, ativa=True, email=True
+            ).values_list("usuario_id", flat=True)
+        )
+        criadas = Notificacao.objects.bulk_create(
             [
                 Notificacao(usuario_id=i, tipo=tipo, titulo=titulo, texto=texto, link=link)
                 for i in ids
+                if i not in silenciam
             ]
         )
+        for_email = [str(n.pk) for n in criadas if n.usuario_id in por_email]
+        if for_email:
+            from .tasks import enfileirar_emails
+
+            enfileirar_emails(for_email)
 
     transaction.on_commit(gravar)
 

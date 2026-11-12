@@ -33,7 +33,13 @@ import { Linha, Tabela, Td, Th, ThOrdenavel } from "../../ui/tabela";
 import { formatarData, formatarDataHora, plural } from "../../util/formatos";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { NovaArvoreDialogo } from "./NovaArvoreDialogo";
-import { direcaoDe, proximaOrdenacao, type CampoOrdenacao, type Ordenacao } from "./ordenacao";
+import {
+  ORDENACAO_ATRASO,
+  direcaoDe,
+  proximaOrdenacao,
+  type CampoOrdenacao,
+  type Ordenacao,
+} from "./ordenacao";
 
 const TAMANHO = 50;
 
@@ -48,6 +54,8 @@ export interface BuscaArvores {
   situacao?: "ativa" | "excluida" | "fundida" | "todas";
   sem_inspecao_dias?: number;
   condicao_aparente?: string;
+  /** Área desenhada no mapa, no formato compacto da URL do mapa (M-24). */
+  area?: string;
   ordenar?: Ordenacao;
   pagina?: number;
 }
@@ -263,7 +271,29 @@ export function ArvoresPagina() {
             </option>
           ))}
         </Selecao>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="size-4 accent-marca"
+            checked={ordenacao === ORDENACAO_ATRASO}
+            onChange={(e) => filtrar({ ordenar: e.target.checked ? ORDENACAO_ATRASO : undefined })}
+          />
+          Nunca inspecionadas primeiro
+        </label>
       </div>
+      {filtros.area && (
+        <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-texto-suave">
+          Só as árvores dentro da área desenhada no mapa.
+          <Botao variante="fantasma" asChild>
+            <Link to="/mapa" search={{ area: filtros.area }}>
+              <IconeMapa /> Ver a área no mapa
+            </Link>
+          </Botao>
+          <Botao variante="fantasma" onClick={() => filtrar({ area: undefined })}>
+            Remover a área
+          </Botao>
+        </p>
+      )}
       <details
         className="mb-3 rounded-lg border border-borda bg-superficie"
         open={maisAberto}

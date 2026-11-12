@@ -402,6 +402,34 @@ describe("seleção por área no mapa (RF-MAPA-022)", () => {
   });
 });
 
+describe("Ver todas em lista (M-24)", () => {
+  it("leva à lista de árvores com a mesma área e os filtros do mapa", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?condicao_aparente=ruim");
+    const painel = await selecionarArea(usuario, mapa);
+    const link = await within(painel).findByRole("link", { name: /Ver todas em lista \(2\)/ });
+    const destino = new URL(link.getAttribute("href")!, "http://app.teste");
+    expect(destino.pathname).toBe("/inventario/arvores");
+    expect(destino.searchParams.get("condicao_aparente")).toBe("ruim");
+    // A área vai no mesmo formato compacto da URL do mapa.
+    const { decodificarArea } = await import("../mapa/areaUrl");
+    const area = destino.searchParams.get("area")!;
+    expect(area).toBe(new URLSearchParams(historico.location.search).get("area"));
+    expect(decodificarArea(area)).not.toBeNull();
+    // Filtros de ocorrência não vão para a lista de árvores.
+    expect(destino.searchParams.get("estado")).toBeNull();
+  });
+
+  it("não aparece sem árvores na área nem para quem não lê o inventário", async () => {
+    const usuario = userEvent.setup();
+    eu = { ...LEITOR, permissoes: ["mapa.ler", "ocorrencias.ler"] };
+    const mapa = await abrirMapa();
+    const painel = await selecionarArea(usuario, mapa);
+    await within(painel).findByText("ARV-000001");
+    expect(within(painel).queryByRole("link", { name: /Ver todas em lista/ })).toBeNull();
+  });
+});
+
 describe("área na URL e árvore com área ativa (M-12)", () => {
   // O mapa falso converte o pixel (10,10) em (-38,56; -3,76) e (80,80) em (-38,546; -3,746).
   const RETANGULO = [

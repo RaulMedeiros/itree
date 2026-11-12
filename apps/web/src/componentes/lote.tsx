@@ -12,6 +12,9 @@ export function BarraAcoesEmLote({
   singular,
   plural: pluralForma,
   aoLimpar,
+  todosFiltrados = false,
+  totalFiltrado,
+  aoSelecionarTodos,
   children,
 }: {
   total: number;
@@ -20,6 +23,12 @@ export function BarraAcoesEmLote({
   /** "ocorrências selecionadas" */
   plural: string;
   aoLimpar: () => void;
+  /** A seleção é "todos os filtrados", e não só as linhas marcadas. */
+  todosFiltrados?: boolean;
+  /** Total que os filtros alcançam, para oferecer "Selecionar todos os N filtrados". */
+  totalFiltrado?: number;
+  /** Presente só quando vale oferecer a seleção de todos os filtrados. */
+  aoSelecionarTodos?: () => void;
   children: ReactNode;
 }) {
   if (total === 0) return null;
@@ -32,15 +41,24 @@ export function BarraAcoesEmLote({
     >
       <p role="status" className="mr-2 text-sm font-medium">
         {plural(total, singular, pluralForma)}
+        {todosFiltrados && (
+          <span className="font-normal text-texto-suave"> (todos os filtrados)</span>
+        )}
       </p>
+      {aoSelecionarTodos && totalFiltrado !== undefined && (
+        <Botao variante="fantasma" onClick={aoSelecionarTodos}>
+          Selecionar todos os {totalFiltrado.toLocaleString("pt-BR")} filtrados
+        </Botao>
+      )}
       {children}
       <Botao variante="fantasma" onClick={aoLimpar}>
         Limpar seleção
       </Botao>
       {excede && (
         <p role="alert" className="basis-full text-xs text-perigo">
-          O limite é de {LIMITE_ACOES_EM_LOTE} registros por ação. Desmarque{" "}
-          {total - LIMITE_ACOES_EM_LOTE} para continuar.
+          {todosFiltrados
+            ? `Os filtros alcançam ${total} registros; o limite é de ${LIMITE_ACOES_EM_LOTE} por ação. Refine os filtros para continuar.`
+            : `O limite é de ${LIMITE_ACOES_EM_LOTE} registros por ação. Desmarque ${total - LIMITE_ACOES_EM_LOTE} para continuar.`}
         </p>
       )}
     </div>

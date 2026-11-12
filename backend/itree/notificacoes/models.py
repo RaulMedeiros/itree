@@ -25,11 +25,36 @@ class Notificacao(ModeloBase):
     texto = models.TextField(blank=True)
     link = models.CharField(max_length=300, blank=True, help_text="Caminho interno da tela.")
     lida_em = models.DateTimeField(null=True, blank=True)
+    email_enviado_em = models.DateTimeField(
+        null=True, blank=True, help_text="Quando o e-mail desta notificação foi enviado (M-14)."
+    )
 
     class Meta:
         ordering = ["-criado_em", "-id"]
         verbose_name_plural = "notificações"
         indexes = [models.Index(fields=["usuario", "lida_em", "-criado_em"])]
+
+
+class PreferenciaNotificacao(ModeloBase):
+    """Escolha do usuário por tipo de notificação (M-14).
+
+    Sem registro vale o padrão: recebe no sino e não recebe por e-mail.
+    """
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="preferencias_notificacao"
+    )
+    tipo = models.CharField(max_length=30, choices=TipoNotificacao.choices)
+    ativa = models.BooleanField(default=True, help_text="Recebe este tipo no sino.")
+    email = models.BooleanField(default=False, help_text="Recebe também por e-mail.")
+
+    class Meta:
+        verbose_name_plural = "preferências de notificação"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["usuario", "tipo"], name="preferencia_notificacao_unica"
+            )
+        ]
 
 
 # Texto de um grupo (mesmo tipo, mesmo dia) e tela que abre a lista inteira. O singular vale

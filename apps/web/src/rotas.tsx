@@ -47,6 +47,7 @@ import { AlertaDetalhePagina } from "./paginas/alertas/AlertaDetalhePagina";
 import { AlertasPagina } from "./paginas/alertas/AlertasPagina";
 import { AnalisesPagina } from "./paginas/analises/AnalisesPagina";
 import { AjudaPagina } from "./paginas/ajuda/AjudaPagina";
+import { MinhaContaPagina } from "./paginas/conta/MinhaContaPagina";
 import { NotificacoesPagina } from "./paginas/notificacoes/NotificacoesPagina";
 import { IntegracoesPagina } from "./paginas/administracao/IntegracoesPagina";
 import { QualidadePagina } from "./paginas/inventario/QualidadePagina";
@@ -321,6 +322,8 @@ const arvores = createRoute({
     situacao: z.enum(["ativa", "excluida", "fundida", "todas"]).optional().catch(undefined),
     sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),
     condicao_aparente: textoOpcional,
+    // Área do mapa (M-24): mesmo formato compacto do parâmetro `area` da URL do mapa.
+    area: textoOpcional,
     ordenar: z.enum(ORDENACOES_ARVORES).optional().catch(undefined),
     pagina: paginaOpcional,
   }),
@@ -583,6 +586,12 @@ const notificacoes = createRoute({
   component: NotificacoesPagina,
 });
 
+const minhaConta = createRoute({
+  getParentRoute: () => autenticado,
+  path: "minha-conta",
+  component: MinhaContaPagina,
+});
+
 const ajuda = createRoute({
   getParentRoute: () => autenticado,
   path: "ajuda",
@@ -622,6 +631,7 @@ const arvore = raiz.addChildren([
     analises,
     notificacoes,
     ajuda,
+    minhaConta,
     ...modulosFuturos,
   ]),
 ]);

@@ -254,6 +254,7 @@ class ReatribuicaoEmLoteSerializer(IdsEmLoteSerializer):
     )
 
     def validate(self, attrs):
+        attrs = super().validate(attrs)
         if "responsavel_id" not in attrs and "equipe_id" not in attrs:
             raise serializers.ValidationError("Informe o responsável, a equipe ou os dois.")
         return attrs

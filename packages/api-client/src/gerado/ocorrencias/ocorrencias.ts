@@ -31,6 +31,7 @@ import type {
   OcorrenciasListarParams,
   PaginatedOcorrenciaList,
   PatchedOcorrenciaRequest,
+  PrazoEmLoteRequest,
   PrioridadeEmLoteRequest,
   PrioridadeRequest,
   ReatribuicaoEmLoteRequest,
@@ -879,6 +880,102 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getOcorrenciasTransicaoMutationOptions(options), queryClient);
     }
+    export type ocorrenciasPrazoEmLoteResponse200 = {
+  data: ResultadoAcaoEmLote
+  status: 200
+}
+
+export type ocorrenciasPrazoEmLoteResponseSuccess = (ocorrenciasPrazoEmLoteResponse200) & {
+  headers: Headers;
+};
+;
+
+export type ocorrenciasPrazoEmLoteResponse = (ocorrenciasPrazoEmLoteResponseSuccess)
+
+export const getOcorrenciasPrazoEmLoteUrl = () => {
+
+
+
+
+  return `/api/v1/ocorrencias/lote/prazo`
+}
+
+/**
+ * Define (ou remove) o prazo das ocorrências marcadas ou de todas as filtradas.
+ */
+export const ocorrenciasPrazoEmLote = async (prazoEmLoteRequest: PrazoEmLoteRequest, options?: Parameters<typeof requisicao>[1]): Promise<ocorrenciasPrazoEmLoteResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<ocorrenciasPrazoEmLoteResponse>(getOcorrenciasPrazoEmLoteUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(prazoEmLoteRequest)
+  }
+);}
+
+
+
+
+
+export const getOcorrenciasPrazoEmLoteMutationKey = () => ['ocorrenciasPrazoEmLote'] as const;
+
+export const getOcorrenciasPrazoEmLoteMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasPrazoEmLote>>, TError,OcorrenciasPrazoEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasPrazoEmLote>>, TError,OcorrenciasPrazoEmLoteMutationVariables, TContext> => {
+
+const mutationKey = getOcorrenciasPrazoEmLoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ocorrenciasPrazoEmLote>>, OcorrenciasPrazoEmLoteMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  ocorrenciasPrazoEmLote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OcorrenciasPrazoEmLoteMutationResult = NonNullable<Awaited<ReturnType<typeof ocorrenciasPrazoEmLote>>>
+    export type OcorrenciasPrazoEmLoteMutationBody = PrazoEmLoteRequest
+    export type OcorrenciasPrazoEmLoteMutationError = unknown
+    export type OcorrenciasPrazoEmLoteMutationVariables = {data: PrazoEmLoteRequest}
+
+    export const useOcorrenciasPrazoEmLote = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasPrazoEmLote>>, TError,OcorrenciasPrazoEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof ocorrenciasPrazoEmLote>>,
+        TError,
+        OcorrenciasPrazoEmLoteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getOcorrenciasPrazoEmLoteMutationOptions(options), queryClient);
+    }
     export type ocorrenciasPrioridadeEmLoteResponse200 = {
   data: ResultadoAcaoEmLote
   status: 200
@@ -998,7 +1095,7 @@ export const getOcorrenciasReatribuirEmLoteUrl = () => {
 /**
  * Muda responsável e/ou equipe das ocorrências marcadas na lista (até o limite do lote).
  */
-export const ocorrenciasReatribuirEmLote = async (reatribuicaoEmLoteRequest: ReatribuicaoEmLoteRequest, options?: Parameters<typeof requisicao>[1]): Promise<ocorrenciasReatribuirEmLoteResponse> => {
+export const ocorrenciasReatribuirEmLote = async (reatribuicaoEmLoteRequest?: ReatribuicaoEmLoteRequest, options?: Parameters<typeof requisicao>[1]): Promise<ocorrenciasReatribuirEmLoteResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -1057,9 +1154,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type OcorrenciasReatribuirEmLoteMutationResult = NonNullable<Awaited<ReturnType<typeof ocorrenciasReatribuirEmLote>>>
-    export type OcorrenciasReatribuirEmLoteMutationBody = ReatribuicaoEmLoteRequest
+    export type OcorrenciasReatribuirEmLoteMutationBody = ReatribuicaoEmLoteRequest | undefined
     export type OcorrenciasReatribuirEmLoteMutationError = unknown
-    export type OcorrenciasReatribuirEmLoteMutationVariables = {data: ReatribuicaoEmLoteRequest}
+    export type OcorrenciasReatribuirEmLoteMutationVariables = {data?: ReatribuicaoEmLoteRequest}
 
     export const useOcorrenciasReatribuirEmLote = <TError = unknown,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ocorrenciasReatribuirEmLote>>, TError,OcorrenciasReatribuirEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}

@@ -1,5 +1,5 @@
-import { Link, Outlet } from "@tanstack/react-router";
-import { ChevronDown, CircleHelp, LogOut } from "lucide-react";
+import { Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { ChevronDown, CircleHelp, LogOut, UserRound } from "lucide-react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { ROTULOS_PAPEL } from "@itree/domain";
 import { useAuth } from "react-oidc-context";
@@ -79,6 +79,7 @@ export function Shell() {
 function Cabecalho() {
   const eu = useUsuario();
   const auth = useAuth();
+  const navegar = useNavigate();
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-borda bg-superficie px-6">
@@ -113,6 +114,12 @@ function Cabecalho() {
                 </div>
               </div>
               <Menu.Separator className="my-1 h-px bg-borda" />
+              <Menu.Item
+                className="flex cursor-pointer items-center gap-2 rounded-sm px-2.5 py-2 text-sm outline-none data-highlighted:bg-marca-clara data-highlighted:outline-2 data-highlighted:outline-marca"
+                onSelect={() => void navegar({ to: "/minha-conta" })}
+              >
+                <UserRound className="size-4" aria-hidden /> Minha conta
+              </Menu.Item>
               <Menu.Item
                 className="flex cursor-pointer items-center gap-2 rounded-sm px-2.5 py-2 text-sm outline-none data-highlighted:bg-marca-clara data-highlighted:outline-2 data-highlighted:outline-marca"
                 onSelect={() => void auth.signoutRedirect()}

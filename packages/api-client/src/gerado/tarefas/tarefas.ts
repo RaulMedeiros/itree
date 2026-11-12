@@ -29,6 +29,7 @@ import type {
   EventoAuditoria,
   PaginatedTarefaList,
   PatchedTarefaRequest,
+  PrazoEmLoteRequest,
   ResultadoAcaoEmLote,
   ResultadoLote,
   Tarefa,
@@ -878,4 +879,100 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getTarefasEquipeEmLoteMutationOptions(options), queryClient);
+    }
+    export type tarefasPrazoEmLoteResponse200 = {
+  data: ResultadoAcaoEmLote
+  status: 200
+}
+
+export type tarefasPrazoEmLoteResponseSuccess = (tarefasPrazoEmLoteResponse200) & {
+  headers: Headers;
+};
+;
+
+export type tarefasPrazoEmLoteResponse = (tarefasPrazoEmLoteResponseSuccess)
+
+export const getTarefasPrazoEmLoteUrl = () => {
+
+
+
+
+  return `/api/v1/tarefas/lote/prazo`
+}
+
+/**
+ * Define (ou remove) o prazo das tarefas marcadas ou de todas as filtradas.
+ */
+export const tarefasPrazoEmLote = async (prazoEmLoteRequest: PrazoEmLoteRequest, options?: Parameters<typeof requisicao>[1]): Promise<tarefasPrazoEmLoteResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<tarefasPrazoEmLoteResponse>(getTarefasPrazoEmLoteUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(prazoEmLoteRequest)
+  }
+);}
+
+
+
+
+
+export const getTarefasPrazoEmLoteMutationKey = () => ['tarefasPrazoEmLote'] as const;
+
+export const getTarefasPrazoEmLoteMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tarefasPrazoEmLote>>, TError,TarefasPrazoEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof tarefasPrazoEmLote>>, TError,TarefasPrazoEmLoteMutationVariables, TContext> => {
+
+const mutationKey = getTarefasPrazoEmLoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof tarefasPrazoEmLote>>, TarefasPrazoEmLoteMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  tarefasPrazoEmLote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TarefasPrazoEmLoteMutationResult = NonNullable<Awaited<ReturnType<typeof tarefasPrazoEmLote>>>
+    export type TarefasPrazoEmLoteMutationBody = PrazoEmLoteRequest
+    export type TarefasPrazoEmLoteMutationError = unknown
+    export type TarefasPrazoEmLoteMutationVariables = {data: PrazoEmLoteRequest}
+
+    export const useTarefasPrazoEmLote = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof tarefasPrazoEmLote>>, TError,TarefasPrazoEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof tarefasPrazoEmLote>>,
+        TError,
+        TarefasPrazoEmLoteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getTarefasPrazoEmLoteMutationOptions(options), queryClient);
     }

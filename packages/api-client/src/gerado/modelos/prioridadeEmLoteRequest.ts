@@ -5,15 +5,21 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { PrioridadeEmLoteRequestFiltros } from './prioridadeEmLoteRequestFiltros';
 import type { PrioridadeEnum } from './prioridadeEnum';
 
+/**
+ * Quais registros a ação alcança: os marcados (``ids``) ou todos os filtrados (``filtros``).
+ */
 export interface PrioridadeEmLoteRequest {
   /**
-     * Registros marcados na lista (de 1 a 200).
+     * Registros marcados na lista (de 1 a 200). Use `ids` ou `filtros`, nunca os dois.
      * @minItems 1
      * @maxItems 200
      */
-  ids: string[];
+  ids?: string[];
+  /** Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...), no lugar dos ids. Alcança todos os registros filtrados, até o limite de 200; com mais que isso, a ação é recusada. */
+  filtros?: PrioridadeEmLoteRequestFiltros;
   /**
      * Fica no histórico de cada registro alterado.
      * @maxLength 500
