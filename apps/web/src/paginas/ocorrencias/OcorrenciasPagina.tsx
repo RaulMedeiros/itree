@@ -12,8 +12,9 @@ import { Map as IconeMapa, Plus, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
-import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
+import { BotaoExportarCsv, filtrosParaExportar } from "../../componentes/BotaoExportarCsv";
 import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
+import { PrazoEmLoteDialogo } from "../../componentes/PrazoEmLoteDialogo";
 import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
@@ -67,7 +68,7 @@ export function OcorrenciasPagina() {
   const podeRegistrar = usePermissao("ocorrencias.editar");
   const podePriorizar = usePermissao("ocorrencias.priorizar");
   const [nova, setNova] = useState(false);
-  const [acaoEmLote, setAcaoEmLote] = useState<"reatribuir" | "prioridade" | null>(null);
+  const [acaoEmLote, setAcaoEmLote] = useState<"reatribuir" | "prioridade" | "prazo" | null>(null);
   const [busca, setBusca] = useState(filtros.busca ?? "");
   const tipos = useTiposOcorrenciaListar();
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
@@ -104,7 +105,10 @@ export function OcorrenciasPagina() {
   const selecao = useSelecaoEmLote(
     JSON.stringify({ ...filtros, pagina: undefined, bairro, estado }),
     consulta.data?.data.results.map((o) => o.id) ?? [],
+    consulta.data?.data.count ?? 0,
   );
+  // Os mesmos filtros da lista, para "todos os filtrados" valer exatamente o que ela mostra.
+  const filtrosDoLote = filtrosParaExportar({ ...filtros, bairro, estado });
 
   return (
     <>
@@ -252,24 +256,38 @@ export function OcorrenciasPagina() {
       ) : (
         <>
           <BarraAcoesEmLote
-            total={selecao.selecionadas.length}
+            total={selecao.total}
             singular="ocorrência selecionada"
             plural="ocorrências selecionadas"
             aoLimpar={selecao.limpar}
+            todosFiltrados={selecao.todosFiltrados}
+            totalFiltrado={consulta.data.data.count}
+            aoSelecionarTodos={
+              selecao.podeSelecionarTodos ? selecao.selecionarTodosFiltrados : undefined
+            }
           >
             {podeRegistrar && (
               <Botao
                 variante="secundario"
-                disabled={selecao.selecionadas.length > LIMITE_ACOES_EM_LOTE}
+                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
                 onClick={() => setAcaoEmLote("reatribuir")}
               >
                 Reatribuir
               </Botao>
             )}
+            {podeRegistrar && (
+              <Botao
+                variante="secundario"
+                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
+                onClick={() => setAcaoEmLote("prazo")}
+              >
+                Definir prazo
+              </Botao>
+            )}
             {podePriorizar && (
               <Botao
                 variante="secundario"
-                disabled={selecao.selecionadas.length > LIMITE_ACOES_EM_LOTE}
+                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
                 onClick={() => setAcaoEmLote("prioridade")}
               >
                 Alterar prioridade
@@ -376,7 +394,19 @@ export function OcorrenciasPagina() {
       {nova && <NovaOcorrenciaDialogo aoFechar={() => setNova(false)} />}
       {acaoEmLote === "reatribuir" && (
         <ReatribuirEmLoteDialogo
-          ids={selecao.selecionadas}
+          alvo={selecao.alvo(filtrosDoLote)}
+          total={selecao.total}
+          aoFechar={(alterou) => {
+            setAcaoEmLote(null);
+            if (alterou) selecao.limpar();
+          }}
+        />
+      )}
+      {acaoEmLote === "prazo" && (
+        <PrazoEmLoteDialogo
+          recurso="ocorrencias"
+          alvo={selecao.alvo(filtrosDoLote)}
+          total={selecao.total}
           aoFechar={(alterou) => {
             setAcaoEmLote(null);
             if (alterou) selecao.limpar();
@@ -385,7 +415,8 @@ export function OcorrenciasPagina() {
       )}
       {acaoEmLote === "prioridade" && (
         <PrioridadeEmLoteDialogo
-          ids={selecao.selecionadas}
+          alvo={selecao.alvo(filtrosDoLote)}
+          total={selecao.total}
           aoFechar={(alterou) => {
             setAcaoEmLote(null);
             if (alterou) selecao.limpar();

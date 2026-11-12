@@ -16,8 +16,10 @@ from itree.contas.acesso import area_do_escopo, filtrar_por_escopo, ponto_no_esc
 from itree.contas.permissoes import Permissao
 from itree.core.lote import (
     MOTIVO_ENCERRADA,
+    PrazoEmLoteSerializer,
     ResultadoAcaoEmLoteSerializer,
     ignorados_fora_do_escopo,
+    resolver_ids_do_lote,
 )
 from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
 from itree.evidencias.models import EstadoEvidencia, Evidencia
@@ -315,12 +317,51 @@ class TarefaViewSet(
         dados = EquipeEmLoteSerializer(data=request.data)
         dados.is_valid(raise_exception=True)
         v = dados.validated_data
-        ids, equipe, motivo = v["ids"], v["equipe_id"], v.get("motivo", "").strip()
+        equipe = v["equipe_id"]
         membros = set(equipe.membros.values_list("pk", flat=True))
+
+        def alterar(tarefa):
+            tarefa.equipe = equipe
+            if tarefa.responsavel_id and tarefa.responsavel_id not in membros:
+                tarefa.responsavel = None
+            tarefa.save(update_fields=["equipe", "responsavel", "atualizado_em"])
+            notificacoes.tarefa_atribuida(tarefa, autor=request.user)
+
+        return self._alterar_em_lote(v, "tarefas_equipe_em_lote", alterar)
+
+    @extend_schema(
+        operation_id="tarefas_prazo_em_lote",
+        request=PrazoEmLoteSerializer,
+        responses=ResultadoAcaoEmLoteSerializer,
+    )
+    @action(detail=False, methods=["post"], url_path="lote/prazo", pagination_class=None)
+    def prazo_em_lote(self, request):
+        """Define (ou remove) o prazo das tarefas marcadas ou de todas as filtradas."""
+        dados = PrazoEmLoteSerializer(data=request.data)
+        dados.is_valid(raise_exception=True)
+        v = dados.validated_data
+
+        def alterar(tarefa):
+            tarefa.prazo = v["prazo"]
+            tarefa.save(update_fields=["prazo", "atualizado_em"])
+
+        return self._alterar_em_lote(v, "tarefas_prazo_em_lote", alterar)
+
+    def _alterar_em_lote(self, validado, evento: str, alterar):
+        """Aplica ``alterar(tarefa)`` às tarefas abertas do escopo, em uma transação.
+
+        O que não pôde ser alterado volta em ``ignoradas``, com o motivo.
+        """
+        ids = resolver_ids_do_lote(
+            validado,
+            self.get_queryset(),
+            lambda qs, filtros: filtrar_tarefas(qs, self.request.user, filtros),
+        )
+        motivo = validado.get("motivo", "").strip()
         atualizadas = 0
         with (
             transaction.atomic(),
-            pghistory.context(motivo=motivo or None, evento="tarefas_equipe_em_lote"),
+            pghistory.context(motivo=motivo or None, evento=evento),
         ):
             encontradas = {
                 t.pk: t
@@ -336,11 +377,7 @@ class TarefaViewSet(
                         {"id": pk, "codigo": tarefa.codigo, "motivo": MOTIVO_ENCERRADA}
                     )
                     continue
-                tarefa.equipe = equipe
-                if tarefa.responsavel_id and tarefa.responsavel_id not in membros:
-                    tarefa.responsavel = None
-                tarefa.save(update_fields=["equipe", "responsavel", "atualizado_em"])
-                notificacoes.tarefa_atribuida(tarefa, autor=request.user)
+                alterar(tarefa)
                 atualizadas += 1
         return Response({"atualizadas": atualizadas, "ignoradas": ignoradas})
 

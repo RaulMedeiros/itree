@@ -18,6 +18,7 @@ import { AreaTexto, Campo, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { invalidarCaminhos } from "../../util/cache";
 import { plural } from "../../util/formatos";
+import type { AlvoLote } from "../../util/lote";
 
 /** Valor da opção que deixa o campo como está em cada ocorrência. */
 const MANTER = "__manter__";
@@ -30,10 +31,12 @@ function mensagemDeErro(erro: ErroApi): string {
 
 /** Reatribui responsável e/ou equipe das ocorrências marcadas. Só muda o que for escolhido. */
 export function ReatribuirEmLoteDialogo({
-  ids,
+  alvo,
+  total,
   aoFechar,
 }: {
-  ids: string[];
+  alvo: AlvoLote;
+  total: number;
   aoFechar: (alterou: boolean) => void;
 }) {
   const podeVerUsuarios = usePermissao("admin.usuarios");
@@ -71,7 +74,7 @@ export function ReatribuirEmLoteDialogo({
     <Dialogo
       aberto
       aoMudar={(v) => !v && aoFechar(false)}
-      titulo={`Reatribuir ${plural(ids.length, "ocorrência", "ocorrências")}`}
+      titulo={`Reatribuir ${plural(total, "ocorrência", "ocorrências")}`}
       descricao="Vale para todas as ocorrências marcadas. As já encerradas não mudam. Fica no histórico de cada uma."
       rodape={
         <>
@@ -84,7 +87,7 @@ export function ReatribuirEmLoteDialogo({
               mutacao.mutate(
                 {
                   data: {
-                    ids,
+                    ...alvo,
                     ...(responsavel !== MANTER && { responsavel_id: responsavel || null }),
                     ...(equipe !== MANTER && { equipe_id: equipe || null }),
                     motivo: motivo.trim() || undefined,
@@ -146,10 +149,12 @@ export function ReatribuirEmLoteDialogo({
 
 /** Prioridade operacional das ocorrências marcadas (só quem pode priorizar). */
 export function PrioridadeEmLoteDialogo({
-  ids,
+  alvo,
+  total,
   aoFechar,
 }: {
-  ids: string[];
+  alvo: AlvoLote;
+  total: number;
   aoFechar: (alterou: boolean) => void;
 }) {
   const [prioridade, setPrioridade] = useState<PrioridadeEnum>("media");
@@ -170,7 +175,7 @@ export function PrioridadeEmLoteDialogo({
     <Dialogo
       aberto
       aoMudar={(v) => !v && aoFechar(false)}
-      titulo={`Alterar prioridade de ${plural(ids.length, "ocorrência", "ocorrências")}`}
+      titulo={`Alterar prioridade de ${plural(total, "ocorrência", "ocorrências")}`}
       descricao="A prioridade ordena o atendimento. Não é avaliação de risco. As já encerradas não mudam."
       rodape={
         <>
@@ -181,7 +186,7 @@ export function PrioridadeEmLoteDialogo({
             disabled={mutacao.isPending}
             onClick={() =>
               mutacao.mutate(
-                { data: { ids, prioridade, motivo: motivo.trim() || undefined } },
+                { data: { ...alvo, prioridade, motivo: motivo.trim() || undefined } },
                 {
                   onSuccess: async ({ data }) => {
                     await invalidarCaminhos(cliente, "/api/v1/ocorrencias");

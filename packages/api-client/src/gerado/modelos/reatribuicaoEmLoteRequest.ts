@@ -5,6 +5,7 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { ReatribuicaoEmLoteRequestFiltros } from './reatribuicaoEmLoteRequestFiltros';
 
 /**
  * Responsável e/ou equipe aplicados a todas as ocorrências marcadas.
@@ -13,11 +14,13 @@
  */
 export interface ReatribuicaoEmLoteRequest {
   /**
-     * Registros marcados na lista (de 1 a 200).
+     * Registros marcados na lista (de 1 a 200). Use `ids` ou `filtros`, nunca os dois.
      * @minItems 1
      * @maxItems 200
      */
-  ids: string[];
+  ids?: string[];
+  /** Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...), no lugar dos ids. Alcança todos os registros filtrados, até o limite de 200; com mais que isso, a ação é recusada. */
+  filtros?: ReatribuicaoEmLoteRequestFiltros;
   /**
      * Fica no histórico de cada registro alterado.
      * @maxLength 500

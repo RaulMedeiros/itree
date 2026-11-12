@@ -14,16 +14,19 @@ import { AreaTexto, Campo, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { invalidarCaminhos } from "../../util/cache";
 import { plural } from "../../util/formatos";
+import type { AlvoLote } from "../../util/lote";
 
 /**
  * Passa as tarefas marcadas para outra equipe. O responsável de cada tarefa só continua
  * se for membro da nova equipe; senão a tarefa fica sem responsável (o servidor decide).
  */
 export function EquipeEmLoteDialogo({
-  ids,
+  alvo,
+  total,
   aoFechar,
 }: {
-  ids: string[];
+  alvo: AlvoLote;
+  total: number;
   aoFechar: (alterou: boolean) => void;
 }) {
   const equipes = useEquipesListar({ ativa: true, tamanho: 200 });
@@ -45,7 +48,7 @@ export function EquipeEmLoteDialogo({
     <Dialogo
       aberto
       aoMudar={(v) => !v && aoFechar(false)}
-      titulo={`Reatribuir equipe de ${plural(ids.length, "tarefa", "tarefas")}`}
+      titulo={`Reatribuir equipe de ${plural(total, "tarefa", "tarefas")}`}
       descricao="As tarefas encerradas não mudam. Quem era responsável e não é da nova equipe deixa de ser, e a equipe é avisada."
       rodape={
         <>
@@ -56,7 +59,7 @@ export function EquipeEmLoteDialogo({
             disabled={!equipe || mutacao.isPending}
             onClick={() =>
               mutacao.mutate(
-                { data: { ids, equipe_id: equipe, motivo: motivo.trim() || undefined } },
+                { data: { ...alvo, equipe_id: equipe, motivo: motivo.trim() || undefined } },
                 {
                   onSuccess: async ({ data }) => {
                     await invalidarCaminhos(cliente, "/api/v1/tarefas");

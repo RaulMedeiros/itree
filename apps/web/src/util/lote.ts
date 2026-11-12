@@ -3,18 +3,42 @@ import { useState } from "react";
 /** Registros por ação em lote. O servidor é quem impõe (`LIMITE_ACOES_EM_LOTE`); aqui só avisa antes. */
 export const LIMITE_ACOES_EM_LOTE = 200;
 
+/** O que a ação em lote alcança: as linhas marcadas ou todas as que os filtros mostram (M-23). */
+export type AlvoLote = { ids: string[] } | { filtros: Record<string, string> };
+
 /**
  * Seleção por caixas de seleção em uma lista paginada. Atravessa as páginas, mas só vale
  * para os filtros em que foi feita: mudou o filtro, a seleção recomeça vazia.
+ *
+ * Com a página inteira marcada e mais registros além dela, `podeSelecionarTodos` oferece
+ * "Selecionar todos os N filtrados": a ação passa a valer para os filtros, não para ids.
  */
-export function useSelecaoEmLote(chaveDosFiltros: string, idsDaPagina: string[]) {
-  const [estado, setEstado] = useState<{ chave: string; ids: string[] }>({ chave: "", ids: [] });
-  const selecionadas = estado.chave === chaveDosFiltros ? estado.ids : [];
-  const definir = (ids: string[]) => setEstado({ chave: chaveDosFiltros, ids });
+export function useSelecaoEmLote(
+  chaveDosFiltros: string,
+  idsDaPagina: string[],
+  totalFiltrado = 0,
+) {
+  const [estado, setEstado] = useState<{ chave: string; ids: string[]; todos: boolean }>({
+    chave: "",
+    ids: [],
+    todos: false,
+  });
+  const vale = estado.chave === chaveDosFiltros;
+  const selecionadas = vale ? estado.ids : [];
+  const todosFiltrados = vale && estado.todos;
+  const definir = (ids: string[]) => setEstado({ chave: chaveDosFiltros, ids, todos: false });
   const marcadasNaPagina = idsDaPagina.filter((id) => selecionadas.includes(id));
   const paginaInteira = idsDaPagina.length > 0 && marcadasNaPagina.length === idsDaPagina.length;
   return {
     selecionadas,
+    /** Quantos registros a ação alcança: os filtrados, quando "todos" está ligado. */
+    total: todosFiltrados ? totalFiltrado : selecionadas.length,
+    todosFiltrados,
+    podeSelecionarTodos: !todosFiltrados && paginaInteira && totalFiltrado > selecionadas.length,
+    selecionarTodosFiltrados: () =>
+      setEstado({ chave: chaveDosFiltros, ids: selecionadas, todos: true }),
+    alvo: (filtros: Record<string, string>): AlvoLote =>
+      todosFiltrados ? { filtros } : { ids: selecionadas },
     paginaInteira,
     paginaParcial: marcadasNaPagina.length > 0 && !paginaInteira,
     marcada: (id: string) => selecionadas.includes(id),

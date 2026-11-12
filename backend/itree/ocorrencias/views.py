@@ -16,8 +16,10 @@ from itree.contas.acesso import filtrar_por_escopo, ponto_no_escopo, requer
 from itree.contas.permissoes import Permissao
 from itree.core.lote import (
     MOTIVO_ENCERRADA,
+    PrazoEmLoteSerializer,
     ResultadoAcaoEmLoteSerializer,
     ignorados_fora_do_escopo,
+    resolver_ids_do_lote,
 )
 from itree.core.parametros import uuid_do_parametro
 from itree.notificacoes import servicos as notificacoes
@@ -290,12 +292,21 @@ class OcorrenciaViewSet(
             )
         return self._responder(request)
 
-    def _alterar_em_lote(self, ids, motivo: str, evento: str, alterar):
+    def _ids_do_lote(self, validado) -> list:
+        """Os ids marcados ou, com ``filtros``, todas as ocorrências que a lista mostraria."""
+        return resolver_ids_do_lote(
+            validado,
+            self.get_queryset(),
+            lambda qs, filtros: filtrar_ocorrencias(qs, filtros),
+        )
+
+    def _alterar_em_lote(self, validado, evento: str, alterar):
         """Aplica ``alterar(ocorrencia)`` às ocorrências abertas do escopo, em uma transação.
 
         O que não pôde ser alterado volta em ``ignoradas``, com o motivo. A auditoria de
         cada ocorrência recebe o motivo e o nome do evento em lote.
         """
+        ids, motivo = self._ids_do_lote(validado), validado.get("motivo", "").strip()
         atualizadas = 0
         with transaction.atomic(), pghistory.context(motivo=motivo or None, evento=evento):
             encontradas = {
@@ -338,9 +349,7 @@ class OcorrenciaViewSet(
                 setattr(ocorrencia, campo, valor)
             ocorrencia.save(update_fields=[*(c for c, _ in campos), "atualizado_em"])
 
-        return self._alterar_em_lote(
-            v["ids"], v.get("motivo", "").strip(), "ocorrencias_reatribuidas_em_lote", alterar
-        )
+        return self._alterar_em_lote(v, "ocorrencias_reatribuidas_em_lote", alterar)
 
     @extend_schema(
         operation_id="ocorrencias_prioridade_em_lote",
@@ -368,9 +377,25 @@ class OcorrenciaViewSet(
                 ]
             )
 
-        return self._alterar_em_lote(
-            v["ids"], v.get("motivo", "").strip(), "prioridade_definida_em_lote", alterar
-        )
+        return self._alterar_em_lote(v, "prioridade_definida_em_lote", alterar)
+
+    @extend_schema(
+        operation_id="ocorrencias_prazo_em_lote",
+        request=PrazoEmLoteSerializer,
+        responses=ResultadoAcaoEmLoteSerializer,
+    )
+    @action(detail=False, methods=["post"], url_path="lote/prazo", pagination_class=None)
+    def prazo_em_lote(self, request):
+        """Define (ou remove) o prazo das ocorrências marcadas ou de todas as filtradas."""
+        dados = PrazoEmLoteSerializer(data=request.data)
+        dados.is_valid(raise_exception=True)
+        v = dados.validated_data
+
+        def alterar(ocorrencia):
+            ocorrencia.prazo = v["prazo"]
+            ocorrencia.save(update_fields=["prazo", "atualizado_em"])
+
+        return self._alterar_em_lote(v, "prazo_definido_em_lote", alterar)
 
     @extend_schema(
         operation_id="ocorrencias_risco", request=RiscoSerializer, responses=OcorrenciaSerializer

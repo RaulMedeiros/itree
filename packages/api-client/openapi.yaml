@@ -2641,6 +2641,34 @@ paths:
               schema:
                 $ref: '#/components/schemas/Ocorrencia'
           description: ''
+  /api/v1/ocorrencias/lote/prazo:
+    post:
+      operationId: ocorrencias_prazo_em_lote
+      description: Define (ou remove) o prazo das ocorrências marcadas ou de todas
+        as filtradas.
+      tags:
+      - ocorrencias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrazoEmLoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PrazoEmLoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PrazoEmLoteRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoAcaoEmLote'
+          description: ''
   /api/v1/ocorrencias/lote/prioridade:
     post:
       operationId: ocorrencias_prioridade_em_lote
@@ -2687,7 +2715,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/ReatribuicaoEmLoteRequest'
-        required: true
       security:
       - oidc: []
       responses:
@@ -3122,6 +3149,34 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/EquipeEmLoteRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoAcaoEmLote'
+          description: ''
+  /api/v1/tarefas/lote/prazo:
+    post:
+      operationId: tarefas_prazo_em_lote
+      description: Define (ou remove) o prazo das tarefas marcadas ou de todas as
+        filtradas.
+      tags:
+      - tarefas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrazoEmLoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PrazoEmLoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PrazoEmLoteRequest'
         required: true
       security:
       - oidc: []
@@ -4169,15 +4224,25 @@ components:
       - territorios
     EquipeEmLoteRequest:
       type: object
+      description: 'Quais registros a ação alcança: os marcados (``ids``) ou todos
+        os filtrados (``filtros``).'
       properties:
         ids:
           type: array
           items:
             type: string
             format: uuid
-          description: Registros marcados na lista (de 1 a 200).
+          description: Registros marcados na lista (de 1 a 200). Use `ids` ou `filtros`,
+            nunca os dois.
           maxItems: 200
           minItems: 1
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+          description: Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...),
+            no lugar dos ids. Alcança todos os registros filtrados, até o limite de
+            200; com mais que isso, a ação é recusada.
         motivo:
           type: string
           description: Fica no histórico de cada registro alterado.
@@ -4188,7 +4253,6 @@ components:
           description: Equipe que passa a atender as tarefas marcadas.
       required:
       - equipe_id
-      - ids
     EquipeRequest:
       type: object
       properties:
@@ -6934,6 +6998,38 @@ components:
         * `admin.auditoria` - Consultar auditoria
         * `admin.territorios` - Administrar territórios
         * `admin.configuracao` - Administrar catálogos e integrações
+    PrazoEmLoteRequest:
+      type: object
+      description: 'Quais registros a ação alcança: os marcados (``ids``) ou todos
+        os filtrados (``filtros``).'
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Registros marcados na lista (de 1 a 200). Use `ids` ou `filtros`,
+            nunca os dois.
+          maxItems: 200
+          minItems: 1
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+          description: Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...),
+            no lugar dos ids. Alcança todos os registros filtrados, até o limite de
+            200; com mais que isso, a ação é recusada.
+        motivo:
+          type: string
+          description: Fica no histórico de cada registro alterado.
+          maxLength: 500
+        prazo:
+          type: string
+          format: date
+          nullable: true
+          description: Novo prazo (AAAA-MM-DD). `null` remove o prazo.
+      required:
+      - prazo
     PreferenciaNotificacao:
       type: object
       properties:
@@ -6982,15 +7078,25 @@ components:
       - passos
     PrioridadeEmLoteRequest:
       type: object
+      description: 'Quais registros a ação alcança: os marcados (``ids``) ou todos
+        os filtrados (``filtros``).'
       properties:
         ids:
           type: array
           items:
             type: string
             format: uuid
-          description: Registros marcados na lista (de 1 a 200).
+          description: Registros marcados na lista (de 1 a 200). Use `ids` ou `filtros`,
+            nunca os dois.
           maxItems: 200
           minItems: 1
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+          description: Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...),
+            no lugar dos ids. Alcança todos os registros filtrados, até o limite de
+            200; com mais que isso, a ação é recusada.
         motivo:
           type: string
           description: Fica no histórico de cada registro alterado.
@@ -6998,7 +7104,6 @@ components:
         prioridade:
           $ref: '#/components/schemas/PrioridadeEnum'
       required:
-      - ids
       - prioridade
     PrioridadeEnum:
       enum:
@@ -7034,9 +7139,17 @@ components:
           items:
             type: string
             format: uuid
-          description: Registros marcados na lista (de 1 a 200).
+          description: Registros marcados na lista (de 1 a 200). Use `ids` ou `filtros`,
+            nunca os dois.
           maxItems: 200
           minItems: 1
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+          description: Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...),
+            no lugar dos ids. Alcança todos os registros filtrados, até o limite de
+            200; com mais que isso, a ação é recusada.
         motivo:
           type: string
           description: Fica no histórico de cada registro alterado.
@@ -7049,8 +7162,6 @@ components:
           type: string
           format: uuid
           nullable: true
-      required:
-      - ids
     Referencia:
       type: object
       properties:
