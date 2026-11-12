@@ -47,6 +47,7 @@ import { AlertaDetalhePagina } from "./paginas/alertas/AlertaDetalhePagina";
 import { AlertasPagina } from "./paginas/alertas/AlertasPagina";
 import { AnalisesPagina } from "./paginas/analises/AnalisesPagina";
 import { AjudaPagina } from "./paginas/ajuda/AjudaPagina";
+import { MinhaContaPagina } from "./paginas/conta/MinhaContaPagina";
 import { NotificacoesPagina } from "./paginas/notificacoes/NotificacoesPagina";
 import { IntegracoesPagina } from "./paginas/administracao/IntegracoesPagina";
 import { QualidadePagina } from "./paginas/inventario/QualidadePagina";
@@ -583,6 +584,12 @@ const notificacoes = createRoute({
   component: NotificacoesPagina,
 });
 
+const minhaConta = createRoute({
+  getParentRoute: () => autenticado,
+  path: "minha-conta",
+  component: MinhaContaPagina,
+});
+
 const ajuda = createRoute({
   getParentRoute: () => autenticado,
   path: "ajuda",
@@ -622,6 +629,7 @@ const arvore = raiz.addChildren([
     analises,
     notificacoes,
     ajuda,
+    minhaConta,
     ...modulosFuturos,
   ]),
 ]);

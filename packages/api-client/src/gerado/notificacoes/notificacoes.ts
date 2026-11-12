@@ -25,13 +25,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AtualizarPreferenciasRequest,
   ContagemNaoLidas,
   GrupoNotificacoes,
   LerGrupoRequest,
   Notificacao,
   NotificacoesAgrupadasParams,
   NotificacoesListarParams,
-  PaginatedNotificacaoList
+  PaginatedNotificacaoList,
+  PreferenciaNotificacao
 } from '../modelos';
 
 import { requisicao } from '../../cliente';
@@ -658,4 +660,213 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getNotificacoesLerTodasMutationOptions(options), queryClient);
+    }
+    export type notificacoesPreferenciasResponse200 = {
+  data: PreferenciaNotificacao[]
+  status: 200
+}
+
+export type notificacoesPreferenciasResponseSuccess = (notificacoesPreferenciasResponse200) & {
+  headers: Headers;
+};
+;
+
+export type notificacoesPreferenciasResponse = (notificacoesPreferenciasResponseSuccess)
+
+export const getNotificacoesPreferenciasUrl = () => {
+
+
+
+
+  return `/api/v1/notificacoes/preferencias`
+}
+
+/**
+ * Escolha por tipo: receber no sino e receber também por e-mail (M-14).
+ *
+ * O PUT aceita só os tipos que mudam; os demais ficam como estão.
+ */
+export const notificacoesPreferencias = async ( options?: Parameters<typeof requisicao>[1]): Promise<notificacoesPreferenciasResponse> => {
+
+  return requisicao<notificacoesPreferenciasResponse>(getNotificacoesPreferenciasUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getNotificacoesPreferenciasQueryKey = () => {
+    return [
+    `/api/v1/notificacoes/preferencias`
+    ] as const;
+    }
+
+
+export const getNotificacoesPreferenciasQueryOptions = <TData = Awaited<ReturnType<typeof notificacoesPreferencias>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesPreferencias>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getNotificacoesPreferenciasQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof notificacoesPreferencias>>> = ({ signal }) => notificacoesPreferencias({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof notificacoesPreferencias>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type NotificacoesPreferenciasQueryResult = NonNullable<Awaited<ReturnType<typeof notificacoesPreferencias>>>
+export type NotificacoesPreferenciasQueryError = unknown
+
+
+export function useNotificacoesPreferencias<TData = Awaited<ReturnType<typeof notificacoesPreferencias>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesPreferencias>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof notificacoesPreferencias>>,
+          TError,
+          Awaited<ReturnType<typeof notificacoesPreferencias>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useNotificacoesPreferencias<TData = Awaited<ReturnType<typeof notificacoesPreferencias>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesPreferencias>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof notificacoesPreferencias>>,
+          TError,
+          Awaited<ReturnType<typeof notificacoesPreferencias>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useNotificacoesPreferencias<TData = Awaited<ReturnType<typeof notificacoesPreferencias>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesPreferencias>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useNotificacoesPreferencias<TData = Awaited<ReturnType<typeof notificacoesPreferencias>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesPreferencias>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getNotificacoesPreferenciasQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type notificacoesAtualizarPreferenciasResponse200 = {
+  data: PreferenciaNotificacao[]
+  status: 200
+}
+
+export type notificacoesAtualizarPreferenciasResponseSuccess = (notificacoesAtualizarPreferenciasResponse200) & {
+  headers: Headers;
+};
+;
+
+export type notificacoesAtualizarPreferenciasResponse = (notificacoesAtualizarPreferenciasResponseSuccess)
+
+export const getNotificacoesAtualizarPreferenciasUrl = () => {
+
+
+
+
+  return `/api/v1/notificacoes/preferencias`
+}
+
+/**
+ * Escolha por tipo: receber no sino e receber também por e-mail (M-14).
+ *
+ * O PUT aceita só os tipos que mudam; os demais ficam como estão.
+ */
+export const notificacoesAtualizarPreferencias = async (atualizarPreferenciasRequest: AtualizarPreferenciasRequest, options?: Parameters<typeof requisicao>[1]): Promise<notificacoesAtualizarPreferenciasResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<notificacoesAtualizarPreferenciasResponse>(getNotificacoesAtualizarPreferenciasUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(atualizarPreferenciasRequest)
+  }
+);}
+
+
+
+
+
+export const getNotificacoesAtualizarPreferenciasMutationKey = () => ['notificacoesAtualizarPreferencias'] as const;
+
+export const getNotificacoesAtualizarPreferenciasMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificacoesAtualizarPreferencias>>, TError,NotificacoesAtualizarPreferenciasMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof notificacoesAtualizarPreferencias>>, TError,NotificacoesAtualizarPreferenciasMutationVariables, TContext> => {
+
+const mutationKey = getNotificacoesAtualizarPreferenciasMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof notificacoesAtualizarPreferencias>>, NotificacoesAtualizarPreferenciasMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  notificacoesAtualizarPreferencias(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type NotificacoesAtualizarPreferenciasMutationResult = NonNullable<Awaited<ReturnType<typeof notificacoesAtualizarPreferencias>>>
+    export type NotificacoesAtualizarPreferenciasMutationBody = AtualizarPreferenciasRequest
+    export type NotificacoesAtualizarPreferenciasMutationError = unknown
+    export type NotificacoesAtualizarPreferenciasMutationVariables = {data: AtualizarPreferenciasRequest}
+
+    export const useNotificacoesAtualizarPreferencias = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificacoesAtualizarPreferencias>>, TError,NotificacoesAtualizarPreferenciasMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof notificacoesAtualizarPreferencias>>,
+        TError,
+        NotificacoesAtualizarPreferenciasMutationVariables,
+        TContext
+      > => {
+      return useMutation(getNotificacoesAtualizarPreferenciasMutationOptions(options), queryClient);
     }

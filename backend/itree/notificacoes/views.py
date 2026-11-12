@@ -7,13 +7,16 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from .models import GRUPOS, Notificacao, TipoNotificacao
+from .models import GRUPOS, Notificacao, PreferenciaNotificacao, TipoNotificacao
 from .serializers import (
+    AtualizarPreferenciasSerializer,
     ContagemNaoLidasSerializer,
     GrupoNotificacoesSerializer,
     LerGrupoSerializer,
     NotificacaoSerializer,
+    PreferenciaNotificacaoSerializer,
 )
+from .servicos import preferencias_do_usuario
 
 LIMITE_GRUPOS = 50
 
@@ -58,6 +61,43 @@ class NotificacaoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         elif lida:
             raise ValidationError({"lida": ["Use true ou false."]})
         return qs
+
+    @extend_schema(
+        methods=["GET"],
+        operation_id="notificacoes_preferencias",
+        responses=PreferenciaNotificacaoSerializer(many=True),
+    )
+    @extend_schema(
+        methods=["PUT"],
+        operation_id="notificacoes_atualizar_preferencias",
+        request=AtualizarPreferenciasSerializer,
+        responses=PreferenciaNotificacaoSerializer(many=True),
+    )
+    @action(detail=False, methods=["get", "put"], pagination_class=None)
+    def preferencias(self, request):
+        """Escolha por tipo: receber no sino e receber também por e-mail (M-14).
+
+        O PUT aceita só os tipos que mudam; os demais ficam como estão.
+        """
+        if request.method == "PUT":
+            dados = AtualizarPreferenciasSerializer(data=request.data)
+            dados.is_valid(raise_exception=True)
+            for p in dados.validated_data["preferencias"]:
+                PreferenciaNotificacao.objects.update_or_create(
+                    usuario=request.user,
+                    tipo=p["tipo"],
+                    defaults={"ativa": p["ativa"], "email": p["ativa"] and p["email"]},
+                )
+        escolhas = preferencias_do_usuario(request.user)
+        return Response(
+            PreferenciaNotificacaoSerializer(
+                [
+                    {"tipo": t, "rotulo": rotulo, "ativa": escolhas[t][0], "email": escolhas[t][1]}
+                    for t, rotulo in TipoNotificacao.choices
+                ],
+                many=True,
+            ).data
+        )
 
     @extend_schema(operation_id="notificacoes_contar", responses=ContagemNaoLidasSerializer)
     @action(detail=False, pagination_class=None)
