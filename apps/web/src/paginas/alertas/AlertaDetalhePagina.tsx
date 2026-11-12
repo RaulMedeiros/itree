@@ -17,6 +17,7 @@ import { ArrowLeft } from "lucide-react";
 import { Fragment, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
+import { CondicaoAparente } from "../../componentes/CondicaoAparente";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { Mapa } from "../../mapa/Mapa";
@@ -287,7 +288,9 @@ function ArvoresProximas({ alerta, raio }: { alerta: AlertaAmbiental; raio: Raio
                   </Link>
                 </Td>
                 <Td>{v.especie ?? <span className="text-texto-suave">Não identificada</span>}</Td>
-                <Td>{v.condicao_aparente || <span className="text-texto-suave">—</span>}</Td>
+                <Td>
+                  <CondicaoAparente condicao={v.condicao_aparente} />
+                </Td>
                 <Td className="text-right whitespace-nowrap">
                   {Math.round(v.distancia_m).toLocaleString("pt-BR")} m
                 </Td>

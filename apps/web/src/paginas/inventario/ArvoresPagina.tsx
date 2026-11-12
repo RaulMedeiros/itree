@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { AjudaTermo } from "../../componentes/AjudaTermo";
+import { CondicaoAparente } from "../../componentes/CondicaoAparente";
 import { SeloEspecie, SeloLocalizacao, nomeEspecie } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
 import { Entrada, Selecao } from "../../ui/campos";
@@ -29,7 +30,6 @@ import { MenuAgrupado } from "../../ui/menu";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th, ThOrdenavel } from "../../ui/tabela";
-import { CORES_CONDICAO } from "../../mapa/simbologia";
 import { formatarData, formatarDataHora, plural } from "../../util/formatos";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { NovaArvoreDialogo } from "./NovaArvoreDialogo";
@@ -50,25 +50,6 @@ export interface BuscaArvores {
   condicao_aparente?: string;
   ordenar?: Ordenacao;
   pagina?: number;
-}
-
-/** Ponto na cor do mapa mais o texto: a condição nunca depende só da cor (RNF-A11Y-002). */
-function CondicaoAparente({ condicao }: { condicao?: string }) {
-  const chave = (
-    condicao && condicao in ROTULOS_CONDICAO ? condicao : "nao_avaliada"
-  ) as keyof typeof ROTULOS_CONDICAO;
-  return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <span
-        aria-hidden
-        className="size-2.5 rounded-full"
-        style={{ backgroundColor: CORES_CONDICAO[chave] }}
-      />
-      <span className={chave === "nao_avaliada" ? "text-texto-suave" : undefined}>
-        {ROTULOS_CONDICAO[chave]}
-      </span>
-    </span>
-  );
 }
 
 export function ArvoresPagina() {
