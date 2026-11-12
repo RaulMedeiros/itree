@@ -417,7 +417,13 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
           <ul className="flex flex-col divide-y divide-borda text-sm">
             {o.tarefas.map((t) => (
               <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
-                <span className="font-mono font-medium">{t.codigo}</span>
+                <Link
+                  to="/equipes-tarefas/$id"
+                  params={{ id: t.id }}
+                  className="font-mono font-medium text-marca-escura hover:underline"
+                >
+                  {t.codigo}
+                </Link>
                 <SeloEstadoTarefa estado={t.estado} />
                 <span className="text-texto-suave">
                   {t.responsavel ?? "Sem responsável"}

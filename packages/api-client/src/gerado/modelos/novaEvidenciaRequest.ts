@@ -14,6 +14,8 @@ export interface NovaEvidenciaRequest {
   ocorrencia?: string | null;
   /** @nullable */
   inspecao?: string | null;
+  /** @nullable */
+  tarefa?: string | null;
   /**
      * @minLength 1
      * @maxLength 255

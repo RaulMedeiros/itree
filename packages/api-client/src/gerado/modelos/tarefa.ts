@@ -30,6 +30,12 @@ export interface Tarefa {
   prioridade?: string;
   readonly estado: EstadoTarefaEnum;
   readonly motivo_estado: string;
+  /** O que foi feito, informado ao concluir a tarefa. */
+  readonly resultado: string;
+  /** Tarefa de execução em campo: só conclui com evidência fotográfica anexada. */
+  readonly exige_evidencia: boolean;
+  /** Evidências disponíveis anexadas à tarefa. */
+  readonly total_evidencias: number;
   readonly transicoes_possiveis: readonly EstadoTarefaEnum[];
   readonly atrasada: boolean;
   readonly criada_por: UsuarioResumo;

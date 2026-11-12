@@ -40,6 +40,7 @@ import { OcorrenciaDetalhePagina } from "./paginas/ocorrencias/OcorrenciaDetalhe
 import { OcorrenciasPagina } from "./paginas/ocorrencias/OcorrenciasPagina";
 import { InspecaoDetalhePagina } from "./paginas/inspecoes/InspecaoDetalhePagina";
 import { InspecoesPagina } from "./paginas/inspecoes/InspecoesPagina";
+import { TarefaDetalhePagina } from "./paginas/tarefas/TarefaDetalhePagina";
 import { TarefasPagina } from "./paginas/tarefas/TarefasPagina";
 import { VisaoGeralPagina } from "./paginas/visao-geral/VisaoGeralPagina";
 import { AlertaDetalhePagina } from "./paginas/alertas/AlertaDetalhePagina";
@@ -448,6 +449,16 @@ const inspecaoDetalhe = createRoute({
 const tarefas = createRoute({
   getParentRoute: () => autenticado,
   path: "equipes-tarefas",
+  component: () => (
+    <Exige permissao="tarefas.ler">
+      <Outlet />
+    </Exige>
+  ),
+});
+
+const tarefasLista = createRoute({
+  getParentRoute: () => tarefas,
+  path: "/",
   validateSearch: z.object({
     responsavel: bandeira("eu"),
     estado: textoOpcional,
@@ -456,11 +467,13 @@ const tarefas = createRoute({
     atrasadas: bandeira("true"),
     pagina: paginaOpcional,
   }),
-  component: () => (
-    <Exige permissao="tarefas.ler">
-      <TarefasPagina />
-    </Exige>
-  ),
+  component: TarefasPagina,
+});
+
+const tarefaDetalhe = createRoute({
+  getParentRoute: () => tarefas,
+  path: "$id",
+  component: TarefaDetalhePagina,
 });
 
 // --- F3: alertas, análises, qualidade e integrações ----------------------------
@@ -604,7 +617,7 @@ const arvore = raiz.addChildren([
     ocorrencias.addChildren([ocorrenciasLista, ocorrenciaDetalhe]),
     visaoGeral,
     inspecoes.addChildren([inspecoesLista, inspecaoDetalhe]),
-    tarefas,
+    tarefas.addChildren([tarefasLista, tarefaDetalhe]),
     alertas.addChildren([alertasLista, alertaDetalhe]),
     analises,
     notificacoes,

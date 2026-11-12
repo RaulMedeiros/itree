@@ -294,7 +294,7 @@ def test_tarefa_bloqueada_e_concluida_notificam_quem_criou(
     assert "bloqueada" in aviso.titulo and aviso.texto == "Portão fechado"
     with executar():
         cliente.post(url, {"estado": "em_execucao", "motivo": "Portão liberado"}, format="json")
-        cliente.post(url, {"estado": "concluida"}, format="json")
+        cliente.post(url, {"estado": "concluida", "resultado": "Feito"}, format="json")
     assert sorted(tipos(coordenador)) == ["tarefa_bloqueada", "tarefa_concluida"]
     assert tipos(tecnico_a) == []  # quem agiu não é avisado
 

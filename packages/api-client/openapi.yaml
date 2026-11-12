@@ -1266,6 +1266,10 @@ paths:
         name: ocorrencia
         schema:
           type: string
+      - in: query
+        name: tarefa
+        schema:
+          type: string
       tags:
       - evidencias
       security:
@@ -4616,7 +4620,7 @@ components:
           additionalProperties: {}
           nullable: true
           readOnly: true
-          description: 'Registro pai (árvore, inspeção ou ocorrência) de medidas,
+          description: 'Registro pai (árvore, inspeção, ocorrência ou tarefa) de medidas,
             evidências e sugestões de IA: {tipo, id, codigo}.'
         acao:
           type: string
@@ -4699,6 +4703,12 @@ components:
           type: string
           format: uuid
           nullable: true
+        tarefa:
+          type: string
+          format: uuid
+          nullable: true
+          description: Evidência do resultado, anexada ao concluir uma tarefa de campo
+            (M-20).
         criado_em:
           type: string
           format: date-time
@@ -5756,6 +5766,10 @@ components:
           format: uuid
           nullable: true
         inspecao:
+          type: string
+          format: uuid
+          nullable: true
+        tarefa:
           type: string
           format: uuid
           nullable: true
@@ -7311,6 +7325,19 @@ components:
         motivo_estado:
           type: string
           readOnly: true
+        resultado:
+          type: string
+          readOnly: true
+          description: O que foi feito, informado ao concluir a tarefa.
+        exige_evidencia:
+          type: boolean
+          readOnly: true
+          description: 'Tarefa de execução em campo: só conclui com evidência fotográfica
+            anexada.'
+        total_evidencias:
+          type: integer
+          readOnly: true
+          description: Evidências disponíveis anexadas à tarefa.
         transicoes_possiveis:
           type: array
           items:
@@ -7346,12 +7373,15 @@ components:
       - criado_em
       - equipe
       - estado
+      - exige_evidencia
       - id
       - localizacao
       - motivo_estado
       - origem
       - responsavel
+      - resultado
       - tipo
+      - total_evidencias
       - transicoes_possiveis
     TarefaIaEnum:
       enum:
@@ -7689,6 +7719,10 @@ components:
         motivo:
           type: string
           maxLength: 500
+        resultado:
+          type: string
+          description: O que foi feito. Obrigatório ao concluir.
+          maxLength: 2000
       required:
       - estado
     TriagemRequest:

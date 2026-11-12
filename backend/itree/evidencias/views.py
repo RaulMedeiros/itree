@@ -51,6 +51,7 @@ class EvidenciaSerializer(serializers.ModelSerializer):
             "enviada_por_nome",
             "arvore",
             "ocorrencia",
+            "tarefa",
             "criado_em",
         ]
 
@@ -67,6 +68,7 @@ class NovaEvidenciaSerializer(serializers.Serializer):
     arvore = serializers.UUIDField(required=False, allow_null=True)
     ocorrencia = serializers.UUIDField(required=False, allow_null=True)
     inspecao = serializers.UUIDField(required=False, allow_null=True)
+    tarefa = serializers.UUIDField(required=False, allow_null=True)
     nome_original = serializers.CharField(max_length=255)
     tipo_conteudo = serializers.ChoiceField(choices=sorted(TIPOS_PERMITIDOS))
     tamanho = serializers.IntegerField(min_value=1, max_value=TAMANHO_MAXIMO)
@@ -74,9 +76,9 @@ class NovaEvidenciaSerializer(serializers.Serializer):
     capturada_em = serializers.DateTimeField(required=False, allow_null=True)
 
     def validate(self, attrs):
-        if sum(bool(attrs.get(c)) for c in ("arvore", "ocorrencia", "inspecao")) != 1:
+        if sum(bool(attrs.get(c)) for c in ("arvore", "ocorrencia", "inspecao", "tarefa")) != 1:
             raise serializers.ValidationError(
-                "Vincule a evidência a uma árvore ou a uma ocorrência."
+                "Vincule a evidência a uma árvore, ocorrência, inspeção ou tarefa."
             )
         return attrs
 
@@ -88,6 +90,7 @@ class NovaEvidenciaSerializer(serializers.Serializer):
             OpenApiParameter("arvore", str),
             OpenApiParameter("ocorrencia", str),
             OpenApiParameter("inspecao", str),
+            OpenApiParameter("tarefa", str),
         ],
     ),
 )
@@ -100,8 +103,26 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     pagination_class = None
     lookup_value_converter = "uuid"
 
-    def _alvo(self, arvore_id=None, ocorrencia_id=None, editar=False, inspecao_id=None):
+    def _alvo(
+        self, arvore_id=None, ocorrencia_id=None, editar=False, inspecao_id=None, tarefa_id=None
+    ):
         usuario = self.request.user
+        if tarefa_id:
+            from itree.tarefas.acesso import pode_atuar
+            from itree.tarefas.models import ESTADOS_FINAIS_TAREFA, Tarefa
+
+            if not usuario.tem_permissao("tarefas.ler"):
+                raise PermissionDenied()
+            objeto = filtrar_por_escopo(Tarefa.objects.all(), usuario).filter(pk=tarefa_id).first()
+            if objeto is None:
+                raise ValidationError({"tarefa": "Tarefa não encontrada no seu escopo."})
+            if editar and not pode_atuar(usuario, objeto):
+                raise PermissionDenied()
+            if editar and objeto.estado in ESTADOS_FINAIS_TAREFA:
+                raise ValidationError(
+                    {"tarefa": "Tarefas concluídas ou canceladas não recebem evidências."}
+                )
+            return "tarefa", objeto
         if inspecao_id:
             from itree.inspecoes.models import EstadoInspecao, Inspecao
 
@@ -138,12 +159,14 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     def get_queryset(self):
         p = self.request.query_params
         arvore, ocorrencia, inspecao = p.get("arvore"), p.get("ocorrencia"), p.get("inspecao")
-        if not (arvore or ocorrencia or inspecao):
-            raise ValidationError("Informe 'arvore', 'ocorrencia' ou 'inspecao'.")
+        tarefa = p.get("tarefa")
+        if not (arvore or ocorrencia or inspecao or tarefa):
+            raise ValidationError("Informe 'arvore', 'ocorrencia', 'inspecao' ou 'tarefa'.")
         campo, objeto = self._alvo(
             arvore_id=arvore and uuid_do_parametro(arvore, "arvore"),
             ocorrencia_id=ocorrencia and uuid_do_parametro(ocorrencia, "ocorrencia"),
             inspecao_id=inspecao and uuid_do_parametro(inspecao, "inspecao"),
+            tarefa_id=tarefa and uuid_do_parametro(tarefa, "tarefa"),
         )
         return Evidencia.objects.filter(
             **{campo: objeto}, estado=EstadoEvidencia.DISPONIVEL
@@ -172,7 +195,11 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         dados.is_valid(raise_exception=True)
         v = dados.validated_data
         campo, objeto = self._alvo(
-            v.get("arvore"), v.get("ocorrencia"), editar=True, inspecao_id=v.get("inspecao")
+            v.get("arvore"),
+            v.get("ocorrencia"),
+            editar=True,
+            inspecao_id=v.get("inspecao"),
+            tarefa_id=v.get("tarefa"),
         )
         identificador = uuid7()
         hoje = timezone.now()
@@ -207,6 +234,7 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             evidencia.ocorrencia_id,
             editar=True,
             inspecao_id=evidencia.inspecao_id,
+            tarefa_id=evidencia.tarefa_id,
         )
         return evidencia
 

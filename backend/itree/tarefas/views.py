@@ -2,6 +2,7 @@ import re
 
 import pghistory
 from django.db import transaction
+from django.db.models import Count, Q
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from pghistory.models import Events
@@ -19,6 +20,7 @@ from itree.core.lote import (
     ignorados_fora_do_escopo,
 )
 from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
+from itree.evidencias.models import EstadoEvidencia, Evidencia
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
 from itree.notificacoes import servicos as notificacoes
@@ -91,6 +93,23 @@ def filtrar_tarefas(qs, usuario, p):
     return qs
 
 
+def _exigir_resultado_e_evidencia(tarefa, resultado: str) -> None:
+    """Regras de conclusão (M-20): o resultado é sempre pedido; nos tipos de execução em
+    campo (`TIPOS_COM_EVIDENCIA_OBRIGATORIA`), também ao menos uma foto anexada à tarefa."""
+    erros: dict[str, list[str]] = {}
+    if not resultado:
+        erros["resultado"] = ["Descreva o que foi feito."]
+    if (
+        tarefa.exige_evidencia
+        and not Evidencia.objects.filter(
+            tarefa=tarefa, estado=EstadoEvidencia.DISPONIVEL, tipo_conteudo__startswith="image/"
+        ).exists()
+    ):
+        erros["evidencias"] = ["Anexe ao menos uma foto do serviço executado para concluir."]
+    if erros:
+        raise ValidationError(erros)
+
+
 def _verificar_escopo_responsavel(tarefa_geom, responsavel):
     if responsavel is not None and not ponto_no_escopo(responsavel, tarefa_geom):
         raise ValidationError(
@@ -140,6 +159,13 @@ class TarefaViewSet(
             "criada_por",
         )
         qs = filtrar_por_escopo(qs, self.request.user)
+        if self.action in ("list", "retrieve"):
+            # A lista e o detalhe mostram quantas evidências cada tarefa já tem.
+            qs = qs.annotate(
+                total_evidencias=Count(
+                    "evidencias", filter=Q(evidencias__estado=EstadoEvidencia.DISPONIVEL)
+                )
+            ).order_by(*Tarefa._meta.ordering)  # a agregação descarta a ordenação do modelo
         if self.action != "list":
             return qs
         return filtrar_tarefas(qs, self.request.user, self.request.query_params)
@@ -195,11 +221,18 @@ class TarefaViewSet(
             raise ValidationError({"motivo": ["Informe o motivo."]})
         if tarefa.estado == EstadoTarefa.BLOQUEADA and not motivo:
             raise ValidationError({"motivo": ["Informe por que o bloqueio acabou."]})
+        resultado = dados.validated_data.get("resultado", "").strip()
+        if novo == EstadoTarefa.CONCLUIDA:
+            _exigir_resultado_e_evidencia(tarefa, resultado)
         with transaction.atomic(), pghistory.context(motivo=motivo or None):
             tarefa.estado = novo
             tarefa.motivo_estado = motivo
+            campos = ["estado", "motivo_estado", "concluida_em", "atualizado_em"]
+            if novo == EstadoTarefa.CONCLUIDA:
+                tarefa.resultado = resultado
+                campos.append("resultado")
             tarefa.concluida_em = timezone.now() if novo == EstadoTarefa.CONCLUIDA else None
-            tarefa.save(update_fields=["estado", "motivo_estado", "concluida_em", "atualizado_em"])
+            tarefa.save(update_fields=campos)
             notificacoes.tarefa_concluida_ou_bloqueada(tarefa, autor=request.user)
         return Response(TarefaSerializer(tarefa).data)
 

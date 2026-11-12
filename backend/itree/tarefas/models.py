@@ -25,6 +25,14 @@ class EstadoTarefa(models.TextChoices):
 ESTADOS_FINAIS_TAREFA = {EstadoTarefa.CONCLUIDA, EstadoTarefa.CANCELADA}
 EXIGEM_MOTIVO = {EstadoTarefa.BLOQUEADA, EstadoTarefa.CANCELADA}
 
+# Configuração da regra de conclusão (M-20): tipos de tarefa de execução em campo que só
+# podem ser concluídos com ao menos uma evidência fotográfica anexada à própria tarefa.
+# Hoje o único tipo de execução é o atendimento de ocorrência (poda, remoção e plantio são
+# atendimentos); a inspeção de árvore se conclui pelo envio da inspeção, que tem as próprias
+# evidências. Quando poda, remoção e plantio virarem tipos próprios (DP-17), basta listá-los
+# aqui. A regra é conferida no servidor, em `TarefaViewSet.transicao`.
+TIPOS_COM_EVIDENCIA_OBRIGATORIA = frozenset({TipoTarefa.ATENDIMENTO_OCORRENCIA})
+
 TRANSICOES_TAREFA: dict[str, set[str]] = {
     EstadoTarefa.NAO_INICIADA: {
         EstadoTarefa.EM_EXECUCAO,
@@ -78,6 +86,9 @@ class Tarefa(ModeloBase):
         max_length=20, choices=EstadoTarefa.choices, default=EstadoTarefa.NAO_INICIADA
     )
     motivo_estado = models.TextField(blank=True)
+    resultado = models.TextField(
+        blank=True, help_text="O que foi feito, informado ao concluir a tarefa."
+    )
     criada_por = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
     )
@@ -92,6 +103,10 @@ class Tarefa(ModeloBase):
                 name="tarefa_com_alvo",
             )
         ]
+
+    @property
+    def exige_evidencia(self) -> bool:
+        return self.tipo in TIPOS_COM_EVIDENCIA_OBRIGATORIA
 
     @property
     def codigo(self) -> str:
