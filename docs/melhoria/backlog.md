@@ -18,6 +18,11 @@ quando houver espaço ou decisão.
 | M-17 | P3 | Definição oficial de "registro válido" | O cartão marca o critério como provisório. Depende da DP-14. | Texto e cálculo atualizados quando a DP-14 for fechada. |
 | M-18 | P3 | Arborização do entorno: ficha do bairro e cruzamento com o inventário | A camada coroplética mostra só o percentual do Censo 2022, em dica ao passar o cursor. Não há onde ver base, definição e método por bairro, nem a comparação com as árvores cadastradas. | Clique no bairro abre ficha com proveniência completa (método, licença, ingestão). Cruzamento com a densidade do inventário só depois das fórmulas da DP-14. |
 | M-19 | P3 | Área na URL: limite e simplificação de polígonos | O parâmetro `area` aceita até 200 vértices; um polígono desenhado à mão com mais pontos é descartado ao abrir o link. | Polígono simplificado antes de ir para a URL (tolerância documentada), com aviso quando perder detalhe. |
+| M-20 | P2 | Detalhe próprio da tarefa, com resultado e evidência ao concluir | A tarefa só aparece em lista; concluir não registra o que foi feito nem foto. | Tela de tarefa com origem, histórico, resultado e evidência obrigatória por tipo. |
+| M-21 | P2 | Histórico da árvore com o encadeamento inspeção → ocorrência → tarefa | A rastreabilidade existe nas fichas, mas a árvore não mostra a cadeia. | Linha do tempo da árvore agrupando cada cadeia. |
+| M-22 | P3 | Auditoria agrupada no servidor | A tela agrupa eventos iguais, mas a paginação é por evento. | Agrupamento e contagem no backend; nenhum grupo partido entre páginas. |
+| M-23 | P3 | Lote em ocorrências e tarefas: prazo e "todos os filtrados" | Hoje o lote vale para as páginas marcadas, até 200, sem "definir prazo". | Ação "Definir prazo" e seleção de todos os filtrados, com limite e aviso. |
+| M-24 | P3 | Filtro por área na lista de árvores | "Ver todas em lista" da seleção por área não tem como apontar para as mesmas árvores. | Lista aceita a área (mesmo formato da URL do mapa). |
 
 ## Áreas verdes
 
