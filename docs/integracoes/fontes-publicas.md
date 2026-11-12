@@ -130,6 +130,31 @@ uv run python manage.py ingerir_focos_historico --desde 2023-01 --ate 2023-03
   buffer; os outros tipos de alerta seguem o escopo exato.
 - Depende de `importar_areas_verdes` ter rodado; sem áreas, nenhum foco ganha a marca.
 
+### Praças: subtipo (areninha, calçadão, rotatória)
+
+A camada de praças (mapa 99) mistura equipamentos e não tem campo próprio para
+distingui-los. `importar_areas_verdes` grava `AreaVerde.subtipo` (só nas praças) pela
+**primeira palavra do nome oficial**, sem distinguir caixa nem acento
+(`itree/areas_verdes/subtipos.py`):
+
+| Nome começa com | Subtipo |
+| --- | --- |
+| "Areninha" (ou o erro de digitação "Arenina") | areninha |
+| "Calçadão" | calçadão |
+| "Rotatória" | rotatória |
+| "Sem Denominação Oficial" | sem denominação oficial |
+| qualquer outro | praça (inclui "Largo", "Área Verde", "Jardim", "Canteiro", "Polo" e "Triângulo") |
+
+- O apelido (`nome_pop`) não entra na regra.
+- Conferido nas 484 feições reais: 432 praças, 19 areninhas (18 "Areninha" e a
+  "Arenina Thauzer Parente"; a verificação contou 18), 5 calçadões, 1 rotatória e
+  27 sem denominação. O teste usa os nomes reais (`tests/dados/fortaleza_em_mapas_99_praca_nomes.json`).
+- A API de áreas verdes traz `subtipo` e `subtipo_rotulo` e aceita `?subtipo=`; o mapa
+  de camadas informa a quantidade de cada subtipo. No mapa, o seletor "Subtipo das praças"
+  esconde as praças dos outros subtipos (parques e unidades de conservação seguem à vista), e o
+  painel da área mostra o subtipo.
+- A migração preenche o subtipo das praças já importadas.
+
 ### Validação contra o dado real (2026-11-11)
 
 - `importar_limites_fortaleza` na API real: 12 regionais e 121 bairros criados; segunda

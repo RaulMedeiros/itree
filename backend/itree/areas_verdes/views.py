@@ -11,11 +11,16 @@ from rest_framework.response import Response
 
 from itree.contas.acesso import filtrar_por_escopo, requer
 
-from .models import AreaVerde, TipoAreaVerde
+from .models import AreaVerde, SubtipoAreaVerde, TipoAreaVerde
 from .servico import situacao_da_fonte
 
 PARAMETROS = [
     OpenApiParameter("tipo", str, description="praca | parque | unidade_conservacao"),
+    OpenApiParameter(
+        "subtipo",
+        str,
+        description="Só das praças: praca | areninha | calcadao | rotatoria | sem_denominacao.",
+    ),
     OpenApiParameter("bbox", str, description="Limites oeste,sul,leste,norte em graus (WGS 84)."),
     OpenApiParameter("precisao", int, description="Casas decimais da geometria (padrão 5)."),
 ]
@@ -44,6 +49,8 @@ def _feicao(a: AreaVerde) -> dict:
             "nome_popular": a.nome_popular,
             "tipo": a.tipo,
             "tipo_rotulo": a.get_tipo_display(),
+            "subtipo": a.subtipo,
+            "subtipo_rotulo": a.get_subtipo_display(),
             "codigo_externo": a.codigo_externo,
             "orgao_gestor": a.orgao_gestor,
             "esfera": a.esfera,
@@ -64,7 +71,7 @@ def _feicao(a: AreaVerde) -> dict:
     ),
     retrieve=extend_schema(
         operation_id="areas_verdes_obter",
-        parameters=[PARAMETROS[2]],
+        parameters=[PARAMETROS[3]],
         responses=GEOJSON,
     ),
 )
@@ -93,6 +100,12 @@ class AreaVerdeViewSet(viewsets.ReadOnlyModelViewSet):
             if tipo not in TipoAreaVerde.values:
                 raise ValidationError({"tipo": f"Use um de: {', '.join(TipoAreaVerde.values)}."})
             qs = qs.filter(tipo=tipo)
+        if subtipo := params.get("subtipo"):
+            if subtipo not in SubtipoAreaVerde.values:
+                raise ValidationError(
+                    {"subtipo": f"Use um de: {', '.join(SubtipoAreaVerde.values)}."}
+                )
+            qs = qs.filter(subtipo=subtipo)
         if bbox := params.get("bbox"):
             qs = qs.filter(geom__intersects=_bbox(bbox))
         return qs.annotate(geometria=AsGeoJSON("geom", precision=self._precisao()))

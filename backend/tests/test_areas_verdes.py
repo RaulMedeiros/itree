@@ -21,6 +21,7 @@ from itree.areas_verdes.management.commands.importar_areas_verdes import (
 )
 from itree.areas_verdes.models import AreaVerde
 from itree.areas_verdes.servico import area_verde_do_ponto, situacao_da_fonte
+from itree.areas_verdes.subtipos import subtipo_da_praca
 from itree.areas_verdes.tasks import reimportar_areas_verdes
 from itree.contas.models import EscopoUsuario
 from itree.inventario.models import Arvore
@@ -487,3 +488,92 @@ def test_tarefa_com_falha_da_api_mantem_a_data_antiga_e_o_aviso(importadas):
     with pytest.raises(CommandError):
         reimportar_areas_verdes()
     assert situacao_da_fonte()["desatualizada"] is True
+
+
+# --- Subtipo das praças (AV-01) ------------------------------------------------
+
+
+def _nomes_reais_das_pracas():
+    """Id, nome e apelido das 484 feições do mapa 99, como a API entregou em 2026-11-11."""
+    return json.loads((DADOS / "fortaleza_em_mapas_99_praca_nomes.json").read_text())
+
+
+def test_subtipo_no_dado_real_bate_com_a_verificacao():
+    contagem = {}
+    for praca in _nomes_reais_das_pracas():
+        subtipo = subtipo_da_praca(praca["nome"])
+        contagem[subtipo] = contagem.get(subtipo, 0) + 1
+    assert sum(contagem.values()) == 484
+    # A verificação contou 18 areninhas; a 19ª é "Arenina Thauzer Parente" (erro da fonte).
+    assert contagem == {
+        "praca": 432,
+        "areninha": 19,
+        "calcadao": 5,
+        "rotatoria": 1,
+        "sem_denominacao": 27,
+    }
+
+
+@pytest.mark.parametrize(
+    ("nome", "esperado"),
+    [
+        ("Areninha Sítio São João", "areninha"),
+        ("Arenina Thauzer Parente", "areninha"),  # erro de digitação da fonte
+        ("Calçadão da Beira-Mar", "calcadao"),
+        ("Rotatória da Rua Adelaide Paulino", "rotatoria"),
+        ("Sem Denominação Oficial", "sem_denominacao"),
+        ("Sem Denominação Oficial - GID 48", "sem_denominacao"),
+        ("  SEM  DENOMINACAO oficial ", "sem_denominacao"),  # caixa, acento e espaços
+        ("Praça do Ferreira", "praca"),
+        ("Largo do Mercado", "praca"),
+        ("Área Verde Lagoa Redonda", "praca"),
+        ("Praça da Areninha", "praca"),  # só a primeira palavra conta
+        ("Areninhas Unidas", "praca"),  # palavra inteira, não prefixo
+        ("", "praca"),
+    ],
+)
+def test_subtipo_da_praca_pelo_nome(nome, esperado):
+    assert subtipo_da_praca(nome) == esperado
+
+
+def test_apelido_nao_muda_o_subtipo():
+    # Real: "Sem Denominação Oficial" com apelido "Praça da Rua 850" segue sem denominação.
+    reais = {p["id"]: p for p in _nomes_reais_das_pracas()}
+    assert reais[466]["nome_pop"] == "Praça da Rua 850"
+    assert subtipo_da_praca(reais[466]["nome"]) == "sem_denominacao"
+
+
+def test_importacao_grava_o_subtipo(importadas):
+    assert AreaVerde.objects.get(tipo="praca", codigo_externo="124").subtipo == "praca"
+    assert AreaVerde.objects.get(tipo="praca", codigo_externo="366").subtipo == "sem_denominacao"
+    # Parques e unidades de conservação não têm subtipo.
+    assert set(AreaVerde.objects.exclude(tipo="praca").values_list("subtipo", flat=True)) == {""}
+
+
+def test_reimportar_corrige_o_subtipo(importadas):
+    AreaVerde.objects.filter(tipo="praca").update(subtipo="")
+    importar(PRACAS, "praca")
+    assert AreaVerde.objects.get(tipo="praca", codigo_externo="366").subtipo == "sem_denominacao"
+
+
+def test_api_traz_o_subtipo_e_filtra_por_ele(cliente, importadas):
+    c = cliente.como(_usuario_com_escopo(_fortaleza()))
+    corpo = c.get(URL).json()
+    por_nome = {f["properties"]["nome"]: f["properties"] for f in corpo["features"]}
+    assert por_nome["Sem Denominação Oficial"]["subtipo"] == "sem_denominacao"
+    assert por_nome["Sem Denominação Oficial"]["subtipo_rotulo"] == "Sem denominação oficial"
+    assert por_nome["Largo do Mercado"]["subtipo_rotulo"] == "Praça"
+    assert por_nome["Parque das Iguanas"]["subtipo"] == ""
+    assert _nomes(c.get(URL, {"subtipo": "sem_denominacao"})) == {"Sem Denominação Oficial"}
+    assert _nomes(c.get(URL, {"subtipo": "praca"})) == {"Largo do Mercado"}
+    assert _nomes(c.get(URL, {"subtipo": "areninha"})) == set()
+    resposta = c.get(URL, {"subtipo": "jardim"})
+    assert resposta.status_code == 400 and "subtipo" in json.dumps(resposta.json())
+
+
+def test_camadas_contam_os_subtipos_das_pracas(cliente, importadas):
+    corpo = cliente.como(_usuario_com_escopo(_fortaleza())).get("/api/v1/mapa/camadas").json()
+    pracas = next(a for a in corpo["areas_verdes"] if a["tipo"] == "praca")
+    assert pracas["subtipos"] == {"praca": 1, "sem_denominacao": 1}
+    parques = next(a for a in corpo["areas_verdes"] if a["tipo"] == "parque")
+    assert parques["subtipos"] == {}

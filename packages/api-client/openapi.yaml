@@ -510,6 +510,11 @@ paths:
           type: integer
         description: Casas decimais da geometria (padrão 5).
       - in: query
+        name: subtipo
+        schema:
+          type: string
+        description: 'Só das praças: praca | areninha | calcadao | rotatoria | sem_denominacao.'
+      - in: query
         name: tipo
         schema:
           type: string

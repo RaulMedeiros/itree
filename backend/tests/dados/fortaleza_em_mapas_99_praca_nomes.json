@@ -1,0 +1,2422 @@
+[
+{
+"id": 11,
+"nome": "Areninha Sítio São João",
+"nome_pop": "sem informação"
+},
+{
+"id": 20,
+"nome": "Praça Boulevard do Arco",
+"nome_pop": "sem informação"
+},
+{
+"id": 55,
+"nome": "Praça de Esporte do Sítio São João",
+"nome_pop": "sem informação"
+},
+{
+"id": 64,
+"nome": "Praça do Parque Santa Maria",
+"nome_pop": "sem informação"
+},
+{
+"id": 84,
+"nome": "Praça São Francisco",
+"nome_pop": "sem informação"
+},
+{
+"id": 12,
+"nome": "Calçadão Boulevard I",
+"nome_pop": "sem informação"
+},
+{
+"id": 14,
+"nome": "Praça do Posto de Saúde Melo Jaborandi",
+"nome_pop": "sem informação"
+},
+{
+"id": 38,
+"nome": "Praça Deputado Paulo Benevides",
+"nome_pop": "sem informação"
+},
+{
+"id": 63,
+"nome": "Praça do Parque Betânia",
+"nome_pop": "sem informação"
+},
+{
+"id": 66,
+"nome": "Praça dos Bessas",
+"nome_pop": "sem informação"
+},
+{
+"id": 79,
+"nome": "Praça Paulo II",
+"nome_pop": "sem informação"
+},
+{
+"id": 19,
+"nome": "Praça Arthur Braga",
+"nome_pop": "sem informação"
+},
+{
+"id": 35,
+"nome": "Praça de Esporte do Copacabana",
+"nome_pop": "sem informação"
+},
+{
+"id": 51,
+"nome": "Praça do Conjunto Residencial Bandeirantes",
+"nome_pop": "sem informação"
+},
+{
+"id": 43,
+"nome": "Praça do Conjunto Alto Alegre",
+"nome_pop": "sem informação"
+},
+{
+"id": 46,
+"nome": "Praça do Conjunto Fernando de Noronha",
+"nome_pop": "sem informação"
+},
+{
+"id": 49,
+"nome": "Praça do Conjunto Por do Sol",
+"nome_pop": "sem informação"
+},
+{
+"id": 1,
+"nome": "Rotatória da Rua Adelaide Paulino",
+"nome_pop": "sem informação"
+},
+{
+"id": 120,
+"nome": "Praça Visconde de Pelotas",
+"nome_pop": "Praça do Mercado dos Pinhões"
+},
+{
+"id": 124,
+"nome": "Largo do Mercado",
+"nome_pop": "Praça dos Correios"
+},
+{
+"id": 162,
+"nome": "Calçadão da Rua Frei Odilon",
+"nome_pop": "Praça da Lagoa do Urubu"
+},
+{
+"id": 184,
+"nome": "Praça Antônio Alves Linhares",
+"nome_pop": "Praça do Mercado do Carlito Pamplona"
+},
+{
+"id": 100,
+"nome": "Praça General Tiburcio",
+"nome_pop": "Praça dos Leões"
+},
+{
+"id": 102,
+"nome": "Praça da Sé",
+"nome_pop": "Praça Pedro II"
+},
+{
+"id": 103,
+"nome": "Praça dos Mártires",
+"nome_pop": "Passeio Público"
+},
+{
+"id": 105,
+"nome": "Praça Capistrano de Abreu",
+"nome_pop": "Praça da Lagoinha"
+},
+{
+"id": 106,
+"nome": "Praça Castro Carreira",
+"nome_pop": "Praça da Estação"
+},
+{
+"id": 108,
+"nome": "Praça dos Voluntários",
+"nome_pop": "Praça da Polícia"
+},
+{
+"id": 112,
+"nome": "Praça da Bandeira",
+"nome_pop": "Praça do Colégio Militar"
+},
+{
+"id": 114,
+"nome": "Praça Clóvis Beviláqua",
+"nome_pop": "Praça da Bandeira"
+},
+{
+"id": 115,
+"nome": "Praça Caio Prado",
+"nome_pop": "Travessa Crato"
+},
+{
+"id": 117,
+"nome": "Praça José Bonifácio",
+"nome_pop": "Praça do 5º Batalhão"
+},
+{
+"id": 118,
+"nome": "Praça Waldemar Alcântara Falcão",
+"nome_pop": "Praça do Banco do Brasil"
+},
+{
+"id": 122,
+"nome": "Praça Paula Pessoa",
+"nome_pop": "Praça do Mercado São Sebastião"
+},
+{
+"id": 123,
+"nome": "Praça Murilo Borges",
+"nome_pop": "Antiga Praça do BNB"
+},
+{
+"id": 126,
+"nome": "Praça José Júlio",
+"nome_pop": "Praça da Igreja do Sagrado Coração de Jesus"
+},
+{
+"id": 470,
+"nome": "Praça Jardim Cearense",
+"nome_pop": "sem informação"
+},
+{
+"id": 153,
+"nome": "Praça Odete Saraiva",
+"nome_pop": "Praça do Chico dos Ovos"
+},
+{
+"id": 157,
+"nome": "Areninha da Barra do Ceará",
+"nome_pop": "Campo do Grêmio/ Praça das Goiabeiras"
+},
+{
+"id": 472,
+"nome": "Praça José A",
+"nome_pop": "sem informação"
+},
+{
+"id": 121,
+"nome": "Praça do Poço da Draga",
+"nome_pop": "sem informação"
+},
+{
+"id": 140,
+"nome": "Praça da Rua Alves de Lima (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 141,
+"nome": "Praça da Rua Doutor Victor Juliano Ribeiro (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 142,
+"nome": "Praça da Rua Eritides Martins",
+"nome_pop": "sem informação"
+},
+{
+"id": 143,
+"nome": "Praça da Rua Leiria de Andrade (sem denomincação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 144,
+"nome": "Praça da Rua Luiz Guimarães (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 113,
+"nome": "Praça Cristo Redentor",
+"nome_pop": "sem informação"
+},
+{
+"id": 185,
+"nome": "Praça do Morro do Ouro",
+"nome_pop": "sem informação"
+},
+{
+"id": 186,
+"nome": "Praça Dr. Amauri",
+"nome_pop": "sem informação"
+},
+{
+"id": 187,
+"nome": "Praça Dr. Hélio Viana",
+"nome_pop": "sem informação"
+},
+{
+"id": 208,
+"nome": "Praça José Carvalho de Melo",
+"nome_pop": "sem informação"
+},
+{
+"id": 101,
+"nome": "Praça do Ferreira",
+"nome_pop": "sem informação"
+},
+{
+"id": 104,
+"nome": "Praça José de Alencar",
+"nome_pop": "sem informação"
+},
+{
+"id": 107,
+"nome": "Praça Filgueira de Melo",
+"nome_pop": "sem informação"
+},
+{
+"id": 109,
+"nome": "Praça dos Navegantes",
+"nome_pop": "sem informação"
+},
+{
+"id": 110,
+"nome": "Praça do Muriçoca",
+"nome_pop": "sem informação"
+},
+{
+"id": 188,
+"nome": "Praça Dr. Hugo Rocha",
+"nome_pop": "Praça Juraci Magalhães"
+},
+{
+"id": 190,
+"nome": "Praça José Lima Verde",
+"nome_pop": "Píer da Barra 2"
+},
+{
+"id": 111,
+"nome": "Praça do Carmo",
+"nome_pop": "sem informação"
+},
+{
+"id": 192,
+"nome": "Praça Major Wilson",
+"nome_pop": "sem informação"
+},
+{
+"id": 264,
+"nome": "Praça Quadra 37",
+"nome_pop": "sem informação"
+},
+{
+"id": 116,
+"nome": "Praça Almirante Saldanha",
+"nome_pop": "sem informação"
+},
+{
+"id": 148,
+"nome": "Praça Tenente Lisboa",
+"nome_pop": "sem informação"
+},
+{
+"id": 119,
+"nome": "Praça da Vitória",
+"nome_pop": "sem informação"
+},
+{
+"id": 280,
+"nome": "Praça Quadra 11",
+"nome_pop": "sem informação"
+},
+{
+"id": 125,
+"nome": "Largo da Assembleia",
+"nome_pop": "sem informação"
+},
+{
+"id": 177,
+"nome": "Praça da Comunidade Frei Galvão",
+"nome_pop": "sem informação"
+},
+{
+"id": 127,
+"nome": "Praça Gustavo Barroso",
+"nome_pop": "sem informação"
+},
+{
+"id": 128,
+"nome": "Praça Guilherme Waessen",
+"nome_pop": "sem informação"
+},
+{
+"id": 130,
+"nome": "Praça Nossa Senhora de Fátima",
+"nome_pop": "sem informação"
+},
+{
+"id": 131,
+"nome": "Rua Padre Santana",
+"nome_pop": "sem informação"
+},
+{
+"id": 132,
+"nome": "Praça Rainha da Paz",
+"nome_pop": "sem informação"
+},
+{
+"id": 133,
+"nome": "Praça Rosinha Sampaio",
+"nome_pop": "sem informação"
+},
+{
+"id": 134,
+"nome": "Praça da Rua Monsenhor Dantas",
+"nome_pop": "sem informação"
+},
+{
+"id": 193,
+"nome": "Praça Manoel Dias Macêdo",
+"nome_pop": "sem informação"
+},
+{
+"id": 196,
+"nome": "Praça Percide Benicio Rodrigues",
+"nome_pop": "Praça dos Ferroviários"
+},
+{
+"id": 209,
+"nome": "Praça Marcilio Prestes de Queiroz",
+"nome_pop": "Praça do Ferroviário"
+},
+{
+"id": 212,
+"nome": "Areninha do Campo do América",
+"nome_pop": "Campo do América"
+},
+{
+"id": 135,
+"nome": "Praça Santa Edwiges",
+"nome_pop": "sem informação"
+},
+{
+"id": 166,
+"nome": "Praça Bela Cruz",
+"nome_pop": "sem informação"
+},
+{
+"id": 268,
+"nome": "Praça Quadra 31",
+"nome_pop": "sem informação"
+},
+{
+"id": 136,
+"nome": "Praça Santiago da Barra",
+"nome_pop": "sem informação"
+},
+{
+"id": 146,
+"nome": "Praça da Rua Raquel Holanda (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 147,
+"nome": "Praça da Rua Trevo (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 149,
+"nome": "Praça Treze da Rockdale",
+"nome_pop": "sem informação"
+},
+{
+"id": 150,
+"nome": "Praça Valentim Monteiro",
+"nome_pop": "sem informação"
+},
+{
+"id": 152,
+"nome": "Praça de Lazer do Álvaro Weyne",
+"nome_pop": "sem informação"
+},
+{
+"id": 156,
+"nome": "Área Verde na Barra do Ceará",
+"nome_pop": "sem informação"
+},
+{
+"id": 223,
+"nome": "Praça Barão de Aquiraz",
+"nome_pop": "Eletricitário"
+},
+{
+"id": 232,
+"nome": "Praça da Conquista",
+"nome_pop": "Praça do Conjunto São Pedro"
+},
+{
+"id": 234,
+"nome": "Praça da Paz Dom Helder Câmara",
+"nome_pop": "Praça 31 de Março"
+},
+{
+"id": 235,
+"nome": "Praça Deputado Marcelo Linhares",
+"nome_pop": "Praça São Gabriel"
+},
+{
+"id": 158,
+"nome": "Areninha Beira Rio 2",
+"nome_pop": "sem informação"
+},
+{
+"id": 159,
+"nome": "Areninha Pirambu",
+"nome_pop": "sem informação"
+},
+{
+"id": 160,
+"nome": "Arenina Thauzer Parente",
+"nome_pop": "sem informação"
+},
+{
+"id": 161,
+"nome": "Calçadão Crasa",
+"nome_pop": "sem informação"
+},
+{
+"id": 163,
+"nome": "Polo do Jardim Iracema",
+"nome_pop": "sem informação"
+},
+{
+"id": 265,
+"nome": "Praça Quadra 35",
+"nome_pop": "sem informação"
+},
+{
+"id": 164,
+"nome": "Praça Assis Bezerra",
+"nome_pop": "sem informação"
+},
+{
+"id": 165,
+"nome": "Praça do Bairro Cristo Redentor",
+"nome_pop": "sem informação"
+},
+{
+"id": 167,
+"nome": "Praça Capela Mãe Rainha",
+"nome_pop": "sem informação"
+},
+{
+"id": 168,
+"nome": "Praça Capitão Nestor Goes",
+"nome_pop": "sem informação"
+},
+{
+"id": 484,
+"nome": "Praça UV5",
+"nome_pop": "sem informação"
+},
+{
+"id": 241,
+"nome": "Praça Dr. Carlos Alberto Studart Gomes",
+"nome_pop": "Praça das Flores"
+},
+{
+"id": 256,
+"nome": "Praça São Lucas",
+"nome_pop": "Praça do Chafariz"
+},
+{
+"id": 169,
+"nome": "Praça Carlos Jereissati",
+"nome_pop": "sem informação"
+},
+{
+"id": 170,
+"nome": "Praça Carnaubal",
+"nome_pop": "sem informação"
+},
+{
+"id": 171,
+"nome": "Praça Conjunto Dom Helder Câmara Campos",
+"nome_pop": "sem informação"
+},
+{
+"id": 172,
+"nome": "Praça Coronel João Pontes",
+"nome_pop": "sem informação"
+},
+{
+"id": 173,
+"nome": "Praça Coronel Melquiades",
+"nome_pop": "sem informação"
+},
+{
+"id": 174,
+"nome": "Praça da Avenida Teodomiro de Castro",
+"nome_pop": "sem informação"
+},
+{
+"id": 175,
+"nome": "Praça da Benção",
+"nome_pop": "sem informação"
+},
+{
+"id": 176,
+"nome": "Praça da Colônia",
+"nome_pop": "sem informação"
+},
+{
+"id": 178,
+"nome": "Praça da Comunidade",
+"nome_pop": "sem informação"
+},
+{
+"id": 179,
+"nome": "Praça da Vila São José",
+"nome_pop": "sem informação"
+},
+{
+"id": 181,
+"nome": "Praça do Conjunto Graça Aranha",
+"nome_pop": "sem informação"
+},
+{
+"id": 189,
+"nome": "Praça Joaquim Guedes Martins",
+"nome_pop": "sem informação"
+},
+{
+"id": 191,
+"nome": "Praça Luciano Cândido",
+"nome_pop": "sem informação"
+},
+{
+"id": 194,
+"nome": "Praça Marcílio Dias",
+"nome_pop": "sem informação"
+},
+{
+"id": 195,
+"nome": "Praça Patrão Mor Aguiar",
+"nome_pop": "sem informação"
+},
+{
+"id": 266,
+"nome": "Praça Quadra 34",
+"nome_pop": "sem informação"
+},
+{
+"id": 201,
+"nome": "Praça Sete Prédios",
+"nome_pop": "sem informação"
+},
+{
+"id": 202,
+"nome": "Praça do Chafariz",
+"nome_pop": "sem informação"
+},
+{
+"id": 203,
+"nome": "Praça do Conjunto Jacyara",
+"nome_pop": "sem informação"
+},
+{
+"id": 204,
+"nome": "Praça do Riacho Doce 2",
+"nome_pop": "sem informação"
+},
+{
+"id": 205,
+"nome": "Praça Farias Brito",
+"nome_pop": "sem informação"
+},
+{
+"id": 206,
+"nome": "Praça Hermes Pereira",
+"nome_pop": "sem informação"
+},
+{
+"id": 210,
+"nome": "Jardim Japonês",
+"nome_pop": "sem informação"
+},
+{
+"id": 211,
+"nome": "Área Verde do Shopping Reserva",
+"nome_pop": "sem informação"
+},
+{
+"id": 213,
+"nome": "Areninha da Praia do Futuro I",
+"nome_pop": "sem informação"
+},
+{
+"id": 214,
+"nome": "Areninha da Praia do Futuro II",
+"nome_pop": "sem informação"
+},
+{
+"id": 215,
+"nome": "Associação dos Moradores do Titãzinho/Serviluz",
+"nome_pop": "sem informação"
+},
+{
+"id": 216,
+"nome": "Praça 1 da Cidade 2000",
+"nome_pop": "sem informação"
+},
+{
+"id": 217,
+"nome": "Praça Alan Neto",
+"nome_pop": "sem informação"
+},
+{
+"id": 218,
+"nome": "Praça Amigos da Marinha",
+"nome_pop": "sem informação"
+},
+{
+"id": 219,
+"nome": "Praça Antônio Prudente",
+"nome_pop": "sem informação"
+},
+{
+"id": 220,
+"nome": "Praça Árbitro Iran do Vale",
+"nome_pop": "sem informação"
+},
+{
+"id": 243,
+"nome": "Praça Edvar Martins",
+"nome_pop": "sem informação"
+},
+{
+"id": 221,
+"nome": "Praça Fotógrafo Josué de Castro",
+"nome_pop": "sem informação"
+},
+{
+"id": 267,
+"nome": "Praça Quadra 33",
+"nome_pop": "sem informação"
+},
+{
+"id": 222,
+"nome": "Praça Areia Branca",
+"nome_pop": "sem informação"
+},
+{
+"id": 224,
+"nome": "Praça Bárbara de Alencar",
+"nome_pop": "sem informação"
+},
+{
+"id": 225,
+"nome": "Praça Central",
+"nome_pop": "sem informação"
+},
+{
+"id": 226,
+"nome": "Praça Cidade Baixa Mucuripe",
+"nome_pop": "sem informação"
+},
+{
+"id": 308,
+"nome": "Praça Irmã Cleide",
+"nome_pop": "Praça São José"
+},
+{
+"id": 319,
+"nome": "Praça Santo Expedito",
+"nome_pop": "Praça Matriz do Henrique Jorge"
+},
+{
+"id": 322,
+"nome": "Praça Artur da Costa e Silva",
+"nome_pop": "Feira dos Pássaros"
+},
+{
+"id": 227,
+"nome": "Praça São Francisco",
+"nome_pop": "sem informação"
+},
+{
+"id": 228,
+"nome": "Praça Dolor Barreira",
+"nome_pop": "sem informação"
+},
+{
+"id": 229,
+"nome": "Praça da Cioba",
+"nome_pop": "sem informação"
+},
+{
+"id": 230,
+"nome": "Praça Cirenio Cordeiro",
+"nome_pop": "sem informação"
+},
+{
+"id": 231,
+"nome": "Praça da Área Triangular",
+"nome_pop": "sem informação"
+},
+{
+"id": 233,
+"nome": "Praça da Imprensa",
+"nome_pop": "sem informação"
+},
+{
+"id": 236,
+"nome": "Praça do CEU",
+"nome_pop": "sem informação"
+},
+{
+"id": 237,
+"nome": "Praça do Ginásio Paulo Sarasate",
+"nome_pop": "sem informação"
+},
+{
+"id": 238,
+"nome": "Praça do Mercado do Joaquim Távora",
+"nome_pop": "sem informação"
+},
+{
+"id": 239,
+"nome": "Praça do Riacho Maceió",
+"nome_pop": "sem informação"
+},
+{
+"id": 240,
+"nome": "Praça dos Engenheiros",
+"nome_pop": "sem informação"
+},
+{
+"id": 242,
+"nome": "Praça Dr. Moreira da Rocha",
+"nome_pop": "sem informação"
+},
+{
+"id": 244,
+"nome": "Praça Eng. José Waldez Botelho",
+"nome_pop": "sem informação"
+},
+{
+"id": 245,
+"nome": "Praça Eng. Pedro Felipe Borges",
+"nome_pop": "sem informação"
+},
+{
+"id": 246,
+"nome": "Praça Estrigas e Nice",
+"nome_pop": "sem informação"
+},
+{
+"id": 333,
+"nome": "Praça Dr. César Cals",
+"nome_pop": "Praça do João XXIII"
+},
+{
+"id": 247,
+"nome": "Praça Francisco",
+"nome_pop": "sem informação"
+},
+{
+"id": 248,
+"nome": "Praça GID 37 (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 249,
+"nome": "Praça do Ideal Club",
+"nome_pop": "sem informação"
+},
+{
+"id": 250,
+"nome": "Praça do Guararapes",
+"nome_pop": "sem informação"
+},
+{
+"id": 251,
+"nome": "Triângulo do Mirante",
+"nome_pop": "sem informação"
+},
+{
+"id": 252,
+"nome": "Praça dos Tremembés",
+"nome_pop": "sem informação"
+},
+{
+"id": 253,
+"nome": "Sem Denominação Oficial - GID 48",
+"nome_pop": "sem informação"
+},
+{
+"id": 254,
+"nome": "Sem Denominação Oficial - GID 77",
+"nome_pop": "sem informação"
+},
+{
+"id": 255,
+"nome": "Sem Denominação Oficial - GID 104",
+"nome_pop": "sem informação"
+},
+{
+"id": 257,
+"nome": "Praça São Francisco",
+"nome_pop": "sem informação"
+},
+{
+"id": 258,
+"nome": "Sem Denominação Oficial - GID 326",
+"nome_pop": "sem informação"
+},
+{
+"id": 259,
+"nome": "Praça Rosa Jr.",
+"nome_pop": "sem informação"
+},
+{
+"id": 260,
+"nome": "Praça Rogério de Sousa Froes",
+"nome_pop": "sem informação"
+},
+{
+"id": 261,
+"nome": "Praça Quadra LBA",
+"nome_pop": "sem informação"
+},
+{
+"id": 262,
+"nome": "Praça Quadra 39",
+"nome_pop": "sem informação"
+},
+{
+"id": 263,
+"nome": "Praça Quadra 38",
+"nome_pop": "sem informação"
+},
+{
+"id": 269,
+"nome": "Praça Quadra 30",
+"nome_pop": "sem informação"
+},
+{
+"id": 270,
+"nome": "Praça Quadra 29",
+"nome_pop": "sem informação"
+},
+{
+"id": 271,
+"nome": "Praça Quadra 27",
+"nome_pop": "sem informação"
+},
+{
+"id": 272,
+"nome": "Praça Quadra 26",
+"nome_pop": "sem informação"
+},
+{
+"id": 294,
+"nome": "Praça Pio XII",
+"nome_pop": "Praça da Igreja"
+},
+{
+"id": 273,
+"nome": "Praça Quadra 25",
+"nome_pop": "sem informação"
+},
+{
+"id": 274,
+"nome": "Praça Quadra 19",
+"nome_pop": "sem informação"
+},
+{
+"id": 275,
+"nome": "Praça Quadra 18",
+"nome_pop": "sem informação"
+},
+{
+"id": 276,
+"nome": "Praça Quadra 16",
+"nome_pop": "sem informação"
+},
+{
+"id": 277,
+"nome": "Praça Quadra 15",
+"nome_pop": "sem informação"
+},
+{
+"id": 278,
+"nome": "Praça Quadra 14",
+"nome_pop": "sem informação"
+},
+{
+"id": 279,
+"nome": "Praça Quadra 12",
+"nome_pop": "sem informação"
+},
+{
+"id": 281,
+"nome": "Praça Quadra 10",
+"nome_pop": "sem informação"
+},
+{
+"id": 282,
+"nome": "Praça Quadra 08",
+"nome_pop": "sem informação"
+},
+{
+"id": 283,
+"nome": "Praça Quadra 07",
+"nome_pop": "sem informação"
+},
+{
+"id": 284,
+"nome": "Praça Quadra 04",
+"nome_pop": "sem informação"
+},
+{
+"id": 285,
+"nome": "Praça Quadra 06",
+"nome_pop": "sem informação"
+},
+{
+"id": 286,
+"nome": "Praça Quadra 03",
+"nome_pop": "sem informação"
+},
+{
+"id": 287,
+"nome": "Praça Professor Belarmino Maio",
+"nome_pop": "sem informação"
+},
+{
+"id": 288,
+"nome": "Praça Professor Fran Martins",
+"nome_pop": "sem informação"
+},
+{
+"id": 289,
+"nome": "Praça Portugal (Quadrante 3)",
+"nome_pop": "sem informação"
+},
+{
+"id": 290,
+"nome": "Praça Portugal (Quadrante 2)",
+"nome_pop": "sem informação"
+},
+{
+"id": 291,
+"nome": "Praça Portugal (Quadrante 1)",
+"nome_pop": "sem informação"
+},
+{
+"id": 292,
+"nome": "Praça Portugal (Quadrante 4)",
+"nome_pop": "sem informação"
+},
+{
+"id": 303,
+"nome": "Praça Lurdinha Campos",
+"nome_pop": "sem informação"
+},
+{
+"id": 304,
+"nome": "Praça Leonan Onofre",
+"nome_pop": "sem informação"
+},
+{
+"id": 453,
+"nome": "Praça Santo Amaro",
+"nome_pop": "sem informação"
+},
+{
+"id": 344,
+"nome": "Praça Sem Denominação Oficial",
+"nome_pop": "Praça da Rua Anselmo Nogueira"
+},
+{
+"id": 345,
+"nome": "Praça Sem Denominação Oficial",
+"nome_pop": "Praça da Rua José Goiania"
+},
+{
+"id": 349,
+"nome": "Praça Recamonde Campelo",
+"nome_pop": "Praça da UBS Bonsucesso"
+},
+{
+"id": 357,
+"nome": "Praça Euzébio de Souza",
+"nome_pop": "Praça Major Assis Nepomuceno"
+},
+{
+"id": 305,
+"nome": "Praça Lavadeiras",
+"nome_pop": "sem informação"
+},
+{
+"id": 307,
+"nome": "Praça Jader de Carvalho",
+"nome_pop": "sem informação"
+},
+{
+"id": 309,
+"nome": "Praça do Instituto do Câncer",
+"nome_pop": "sem informação"
+},
+{
+"id": 310,
+"nome": "Praça da Igreja da Piedade",
+"nome_pop": "sem informação"
+},
+{
+"id": 311,
+"nome": "Praça Igreja Santa Luzia",
+"nome_pop": "sem informação"
+},
+{
+"id": 312,
+"nome": "Calçadão da Beira-Mar",
+"nome_pop": "sem informação"
+},
+{
+"id": 313,
+"nome": "Praça do Papoco",
+"nome_pop": "sem informação"
+},
+{
+"id": 314,
+"nome": "Praça do Planalto do Pici",
+"nome_pop": "sem informação"
+},
+{
+"id": 315,
+"nome": "Praça Haroldo Torres",
+"nome_pop": "sem informação"
+},
+{
+"id": 302,
+"nome": "Praça Luciano Cavalcante",
+"nome_pop": "sem informação"
+},
+{
+"id": 316,
+"nome": "Praça Ipiranga",
+"nome_pop": "sem informação"
+},
+{
+"id": 317,
+"nome": "Praça José Carlos Gaspar",
+"nome_pop": "sem informação"
+},
+{
+"id": 318,
+"nome": "Praça Nossa Senhora da Salete",
+"nome_pop": "sem informação"
+},
+{
+"id": 485,
+"nome": "Praça UV7",
+"nome_pop": "sem informação"
+},
+{
+"id": 366,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Bifurcação Tiago Lanches"
+},
+{
+"id": 370,
+"nome": "Praça Aprigio Coelho",
+"nome_pop": "Praça da Cruz Grande"
+},
+{
+"id": 377,
+"nome": "Praça da Professora",
+"nome_pop": "Praça do Jornal O Povo"
+},
+{
+"id": 380,
+"nome": "Praça das Artes Leonilson",
+"nome_pop": "Praça da MRV"
+},
+{
+"id": 384,
+"nome": "Praça do Avião",
+"nome_pop": "Praça da Lagoa do Opaia"
+},
+{
+"id": 320,
+"nome": "Praça do Salete",
+"nome_pop": "sem informação"
+},
+{
+"id": 321,
+"nome": "Praça Antônio Carlos Silva",
+"nome_pop": "sem informação"
+},
+{
+"id": 323,
+"nome": "Praça Beira Rio",
+"nome_pop": "sem informação"
+},
+{
+"id": 324,
+"nome": "Praça Cardeal",
+"nome_pop": "sem informação"
+},
+{
+"id": 325,
+"nome": "Praça da Capela de São José",
+"nome_pop": "sem informação"
+},
+{
+"id": 326,
+"nome": "Praça da Igreja do Antônio Bezerra",
+"nome_pop": "sem informação"
+},
+{
+"id": 327,
+"nome": "Praça da Igreja Dom Bosco",
+"nome_pop": "sem informação"
+},
+{
+"id": 328,
+"nome": "Praça Desembargador Luís Paulino",
+"nome_pop": "sem informação"
+},
+{
+"id": 329,
+"nome": "Praça do Campo Novo Ideal",
+"nome_pop": "sem informação"
+},
+{
+"id": 404,
+"nome": "Praça Luiz Amora",
+"nome_pop": "Praça Mãe Rainha"
+},
+{
+"id": 330,
+"nome": "Praça do Colégio Cere",
+"nome_pop": "sem informação"
+},
+{
+"id": 331,
+"nome": "Praça do Sossego",
+"nome_pop": "sem informação"
+},
+{
+"id": 332,
+"nome": "Praça Dolores Alcântara",
+"nome_pop": "sem informação"
+},
+{
+"id": 334,
+"nome": "Praça Dr. Raimundo Maciel Brito",
+"nome_pop": "sem informação"
+},
+{
+"id": 335,
+"nome": "Praça Governador Parcifal Barroso",
+"nome_pop": "sem informação"
+},
+{
+"id": 336,
+"nome": "Praça Dr. José Frota",
+"nome_pop": "sem informação"
+},
+{
+"id": 337,
+"nome": "Praça Joaquim Nogueira",
+"nome_pop": "sem informação"
+},
+{
+"id": 402,
+"nome": "Praça José Chaves",
+"nome_pop": "sem informação"
+},
+{
+"id": 338,
+"nome": "Praça Malvina",
+"nome_pop": "sem informação"
+},
+{
+"id": 339,
+"nome": "Praça Monsenhor Linhares",
+"nome_pop": "sem informação"
+},
+{
+"id": 340,
+"nome": "Praça Nossa Senhora das Graças",
+"nome_pop": "sem informação"
+},
+{
+"id": 341,
+"nome": "Praça Olavo Oliveira",
+"nome_pop": "sem informação"
+},
+{
+"id": 342,
+"nome": "Praça Santa Gorete",
+"nome_pop": "sem informação"
+},
+{
+"id": 343,
+"nome": "Praça São Francisco",
+"nome_pop": "sem informação"
+},
+{
+"id": 347,
+"nome": "Praça Walderina de Oliveira",
+"nome_pop": "sem informação"
+},
+{
+"id": 348,
+"nome": "Praça Zélia Fontenele",
+"nome_pop": "sem informação"
+},
+{
+"id": 350,
+"nome": "Praça da Juventude 1",
+"nome_pop": "sem informação"
+},
+{
+"id": 478,
+"nome": "Praça São Pedro",
+"nome_pop": "sem informação"
+},
+{
+"id": 414,
+"nome": "Praça da Rua Carlos Gomes",
+"nome_pop": "Praça da Rua Mestra Rosa"
+},
+{
+"id": 443,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da 4ª Etapa"
+},
+{
+"id": 293,
+"nome": "Praça Portugal",
+"nome_pop": "sem informação"
+},
+{
+"id": 295,
+"nome": "Praça Patriolino Ribeiro",
+"nome_pop": "sem informação"
+},
+{
+"id": 296,
+"nome": "Praça Nossa Senhora da Saúde",
+"nome_pop": "sem informação"
+},
+{
+"id": 297,
+"nome": "Praça Narcisa Borges",
+"nome_pop": "sem informação"
+},
+{
+"id": 298,
+"nome": "Praça Martins Dourado",
+"nome_pop": "sem informação"
+},
+{
+"id": 426,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Avenida C"
+},
+{
+"id": 430,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua 440"
+},
+{
+"id": 431,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Avenida da Penetração Leste"
+},
+{
+"id": 437,
+"nome": "Areninha do Planalto Ayrton Senna",
+"nome_pop": "Areninha do Pantanal"
+},
+{
+"id": 299,
+"nome": "Praça Maria Tomásia",
+"nome_pop": "sem informação"
+},
+{
+"id": 300,
+"nome": "Praça Maia",
+"nome_pop": "sem informação"
+},
+{
+"id": 301,
+"nome": "Praça Luiza Távora",
+"nome_pop": "sem informação"
+},
+{
+"id": 346,
+"nome": "Praça Tupinambá da Frota",
+"nome_pop": "sem informação"
+},
+{
+"id": 351,
+"nome": "Areninha do Pici",
+"nome_pop": "sem informação"
+},
+{
+"id": 352,
+"nome": "Praça Anselmo Nogueira",
+"nome_pop": "sem informação"
+},
+{
+"id": 353,
+"nome": "Praça Ari de Sá",
+"nome_pop": "sem informação"
+},
+{
+"id": 354,
+"nome": "Praça da Rua Azevedo Bolão",
+"nome_pop": "sem informação"
+},
+{
+"id": 355,
+"nome": "Praça Antônio Mendes",
+"nome_pop": "sem informação"
+},
+{
+"id": 356,
+"nome": "Praça da Capela da Sagrada Família",
+"nome_pop": "sem informação"
+},
+{
+"id": 358,
+"nome": "Área Verde da Rua Professora Stella Cochrane",
+"nome_pop": "sem informação"
+},
+{
+"id": 359,
+"nome": "Areninha Vila União",
+"nome_pop": "sem informação"
+},
+{
+"id": 400,
+"nome": "Praça Jaime Benévolo Mangueira",
+"nome_pop": "sem informação"
+},
+{
+"id": 466,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua 850"
+},
+{
+"id": 479,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Avenida B"
+},
+{
+"id": 481,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua 444"
+},
+{
+"id": 360,
+"nome": "Praça 1º de Janeiro",
+"nome_pop": "sem informação"
+},
+{
+"id": 361,
+"nome": "Praça 1º de Maio",
+"nome_pop": "sem informação"
+},
+{
+"id": 362,
+"nome": "Praça Amancio Cavalcante",
+"nome_pop": "sem informação"
+},
+{
+"id": 363,
+"nome": "Praça Antônio Epitácio Pinheiro",
+"nome_pop": "sem informação"
+},
+{
+"id": 364,
+"nome": "Praça Argentina Castelo Branco",
+"nome_pop": "sem informação"
+},
+{
+"id": 365,
+"nome": "Praça Bernadete de Lourdes Montenegro",
+"nome_pop": "sem informação"
+},
+{
+"id": 367,
+"nome": "Praça Bom Jesus",
+"nome_pop": "sem informação"
+},
+{
+"id": 368,
+"nome": "Praça Capela de São José",
+"nome_pop": "sem informação"
+},
+{
+"id": 369,
+"nome": "Praça Conjunto Marajó",
+"nome_pop": "sem informação"
+},
+{
+"id": 371,
+"nome": "Praça da Capela Nossa Senhora de Fátima",
+"nome_pop": "sem informação"
+},
+{
+"id": 372,
+"nome": "Praça da Gentilândia",
+"nome_pop": "sem informação"
+},
+{
+"id": 373,
+"nome": "Praça da Igreja Nossa Senhora Aparecida",
+"nome_pop": "sem informação"
+},
+{
+"id": 374,
+"nome": "Praça da Igreja Perpétua do Socorro",
+"nome_pop": "sem informação"
+},
+{
+"id": 375,
+"nome": "Praça da Lavanderia",
+"nome_pop": "sem informação"
+},
+{
+"id": 376,
+"nome": "Praça da Matriz da Parangaba",
+"nome_pop": "sem informação"
+},
+{
+"id": 378,
+"nome": "Praça da República Marupiara",
+"nome_pop": "sem informação"
+},
+{
+"id": 379,
+"nome": "Praça da Saudade",
+"nome_pop": "sem informação"
+},
+{
+"id": 381,
+"nome": "Praça das Costureiras",
+"nome_pop": "sem informação"
+},
+{
+"id": 401,
+"nome": "Praça João Gentil",
+"nome_pop": "sem informação"
+},
+{
+"id": 382,
+"nome": "Praça das Nações",
+"nome_pop": "sem informação"
+},
+{
+"id": 383,
+"nome": "Praça Delmiro Gouveia",
+"nome_pop": "sem informação"
+},
+{
+"id": 406,
+"nome": "Praça Mauá",
+"nome_pop": "sem informação"
+},
+{
+"id": 385,
+"nome": "Praça do Campo do Omegão",
+"nome_pop": "sem informação"
+},
+{
+"id": 386,
+"nome": "Praça do Chafariz",
+"nome_pop": "sem informação"
+},
+{
+"id": 387,
+"nome": "Praça do Conjunto Itapuá",
+"nome_pop": "sem informação"
+},
+{
+"id": 388,
+"nome": "Praça do Posto Gutemberg Braun",
+"nome_pop": "sem informação"
+},
+{
+"id": 389,
+"nome": "Praça do Posto Maral",
+"nome_pop": "sem informação"
+},
+{
+"id": 390,
+"nome": "Praça do Vaqueiro",
+"nome_pop": "sem informação"
+},
+{
+"id": 391,
+"nome": "Praça dos Caboclos",
+"nome_pop": "sem informação"
+},
+{
+"id": 392,
+"nome": "Praça dos Encontros",
+"nome_pop": "sem informação"
+},
+{
+"id": 393,
+"nome": "Praça Dr. José Tupinambá",
+"nome_pop": "sem informação"
+},
+{
+"id": 394,
+"nome": "Praça Ecológica Guaribal",
+"nome_pop": "sem informação"
+},
+{
+"id": 395,
+"nome": "Praça Estudante Jucá",
+"nome_pop": "sem informação"
+},
+{
+"id": 396,
+"nome": "Praça Frei Galvão",
+"nome_pop": "sem informação"
+},
+{
+"id": 397,
+"nome": "Praça General Sampaio",
+"nome_pop": "sem informação"
+},
+{
+"id": 398,
+"nome": "Praça Haroldo Jorge Vieira",
+"nome_pop": "sem informação"
+},
+{
+"id": 37,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua Angélica Gurgel"
+},
+{
+"id": 399,
+"nome": "Praça Humberto Albano Cambraia",
+"nome_pop": "sem informação"
+},
+{
+"id": 405,
+"nome": "Praça Manoel Dias Branco",
+"nome_pop": "sem informação"
+},
+{
+"id": 407,
+"nome": "Praça Nossa Senhora de Fátima",
+"nome_pop": "sem informação"
+},
+{
+"id": 408,
+"nome": "Praça Nossa Senhora de Nazaré",
+"nome_pop": "sem informação"
+},
+{
+"id": 409,
+"nome": "Praça Parque Parreão 2",
+"nome_pop": "sem informação"
+},
+{
+"id": 410,
+"nome": "Praça Pio X",
+"nome_pop": "sem informação"
+},
+{
+"id": 411,
+"nome": "Praça Plácido de Castro",
+"nome_pop": "sem informação"
+},
+{
+"id": 412,
+"nome": "Praça Presidente Vargas",
+"nome_pop": "sem informação"
+},
+{
+"id": 413,
+"nome": "Praça Rádio Amador Teobaldo Scerni",
+"nome_pop": "sem informação"
+},
+{
+"id": 415,
+"nome": "Praça da Rua Padre João Piamarta",
+"nome_pop": "sem informação"
+},
+{
+"id": 416,
+"nome": "Praça da Santa Emília",
+"nome_pop": "sem informação"
+},
+{
+"id": 417,
+"nome": "Praça Santa Lígia",
+"nome_pop": "sem informação"
+},
+{
+"id": 418,
+"nome": "Praça Santa Luzia",
+"nome_pop": "sem informação"
+},
+{
+"id": 419,
+"nome": "Praça São Cristóvão",
+"nome_pop": "sem informação"
+},
+{
+"id": 420,
+"nome": "Praça Ubiratan Costa",
+"nome_pop": "sem informação"
+},
+{
+"id": 421,
+"nome": "Praça UV 07 Esperança",
+"nome_pop": "sem informação"
+},
+{
+"id": 422,
+"nome": "Praça Vila Vitória",
+"nome_pop": "sem informação"
+},
+{
+"id": 440,
+"nome": "Calçadão da Lagoa da Maraponga",
+"nome_pop": "sem informação"
+},
+{
+"id": 441,
+"nome": "Praça Apollo XI",
+"nome_pop": "sem informação"
+},
+{
+"id": 482,
+"nome": "Praça do Sítio Córrego",
+"nome_pop": "sem informação"
+},
+{
+"id": 61,
+"nome": "Praça do Mercado",
+"nome_pop": "Praça da Cidade dos Funcionários"
+},
+{
+"id": 423,
+"nome": "Praça Zenaide Magalhães",
+"nome_pop": "sem informação"
+},
+{
+"id": 424,
+"nome": "Praça UV3",
+"nome_pop": "sem informação"
+},
+{
+"id": 427,
+"nome": "Praça Antônio Almeida Lustosa",
+"nome_pop": "sem informação"
+},
+{
+"id": 428,
+"nome": "Praça UV4 Democracia",
+"nome_pop": "sem informação"
+},
+{
+"id": 429,
+"nome": "Área Verde do Bairro Conjunto Ceará",
+"nome_pop": "sem informação"
+},
+{
+"id": 432,
+"nome": "Areninha do Aracapé",
+"nome_pop": "sem informação"
+},
+{
+"id": 433,
+"nome": "Areninha do Bom Jardim",
+"nome_pop": "sem informação"
+},
+{
+"id": 434,
+"nome": "Areninha do Conjunto Ceará",
+"nome_pop": "sem informação"
+},
+{
+"id": 435,
+"nome": "Areninha do Genibaú",
+"nome_pop": "sem informação"
+},
+{
+"id": 438,
+"nome": "Polo de Lazer do Conjunto Esperança",
+"nome_pop": "sem informação"
+},
+{
+"id": 57,
+"nome": "Praça do Jardim Sumaré",
+"nome_pop": "sem informação"
+},
+{
+"id": 448,
+"nome": "Praça da Igreja Santa Cecília",
+"nome_pop": "sem informação"
+},
+{
+"id": 451,
+"nome": "Praça da Maraponga",
+"nome_pop": "sem informação"
+},
+{
+"id": 454,
+"nome": "Praça da UV1",
+"nome_pop": "sem informação"
+},
+{
+"id": 81,
+"nome": "Praça Raimundo de Araújo Cabral Pinheiro",
+"nome_pop": "Praça da ACAL"
+},
+{
+"id": 83,
+"nome": "Praça Santa Fé",
+"nome_pop": "sem informação"
+},
+{
+"id": 73,
+"nome": "Praça Juventude",
+"nome_pop": "Praça José de Alencar"
+},
+{
+"id": 85,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Avenida Evilásio Almeida"
+},
+{
+"id": 86,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Av. Jornalista Thomaz Coelho"
+},
+{
+"id": 87,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça do Conjunto Tupamirim"
+},
+{
+"id": 88,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua 136"
+},
+{
+"id": 89,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Rua Alpinópolis"
+},
+{
+"id": 90,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua Diamante"
+},
+{
+"id": 91,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua Dois"
+},
+{
+"id": 455,
+"nome": "Praça da UV4",
+"nome_pop": "sem informação"
+},
+{
+"id": 456,
+"nome": "Praça da Vitória",
+"nome_pop": "sem informação"
+},
+{
+"id": 458,
+"nome": "Praça do Conjunto Novo Lar",
+"nome_pop": "sem informação"
+},
+{
+"id": 94,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua Jurandir Alencar"
+},
+{
+"id": 95,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da  Rua N"
+},
+{
+"id": 96,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua Seis"
+},
+{
+"id": 97,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Rua Vereador José Batista"
+},
+{
+"id": 98,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Travessa Alice"
+},
+{
+"id": 99,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Travessa Servidão"
+},
+{
+"id": 459,
+"nome": "Praça do CRB",
+"nome_pop": "sem informação"
+},
+{
+"id": 461,
+"nome": "Praça do Lazer",
+"nome_pop": "sem informação"
+},
+{
+"id": 463,
+"nome": "Praça da UV6",
+"nome_pop": "sem informação"
+},
+{
+"id": 464,
+"nome": "Praça dos Bombeiros",
+"nome_pop": "sem informação"
+},
+{
+"id": 465,
+"nome": "Praça da UV8",
+"nome_pop": "sem informação"
+},
+{
+"id": 471,
+"nome": "Praça Jardim Fluminense",
+"nome_pop": "sem informação"
+},
+{
+"id": 474,
+"nome": "Praça Osíris Pontes",
+"nome_pop": "sem informação"
+},
+{
+"id": 475,
+"nome": "Praça Paraná",
+"nome_pop": "sem informação"
+},
+{
+"id": 480,
+"nome": "Sem Denominação Oficial",
+"nome_pop": "Praça da Avenida F"
+},
+{
+"id": 452,
+"nome": "Praça da Paz",
+"nome_pop": "sem informação"
+},
+{
+"id": 403,
+"nome": "Praça José do Patrocínio",
+"nome_pop": "sem informação"
+},
+{
+"id": 425,
+"nome": "Praça Contorno Norte",
+"nome_pop": "sem informação"
+},
+{
+"id": 444,
+"nome": "Praça Augusto T.",
+"nome_pop": "sem informação"
+},
+{
+"id": 445,
+"nome": "Praça da Conquista",
+"nome_pop": "sem informação"
+},
+{
+"id": 447,
+"nome": "Praça da Igreja Nossa Senhora das Graças",
+"nome_pop": "sem informação"
+},
+{
+"id": 467,
+"nome": "Praça Galba Araújo",
+"nome_pop": "sem informação"
+},
+{
+"id": 468,
+"nome": "Praça Grêmio Esportivo Professor C.",
+"nome_pop": "sem informação"
+},
+{
+"id": 469,
+"nome": "Praça Ipaumirim",
+"nome_pop": "sem informação"
+},
+{
+"id": 442,
+"nome": "Praça Armando de Andrade Bonfim",
+"nome_pop": "sem informação"
+},
+{
+"id": 457,
+"nome": "Praça do Canal Leste",
+"nome_pop": "sem informação"
+},
+{
+"id": 78,
+"nome": "Praça Patativa do Assaré",
+"nome_pop": "sem informação"
+},
+{
+"id": 462,
+"nome": "Praça do Mercado",
+"nome_pop": "sem informação"
+},
+{
+"id": 476,
+"nome": "Praça Rogaciano Leite",
+"nome_pop": "sem informação"
+},
+{
+"id": 31,
+"nome": "Praça da Rua Newton Craveiro",
+"nome_pop": "sem informação"
+},
+{
+"id": 483,
+"nome": "Praça UV2",
+"nome_pop": "sem informação"
+},
+{
+"id": 2,
+"nome": "Praça Vereador José Barros de Alencar (Igreja Matriz)\n",
+"nome_pop": "sem informação"
+},
+{
+"id": 3,
+"nome": "Praça da Messejana",
+"nome_pop": "sem informação"
+},
+{
+"id": 45,
+"nome": "Praça do Conjunto Enéas Arruda",
+"nome_pop": "sem informação"
+},
+{
+"id": 18,
+"nome": "Praça Antônio Ferreira de Magalhães (IPREDE)",
+"nome_pop": "sem informação"
+},
+{
+"id": 4,
+"nome": "Área Verdo do Olho d'Água",
+"nome_pop": "sem informação"
+},
+{
+"id": 5,
+"nome": "Área Verde dos Condomínios",
+"nome_pop": "sem informação"
+},
+{
+"id": 6,
+"nome": "Área Verde do Jardim das Oliveiras",
+"nome_pop": "sem informação"
+},
+{
+"id": 7,
+"nome": "Área Verde Washington Soares",
+"nome_pop": "sem informação"
+},
+{
+"id": 8,
+"nome": "Área Verde Lagoa Redonda",
+"nome_pop": "sem informação"
+},
+{
+"id": 9,
+"nome": "Areninha Parque Dois Irmãos",
+"nome_pop": "sem informação"
+},
+{
+"id": 10,
+"nome": "Areninha São Bernardo",
+"nome_pop": "sem informação"
+},
+{
+"id": 32,
+"nome": "Praça da Saudade",
+"nome_pop": "sem informação"
+},
+{
+"id": 33,
+"nome": "Praça das Cores",
+"nome_pop": "sem informação"
+},
+{
+"id": 13,
+"nome": "Canteiro Central da Rua Thomas Idelfonso",
+"nome_pop": "sem informação"
+},
+{
+"id": 15,
+"nome": "Praça 1º de maio",
+"nome_pop": "sem informação"
+},
+{
+"id": 16,
+"nome": "Praça Airton Bezerra",
+"nome_pop": "sem informação"
+},
+{
+"id": 17,
+"nome": "Praça Anhembi",
+"nome_pop": "sem informação"
+},
+{
+"id": 21,
+"nome": "Praça Chico Mendes",
+"nome_pop": "sem informação"
+},
+{
+"id": 22,
+"nome": "Praça da Capela do Menino Jesus de Praga",
+"nome_pop": "sem informação"
+},
+{
+"id": 23,
+"nome": "Praça da Capela Nossa Senhora das Graças",
+"nome_pop": "sem informação"
+},
+{
+"id": 24,
+"nome": "Praça da Capela São Pedro Julião Eymard",
+"nome_pop": "sem informação"
+},
+{
+"id": 25,
+"nome": "Praça da Igreja Batista do Planalto",
+"nome_pop": "sem informação"
+},
+{
+"id": 26,
+"nome": "Praça da Igreja de Santa Luzia",
+"nome_pop": "sem informação"
+},
+{
+"id": 27,
+"nome": "Praça da Paróquia São José",
+"nome_pop": "sem informação"
+},
+{
+"id": 28,
+"nome": "Praça da Igreja de São Francisco",
+"nome_pop": "sem informação"
+},
+{
+"id": 29,
+"nome": "Praça da Justiça",
+"nome_pop": "sem informação"
+},
+{
+"id": 30,
+"nome": "Praça da Juventude Genésio Queiroz",
+"nome_pop": "sem informação"
+},
+{
+"id": 34,
+"nome": "Praça de Esporte do Conjunto Esplanada Castelão",
+"nome_pop": "sem informação"
+},
+{
+"id": 36,
+"nome": "Praça de Esporte José Milton da Cunha",
+"nome_pop": "sem informação"
+},
+{
+"id": 39,
+"nome": "Praça do Anel Viário",
+"nome_pop": "sem informação"
+},
+{
+"id": 40,
+"nome": "Praça do Campo do ASA",
+"nome_pop": "sem informação"
+},
+{
+"id": 41,
+"nome": "Areninha do Campo do Remo",
+"nome_pop": "sem informação"
+},
+{
+"id": 42,
+"nome": "Praça do Campo do Rio Negro",
+"nome_pop": "sem informação"
+},
+{
+"id": 44,
+"nome": "Praça do Conjunto Alvorada",
+"nome_pop": "sem informação"
+},
+{
+"id": 207,
+"nome": "Praça IGPM",
+"nome_pop": "sem informação"
+},
+{
+"id": 47,
+"nome": "Praça do Conjunto Guajerú",
+"nome_pop": "sem informação"
+},
+{
+"id": 48,
+"nome": "Praça do Conjunto João Paulo II",
+"nome_pop": "sem informação"
+},
+{
+"id": 50,
+"nome": "Praça do Conjunto Renascer",
+"nome_pop": "sem informação"
+},
+{
+"id": 52,
+"nome": "Praça do Conjunto Tancredo Neves",
+"nome_pop": "sem informação"
+},
+{
+"id": 53,
+"nome": "Praça do Conjunto Tupãmirim",
+"nome_pop": "sem informação"
+},
+{
+"id": 54,
+"nome": "Praça do CUCA",
+"nome_pop": "sem informação"
+},
+{
+"id": 56,
+"nome": "Praça do Jardim Itaperi",
+"nome_pop": "sem informação"
+},
+{
+"id": 58,
+"nome": "Praça do Jardim Violeta",
+"nome_pop": "sem informação"
+},
+{
+"id": 59,
+"nome": "Praça do Lago Azul",
+"nome_pop": "sem informação"
+},
+{
+"id": 60,
+"nome": "Praça do Liceu da Messejana",
+"nome_pop": "sem informação"
+},
+{
+"id": 62,
+"nome": "Praça do Mercado da Aerolândia",
+"nome_pop": "sem informação"
+},
+{
+"id": 65,
+"nome": "Praça do Trem",
+"nome_pop": "sem informação"
+},
+{
+"id": 67,
+"nome": "Praça dos Correios",
+"nome_pop": "sem informação"
+},
+{
+"id": 68,
+"nome": "Praça Farias Brito",
+"nome_pop": "sem informação"
+},
+{
+"id": 69,
+"nome": "Praça Hélio Góis",
+"nome_pop": "sem informação"
+},
+{
+"id": 70,
+"nome": "Praça da Igreja de São José",
+"nome_pop": "sem informação"
+},
+{
+"id": 71,
+"nome": "Praça do Jardim União",
+"nome_pop": "sem informação"
+},
+{
+"id": 72,
+"nome": "Praça José Duarte Pinheiro",
+"nome_pop": "sem informação"
+},
+{
+"id": 74,
+"nome": "Praça Luciano Magalhães",
+"nome_pop": "sem informação"
+},
+{
+"id": 75,
+"nome": "Praça Margarida Saboia de Carvalho",
+"nome_pop": "sem informação"
+},
+{
+"id": 76,
+"nome": "Praça Nossa Senhora da Glória",
+"nome_pop": "sem informação"
+},
+{
+"id": 77,
+"nome": "Praça da Paróquia São José do Dendê",
+"nome_pop": "sem informação"
+},
+{
+"id": 80,
+"nome": "Praça Poliesportiva Ubiratan Aguiar",
+"nome_pop": "sem informação"
+},
+{
+"id": 82,
+"nome": "Praça Raimundo Nonato Braga",
+"nome_pop": "sem informação"
+},
+{
+"id": 92,
+"nome": "Praça da Lagoa Redonda",
+"nome_pop": "sem informação"
+},
+{
+"id": 93,
+"nome": "Praça de Santa Edwirges",
+"nome_pop": "sem informação"
+},
+{
+"id": 129,
+"nome": "Praça MRI Menezes de Serpa",
+"nome_pop": "sem informação"
+},
+{
+"id": 137,
+"nome": "Praça da Avenida L (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 138,
+"nome": "Praça da Avenida Major Assis (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 139,
+"nome": "Praça da Rua 27 (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 145,
+"nome": "Praça da Rua Palmácia (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 151,
+"nome": "Praça Vila Velha",
+"nome_pop": "sem informação"
+},
+{
+"id": 154,
+"nome": "Praça Santuário Nossa Senhora da Assunção",
+"nome_pop": "sem informação"
+},
+{
+"id": 155,
+"nome": "Área Verde do Bairro Vila Velha",
+"nome_pop": "sem informação"
+},
+{
+"id": 183,
+"nome": "Praça do Conjunto Nova Assunção",
+"nome_pop": "sem informação"
+},
+{
+"id": 180,
+"nome": "Praça do Conjunto Beira Rio",
+"nome_pop": "sem informação"
+},
+{
+"id": 182,
+"nome": "Praça do Conjunto dos Bancários",
+"nome_pop": "sem informação"
+},
+{
+"id": 197,
+"nome": "Praça da Avenida Coronel Carvalho (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 198,
+"nome": "Praça da Rua Ambientalista (sem denominação oficial)",
+"nome_pop": "sem informação"
+},
+{
+"id": 199,
+"nome": "Praça Tancredo Neves",
+"nome_pop": "sem informação"
+},
+{
+"id": 200,
+"nome": "Praça Valdir Campos de Vasconcelos",
+"nome_pop": "sem informação"
+},
+{
+"id": 439,
+"nome": "Praça Adauto Bezerra",
+"nome_pop": "sem informação"
+},
+{
+"id": 436,
+"nome": "Areninha do José Walter",
+"nome_pop": "sem informação"
+},
+{
+"id": 446,
+"nome": "Praça da Esperança",
+"nome_pop": "sem informação"
+},
+{
+"id": 449,
+"nome": "Praça da Juventude",
+"nome_pop": "sem informação"
+},
+{
+"id": 450,
+"nome": "Praça da Liberdade",
+"nome_pop": "sem informação"
+},
+{
+"id": 460,
+"nome": "Praça do Diogo",
+"nome_pop": "sem informação"
+},
+{
+"id": 473,
+"nome": "Praça José Walter",
+"nome_pop": "sem informação"
+},
+{
+"id": 477,
+"nome": "Praça Santíssima Trindade",
+"nome_pop": "sem informação"
+}
+]

@@ -16,6 +16,7 @@ import {
   ROTULOS_CONDICAO,
   ROTULOS_ESTADO_ESPECIE,
   ROTULOS_ORIGEM_LOCALIZACAO,
+  ROTULOS_SUBTIPO_PRACA,
   ROTULOS_TIPO_AREA_VERDE,
   ROTULOS_TIPO_TERRITORIO,
 } from "@itree/domain";
@@ -122,6 +123,8 @@ export interface BuscaMapa {
   ocorrencias?: "0";
   bairros?: "0";
   areas_verdes?: "1";
+  /** Subtipo das praças na camada de áreas verdes (areninha, calçadão...); vazio mostra todos. */
+  subtipo_praca?: "praca" | "areninha" | "calcadao" | "rotatoria" | "sem_denominacao";
   /** Camada coroplética "Arborização do entorno (Censo 2022)"; desligada por padrão. */
   arborizacao_entorno?: "1";
   tarefas?: "1";
@@ -189,6 +192,8 @@ interface AreaVerdeSelecionada {
   nome_popular?: string;
   tipo: string;
   tipo_rotulo?: string;
+  subtipo?: string;
+  subtipo_rotulo?: string;
   orgao_gestor?: string;
   esfera?: string;
   ato_legal?: string;
@@ -924,6 +929,19 @@ export function MapaPagina() {
     mostrarAlertas,
   ]);
 
+  // Subtipo das praças: some só o que é praça e não é do subtipo escolhido; parques e unidades
+  // de conservação seguem à vista.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m) return;
+    const filtro = busca.subtipo_praca
+      ? ["any", ["!=", ["get", "tipo"], "praca"], ["==", ["get", "subtipo"], busca.subtipo_praca]]
+      : null;
+    const semUc = ["!=", ["get", "tipo"], "unidade_conservacao"];
+    m.setFilter("areas-verdes-preenchimento", filtro as never);
+    m.setFilter("areas-verdes-contorno", (filtro ? ["all", semUc, filtro] : semUc) as never);
+  }, [pronto, busca.subtipo_praca]);
+
   useEffect(() => {
     if (!pronto) return;
     mapa.current?.setFilter("selecao", [
@@ -935,6 +953,9 @@ export function MapaPagina() {
 
   const satelite = config.mapaSatelite;
   const info = camadas.data?.data;
+  // Quantas praças há em cada subtipo, informado pela API de camadas.
+  const subtiposPracas = ((info?.areas_verdes ?? []).find((a) => a.tipo === "praca")?.subtipos ??
+    {}) as Record<string, number>;
 
   return (
     <div className="-m-6 h-[calc(100vh-3.5rem)]">
@@ -1020,6 +1041,31 @@ export function MapaPagina() {
                         ativa={mostrarAreasVerdes}
                         aoMudar={(v) => atualizarBusca({ areas_verdes: v ? "1" : undefined })}
                       />
+                      {mostrarAreasVerdes && (
+                        <label className="flex flex-col gap-1">
+                          <span className="text-xs text-texto-suave">Subtipo das praças</span>
+                          <Selecao
+                            value={busca.subtipo_praca ?? ""}
+                            onChange={(e) =>
+                              atualizarBusca({
+                                subtipo_praca: (e.target.value ||
+                                  undefined) as BuscaMapa["subtipo_praca"],
+                              })
+                            }
+                          >
+                            <option value="">Todos os subtipos</option>
+                            {Object.entries(ROTULOS_SUBTIPO_PRACA).map(([subtipo, rotulo]) => {
+                              const n = subtiposPracas[subtipo];
+                              return (
+                                <option key={subtipo} value={subtipo}>
+                                  {rotulo}
+                                  {n !== undefined ? ` (${n.toLocaleString("pt-BR")})` : ""}
+                                </option>
+                              );
+                            })}
+                          </Selecao>
+                        </label>
+                      )}
                       {mostrarAreasVerdes && pronto && estadoAreasVerdes === "inicial" && (
                         <p role="status" className="text-xs text-texto-suave">
                           Carregando áreas verdes…
@@ -1823,6 +1869,9 @@ function PainelAreaVerde({ area, aoFechar }: { area: AreaVerdeSelecionada; aoFec
         )}
         <p className="mt-1 flex items-center gap-1.5">
           <AmostraAreaVerde tipo={area.tipo} /> {tipo ?? area.tipo}
+          {area.tipo === "praca" && area.subtipo && area.subtipo !== "praca"
+            ? ` · ${area.subtipo_rotulo ?? ROTULOS_SUBTIPO_PRACA[area.subtipo] ?? area.subtipo}`
+            : ""}
         </p>
       </div>
       {area.ato_legal && <p>Ato legal: {area.ato_legal}</p>}

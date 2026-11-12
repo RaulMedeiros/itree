@@ -11,6 +11,16 @@ class TipoAreaVerde(models.TextChoices):
     UNIDADE_CONSERVACAO = "unidade_conservacao", "Unidade de conservação"
 
 
+class SubtipoAreaVerde(models.TextChoices):
+    """Subtipo das praças, derivado do nome (ver ``subtipos.subtipo_da_praca``)."""
+
+    PRACA = "praca", "Praça"
+    ARENINHA = "areninha", "Areninha"
+    CALCADAO = "calcadao", "Calçadão"
+    ROTATORIA = "rotatoria", "Rotatória"
+    SEM_DENOMINACAO = "sem_denominacao", "Sem denominação oficial"
+
+
 @pghistory.track(pghistory.InsertEvent(), pghistory.UpdateEvent(), pghistory.DeleteEvent())
 class AreaVerde(ModeloBase):
     """Praça, parque urbano ou unidade de conservação, com fonte e data (RN-PROV-003).
@@ -21,6 +31,12 @@ class AreaVerde(ModeloBase):
     """
 
     tipo = models.CharField(max_length=30, choices=TipoAreaVerde.choices)
+    subtipo = models.CharField(
+        max_length=30,
+        choices=SubtipoAreaVerde.choices,
+        blank=True,
+        help_text="Só nas praças: praça, areninha, calçadão, rotatória ou sem denominação.",
+    )
     nome = models.CharField(max_length=250)
     nome_popular = models.CharField(max_length=250, blank=True)
     codigo_externo = models.CharField(

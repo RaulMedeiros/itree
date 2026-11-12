@@ -251,6 +251,11 @@ const mapa = createRoute({
     ocorrencias: bandeira("0"),
     bairros: bandeira("0"),
     areas_verdes: bandeira("1"),
+    /** Subtipo das praças mostrado na camada de áreas verdes; vazio mostra todos. */
+    subtipo_praca: z
+      .enum(["praca", "areninha", "calcadao", "rotatoria", "sem_denominacao"])
+      .optional()
+      .catch(undefined),
     arborizacao_entorno: bandeira("1"),
     tarefas: bandeira("1"),
     alertas: bandeira("1"),
