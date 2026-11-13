@@ -4,7 +4,8 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { SeloEstadoInspecao } from "../../componentes/selos";
 import { CondicaoAparente } from "../../componentes/CondicaoAparente";
-import { BotaoExportarCsv, filtrosParaExportar } from "../../componentes/BotaoExportarCsv";
+import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
+import { filtrosParaExportar } from "../../componentes/filtrosExportacao";
 import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { EntradaData, Selecao } from "../../ui/campos";
