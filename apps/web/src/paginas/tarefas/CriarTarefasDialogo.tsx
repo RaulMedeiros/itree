@@ -173,7 +173,7 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
               )}
             </Campo>
           </div>
-          <Campo rotulo="Prazo">
+          <Campo rotulo="Prazo" data>
             {(p) => (
               <EntradaData
                 {...p}

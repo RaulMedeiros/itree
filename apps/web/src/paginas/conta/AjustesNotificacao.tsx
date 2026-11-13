@@ -98,7 +98,7 @@ function Formulario({ ajustes }: { ajustes: Ajustes }) {
             <div className="flex flex-wrap items-end gap-3">
               <Campo
                 rotulo="Silenciar até"
-                ajuda="Até essa data, inclusive, nenhum aviso novo chega (sino nem e-mail). Útil nas férias."
+                ajuda="Até essa data, inclusive, nenhum aviso novo chega (sino nem e-mail). Útil nas férias. Use o formato dd/mm/aaaa."
               >
                 {(p) => <EntradaData {...p} value={ate} onChange={setAte} className="max-w-40" />}
               </Campo>
