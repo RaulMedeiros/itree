@@ -11,14 +11,17 @@ export const CENTRO_PADRAO: [number, number] = [-38.5267, -3.7319];
  * Mapa de ruas discreto: o OpenStreetMap padrão é muito colorido (vias
  * amarelas, áreas rosa, ícones) e compete com os dados. Dessaturar e clarear
  * mantém a referência urbana e deixa a cor para as camadas da plataforma.
- * A imagem de satélite não é alterada.
+ * Rótulos, ícones de comércio e números de porta do OSM ficam num cinza claro
+ * (brilho mínimo alto): legíveis de perto, mas abaixo dos dados da plataforma (R3-20).
+ * A imagem de satélite não é alterada. Os valores são conferidos por
+ * `packages/ui-tokens/scripts/contraste.mjs`.
  */
 export function pinturaBase(tipo: TipoBase) {
   return tipo === "ruas"
     ? {
-        "raster-saturation": -0.82,
-        "raster-contrast": -0.12,
-        "raster-brightness-min": 0.14,
+        "raster-saturation": -0.9,
+        "raster-contrast": -0.2,
+        "raster-brightness-min": 0.28,
         "raster-brightness-max": 1,
       }
     : {};
