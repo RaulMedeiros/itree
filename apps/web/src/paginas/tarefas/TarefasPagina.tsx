@@ -618,7 +618,7 @@ export function ReatribuirDialogo({ tarefa, aoFechar }: { tarefa: Tarefa; aoFech
             </Selecao>
           )}
         </Campo>
-        <Campo rotulo="Prazo">
+        <Campo rotulo="Prazo" data>
           {(p) => <EntradaData {...p} value={prazo} onChange={(v) => setPrazo(v)} />}
         </Campo>
         <Campo rotulo="Motivo" obrigatorio>

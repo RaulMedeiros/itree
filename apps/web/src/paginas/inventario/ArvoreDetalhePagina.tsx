@@ -1083,7 +1083,7 @@ function MedidaDialogo({ arvore, aoFechar }: { arvore: Arvore; aoFechar: () => v
             </Selecao>
           )}
         </Campo>
-        <Campo rotulo="Data da medição" erros={erros.data_medicao}>
+        <Campo rotulo="Data da medição" data erros={erros.data_medicao}>
           {(p) => <EntradaData {...p} value={data} onChange={(v) => setData(v)} />}
         </Campo>
         <div className="col-span-2">

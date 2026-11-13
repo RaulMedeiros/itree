@@ -742,7 +742,7 @@ function AtribuicaoDialogo({
             </Selecao>
           )}
         </Campo>
-        <Campo rotulo="Prazo">
+        <Campo rotulo="Prazo" data>
           {(p) => <EntradaData {...p} value={prazo} onChange={(v) => setPrazo(v)} />}
         </Campo>
       </div>

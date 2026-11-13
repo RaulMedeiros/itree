@@ -98,7 +98,7 @@ export function PrazoEmLoteDialogo({
         </p>
       )}
       <div className="flex flex-col gap-3">
-        <Campo rotulo="Novo prazo">
+        <Campo rotulo="Novo prazo" data>
           {(p) => (
             <EntradaData
               {...p}

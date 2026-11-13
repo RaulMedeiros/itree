@@ -63,14 +63,18 @@ export function Sino() {
         >
           <div className="flex items-center justify-between border-b border-borda px-3 py-2">
             <p className="text-sm font-semibold">Notificações</p>
-            <button
-              type="button"
+            {/* Menu.Item (e não <button>): só ele entra na navegação por setas do menu. */}
+            <Menu.Item
               disabled={naoLidas === 0 || lerTodas.isPending}
-              onClick={() => lerTodas.mutate()}
-              className="rounded px-1.5 py-0.5 text-xs font-medium text-marca-escura hover:bg-marca-clara disabled:pointer-events-none disabled:opacity-50"
+              onSelect={(e) => {
+                // Mantém o menu aberto para a pessoa ver as notificações já marcadas.
+                e.preventDefault();
+                lerTodas.mutate();
+              }}
+              className="cursor-pointer rounded px-1.5 py-0.5 text-xs font-medium text-marca-escura outline-none data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-marca-clara"
             >
               Marcar todas como lidas
-            </button>
+            </Menu.Item>
           </div>
           <div className="max-h-96 overflow-y-auto p-1">
             {lista.isError ? (

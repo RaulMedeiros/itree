@@ -343,7 +343,7 @@ function AssistenteImportacao({
               >
                 {(p) => <Entrada {...p} value={fonte} onChange={(e) => setFonte(e.target.value)} />}
               </Campo>
-              <Campo rotulo="Data de referência dos dados" erros={erros.data_referencia}>
+              <Campo rotulo="Data de referência dos dados" data erros={erros.data_referencia}>
                 {(p) => (
                   <EntradaData
                     {...p}
