@@ -42,6 +42,20 @@ EXTENSOES_ACEITAS = ", ".join(sorted(FORMATOS_POR_EXTENSAO))
 _EXTENSOES_SHAPEFILE = (".shp", ".shx", ".dbf", ".prj", ".cpg")
 _DRIVERS_ACEITOS = {"ESRI Shapefile", "GPKG", "KML", "LIBKML"}
 _ASSINATURA_SQLITE = b"SQLite format 3\x00"
+_ASSINATURA_SHP = b"\x00\x00\x27\x0a"
+
+
+def _conferir_kml(conteudo: bytes) -> None:
+    """A GDAL escolhe o driver pelo conteúdo, não pela extensão: um ".kml" que seja na verdade um
+    VRT poderia apontar para arquivos locais ou remotos. Só abre o que é KML de fato, e sem
+    NetworkLink (que faria o servidor buscar URLs de terceiros)."""
+    inicio = conteudo[:4096].lower()
+    if b"<kml" not in inicio or b"ogrvrtdatasource" in conteudo.lower():
+        raise ErroArquivo("O arquivo não é um KML válido.")
+    if b"<networklink" in conteudo.lower():
+        raise ErroArquivo(
+            "KML com NetworkLink não é aceito; exporte as feições para o próprio arquivo."
+        )
 
 
 class ErroArquivo(Exception):
@@ -194,6 +208,7 @@ def _ler_geografico(
             alvo = base / "dados.gpkg"
             alvo.write_bytes(conteudo)
         elif formato == "kml":
+            _conferir_kml(conteudo)
             alvo = base / "dados.kml"
             alvo.write_bytes(conteudo)
         elif formato == "kmz":
@@ -206,6 +221,7 @@ def _ler_geografico(
                 preferido = next((i for i in kmls if i.filename == "doc.kml"), kmls[0])
                 alvo = base / "dados.kml"
                 _extrair(zip_, preferido, alvo)
+                _conferir_kml(alvo.read_bytes())
         else:  # shapefile
             with _abrir_zip(conteudo) as zip_:
                 por_extensao = {}
@@ -218,6 +234,9 @@ def _ler_geografico(
                 for ext, info in por_extensao.items():
                     _extrair(zip_, info, base / f"camada{ext}")
             alvo = base / "camada.shp"
+            with alvo.open("rb") as shp:
+                if shp.read(4) != _ASSINATURA_SHP:
+                    raise ErroArquivo("O .shp do ZIP não é um Shapefile válido.")
         return _ler_ogr(alvo, srid, ponto_interior)
 
 

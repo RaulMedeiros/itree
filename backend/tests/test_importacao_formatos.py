@@ -317,3 +317,34 @@ def test_geografico_respeita_o_escopo_territorial(cliente, territorios, tmp_path
 def test_formatos_novos_exigem_permissao(cliente, tecnico_a, tmp_path):
     caminho = ogr2ogr(tmp_path, PONTOS, "GPKG", "arvores.gpkg")
     assert enviar(cliente.como(tecnico_a), caminho.read_bytes(), "arvores.gpkg").status_code == 403
+
+
+def test_kml_falso_ou_com_networklink_e_recusado(cliente, revisor):
+    """A GDAL escolhe o driver pelo conteúdo: um ".kml" que é VRT apontaria para arquivos locais,
+    e um NetworkLink faria o servidor buscar URLs de terceiros."""
+    cliente.como(revisor)
+    vrt = (
+        b'<OGRVRTDataSource><OGRVRTLayer name="x">'
+        b"<SrcDataSource>/etc/passwd</SrcDataSource></OGRVRTLayer></OGRVRTDataSource>"
+    )
+    r = enviar(cliente, vrt, "arvores.kml")
+    assert r.status_code == 400 and "KML válido" in r.json()["arquivo"]
+    rede = (
+        b'<?xml version="1.0"?><kml xmlns="http://www.opengis.net/kml/2.2"><NetworkLink>'
+        b"<Link><href>http://exemplo.invalid/a.kml</href></Link></NetworkLink></kml>"
+    )
+    r = enviar(cliente, rede, "arvores.kml")
+    assert r.status_code == 400 and "NetworkLink" in r.json()["arquivo"]
+    saida = io.BytesIO()
+    with zipfile.ZipFile(saida, "w") as z:
+        z.writestr("doc.kml", vrt)
+    assert enviar(cliente, saida.getvalue(), "arvores.kmz").status_code == 400
+
+
+def test_shp_com_conteudo_que_nao_e_shapefile_e_recusado(cliente, revisor):
+    cliente.como(revisor)
+    saida = io.BytesIO()
+    with zipfile.ZipFile(saida, "w") as z:
+        z.writestr("camada.shp", b"<OGRVRTDataSource></OGRVRTDataSource>")
+    r = enviar(cliente, saida.getvalue(), "x.zip")
+    assert r.status_code == 400 and "Shapefile válido" in r.json()["arquivo"]
