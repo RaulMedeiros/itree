@@ -22,8 +22,17 @@ Custo da integração (meu, fora dos subagentes): de 30 a 60 mil por PR (rebase,
 conflitos, verificação completa, PR, CI e merge). Sobe para 60 a 100 mil quando
 há conflito semântico entre lotes, por exemplo uma API que muda de formato.
 
-Regra prática: **cerca de 50 mil tokens por item de backlog**, mais **40 mil por PR
-integrado**, mais **20% de folga** para conflitos e correções.
+Regra prática (revista em 2026-11-13):
+
+- **Item pequeno** (configuração, teste que falta, ajuste de texto ou de
+  acessibilidade num componente): cerca de **25 mil tokens**.
+- **Item de funcionalidade** (backend, web e testes, ou dado real da rede):
+  cerca de **50 mil tokens**.
+- **Item estrutural** (fluxo assíncrono, migração, retomada, mudança de
+  formato de API): **150 a 200 mil tokens**, mesmo sendo um item só.
+- **Revisor Opus de uma fatia:** 100 a 200 mil tokens.
+- Mais **40 mil por PR integrado** e **20% de folga**, que só é gasta quando há
+  conflito semântico entre lotes.
 
 ## Estratégia de uso do ambiente
 
@@ -59,3 +68,4 @@ passar de 25%, anote a causa e ajuste a regra prática acima.
 
 | Data | Plano | Estimado | Real | Erro | Causa e ajuste |
 | --- | --- | --- | --- | --- | --- |
+| 2026-11-13 | Correções da 2ª revisão de prontidão (R1–R4, refazer o appsec) | 0,9–1,2 mi (centro 1,05 mi) | ≈ 0,8 mi: subagentes 593 mil (R1 119, R2 127, R3 172, appsec 175) + R4 feito por mim ≈ 50 mil + integração de 4 PRs ≈ 160 mil | −24% | Os itens pequenos (configuração e testes) custaram cerca de metade dos 50 mil da regra, e a reserva para corrigir achados do appsec quase não foi usada (1 achado informativo). A regra passou a separar item pequeno, de funcionalidade e estrutural. |
