@@ -29,6 +29,7 @@ import type {
   Ocorrencia,
   OcorrenciaRequest,
   OcorrenciasListarParams,
+  OperacaoEmLote,
   PaginatedOcorrenciaList,
   PatchedOcorrenciaRequest,
   PrazoEmLoteRequest,
@@ -885,7 +886,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   status: 200
 }
 
-export type ocorrenciasPrazoEmLoteResponseSuccess = (ocorrenciasPrazoEmLoteResponse200) & {
+export type ocorrenciasPrazoEmLoteResponse202 = {
+  data: OperacaoEmLote
+  status: 202
+}
+
+export type ocorrenciasPrazoEmLoteResponseSuccess = (ocorrenciasPrazoEmLoteResponse200 | ocorrenciasPrazoEmLoteResponse202) & {
   headers: Headers;
 };
 ;
@@ -981,7 +987,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   status: 200
 }
 
-export type ocorrenciasPrioridadeEmLoteResponseSuccess = (ocorrenciasPrioridadeEmLoteResponse200) & {
+export type ocorrenciasPrioridadeEmLoteResponse202 = {
+  data: OperacaoEmLote
+  status: 202
+}
+
+export type ocorrenciasPrioridadeEmLoteResponseSuccess = (ocorrenciasPrioridadeEmLoteResponse200 | ocorrenciasPrioridadeEmLoteResponse202) & {
   headers: Headers;
 };
 ;
@@ -1077,7 +1088,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   status: 200
 }
 
-export type ocorrenciasReatribuirEmLoteResponseSuccess = (ocorrenciasReatribuirEmLoteResponse200) & {
+export type ocorrenciasReatribuirEmLoteResponse202 = {
+  data: OperacaoEmLote
+  status: 202
+}
+
+export type ocorrenciasReatribuirEmLoteResponseSuccess = (ocorrenciasReatribuirEmLoteResponse200 | ocorrenciasReatribuirEmLoteResponse202) & {
   headers: Headers;
 };
 ;

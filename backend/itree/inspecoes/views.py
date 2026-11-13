@@ -29,6 +29,7 @@ from .serializers import (
 P = Permissao
 
 FILTROS = [
+    OpenApiParameter("ids", str, description="IDs separados por vírgula (as marcadas na lista)."),
     OpenApiParameter("estado", str, description="Um ou mais, separados por vírgula."),
     OpenApiParameter("tecnico", str),
     OpenApiParameter("arvore", str),
@@ -74,6 +75,8 @@ def ordenar_inspecoes(qs, ordem: str):
 
 def filtrar_inspecoes(qs, p):
     """Filtros da listagem de inspeções, compartilhados com a exportação."""
+    if ids := p.get("ids"):  # as marcadas na lista (exportação da seleção)
+        qs = qs.filter(pk__in=[uuid_do_parametro(i, "ids") for i in ids.split(",")])
     if estado := p.get("estado"):
         qs = qs.filter(estado__in=estado.split(","))
     for campo in ("tecnico", "arvore"):

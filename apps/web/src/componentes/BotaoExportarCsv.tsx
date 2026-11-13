@@ -15,11 +15,15 @@ export function BotaoExportarCsv({
   conjunto,
   filtros,
   leitura,
+  rotulo = "Exportar CSV",
+  variante = "secundario",
 }: {
   conjunto: "ocorrencias" | "inspecoes" | "tarefas" | "alertas";
   filtros: Record<string, string | number | boolean | undefined | null>;
   /** Permissão de leitura do conjunto (a mesma que o servidor exige). */
   leitura: PermissaoEnum;
+  rotulo?: string;
+  variante?: "secundario" | "fantasma";
 }) {
   const pode = usePermissao("relatorios.exportar", leitura);
   const [baixando, setBaixando] = useState(false);
@@ -42,8 +46,8 @@ export function BotaoExportarCsv({
   };
   return (
     <>
-      <Botao variante="secundario" disabled={baixando} onClick={() => void baixar()}>
-        <Download aria-hidden /> Exportar CSV
+      <Botao variante={variante} disabled={baixando} onClick={() => void baixar()}>
+        <Download aria-hidden /> {rotulo}
       </Botao>
       {baixando && (
         <span role="status" className="sr-only">

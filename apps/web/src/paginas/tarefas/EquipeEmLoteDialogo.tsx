@@ -2,13 +2,14 @@ import {
   ErroApi,
   useEquipesListar,
   useTarefasEquipeEmLote,
+  type OperacaoEmLote,
   type ResultadoAcaoEmLote,
 } from "@itree/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
-import { ResultadoDoLote } from "../../componentes/lote";
+import { ResultadoDoLote, alterouRegistros } from "../../componentes/lote";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -32,7 +33,7 @@ export function EquipeEmLoteDialogo({
   const equipes = useEquipesListar({ ativa: true, tamanho: 200 });
   const [equipe, setEquipe] = useState("");
   const [motivo, setMotivo] = useState("");
-  const [resultado, setResultado] = useState<ResultadoAcaoEmLote | null>(null);
+  const [resultado, setResultado] = useState<ResultadoAcaoEmLote | OperacaoEmLote | null>(null);
   const mutacao = useTarefasEquipeEmLote<ErroApi>();
   const cliente = useQueryClient();
   if (resultado) {
@@ -40,7 +41,7 @@ export function EquipeEmLoteDialogo({
       <ResultadoDoLote
         titulo="Equipe reatribuída"
         resultado={resultado}
-        aoFechar={() => aoFechar(resultado.atualizadas > 0)}
+        aoFechar={() => aoFechar(alterouRegistros(resultado))}
       />
     );
   }

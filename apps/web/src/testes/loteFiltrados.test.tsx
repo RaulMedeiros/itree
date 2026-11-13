@@ -268,7 +268,7 @@ describe("M-23: selecionar todos os N filtrados", () => {
     expect(within(barra).queryByText(/todos os filtrados/)).toBeNull();
   });
 
-  it("acima de 200 avisa para refinar os filtros e bloqueia as ações", async () => {
+  it("acima de 200 filtrados avisa que roda em segundo plano e mantém as ações", async () => {
     const usuario = userEvent.setup();
     total = 230;
     await abrir("/ocorrencias");
@@ -277,11 +277,38 @@ describe("M-23: selecionar todos os N filtrados", () => {
       screen.getByRole("checkbox", { name: "Selecionar todas as ocorrências da página" }),
     );
     await usuario.click(screen.getByRole("button", { name: "Selecionar todos os 230 filtrados" }));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText(/roda em segundo plano/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Definir prazo" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Reatribuir" })).toBeEnabled();
+  });
+
+  it("acima do teto da operação avisa para refinar os filtros e bloqueia as ações", async () => {
+    const usuario = userEvent.setup();
+    total = 25000;
+    await abrir("/ocorrencias");
+    await screen.findByText("OCO-000001");
+    await usuario.click(
+      screen.getByRole("checkbox", { name: "Selecionar todas as ocorrências da página" }),
+    );
+    await usuario.click(
+      screen.getByRole("button", { name: /Selecionar todos os 25\.000 filtrados/ }),
+    );
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Os filtros alcançam 230 registros; o limite é de 200 por ação. Refine os filtros para continuar.",
+      "Os filtros alcançam 25000 registros; o limite é de 20000 por ação. Refine os filtros para continuar.",
     );
     expect(screen.getByRole("button", { name: "Definir prazo" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Reatribuir" })).toBeDisabled();
+  });
+
+  it("acima de 200 marcados à mão continua bloqueado", async () => {
+    const usuario = userEvent.setup();
+    total = 230;
+    await abrir("/ocorrencias");
+    await screen.findByText("OCO-000001");
+    expect(screen.queryByRole("alert")).toBeNull();
+    await usuario.click(screen.getByRole("checkbox", { name: "Selecionar OCO-000001" }));
+    expect(screen.queryByText(/roda em segundo plano/)).toBeNull();
   });
 
   it("nas tarefas, define o prazo de todas as filtradas", async () => {

@@ -14,6 +14,7 @@ export * from './inspecoes/inspecoes';
 export * from './mapa/mapa';
 export * from './notificacoes/notificacoes';
 export * from './ocorrencias/ocorrencias';
+export * from './operacoes-em-lote/operacoes-em-lote';
 export * from './qualidade/qualidade';
 export * from './relatorios/relatorios';
 export * from './saude/saude';

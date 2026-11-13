@@ -7,6 +7,6 @@
  */
 
 /**
- * Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...), no lugar dos ids. Alcança todos os registros filtrados, até o limite de 200; com mais que isso, a ação é recusada.
+ * Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...), no lugar dos ids. Alcança todos os registros filtrados. Até 200 a ação é imediata (200); acima disso, roda em segundo plano (202, com uma operação para acompanhar), até 20000; com mais que isso, é recusada.
  */
 export type PrazoEmLoteRequestFiltros = {[key: string]: string};

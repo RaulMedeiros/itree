@@ -8,7 +8,7 @@ from itree.alertas.views import AlertaViewSet
 from itree.areas_verdes.views import AreaVerdeViewSet
 from itree.auditoria.views import AuditoriaListView
 from itree.contas.views import EquipeViewSet, UsuarioAdminViewSet, eu
-from itree.core.views import saude
+from itree.core.views import OperacaoEmLoteViewSet, saude
 from itree.evidencias.views import EvidenciaViewSet
 from itree.indicadores.implantacao import primeiros_passos
 from itree.indicadores.views import arborizacao_entorno_geojson, painel
@@ -39,6 +39,7 @@ roteador.register("inspecoes", InspecaoViewSet, basename="inspecao")
 roteador.register("tarefas", TarefaViewSet, basename="tarefa")
 roteador.register("alertas", AlertaViewSet, basename="alerta")
 roteador.register("notificacoes", NotificacaoViewSet, basename="notificacao")
+roteador.register("operacoes-em-lote", OperacaoEmLoteViewSet, basename="operacao-em-lote")
 roteador.register("inferencias", InferenciaViewSet, basename="inferencia")
 
 api_v1 = [

@@ -6,13 +6,15 @@ import {
 } from "@itree/api-client";
 import { ROTULOS_FONTE_ALERTA, ROTULOS_STATUS_ALERTA, ROTULOS_TIPO_ALERTA } from "@itree/domain";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { RAIO_PADRAO_M, type RaioM } from "./opcoesRaio";
 import { SeletorRaio } from "./raio";
 import { AjudaTermo } from "../../componentes/AjudaTermo";
-import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
+import { BotaoExportarCsv, filtrosParaExportar } from "../../componentes/BotaoExportarCsv";
+import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { Botao } from "../../ui/botao";
@@ -21,6 +23,8 @@ import { contarFiltros } from "../../util/filtros";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th, ThOrdenavel } from "../../ui/tabela";
 import { descreverAreaVerdeProxima, formatarDataHora, plural } from "../../util/formatos";
+import { excedeLimiteDoLote, useSelecaoEmLote } from "../../util/lote";
+import { StatusEmLoteDialogo } from "./StatusEmLoteDialogo";
 
 const TAMANHO = 50;
 
@@ -79,6 +83,8 @@ export function AlertasPagina() {
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
   const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
   const podeConfigurar = usePermissao("admin.configuracao");
+  const podeTriar = usePermissao("alertas.triar");
+  const [alterandoStatus, setAlterandoStatus] = useState(false);
   const raio = filtros.raio ?? RAIO_PADRAO_M;
   const consulta = useAlertasListar({
     ...filtros,
@@ -95,6 +101,18 @@ export function AlertasPagina() {
     filtrar({ ordem: filtros.ordem === `-${campo}` ? campo : (`-${campo}` as OrdemAlertas) });
   const filtrar = (parcial: Partial<BuscaAlertas>) =>
     void navegar({ search: (s: BuscaAlertas) => ({ ...s, ...parcial, pagina: undefined }) });
+  // A seleção atravessa as páginas, mas só vale para os filtros em que foi feita.
+  const selecao = useSelecaoEmLote(
+    JSON.stringify({ ...filtros, bairro, pagina: undefined, ordem: undefined }),
+    consulta.data?.data.results.map((a) => a.id) ?? [],
+    consulta.data?.data.count ?? 0,
+  );
+  // Os mesmos filtros da lista, para "todos os filtrados" valer exatamente o que ela mostra.
+  const filtrosDoLote = filtrosParaExportar({
+    ...filtros,
+    bairro,
+    status: filtros.status ?? "abertos",
+  });
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -197,9 +215,40 @@ export function AlertasPagina() {
         </ListaVazia>
       ) : (
         <>
+          {podeTriar && (
+            <BarraAcoesEmLote
+              total={selecao.total}
+              singular="alerta selecionado"
+              plural="alertas selecionados"
+              aoLimpar={selecao.limpar}
+              todosFiltrados={selecao.todosFiltrados}
+              totalFiltrado={consulta.data.data.count}
+              aoSelecionarTodos={
+                selecao.podeSelecionarTodos ? selecao.selecionarTodosFiltrados : undefined
+              }
+            >
+              <Botao
+                variante="secundario"
+                disabled={excedeLimiteDoLote(selecao.total, selecao.todosFiltrados)}
+                onClick={() => setAlterandoStatus(true)}
+              >
+                Alterar status
+              </Botao>
+            </BarraAcoesEmLote>
+          )}
           <Tabela>
             <thead>
               <tr>
+                {podeTriar && (
+                  <Th className="w-10">
+                    <CaixaDaPagina
+                      rotulo="Selecionar todos os alertas da página"
+                      inteira={selecao.paginaInteira}
+                      parcial={selecao.paginaParcial}
+                      aoAlternar={selecao.alternarPagina}
+                    />
+                  </Th>
+                )}
                 <Th>Alerta</Th>
                 <Th>
                   Fonte e tipo <AjudaTermo id="fonte_externa" />
@@ -225,6 +274,17 @@ export function AlertasPagina() {
             <tbody>
               {consulta.data.data.results.map((a) => (
                 <Linha key={a.id} className="hover:bg-fundo">
+                  {podeTriar && (
+                    <Td>
+                      <input
+                        type="checkbox"
+                        aria-label={`Selecionar ${a.codigo}`}
+                        className="size-4 accent-marca"
+                        checked={selecao.marcada(a.id)}
+                        onChange={(e) => selecao.alternar(a.id, e.target.checked)}
+                      />
+                    </Td>
+                  )}
                   <Td>
                     <Link
                       to="/alertas/$id"
@@ -287,6 +347,16 @@ export function AlertasPagina() {
             aoMudar={(p) => void navegar({ search: (s: BuscaAlertas) => ({ ...s, pagina: p }) })}
           />
         </>
+      )}
+      {alterandoStatus && (
+        <StatusEmLoteDialogo
+          alvo={selecao.alvo(filtrosDoLote)}
+          total={selecao.total}
+          aoFechar={(alterou) => {
+            setAlterandoStatus(false);
+            if (alterou) selecao.limpar();
+          }}
+        />
       )}
     </div>
   );

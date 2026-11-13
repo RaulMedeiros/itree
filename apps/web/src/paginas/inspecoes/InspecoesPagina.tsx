@@ -4,7 +4,9 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { SeloEstadoInspecao } from "../../componentes/selos";
 import { CondicaoAparente } from "../../componentes/CondicaoAparente";
-import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
+import { BotaoExportarCsv, filtrosParaExportar } from "../../componentes/BotaoExportarCsv";
+import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
+import { usePermissao } from "../../acesso/ContextoUsuario";
 import { EntradaData, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { Botao } from "../../ui/botao";
@@ -14,6 +16,7 @@ import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { contar, diasDesde, formatarDataHora } from "../../util/formatos";
+import { useSelecaoEmLote } from "../../util/lote";
 
 const TAMANHO = 50;
 
@@ -65,6 +68,15 @@ export function InspecoesPagina() {
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
   const filtrar = (parcial: Partial<BuscaInspecoes>) =>
     void navegar({ search: (s: BuscaInspecoes) => ({ ...s, ...parcial, pagina: undefined }) });
+  // Só a exportação aceita seleção aqui: a revisão não tem ação em lote (não há revisor atribuído).
+  const podeExportar = usePermissao("relatorios.exportar", "inspecoes.ler");
+  const selecao = useSelecaoEmLote(
+    JSON.stringify({ ...filtros, bairro, pagina: undefined, ordenar: undefined }),
+    consulta.data?.data.results.map((i) => i.id) ?? [],
+    consulta.data?.data.count ?? 0,
+  );
+  // Os mesmos filtros da lista: "todas as filtradas" exporta exatamente o que ela mostra.
+  const filtrosDaLista = { ...filtros, bairro, estado: filtros.estado ?? "em_revisao" };
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -185,9 +197,43 @@ export function InspecoesPagina() {
         </ListaVazia>
       ) : (
         <>
+          {podeExportar && (
+            <BarraAcoesEmLote
+              total={selecao.total}
+              singular="inspeção selecionada"
+              plural="inspeções selecionadas"
+              aoLimpar={selecao.limpar}
+              todosFiltrados={selecao.todosFiltrados}
+              totalFiltrado={consulta.data.data.count}
+              aoSelecionarTodos={
+                selecao.podeSelecionarTodos ? selecao.selecionarTodosFiltrados : undefined
+              }
+            >
+              <BotaoExportarCsv
+                conjunto="inspecoes"
+                leitura="inspecoes.ler"
+                rotulo="Exportar seleção"
+                filtros={
+                  selecao.todosFiltrados
+                    ? filtrosParaExportar(filtrosDaLista)
+                    : { ids: selecao.selecionadas.join(",") }
+                }
+              />
+            </BarraAcoesEmLote>
+          )}
           <Tabela>
             <thead>
               <tr>
+                {podeExportar && (
+                  <Th className="w-10">
+                    <CaixaDaPagina
+                      rotulo="Selecionar todas as inspeções da página"
+                      inteira={selecao.paginaInteira}
+                      parcial={selecao.paginaParcial}
+                      aoAlternar={selecao.alternarPagina}
+                    />
+                  </Th>
+                )}
                 <Th>Inspeção</Th>
                 <Th>Árvore</Th>
                 <Th>Técnico</Th>
@@ -199,6 +245,17 @@ export function InspecoesPagina() {
             <tbody>
               {consulta.data.data.results.map((i) => (
                 <Linha key={i.id} className="hover:bg-fundo">
+                  {podeExportar && (
+                    <Td>
+                      <input
+                        type="checkbox"
+                        aria-label={`Selecionar ${i.codigo}`}
+                        className="size-4 accent-marca"
+                        checked={selecao.marcada(i.id)}
+                        onChange={(e) => selecao.alternar(i.id, e.target.checked)}
+                      />
+                    </Td>
+                  )}
                   <Td>
                     <Link
                       to="/inspecoes/$id"

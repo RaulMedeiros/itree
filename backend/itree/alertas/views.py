@@ -21,6 +21,12 @@ from rest_framework.response import Response
 from itree.auditoria.views import EventoAuditoriaSerializer
 from itree.contas.acesso import requer
 from itree.contas.permissoes import Permissao
+from itree.core.lote import (
+    IdsEmLoteSerializer,
+    OperacaoEmLoteSerializer,
+    ResultadoAcaoEmLoteSerializer,
+    iniciar_acao_em_lote,
+)
 from itree.core.parametros import uuid_do_parametro
 from itree.core.textos import sem_codigos_internos
 from itree.ocorrencias.models import Ocorrencia, OrigemOcorrencia, TipoOcorrencia
@@ -126,6 +132,31 @@ class TriagemSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=StatusAlerta.choices)
     justificativa = serializers.CharField(required=False, allow_blank=True, max_length=2000)
     referencia = serializers.CharField(required=False, allow_blank=True, max_length=200)
+
+
+class StatusEmLoteSerializer(IdsEmLoteSerializer):
+    """Novo status para os alertas marcados ou todos os filtrados (M-26).
+
+    Vale a mesma regra da triagem de um alerta: só passa quem tem a transição permitida a
+    partir do status atual; os demais ficam como estão, com o motivo. Justificativa e
+    referência (quando o status exige) valem para todos.
+    """
+
+    motivo = None  # a justificativa faz o papel do motivo no histórico
+    status = serializers.ChoiceField(choices=StatusAlerta.choices)
+    justificativa = serializers.CharField(required=False, allow_blank=True, max_length=2000)
+    referencia = serializers.CharField(required=False, allow_blank=True, max_length=200)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        novo = attrs["status"]
+        if novo in EXIGEM_JUSTIFICATIVA and not attrs.get("justificativa", "").strip():
+            raise serializers.ValidationError({"justificativa": ["Informe a justificativa."]})
+        if novo in EXIGEM_REFERENCIA and not attrs.get("referencia", "").strip():
+            raise serializers.ValidationError(
+                {"referencia": [f"Informe o {EXIGEM_REFERENCIA[novo]}."]}
+            )
+        return attrs
 
 
 class ConversaoSerializer(serializers.Serializer):
@@ -265,7 +296,7 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
     lookup_value_converter = "uuid"
 
     def get_permissions(self):
-        if self.action in ("triagem", "converter"):
+        if self.action in ("triagem", "converter", "status_em_lote"):
             return [requer(P.ALERTAS_TRIAR)()]
         if self.action in ("ingestoes", "estado_fontes", "enviar_arquivo"):
             return (
@@ -365,6 +396,27 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
                 ]
             )
         return Response(AlertaSerializer(alerta).data)
+
+    @extend_schema(
+        operation_id="alertas_status_em_lote",
+        request=StatusEmLoteSerializer,
+        responses={200: ResultadoAcaoEmLoteSerializer, 202: OperacaoEmLoteSerializer},
+    )
+    @action(detail=False, methods=["post"], url_path="lote/status", pagination_class=None)
+    def status_em_lote(self, request):
+        """Muda o status dos alertas marcados ou de todos os filtrados, respeitando as
+        transições permitidas. Com mais de 200 alertas, roda em segundo plano."""
+        dados = StatusEmLoteSerializer(data=request.data)
+        dados.is_valid(raise_exception=True)
+        v = dados.validated_data
+        justificativa = v.get("justificativa", "").strip()
+        v["motivo"] = justificativa
+        parametros = {
+            "status": v["status"],
+            "justificativa": justificativa,
+            "referencia": v.get("referencia", "").strip(),
+        }
+        return iniciar_acao_em_lote(request.user, "alertas", "status", v, parametros)
 
     @extend_schema(
         operation_id="alertas_converter_ocorrencia",

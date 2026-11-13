@@ -27,6 +27,7 @@ import type {
 import type {
   EquipeEmLoteRequest,
   EventoAuditoria,
+  OperacaoEmLote,
   PaginatedTarefaList,
   PatchedTarefaRequest,
   PrazoEmLoteRequest,
@@ -786,7 +787,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   status: 200
 }
 
-export type tarefasEquipeEmLoteResponseSuccess = (tarefasEquipeEmLoteResponse200) & {
+export type tarefasEquipeEmLoteResponse202 = {
+  data: OperacaoEmLote
+  status: 202
+}
+
+export type tarefasEquipeEmLoteResponseSuccess = (tarefasEquipeEmLoteResponse200 | tarefasEquipeEmLoteResponse202) & {
   headers: Headers;
 };
 ;
@@ -885,7 +891,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   status: 200
 }
 
-export type tarefasPrazoEmLoteResponseSuccess = (tarefasPrazoEmLoteResponse200) & {
+export type tarefasPrazoEmLoteResponse202 = {
+  data: OperacaoEmLote
+  status: 202
+}
+
+export type tarefasPrazoEmLoteResponseSuccess = (tarefasPrazoEmLoteResponse200 | tarefasPrazoEmLoteResponse202) & {
   headers: Headers;
 };
 ;

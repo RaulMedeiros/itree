@@ -126,7 +126,8 @@ def test_filtrados_respeitam_o_escopo_territorial(cliente, tecnico_a, gestor_mun
 def test_filtrados_alem_do_limite_sao_recusados_sem_alterar_nada(
     cliente, gestor_municipal, tipo_queda, monkeypatch
 ):
-    monkeypatch.setattr(lote, "LIMITE_ACOES_EM_LOTE", 2)
+    monkeypatch.setattr(lote, "LIMITE_ACOES_EM_LOTE", 1)
+    monkeypatch.setattr(lote, "LIMITE_OPERACAO_EM_LOTE", 2)
     for _ in range(3):
         ocorrencia(gestor_municipal, tipo_queda)
     r = cliente.como(gestor_municipal).post(
@@ -201,6 +202,7 @@ def test_tarefas_filtradas_por_responsavel_eu_e_limite(cliente, coordenador, mon
     de_outro.refresh_from_db()
     assert minha.prazo is not None and de_outro.prazo is None
     monkeypatch.setattr(lote, "LIMITE_ACOES_EM_LOTE", 1)
+    monkeypatch.setattr(lote, "LIMITE_OPERACAO_EM_LOTE", 1)
     r = cliente.post(f"{TAREFAS}/lote/prazo", {"filtros": {}, "prazo": "2026-12-21"}, format="json")
     assert r.status_code == 400
     assert not Tarefa.objects.filter(prazo=date(2026, 12, 21)).exists()

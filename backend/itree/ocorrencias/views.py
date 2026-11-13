@@ -15,11 +15,10 @@ from itree.auditoria.views import EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo, ponto_no_escopo, requer
 from itree.contas.permissoes import Permissao
 from itree.core.lote import (
-    MOTIVO_ENCERRADA,
+    OperacaoEmLoteSerializer,
     PrazoEmLoteSerializer,
     ResultadoAcaoEmLoteSerializer,
-    ignorados_fora_do_escopo,
-    resolver_ids_do_lote,
+    iniciar_acao_em_lote,
 )
 from itree.core.parametros import uuid_do_parametro
 from itree.notificacoes import servicos as notificacoes
@@ -44,6 +43,23 @@ from .serializers import (
 )
 
 P = Permissao
+
+
+def ocorrencias_do_escopo(usuario):
+    """Ocorrências que o usuário enxerga, com o que a lista e as ações em lote precisam."""
+    qs = Ocorrencia.objects.select_related(
+        "tipo",
+        "arvore",
+        "bairro",
+        "responsavel",
+        "equipe",
+        "registrada_por",
+        "prioridade_definida_por",
+        "risco_responsavel",
+        "inspecao",
+        "alerta",
+    ).prefetch_related("tarefas", "tarefas__responsavel")
+    return filtrar_por_escopo(qs, usuario)
 
 
 def encerrar_tarefas_da_ocorrencia(ocorrencia, estado, autor=None):
@@ -179,19 +195,7 @@ class OcorrenciaViewSet(
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):  # geração do contrato OpenAPI
             return Ocorrencia.objects.none()
-        qs = Ocorrencia.objects.select_related(
-            "tipo",
-            "arvore",
-            "bairro",
-            "responsavel",
-            "equipe",
-            "registrada_por",
-            "prioridade_definida_por",
-            "risco_responsavel",
-            "inspecao",
-            "alerta",
-        ).prefetch_related("tarefas", "tarefas__responsavel")
-        qs = filtrar_por_escopo(qs, self.request.user)
+        qs = ocorrencias_do_escopo(self.request.user)
         if self.action == "list":
             qs = ordenar_ocorrencias(
                 filtrar_ocorrencias(qs, self.request.query_params), self.request.query_params
@@ -292,45 +296,10 @@ class OcorrenciaViewSet(
             )
         return self._responder(request)
 
-    def _ids_do_lote(self, validado) -> list:
-        """Os ids marcados ou, com ``filtros``, todas as ocorrências que a lista mostraria."""
-        return resolver_ids_do_lote(
-            validado,
-            self.get_queryset(),
-            lambda qs, filtros: filtrar_ocorrencias(qs, filtros),
-        )
-
-    def _alterar_em_lote(self, validado, evento: str, alterar):
-        """Aplica ``alterar(ocorrencia)`` às ocorrências abertas do escopo, em uma transação.
-
-        O que não pôde ser alterado volta em ``ignoradas``, com o motivo. A auditoria de
-        cada ocorrência recebe o motivo e o nome do evento em lote.
-        """
-        ids, motivo = self._ids_do_lote(validado), validado.get("motivo", "").strip()
-        atualizadas = 0
-        with transaction.atomic(), pghistory.context(motivo=motivo or None, evento=evento):
-            encontradas = {
-                o.pk: o
-                for o in self.get_queryset().filter(pk__in=ids).select_for_update(of=("self",))
-            }
-            ignoradas = ignorados_fora_do_escopo(ids, encontradas)
-            for pk in ids:
-                ocorrencia = encontradas.get(pk)
-                if ocorrencia is None:
-                    continue
-                if ocorrencia.estado in ESTADOS_FINAIS:
-                    ignoradas.append(
-                        {"id": pk, "codigo": ocorrencia.codigo, "motivo": MOTIVO_ENCERRADA}
-                    )
-                    continue
-                alterar(ocorrencia)
-                atualizadas += 1
-        return Response({"atualizadas": atualizadas, "ignoradas": ignoradas})
-
     @extend_schema(
         operation_id="ocorrencias_reatribuir_em_lote",
         request=ReatribuicaoEmLoteSerializer,
-        responses=ResultadoAcaoEmLoteSerializer,
+        responses={200: ResultadoAcaoEmLoteSerializer, 202: OperacaoEmLoteSerializer},
     )
     @action(detail=False, methods=["post"], url_path="lote/reatribuir", pagination_class=None)
     def reatribuir_em_lote(self, request):
@@ -338,23 +307,18 @@ class OcorrenciaViewSet(
         dados = ReatribuicaoEmLoteSerializer(data=request.data)
         dados.is_valid(raise_exception=True)
         v = dados.validated_data
-        campos = [
-            (campo, v[chave])
-            for campo, chave in (("responsavel", "responsavel_id"), ("equipe", "equipe_id"))
+        # `null` limpa o campo; o que não veio no corpo não muda.
+        parametros = {
+            chave: str(v[chave].pk) if v[chave] else None
+            for chave in ("responsavel_id", "equipe_id")
             if chave in v
-        ]
-
-        def alterar(ocorrencia):
-            for campo, valor in campos:
-                setattr(ocorrencia, campo, valor)
-            ocorrencia.save(update_fields=[*(c for c, _ in campos), "atualizado_em"])
-
-        return self._alterar_em_lote(v, "ocorrencias_reatribuidas_em_lote", alterar)
+        }
+        return iniciar_acao_em_lote(request.user, "ocorrencias", "reatribuir", v, parametros)
 
     @extend_schema(
         operation_id="ocorrencias_prioridade_em_lote",
         request=PrioridadeEmLoteSerializer,
-        responses=ResultadoAcaoEmLoteSerializer,
+        responses={200: ResultadoAcaoEmLoteSerializer, 202: OperacaoEmLoteSerializer},
     )
     @action(detail=False, methods=["post"], url_path="lote/prioridade", pagination_class=None)
     def prioridade_em_lote(self, request):
@@ -362,27 +326,14 @@ class OcorrenciaViewSet(
         dados = PrioridadeEmLoteSerializer(data=request.data)
         dados.is_valid(raise_exception=True)
         v = dados.validated_data
-        agora = timezone.now()
-
-        def alterar(ocorrencia):
-            ocorrencia.prioridade = v["prioridade"]
-            ocorrencia.prioridade_definida_por = request.user
-            ocorrencia.prioridade_definida_em = agora
-            ocorrencia.save(
-                update_fields=[
-                    "prioridade",
-                    "prioridade_definida_por",
-                    "prioridade_definida_em",
-                    "atualizado_em",
-                ]
-            )
-
-        return self._alterar_em_lote(v, "prioridade_definida_em_lote", alterar)
+        return iniciar_acao_em_lote(
+            request.user, "ocorrencias", "prioridade", v, {"prioridade": v["prioridade"]}
+        )
 
     @extend_schema(
         operation_id="ocorrencias_prazo_em_lote",
         request=PrazoEmLoteSerializer,
-        responses=ResultadoAcaoEmLoteSerializer,
+        responses={200: ResultadoAcaoEmLoteSerializer, 202: OperacaoEmLoteSerializer},
     )
     @action(detail=False, methods=["post"], url_path="lote/prazo", pagination_class=None)
     def prazo_em_lote(self, request):
@@ -390,12 +341,8 @@ class OcorrenciaViewSet(
         dados = PrazoEmLoteSerializer(data=request.data)
         dados.is_valid(raise_exception=True)
         v = dados.validated_data
-
-        def alterar(ocorrencia):
-            ocorrencia.prazo = v["prazo"]
-            ocorrencia.save(update_fields=["prazo", "atualizado_em"])
-
-        return self._alterar_em_lote(v, "prazo_definido_em_lote", alterar)
+        prazo = v["prazo"].isoformat() if v["prazo"] else None
+        return iniciar_acao_em_lote(request.user, "ocorrencias", "prazo", v, {"prazo": prazo})
 
     @extend_schema(
         operation_id="ocorrencias_risco", request=RiscoSerializer, responses=OcorrenciaSerializer

@@ -35,7 +35,10 @@ import type {
   FonteEstado,
   Ingestao,
   NovaIngestaoRequest,
+  OperacaoEmLote,
   PaginatedAlertaList,
+  ResultadoAcaoEmLote,
+  StatusEmLoteRequest,
   TriagemRequest
 } from '../modelos';
 
@@ -1031,4 +1034,106 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAlertasEnviarArquivoMutationOptions(options), queryClient);
+    }
+    export type alertasStatusEmLoteResponse200 = {
+  data: ResultadoAcaoEmLote
+  status: 200
+}
+
+export type alertasStatusEmLoteResponse202 = {
+  data: OperacaoEmLote
+  status: 202
+}
+
+export type alertasStatusEmLoteResponseSuccess = (alertasStatusEmLoteResponse200 | alertasStatusEmLoteResponse202) & {
+  headers: Headers;
+};
+;
+
+export type alertasStatusEmLoteResponse = (alertasStatusEmLoteResponseSuccess)
+
+export const getAlertasStatusEmLoteUrl = () => {
+
+
+
+
+  return `/api/v1/alertas/lote/status`
+}
+
+/**
+ * Muda o status dos alertas marcados ou de todos os filtrados, respeitando as
+ * transições permitidas. Com mais de 200 alertas, roda em segundo plano.
+ */
+export const alertasStatusEmLote = async (statusEmLoteRequest: StatusEmLoteRequest, options?: Parameters<typeof requisicao>[1]): Promise<alertasStatusEmLoteResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<alertasStatusEmLoteResponse>(getAlertasStatusEmLoteUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(statusEmLoteRequest)
+  }
+);}
+
+
+
+
+
+export const getAlertasStatusEmLoteMutationKey = () => ['alertasStatusEmLote'] as const;
+
+export const getAlertasStatusEmLoteMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof alertasStatusEmLote>>, TError,AlertasStatusEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof alertasStatusEmLote>>, TError,AlertasStatusEmLoteMutationVariables, TContext> => {
+
+const mutationKey = getAlertasStatusEmLoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof alertasStatusEmLote>>, AlertasStatusEmLoteMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  alertasStatusEmLote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AlertasStatusEmLoteMutationResult = NonNullable<Awaited<ReturnType<typeof alertasStatusEmLote>>>
+    export type AlertasStatusEmLoteMutationBody = StatusEmLoteRequest
+    export type AlertasStatusEmLoteMutationError = unknown
+    export type AlertasStatusEmLoteMutationVariables = {data: StatusEmLoteRequest}
+
+    export const useAlertasStatusEmLote = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof alertasStatusEmLote>>, TError,AlertasStatusEmLoteMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof alertasStatusEmLote>>,
+        TError,
+        AlertasStatusEmLoteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAlertasStatusEmLoteMutationOptions(options), queryClient);
     }

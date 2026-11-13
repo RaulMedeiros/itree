@@ -15,11 +15,10 @@ from itree.auditoria.views import EventoAuditoriaSerializer
 from itree.contas.acesso import area_do_escopo, filtrar_por_escopo, ponto_no_escopo, requer
 from itree.contas.permissoes import Permissao
 from itree.core.lote import (
-    MOTIVO_ENCERRADA,
+    OperacaoEmLoteSerializer,
     PrazoEmLoteSerializer,
     ResultadoAcaoEmLoteSerializer,
-    ignorados_fora_do_escopo,
-    resolver_ids_do_lote,
+    iniciar_acao_em_lote,
 )
 from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
 from itree.evidencias.models import EstadoEvidencia, Evidencia
@@ -123,6 +122,19 @@ def _verificar_escopo_responsavel(tarefa_geom, responsavel):
         )
 
 
+def tarefas_do_escopo(usuario):
+    """Tarefas que o usuário enxerga, com o que a lista e as ações em lote precisam."""
+    qs = Tarefa.objects.select_related(
+        "arvore",
+        "ocorrencia",
+        "ocorrencia__inspecao",
+        "responsavel",
+        "equipe",
+        "criada_por",
+    )
+    return filtrar_por_escopo(qs, usuario)
+
+
 @extend_schema_view(
     list=extend_schema(operation_id="tarefas_listar", parameters=FILTROS),
     retrieve=extend_schema(operation_id="tarefas_obter"),
@@ -152,15 +164,7 @@ class TarefaViewSet(
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return Tarefa.objects.none()
-        qs = Tarefa.objects.select_related(
-            "arvore",
-            "ocorrencia",
-            "ocorrencia__inspecao",
-            "responsavel",
-            "equipe",
-            "criada_por",
-        )
-        qs = filtrar_por_escopo(qs, self.request.user)
+        qs = tarefas_do_escopo(self.request.user)
         if self.action in ("list", "retrieve"):
             # A lista e o detalhe mostram quantas evidências cada tarefa já tem.
             qs = qs.annotate(
@@ -305,7 +309,7 @@ class TarefaViewSet(
     @extend_schema(
         operation_id="tarefas_equipe_em_lote",
         request=EquipeEmLoteSerializer,
-        responses=ResultadoAcaoEmLoteSerializer,
+        responses={200: ResultadoAcaoEmLoteSerializer, 202: OperacaoEmLoteSerializer},
     )
     @action(detail=False, methods=["post"], url_path="lote/equipe", pagination_class=None)
     def equipe_em_lote(self, request):
@@ -317,22 +321,14 @@ class TarefaViewSet(
         dados = EquipeEmLoteSerializer(data=request.data)
         dados.is_valid(raise_exception=True)
         v = dados.validated_data
-        equipe = v["equipe_id"]
-        membros = set(equipe.membros.values_list("pk", flat=True))
-
-        def alterar(tarefa):
-            tarefa.equipe = equipe
-            if tarefa.responsavel_id and tarefa.responsavel_id not in membros:
-                tarefa.responsavel = None
-            tarefa.save(update_fields=["equipe", "responsavel", "atualizado_em"])
-            notificacoes.tarefa_atribuida(tarefa, autor=request.user)
-
-        return self._alterar_em_lote(v, "tarefas_equipe_em_lote", alterar)
+        return iniciar_acao_em_lote(
+            request.user, "tarefas", "equipe", v, {"equipe_id": str(v["equipe_id"].pk)}
+        )
 
     @extend_schema(
         operation_id="tarefas_prazo_em_lote",
         request=PrazoEmLoteSerializer,
-        responses=ResultadoAcaoEmLoteSerializer,
+        responses={200: ResultadoAcaoEmLoteSerializer, 202: OperacaoEmLoteSerializer},
     )
     @action(detail=False, methods=["post"], url_path="lote/prazo", pagination_class=None)
     def prazo_em_lote(self, request):
@@ -340,46 +336,8 @@ class TarefaViewSet(
         dados = PrazoEmLoteSerializer(data=request.data)
         dados.is_valid(raise_exception=True)
         v = dados.validated_data
-
-        def alterar(tarefa):
-            tarefa.prazo = v["prazo"]
-            tarefa.save(update_fields=["prazo", "atualizado_em"])
-
-        return self._alterar_em_lote(v, "tarefas_prazo_em_lote", alterar)
-
-    def _alterar_em_lote(self, validado, evento: str, alterar):
-        """Aplica ``alterar(tarefa)`` às tarefas abertas do escopo, em uma transação.
-
-        O que não pôde ser alterado volta em ``ignoradas``, com o motivo.
-        """
-        ids = resolver_ids_do_lote(
-            validado,
-            self.get_queryset(),
-            lambda qs, filtros: filtrar_tarefas(qs, self.request.user, filtros),
-        )
-        motivo = validado.get("motivo", "").strip()
-        atualizadas = 0
-        with (
-            transaction.atomic(),
-            pghistory.context(motivo=motivo or None, evento=evento),
-        ):
-            encontradas = {
-                t.pk: t
-                for t in self.get_queryset().filter(pk__in=ids).select_for_update(of=("self",))
-            }
-            ignoradas = ignorados_fora_do_escopo(ids, encontradas)
-            for pk in ids:
-                tarefa = encontradas.get(pk)
-                if tarefa is None:
-                    continue
-                if tarefa.estado in ESTADOS_FINAIS_TAREFA:
-                    ignoradas.append(
-                        {"id": pk, "codigo": tarefa.codigo, "motivo": MOTIVO_ENCERRADA}
-                    )
-                    continue
-                alterar(tarefa)
-                atualizadas += 1
-        return Response({"atualizadas": atualizadas, "ignoradas": ignoradas})
+        prazo = v["prazo"].isoformat() if v["prazo"] else None
+        return iniciar_acao_em_lote(request.user, "tarefas", "prazo", v, {"prazo": prazo})
 
     @extend_schema(operation_id="tarefas_historico", responses=EventoAuditoriaSerializer(many=True))
     @action(detail=True, pagination_class=None)
