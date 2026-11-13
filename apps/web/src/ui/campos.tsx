@@ -11,7 +11,8 @@ import {
 
 import { cn } from "../util/cn";
 import { dataBrParaIso, dataIsoParaBr, mascararDataBr } from "../util/formatos";
-import { Botao, ContextoLinhaFormulario } from "./botao";
+import { Botao } from "./botao";
+import { ContextoLinhaFormulario } from "./contextoFormulario";
 import { Recolhivel } from "./recolhivel";
 
 const base =
