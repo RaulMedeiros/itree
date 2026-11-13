@@ -5460,6 +5460,13 @@ components:
           maximum: 2147483647
           minimum: 0
           description: Controle de concorrência na sincronização.
+        tarefa:
+          allOf:
+          - $ref: '#/components/schemas/TarefaDaInspecao'
+          readOnly: true
+          nullable: true
+          description: Tarefa de inspeção que originou esta inspeção, quando houve
+            (início da cadeia tarefa → inspeção → ocorrência).
         medidas_propostas:
           type: array
           items:
@@ -5517,11 +5524,6 @@ components:
           readOnly: true
           description: Inspeção validada anterior da mesma árvore, com as medidas
             dela, para comparação (RF-INSP-004).
-        tarefa:
-          type: object
-          additionalProperties: {}
-          nullable: true
-          readOnly: true
       required:
       - anterior
       - arvore
@@ -5599,6 +5601,13 @@ components:
           maximum: 2147483647
           minimum: 0
           description: Controle de concorrência na sincronização.
+        tarefa:
+          allOf:
+          - $ref: '#/components/schemas/TarefaDaInspecao'
+          readOnly: true
+          nullable: true
+          description: Tarefa de inspeção que originou esta inspeção, quando houve
+            (início da cadeia tarefa → inspeção → ocorrência).
         medidas_propostas:
           type: array
           items:
@@ -5621,6 +5630,7 @@ components:
       - realizada_em
       - recebida_em
       - revisor
+      - tarefa
       - tecnico
     InspecaoResumo:
       type: object
@@ -5682,6 +5692,13 @@ components:
           maximum: 2147483647
           minimum: 0
           description: Controle de concorrência na sincronização.
+        tarefa:
+          allOf:
+          - $ref: '#/components/schemas/TarefaDaInspecao'
+          readOnly: true
+          nullable: true
+          description: Tarefa de inspeção que originou esta inspeção, quando houve
+            (início da cadeia tarefa → inspeção → ocorrência).
         medidas_propostas:
           type: array
           items:
@@ -5698,6 +5715,7 @@ components:
       - realizada_em
       - recebida_em
       - revisor
+      - tarefa
       - tecnico
     ItemArvore:
       type: object
@@ -7946,6 +7964,21 @@ components:
       - tipo
       - total_evidencias
       - transicoes_possiveis
+    TarefaDaInspecao:
+      type: object
+      description: A tarefa de inspeção que originou a inspeção (M-28).
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        estado:
+          type: string
+      required:
+      - codigo
+      - estado
+      - id
     TarefaIaEnum:
       enum:
       - especie

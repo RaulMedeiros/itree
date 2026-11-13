@@ -452,3 +452,34 @@ def test_detalhe_traz_as_medidas_do_cadastro_para_comparar(cliente, tecnico_a, r
         "dap": "38.00",
         "altura": "10.20",
     }
+
+
+def test_resumo_da_inspecao_expoe_a_tarefa_de_origem(
+    cliente, coordenador, tecnico_a, revisor, arvore_a
+):
+    """M-28: a lista traz a tarefa que originou a inspeção, para abrir a cadeia da árvore."""
+    tarefa = (
+        cliente.como(coordenador)
+        .post(
+            "/api/v1/tarefas",
+            {
+                "tipo": "inspecao_arvore",
+                "arvore_id": arvore_a["id"],
+                "responsavel_id": str(tecnico_a.id),
+            },
+            format="json",
+        )
+        .json()
+    )
+    com = enviada(cliente, tecnico_a, arvore_a["id"], tarefa=tarefa["id"])
+    sem = enviada(cliente, tecnico_a, arvore_a["id"])
+    lista = cliente.como(revisor).get("/api/v1/inspecoes", {"arvore": arvore_a["id"]}).json()
+    por_id = {i["id"]: i for i in lista["results"]}
+    assert por_id[com]["tarefa"] == {
+        "id": tarefa["id"],
+        "codigo": tarefa["codigo"],
+        "estado": "concluida",
+    }
+    assert por_id[sem]["tarefa"] is None
+    detalhe = cliente.get(f"/api/v1/inspecoes/{com}").json()
+    assert detalhe["tarefa"]["codigo"] == tarefa["codigo"]

@@ -16,7 +16,6 @@ quando houver espaço ou decisão.
 | M-17 | P3 | Definição oficial de "registro válido" | O cartão marca o critério como provisório. Depende da DP-14. | Texto e cálculo atualizados quando a DP-14 for fechada. |
 | M-18 | P3 | Arborização do entorno: ficha do bairro e cruzamento com o inventário | A camada coroplética mostra só o percentual do Censo 2022, em dica ao passar o cursor. Não há onde ver base, definição e método por bairro, nem a comparação com as árvores cadastradas. | Clique no bairro abre ficha com proveniência completa (método, licença, ingestão). Cruzamento com a densidade do inventário só depois das fórmulas da DP-14. |
 | M-25 | P3 | Resumo de notificações por e-mail e SMTP de produção | Hoje sai um e-mail por evento; o SMTP real depende da hospedagem (DP-21). | Resumo diário opcional, verificação do e-mail e SMTP configurado no ambiente. |
-| M-28 | P3 | Tarefa de inspeção dentro das cadeias da árvore | As cadeias começam na inspeção; a tarefa que a originou não aparece. | Expor `Inspecao.tarefa` no resumo e mostrar a tarefa no início da cadeia. |
 | M-29 | P3 | Agrupador por bairro no zoom do município | Em zoom muito afastado, um grupo por bairro com o anel da pior condição leria melhor que células. | Grupos por bairro abaixo de um zoom definido, com contagem e anel. |
 | M-30 | P3 | Resultado e foto quando a tarefa fecha pela ocorrência ou pela inspeção | Esses caminhos não passam pela regra de resultado e foto. Os tipos poda, remoção e plantio dependem da DP-17. | Regra decidida e aplicada nos três caminhos. |
 

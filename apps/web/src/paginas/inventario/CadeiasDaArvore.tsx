@@ -1,4 +1,9 @@
-import { useInspecoesListar, useOcorrenciasListar, type Ocorrencia } from "@itree/api-client";
+import {
+  useInspecoesListar,
+  useOcorrenciasListar,
+  type EstadoTarefaEnum,
+  type Ocorrencia,
+} from "@itree/api-client";
 import { ROTULOS_CONDICAO } from "@itree/domain";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -25,6 +30,7 @@ const classeLink = "font-mono font-medium text-marca-escura hover:underline";
 export function CadeiasDaArvore({ arvoreId }: { arvoreId: string }) {
   const podeInspecoes = usePermissao("inspecoes.ler");
   const podeOcorrencias = usePermissao("ocorrencias.ler");
+  const podeTarefas = usePermissao("tarefas.ler");
   const inspecoes = useInspecoesListar(
     { arvore: arvoreId, estado: "rascunho,em_revisao,devolvida,validada", tamanho: LIMITE },
     { query: { enabled: podeInspecoes } },
@@ -72,7 +78,11 @@ export function CadeiasDaArvore({ arvoreId }: { arvoreId: string }) {
       <ol className="flex flex-col gap-4">
         {cadeias.map((c) => (
           <li key={c.chave}>
-            <CartaoCadeia cadeia={c} mostrarTarefas={podeOcorrencias} />
+            <CartaoCadeia
+              cadeia={c}
+              mostrarTarefas={podeOcorrencias}
+              mostrarTarefaDaInspecao={podeTarefas}
+            />
           </li>
         ))}
       </ol>
@@ -80,8 +90,8 @@ export function CadeiasDaArvore({ arvoreId }: { arvoreId: string }) {
   );
 }
 
-function Passo({ children, nivel }: { children: ReactNode; nivel: 0 | 1 | 2 }) {
-  const recuo = ["", "ml-5", "ml-10"][nivel];
+function Passo({ children, nivel }: { children: ReactNode; nivel: 0 | 1 | 2 | 3 }) {
+  const recuo = ["", "ml-5", "ml-10", "ml-15"][nivel];
   return (
     <li className={`relative border-l-2 border-borda pb-3 pl-4 last:pb-0 ${recuo}`}>
       <span className="absolute top-1.5 -left-[7px] size-3 rounded-full border-2 border-superficie bg-marca" />
@@ -90,16 +100,40 @@ function Passo({ children, nivel }: { children: ReactNode; nivel: 0 | 1 | 2 }) {
   );
 }
 
-function CartaoCadeia({ cadeia, mostrarTarefas }: { cadeia: Cadeia; mostrarTarefas: boolean }) {
+function CartaoCadeia({
+  cadeia,
+  mostrarTarefas,
+  mostrarTarefaDaInspecao,
+}: {
+  cadeia: Cadeia;
+  mostrarTarefas: boolean;
+  mostrarTarefaDaInspecao: boolean;
+}) {
   const { inspecao: i, ocorrencias } = cadeia;
+  // A tarefa que mandou inspecionar abre a cadeia (M-28): tarefa → inspeção → ocorrência → tarefas.
+  const tarefaDeOrigem = mostrarTarefaDaInspecao ? i?.tarefa : null;
+  const base = tarefaDeOrigem ? 1 : 0;
   return (
     <section
       aria-label={i ? `Cadeia da inspeção ${i.codigo}` : "Cadeia sem inspeção de origem"}
       className="rounded-lg border border-borda bg-superficie p-4"
     >
       <ol className="flex flex-col">
-        {i ? (
+        {tarefaDeOrigem && (
           <Passo nivel={0}>
+            <span className="text-xs text-texto-suave">Tarefa de inspeção</span>
+            <Link
+              to="/equipes-tarefas/$id"
+              params={{ id: tarefaDeOrigem.id }}
+              className={classeLink}
+            >
+              {tarefaDeOrigem.codigo}
+            </Link>
+            <SeloEstadoTarefa estado={tarefaDeOrigem.estado as EstadoTarefaEnum} />
+          </Passo>
+        )}
+        {i ? (
+          <Passo nivel={base as 0 | 1}>
             <span className="text-xs text-texto-suave">Inspeção</span>
             <Link to="/inspecoes/$id" params={{ id: i.id }} className={classeLink}>
               {i.codigo}
@@ -129,7 +163,7 @@ function CartaoCadeia({ cadeia, mostrarTarefas }: { cadeia: Cadeia; mostrarTaref
           <OcorrenciaDaCadeia
             key={o.id}
             ocorrencia={o}
-            nivel={i ? 1 : 0}
+            nivel={(i ? 1 + base : 0) as 0 | 1 | 2}
             mostrarTarefas={mostrarTarefas}
           />
         ))}
@@ -144,7 +178,7 @@ function OcorrenciaDaCadeia({
   mostrarTarefas,
 }: {
   ocorrencia: Ocorrencia;
-  nivel: 0 | 1;
+  nivel: 0 | 1 | 2;
   mostrarTarefas: boolean;
 }) {
   return (
@@ -162,7 +196,7 @@ function OcorrenciaDaCadeia({
       </Passo>
       {mostrarTarefas &&
         o.tarefas.map((t) => (
-          <Passo key={t.id} nivel={(nivel + 1) as 1 | 2}>
+          <Passo key={t.id} nivel={(nivel + 1) as 1 | 2 | 3}>
             <span className="text-xs text-texto-suave">Tarefa</span>
             <Link to="/equipes-tarefas/$id" params={{ id: t.id }} className={classeLink}>
               {t.codigo}

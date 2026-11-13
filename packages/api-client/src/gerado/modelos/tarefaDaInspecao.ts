@@ -7,6 +7,10 @@
  */
 
 /**
- * @nullable
+ * A tarefa de inspeção que originou a inspeção (M-28).
  */
-export type InspecaoTarefa = {[key: string]: unknown} | null;
+export interface TarefaDaInspecao {
+  id: string;
+  codigo: string;
+  estado: string;
+}

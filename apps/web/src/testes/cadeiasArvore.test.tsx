@@ -69,7 +69,12 @@ const arvore = {
 };
 
 const tecnico = { id: "u-tec", nome: "Tiago Técnico", email: "t@itree.teste" };
-const inspecao = (id: string, codigo: string, realizada_em: string) => ({
+const inspecao = (
+  id: string,
+  codigo: string,
+  realizada_em: string,
+  tarefa: { id: string; codigo: string; estado: string } | null = null,
+) => ({
   id,
   codigo,
   arvore: { id: "a-1", codigo: "ARV-000001" },
@@ -83,6 +88,7 @@ const inspecao = (id: string, codigo: string, realizada_em: string) => ({
   requer_encaminhamento: true,
   origem: "app",
   revisor: null,
+  tarefa,
   medidas_propostas: [],
 });
 const ocorrencia = {
@@ -133,7 +139,11 @@ const servidor = criarServidor(
     consultas.push(new URL(request.url));
     return HttpResponse.json(
       pagina([
-        inspecao("i-1", "INS-000001", "2026-10-01T12:00:00Z"),
+        inspecao("i-1", "INS-000001", "2026-10-01T12:00:00Z", {
+          id: "tf-0",
+          codigo: "TAR-000005",
+          estado: "concluida",
+        }),
         inspecao("i-0", "INS-000000", "2026-08-01T12:00:00Z"),
       ]),
     );
@@ -206,9 +216,32 @@ describe("histórico da árvore: cadeias (M-21)", () => {
     );
     expect(within(cadeia).getByText("Em atendimento")).toBeInTheDocument();
     expect(within(cadeia).getByText("Em execução")).toBeInTheDocument();
-    expect(within(cadeia).getByText("Concluída")).toBeInTheDocument();
+    expect(within(cadeia).getAllByText("Concluída")).toHaveLength(2); // tarefa de origem e a TAR-000013
     // Prazo vencido de tarefa concluída não vira "atrasado há...".
     expect(within(cadeia).queryByText(/atrasado há/)).toBeNull();
+  });
+
+  it("a tarefa de inspeção abre a cadeia, antes da inspeção", async () => {
+    await abrirCadeias();
+    const cadeia = await screen.findByRole("region", { name: "Cadeia da inspeção INS-000001" });
+    const origem = within(cadeia).getByRole("link", { name: "TAR-000005" });
+    expect(origem).toHaveAttribute("href", "/equipes-tarefas/tf-0");
+    expect(within(cadeia).getByText("Tarefa de inspeção")).toBeVisible();
+    const inspecaoLink = within(cadeia).getByRole("link", { name: "INS-000001" });
+    // Tarefa de inspeção → inspeção → ocorrência, nessa ordem no documento.
+    expect(origem.compareDocumentPosition(inspecaoLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    // A cadeia sem tarefa de origem (INS-000000) não mostra o passo.
+    const sem = screen.getByRole("region", { name: "Cadeia da inspeção INS-000000" });
+    expect(within(sem).queryByText("Tarefa de inspeção")).toBeNull();
+  });
+
+  it("sem permissão de tarefas, a tarefa de origem não aparece", async () => {
+    eu = { ...COMPLETO, permissoes: ["inventario.ler", "inspecoes.ler", "ocorrencias.ler"] };
+    await abrirCadeias();
+    await screen.findByRole("region", { name: "Cadeia da inspeção INS-000001" });
+    expect(screen.queryByRole("link", { name: "TAR-000005" })).toBeNull();
   });
 
   it("inspeção sem desdobramento diz isso, e a ocorrência avulsa tem cadeia própria", async () => {

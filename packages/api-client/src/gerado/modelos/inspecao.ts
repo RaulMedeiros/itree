@@ -10,12 +10,12 @@ import type { CondicaoAparenteEnum } from './condicaoAparenteEnum';
 import type { EspecieResumo } from './especieResumo';
 import type { EstadoInspecaoEnum } from './estadoInspecaoEnum';
 import type { InspecaoAnterior } from './inspecaoAnterior';
-import type { InspecaoTarefa } from './inspecaoTarefa';
 import type { Localizacao } from './localizacao';
 import type { Medida } from './medida';
 import type { OcorrenciaGerada } from './ocorrenciaGerada';
 import type { OrigemInspecaoEnum } from './origemInspecaoEnum';
 import type { SinalObservadoEnum } from './sinalObservadoEnum';
+import type { TarefaDaInspecao } from './tarefaDaInspecao';
 import type { UsuarioResumo } from './usuarioResumo';
 
 export interface Inspecao {
@@ -43,6 +43,8 @@ export interface Inspecao {
      * @maximum 2147483647
      */
   versao?: number;
+  /** Tarefa de inspeção que originou esta inspeção, quando houve (início da cadeia tarefa → inspeção → ocorrência). */
+  readonly tarefa: TarefaDaInspecao | null;
   /** Medidas da inspeção em revisão que ainda não valem no cadastro da árvore (vazio em qualquer outro estado). */
   readonly medidas_propostas: readonly Medida[];
   /** Ocorrências abertas a partir desta inspeção (validar e encaminhar). */
@@ -66,6 +68,4 @@ export interface Inspecao {
   readonly medidas_do_cadastro: readonly Medida[];
   /** Inspeção validada anterior da mesma árvore, com as medidas dela, para comparação (RF-INSP-004). */
   readonly anterior: InspecaoAnterior | null;
-  /** @nullable */
-  readonly tarefa: InspecaoTarefa;
 }
