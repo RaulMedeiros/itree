@@ -24,6 +24,12 @@ export function Selecao({ className, ...props }: SelectHTMLAttributes<HTMLSelect
   return <select className={cn(base, "seletor h-9 pr-8", className)} {...props} />;
 }
 
+export const MENSAGEM_DATA_INVALIDA = "Data inválida. Use dd/mm/aaaa.";
+const DICA_DATA = "Use o formato dd/mm/aaaa.";
+
+/** Identificador do rótulo de um `Campo`, derivado do id que ele entrega ao controle. */
+const idRotuloDe = (id: string) => `${id}-rotulo`;
+
 type PropsData = Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
   /** Data ISO (AAAA-MM-DD) ou vazio. */
   value: string;
@@ -43,25 +49,37 @@ export function EntradaData({ value, onChange, className, ...props }: PropsData)
     setAnterior(value);
     if (dataBrParaIso(texto) !== value) setTexto(dataIsoParaBr(value));
   }
+  const idErro = useId();
   const invalido = texto.length === 10 && dataBrParaIso(texto) === "";
+  const descricao = [props["aria-describedby"], invalido ? idErro : undefined]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <input
-      {...props}
-      type="text"
-      inputMode="numeric"
-      autoComplete="off"
-      placeholder="dd/mm/aaaa"
-      maxLength={10}
-      lang="pt-BR"
-      aria-invalid={invalido || props["aria-invalid"] || undefined}
-      className={cn(base, "h-9", className)}
-      value={texto}
-      onChange={(e) => {
-        const novo = mascararDataBr(e.target.value);
-        setTexto(novo);
-        onChange(dataBrParaIso(novo));
-      }}
-    />
+    <>
+      <input
+        {...props}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        placeholder="dd/mm/aaaa"
+        maxLength={10}
+        lang="pt-BR"
+        aria-invalid={invalido || props["aria-invalid"] || undefined}
+        aria-describedby={descricao || undefined}
+        className={cn(base, "h-9", className)}
+        value={texto}
+        onChange={(e) => {
+          const novo = mascararDataBr(e.target.value);
+          setTexto(novo);
+          onChange(dataBrParaIso(novo));
+        }}
+      />
+      {invalido && (
+        <p id={idErro} className="text-xs text-perigo">
+          {MENSAGEM_DATA_INVALIDA}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -73,13 +91,19 @@ type PropsArquivo = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "onChan
 export function EntradaArquivo({ onChange, className, ...props }: PropsArquivo) {
   const entrada = useRef<HTMLInputElement>(null);
   const [nome, setNome] = useState("");
+  const idBotao = useId();
+  // O input fica escondido; quem recebe o foco é o botão, então o nome, a descrição e o
+  // estado de erro do Campo (ligados ao input por `id`) são repetidos nele.
+  const { id, "aria-describedby": descricao, "aria-invalid": invalido, ...resto } = props;
   return (
     <div className={cn("flex items-center gap-3", className)}>
       <input
-        {...props}
+        {...resto}
+        id={id}
         ref={entrada}
         type="file"
         tabIndex={-1}
+        aria-hidden
         className="sr-only"
         onChange={(e) => {
           const arquivo = e.target.files?.[0] ?? null;
@@ -87,7 +111,14 @@ export function EntradaArquivo({ onChange, className, ...props }: PropsArquivo) 
           onChange(arquivo);
         }}
       />
-      <Botao variante="secundario" onClick={() => entrada.current?.click()}>
+      <Botao
+        id={idBotao}
+        variante="secundario"
+        aria-labelledby={id ? `${idRotuloDe(id)} ${idBotao}` : undefined}
+        aria-describedby={descricao}
+        aria-invalid={invalido}
+        onClick={() => entrada.current?.click()}
+      >
         <Paperclip /> Escolher arquivo
       </Botao>
       <span className="min-w-0 truncate text-sm text-texto-suave" aria-live="polite">
@@ -104,6 +135,8 @@ export function AreaTexto({ className, ...props }: TextareaHTMLAttributes<HTMLTe
 interface CampoProps {
   rotulo: string;
   ajuda?: string;
+  /** Campo de data dd/mm/aaaa: mostra o formato como dica quando `ajuda` não é usada. */
+  data?: boolean;
   erros?: string[];
   obrigatorio?: boolean;
   children: (props: {
@@ -114,13 +147,21 @@ interface CampoProps {
 }
 
 /** Rótulo, ajuda e mensagens de erro ligados ao controle para leitores de tela. */
-export function Campo({ rotulo, ajuda, erros, obrigatorio, children }: CampoProps) {
+export function Campo({
+  rotulo,
+  ajuda: ajudaInformada,
+  data,
+  erros,
+  obrigatorio,
+  children,
+}: CampoProps) {
   const id = useId();
+  const ajuda = ajudaInformada ?? (data ? DICA_DATA : undefined);
   const idDescricao = `${id}-descricao`;
   const temErro = Boolean(erros?.length);
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium">
+      <label id={idRotuloDe(id)} htmlFor={id} className="text-sm font-medium">
         {rotulo}
         {obrigatorio && <span className="text-perigo"> *</span>}
       </label>

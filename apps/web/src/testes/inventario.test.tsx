@@ -927,7 +927,7 @@ describe("assistente de importação: passos coerentes com a tela (R2-20)", () =
   it("o passo 1 tem arquivo e fonte; só o 2 mostra as colunas", async () => {
     const { usuario, dialogo } = await abrirAssistente();
     await usuario.upload(
-      within(dialogo).getByLabelText(/Arquivo/),
+      within(dialogo).getByLabelText(/Arquivo/, { selector: "input" }),
       new File(["lat,lon,especie\n1,2,x"], "arvores.csv", { type: "text/csv" }),
     );
     await usuario.type(await within(dialogo).findByLabelText(/Fonte dos dados/), "Inventário 2019");

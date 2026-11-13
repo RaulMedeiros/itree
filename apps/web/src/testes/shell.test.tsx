@@ -8,7 +8,7 @@ import { criarServidor } from "./servidorPadrao";
 import { useState } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { EntradaArquivo, EntradaData } from "../ui/campos";
+import { Campo, EntradaArquivo, EntradaData } from "../ui/campos";
 import { fontesComProblema } from "../layout/fontes";
 import { dataBrParaIso, mascararDataBr, plural } from "../util/formatos";
 
@@ -132,6 +132,38 @@ describe("EntradaData", () => {
     await userEvent.type(campo, "31022026");
     expect(campo).toHaveAttribute("aria-invalid", "true");
   });
+
+  it("descreve a data impossível em texto, ligada ao campo, e mostra o formato como dica", async () => {
+    function ComCampo() {
+      const [v, setV] = useState("");
+      return (
+        <Campo rotulo="Prazo" data>
+          {(p) => <EntradaData {...p} value={v} onChange={setV} />}
+        </Campo>
+      );
+    }
+    render(<ComCampo />);
+    const campo = screen.getByLabelText("Prazo");
+    expect(campo).toHaveAccessibleDescription("Use o formato dd/mm/aaaa.");
+    await userEvent.type(campo, "31022026");
+    expect(campo).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("Data inválida. Use dd/mm/aaaa.")).toBeInTheDocument();
+    expect(campo).toHaveAccessibleDescription(
+      "Use o formato dd/mm/aaaa. Data inválida. Use dd/mm/aaaa.",
+    );
+    await userEvent.clear(campo);
+    await userEvent.type(campo, "28022026");
+    expect(screen.queryByText("Data inválida. Use dd/mm/aaaa.")).toBeNull();
+  });
+
+  it("não usa a dica de formato quando o Campo já tem ajuda própria", () => {
+    render(
+      <Campo rotulo="Prazo" data ajuda="Vazio usa o padrão.">
+        {(p) => <EntradaData {...p} value="" onChange={() => {}} />}
+      </Campo>,
+    );
+    expect(screen.getByLabelText("Prazo")).toHaveAccessibleDescription("Vazio usa o padrão.");
+  });
 });
 
 describe("EntradaArquivo", () => {
@@ -144,6 +176,18 @@ describe("EntradaArquivo", () => {
     fireEvent.change(screen.getByLabelText("Arquivo"), { target: { files: [arquivo] } });
     expect(aoMudar).toHaveBeenCalledWith(arquivo);
     expect(screen.getByText("inventario.csv")).toBeInTheDocument();
+  });
+
+  it("liga rótulo, obrigatoriedade, ajuda e erros do Campo ao botão que recebe o foco", () => {
+    render(
+      <Campo rotulo="Arquivo (.csv)" obrigatorio ajuda="Até 5 MB." erros={["Arquivo ilegível."]}>
+        {(p) => <EntradaArquivo {...p} accept=".csv" onChange={() => {}} />}
+      </Campo>,
+    );
+    const botao = screen.getByRole("button", { name: /Arquivo \(\.csv\).*Escolher arquivo/ });
+    expect(botao).toHaveAccessibleName("Arquivo (.csv)* Escolher arquivo");
+    expect(botao).toHaveAccessibleDescription("Até 5 MB. Arquivo ilegível.");
+    expect(botao).toHaveAttribute("aria-invalid", "true");
   });
 });
 
