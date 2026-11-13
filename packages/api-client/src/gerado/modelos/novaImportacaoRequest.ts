@@ -8,6 +8,8 @@
 
 export interface NovaImportacaoRequest {
   arquivo: Blob | File;
+  /** Shapefile, GeoPackage e KML: polígonos entram pelo ponto interior; sem isto, são recusados. */
+  usar_ponto_interior?: boolean;
   /**
      * @minLength 1
      * @maxLength 200

@@ -1523,9 +1523,9 @@ paths:
       description: |-
         Cria as árvores do lote.
 
-        Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas válidas, cria na hora e responde
-        200 com o lote confirmado. Acima disso, responde 202: o lote fica "em processamento" e
-        a tela acompanha `linhas_processadas`, `linhas_com_falha` e o estado em
+        Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas a criar ou atualizar, grava na
+        hora e responde 200 com o lote confirmado. Acima disso, responde 202: o lote fica
+        "em processamento" e a tela acompanha `linhas_processadas`, `linhas_com_falha` e o estado em
         `GET /importacoes/{id}`. A tela pode ser fechada sem interromper a importação.
       parameters:
       - in: path
@@ -1537,6 +1537,17 @@ paths:
         required: true
       tags:
       - importacoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmarImportacaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfirmarImportacaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConfirmarImportacaoRequest'
       security:
       - oidc: []
       responses:
@@ -2258,6 +2269,133 @@ paths:
                 type: string
                 format: binary
           description: ''
+  /api/v1/modelos-importacao:
+    get:
+      operationId: modelos_importacao_listar
+      description: |-
+        Modelos de mapeamento de colunas, por fonte, para as próximas importações.
+
+        Guardam só nomes de colunas, nunca dados: por isso quem pode importar vê, edita e apaga
+        todos, sem filtro territorial.
+      parameters:
+      - in: query
+        name: fonte
+        schema:
+          type: string
+        description: Só os modelos desta fonte (sem diferenciar maiúsculas).
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - modelos-importacao
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedModeloImportacaoList'
+          description: ''
+    post:
+      operationId: modelos_importacao_criar
+      description: |-
+        Modelos de mapeamento de colunas, por fonte, para as próximas importações.
+
+        Guardam só nomes de colunas, nunca dados: por isso quem pode importar vê, edita e apaga
+        todos, sem filtro territorial.
+      tags:
+      - modelos-importacao
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModeloImportacaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ModeloImportacaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ModeloImportacaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModeloImportacao'
+          description: ''
+  /api/v1/modelos-importacao/{id}:
+    patch:
+      operationId: modelos_importacao_atualizar
+      description: |-
+        Modelos de mapeamento de colunas, por fonte, para as próximas importações.
+
+        Guardam só nomes de colunas, nunca dados: por isso quem pode importar vê, edita e apaga
+        todos, sem filtro territorial.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este modelo importacao.
+        required: true
+      tags:
+      - modelos-importacao
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedModeloImportacaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedModeloImportacaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedModeloImportacaoRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModeloImportacao'
+          description: ''
+    delete:
+      operationId: modelos_importacao_apagar
+      description: |-
+        Modelos de mapeamento de colunas, por fonte, para as próximas importações.
+
+        Guardam só nomes de colunas, nunca dados: por isso quem pode importar vê, edita e apaga
+        todos, sem filtro territorial.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este modelo importacao.
+        required: true
+      tags:
+      - modelos-importacao
+      security:
+      - oidc: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/notificacoes:
     get:
       operationId: notificacoes_listar
@@ -4259,6 +4397,22 @@ components:
         * `ruim` - Ruim
         * `morta` - Aparentemente morta
         * `nao_avaliada` - Não avaliada
+    ConfirmarImportacaoRequest:
+      type: object
+      properties:
+        modo:
+          allOf:
+          - $ref: '#/components/schemas/ModoEnum'
+          default: criar
+          description: |-
+            `criar` só cria as novas; `atualizar` também atualiza, pelo identificador externo da fonte, as árvores que já existem (só o que a pré-visualização mostrou).
+
+            * `criar` - Criar só as novas
+            * `atualizar` - Criar as novas e atualizar as existentes
+        ignorar_duplicatas:
+          type: boolean
+          default: false
+          description: Pula as linhas novas apontadas como duplicata de árvore existente.
     Contadores:
       type: object
       properties:
@@ -4356,6 +4510,38 @@ components:
           maxLength: 2000
       required:
       - motivo
+    DiferencaImportacao:
+      type: object
+      properties:
+        campo:
+          type: string
+        rotulo:
+          type: string
+        antigo:
+          type: string
+          description: Valor atual; vazio se não há.
+        novo:
+          type: string
+      required:
+      - antigo
+      - campo
+      - novo
+      - rotulo
+    DuplicataImportacao:
+      type: object
+      properties:
+        arvore_id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        distancia_m:
+          type: number
+          format: double
+      required:
+      - arvore_id
+      - codigo
+      - distancia_m
     EncaminhamentoRequest:
       type: object
       description: Validar a inspeção e abrir a ocorrência de origem nela (G-01).
@@ -5105,6 +5291,22 @@ components:
       - tamanho
       - tipo_conteudo
       - url
+    ExistenteImportacao:
+      type: object
+      properties:
+        arvore_id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        diferencas:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiferencaImportacao'
+      required:
+      - arvore_id
+      - codigo
+      - diferencas
     ExportarArvoresRequest:
       type: object
       description: 'Exportação do inventário por POST: os ids marcados ou os próprios
@@ -5847,6 +6049,20 @@ components:
           type: array
           items:
             type: string
+        existente:
+          allOf:
+          - $ref: '#/components/schemas/ExistenteImportacao'
+          description: 'O identificador já existe na fonte: a árvore e o que mudaria
+            no modo atualizar.'
+        duplicata:
+          allOf:
+          - $ref: '#/components/schemas/DuplicataImportacao'
+          description: Árvore ativa já cadastrada a poucos metros (linha nova).
+        especie_ambigua:
+          type: array
+          items:
+            type: string
+          description: Espécies do catálogo que têm o nome popular informado.
       required:
       - avisos
       - dados
@@ -5931,6 +6147,35 @@ components:
         arvores_criadas:
           type: integer
           readOnly: true
+        modo:
+          allOf:
+          - $ref: '#/components/schemas/ModoEnum'
+          description: |-
+            Escolhido na confirmação: só criar ou também atualizar pelo identificador.
+
+            * `criar` - Criar só as novas
+            * `atualizar` - Criar as novas e atualizar as existentes
+        ignorar_duplicatas:
+          type: boolean
+          description: Na confirmação, pula as linhas apontadas como duplicata.
+        usar_ponto_interior:
+          type: boolean
+          description: Polígonos entram pelo ponto interior em vez de serem recusados.
+        resumo:
+          allOf:
+          - $ref: '#/components/schemas/ResumoImportacao'
+          readOnly: true
+        linhas_atualizadas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Árvores existentes atualizadas pela confirmação.
+        linhas_ignoradas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 'Linhas válidas puladas por escolha: existentes, duplicatas,
+            sem mudança.'
         linhas_processadas:
           type: integer
           maximum: 2147483647
@@ -5974,6 +6219,7 @@ components:
       - motivo_nao_desfazer
       - numero
       - pode_desfazer
+      - resumo
       - usuario_nome
     LoteImportacaoDetalhe:
       type: object
@@ -6022,6 +6268,35 @@ components:
         arvores_criadas:
           type: integer
           readOnly: true
+        modo:
+          allOf:
+          - $ref: '#/components/schemas/ModoEnum'
+          description: |-
+            Escolhido na confirmação: só criar ou também atualizar pelo identificador.
+
+            * `criar` - Criar só as novas
+            * `atualizar` - Criar as novas e atualizar as existentes
+        ignorar_duplicatas:
+          type: boolean
+          description: Na confirmação, pula as linhas apontadas como duplicata.
+        usar_ponto_interior:
+          type: boolean
+          description: Polígonos entram pelo ponto interior em vez de serem recusados.
+        resumo:
+          allOf:
+          - $ref: '#/components/schemas/ResumoImportacao'
+          readOnly: true
+        linhas_atualizadas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Árvores existentes atualizadas pela confirmação.
+        linhas_ignoradas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 'Linhas válidas puladas por escolha: existentes, duplicatas,
+            sem mudança.'
         linhas_processadas:
           type: integer
           maximum: 2147483647
@@ -6077,6 +6352,7 @@ components:
       - motivo_nao_desfazer
       - numero
       - pode_desfazer
+      - resumo
       - usuario_nome
     LoteSincronizacaoRequest:
       type: object
@@ -6180,6 +6456,86 @@ components:
         * `visual` - Estimativa visual
         * `imagem` - Estimativa por imagem
         * `desconhecido` - Não informado pela fonte
+    ModeloImportacao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 100
+        fonte:
+          type: string
+          maxLength: 200
+        mapeamento:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 200
+          description: '{campo da plataforma: nome da coluna no arquivo}.'
+        srid:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        usar_ponto_interior:
+          type: boolean
+        criado_por_nome:
+          type: string
+          nullable: true
+          readOnly: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        atualizado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - atualizado_em
+      - criado_em
+      - criado_por_nome
+      - fonte
+      - id
+      - mapeamento
+      - nome
+    ModeloImportacaoRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 100
+        fonte:
+          type: string
+          minLength: 1
+          maxLength: 200
+        mapeamento:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 200
+          description: '{campo da plataforma: nome da coluna no arquivo}.'
+        srid:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        usar_ponto_interior:
+          type: boolean
+      required:
+      - fonte
+      - mapeamento
+      - nome
+    ModoEnum:
+      enum:
+      - criar
+      - atualizar
+      type: string
+      description: |-
+        * `criar` - Criar só as novas
+        * `atualizar` - Criar as novas e atualizar as existentes
     Notificacao:
       type: object
       properties:
@@ -6268,6 +6624,11 @@ components:
         arquivo:
           type: string
           format: binary
+        usar_ponto_interior:
+          type: boolean
+          default: false
+          description: 'Shapefile, GeoPackage e KML: polígonos entram pelo ponto interior;
+            sem isto, são recusados.'
         fonte:
           type: string
           minLength: 1
@@ -6874,6 +7235,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LoteImportacao'
+    PaginatedModeloImportacaoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModeloImportacao'
     PaginatedNotificacaoList:
       type: object
       required:
@@ -7216,6 +7600,29 @@ components:
         fonte_taxonomica:
           type: string
           maxLength: 200
+    PatchedModeloImportacaoRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 100
+        fonte:
+          type: string
+          minLength: 1
+          maxLength: 200
+        mapeamento:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 200
+          description: '{campo da plataforma: nome da coluna no arquivo}.'
+        srid:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+        usar_ponto_interior:
+          type: boolean
     PatchedOcorrenciaRequest:
       type: object
       properties:
@@ -7729,6 +8136,25 @@ components:
         * `ja_recebida` - ja_recebida
         * `conflito` - conflito
         * `erro` - erro
+    ResumoImportacao:
+      type: object
+      properties:
+        a_criar:
+          type: integer
+        a_atualizar:
+          type: integer
+        sem_mudanca:
+          type: integer
+        duplicatas:
+          type: integer
+        ambiguas:
+          type: integer
+      required:
+      - a_atualizar
+      - a_criar
+      - ambiguas
+      - duplicatas
+      - sem_mudanca
     RiscoRequest:
       type: object
       properties:

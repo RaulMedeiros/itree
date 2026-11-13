@@ -33,13 +33,14 @@ from itree.core.geo import decodificar_area
 from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
 from itree.ocorrencias.models import ESTADOS_FINAIS
 
-from . import duplicidades, importacao, referencias, tasks
+from . import duplicidades, importacao, leitura_arquivos, referencias, tasks
 from .models import (
     Arvore,
     Especie,
     EstadoEspecie,
     EstadoLote,
     LoteImportacao,
+    ModeloImportacao,
     OrigemRegistro,
     ParNaoDuplicado,
     SituacaoArvore,
@@ -49,12 +50,14 @@ from .serializers import (
     ArvoreResumoSerializer,
     ArvoreSerializer,
     ColunasArquivoSerializer,
+    ConfirmarImportacaoSerializer,
     ContadoresSerializer,
     EspecieSerializer,
     FusaoSerializer,
     LoteImportacaoDetalheSerializer,
     LoteImportacaoSerializer,
     MedidaSerializer,
+    ModeloImportacaoSerializer,
     NovaImportacaoSerializer,
     ParDuplicidadeSerializer,
     ParRevisadoSerializer,
@@ -507,13 +510,17 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
         )
 
     @staticmethod
-    def _formato(nome: str) -> str:
-        nome = nome.lower()
-        if nome.endswith(".csv") or nome.endswith(".txt"):
-            return "csv"
-        if nome.endswith(".geojson") or nome.endswith(".json"):
-            return "geojson"
-        raise ValidationError({"arquivo": "Use um arquivo .csv ou .geojson."})
+    def _formato(arquivo) -> str:
+        formato = leitura_arquivos.formato_do_arquivo(arquivo.name)
+        if formato is None:
+            raise ValidationError(
+                {"arquivo": f"Formato não aceito. Use {leitura_arquivos.EXTENSOES_ACEITAS}."}
+            )
+        try:
+            leitura_arquivos.validar_tamanho(arquivo.size)
+        except importacao.ErroArquivo as exc:
+            raise ValidationError({"arquivo": str(exc)}) from exc
+        return formato
 
     @extend_schema(
         operation_id="importacoes_colunas",
@@ -535,7 +542,7 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
         dados = ColunasArquivoSerializer(data=request.data)
         dados.is_valid(raise_exception=True)
         arquivo = dados.validated_data["arquivo"]
-        formato = self._formato(arquivo.name)
+        formato = self._formato(arquivo)
         try:
             colunas, registros = importacao.ler_registros(arquivo.read(), formato)
         except importacao.ErroArquivo as exc:
@@ -562,7 +569,7 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
         dados.is_valid(raise_exception=True)
         v = dados.validated_data
         arquivo = v["arquivo"]
-        formato = self._formato(arquivo.name)
+        formato = self._formato(arquivo)
         mapeamento = {
             nome: v.get(f"campo_{nome}")
             for nome in importacao.CAMPOS_MAPEAVEIS
@@ -571,10 +578,13 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
         escopo = area_do_escopo(request.user)
         if escopo is None:
             raise ValidationError("Você não tem escopo territorial para importar árvores.")
-        if formato == "csv" and not (mapeamento.get("latitude") and mapeamento.get("longitude")):
+        tabular = formato in leitura_arquivos.FORMATOS_TABULARES
+        if tabular and not (mapeamento.get("latitude") and mapeamento.get("longitude")):
             raise ValidationError({"campo_latitude": "Indique as colunas de latitude e longitude."})
         try:
-            _, registros = importacao.ler_registros(arquivo.read(), formato)
+            _, registros = importacao.ler_registros(
+                arquivo.read(), formato, v["srid"], v["usar_ponto_interior"]
+            )
             linhas = importacao.interpretar(
                 registros, mapeamento, v["srid"], fonte_ids=v["fonte"], escopo=escopo
             )
@@ -591,30 +601,39 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
             fonte_url=v.get("fonte_url", ""),
             data_referencia=v.get("data_referencia"),
             mapeamento={**mapeamento, "srid": v["srid"], "fonte_ids": v["fonte"]},
+            usar_ponto_interior=v["usar_ponto_interior"],
             usuario=request.user,
             total_linhas=len(linhas),
             linhas_validas=sum(1 for linha in linhas if not linha.erros),
+            resumo=importacao.resumir(linhas),
             linhas=[linha.como_dict() for linha in linhas],
         )
         return Response(LoteImportacaoDetalheSerializer(lote).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         operation_id="importacoes_confirmar",
-        request=None,
+        request=ConfirmarImportacaoSerializer,
         responses={200: LoteImportacaoSerializer, 202: LoteImportacaoSerializer},
     )
     @action(detail=True, methods=["post"])
     def confirmar(self, request, pk=None):
         """Cria as árvores do lote.
 
-        Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas válidas, cria na hora e responde
-        200 com o lote confirmado. Acima disso, responde 202: o lote fica "em processamento" e
-        a tela acompanha `linhas_processadas`, `linhas_com_falha` e o estado em
+        Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas a criar ou atualizar, grava na
+        hora e responde 200 com o lote confirmado. Acima disso, responde 202: o lote fica
+        "em processamento" e a tela acompanha `linhas_processadas`, `linhas_com_falha` e o estado em
         `GET /importacoes/{id}`. A tela pode ser fechada sem interromper a importação.
         """
         lote = self.get_object()
+        opcoes = ConfirmarImportacaoSerializer(data=request.data)
+        opcoes.is_valid(raise_exception=True)
         try:
-            em_segundo_plano = importacao.preparar_confirmacao(lote, request.user)
+            em_segundo_plano = importacao.preparar_confirmacao(
+                lote,
+                request.user,
+                modo=opcoes.validated_data["modo"],
+                ignorar_duplicatas=opcoes.validated_data["ignorar_duplicatas"],
+            )
         except importacao.ErroArquivo as exc:
             raise ValidationError(str(exc)) from exc
         if em_segundo_plano:
@@ -673,3 +692,42 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
             raise ValidationError(str(exc)) from exc
         lote.refresh_from_db()
         return Response(LoteImportacaoSerializer(lote).data)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        operation_id="modelos_importacao_listar",
+        parameters=[
+            OpenApiParameter(
+                "fonte", str, description="Só os modelos desta fonte (sem diferenciar maiúsculas)."
+            )
+        ],
+    ),
+    create=extend_schema(operation_id="modelos_importacao_criar"),
+    partial_update=extend_schema(operation_id="modelos_importacao_atualizar"),
+    destroy=extend_schema(operation_id="modelos_importacao_apagar"),
+)
+class ModeloImportacaoViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Modelos de mapeamento de colunas, por fonte, para as próximas importações.
+
+    Guardam só nomes de colunas, nunca dados: por isso quem pode importar vê, edita e apaga
+    todos, sem filtro territorial.
+    """
+
+    permission_classes = [requer(P.INVENTARIO_IMPORTAR)]
+    serializer_class = ModeloImportacaoSerializer
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        qs = ModeloImportacao.objects.select_related("criado_por")
+        fonte = self.request.query_params.get("fonte", "").strip() if self.request else ""
+        return qs.filter(fonte__iexact=fonte) if fonte else qs
+
+    def perform_create(self, serializer):
+        serializer.save(criado_por=self.request.user)

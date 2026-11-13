@@ -292,6 +292,11 @@ class EstadoLote(models.TextChoices):
     DESCARTADO = "descartado", "Descartado"
 
 
+class ModoImportacao(models.TextChoices):
+    CRIAR = "criar", "Criar só as novas"
+    ATUALIZAR = "atualizar", "Criar as novas e atualizar as existentes"
+
+
 @pghistory.track(*eventos(), exclude=["linhas", "falhas"])
 class LoteImportacao(ModeloBase):
     """Importação em lote de inventário (RF-INV-010 a 012)."""
@@ -336,6 +341,30 @@ class LoteImportacao(ModeloBase):
         help_text="[{indice, motivo}] das linhas com falha, até `LIMITE_FALHAS_GUARDADAS`.",
     )
     erro = models.TextField(blank=True, help_text="Por que a confirmação foi interrompida.")
+    modo = models.CharField(
+        max_length=10,
+        choices=ModoImportacao.choices,
+        default=ModoImportacao.CRIAR,
+        help_text="Escolhido na confirmação: só criar ou também atualizar pelo identificador.",
+    )
+    ignorar_duplicatas = models.BooleanField(
+        default=False, help_text="Na confirmação, pula as linhas apontadas como duplicata."
+    )
+    resumo = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Contagens da pré-visualização: a criar, a atualizar, sem mudança, duplicatas.",
+    )
+    linhas_atualizadas = models.PositiveIntegerField(
+        default=0, help_text="Árvores existentes atualizadas pela confirmação."
+    )
+    linhas_ignoradas = models.PositiveIntegerField(
+        default=0,
+        help_text="Linhas válidas puladas por escolha: existentes, duplicatas, sem mudança.",
+    )
+    usar_ponto_interior = models.BooleanField(
+        default=False, help_text="Polígonos entram pelo ponto interior em vez de serem recusados."
+    )
 
     class Meta:
         ordering = ["-numero"]
@@ -344,6 +373,31 @@ class LoteImportacao(ModeloBase):
         if not self.numero:
             self.numero = proximo_numero("inventario_lote_numero_seq")
         super().save(*args, **kwargs)
+
+
+@pghistory.track(*eventos())
+class ModeloImportacao(ModeloBase):
+    """Mapeamento de colunas salvo para reaproveitar na próxima importação da mesma fonte."""
+
+    nome = models.CharField(max_length=100)
+    fonte = models.CharField(max_length=200)
+    mapeamento = models.JSONField(
+        default=dict, help_text="{campo da plataforma: nome da coluna no arquivo}."
+    )
+    srid = models.PositiveIntegerField(default=4326)
+    usar_ponto_interior = models.BooleanField(default=False)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["fonte", "nome"]
+        constraints = [
+            models.UniqueConstraint(fields=["fonte", "nome"], name="modelo_importacao_unico")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.nome} ({self.fonte})"
 
 
 @pghistory.track(*eventos())

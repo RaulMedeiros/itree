@@ -263,6 +263,12 @@ REFERENCIAS_INTERVALO_SEGUNDOS = env.float("REFERENCIAS_INTERVALO_SEGUNDOS", def
 IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA = env.int(
     "IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA", default=500
 )
+# Arquivos de importação: tamanho do envio, membros e tamanho descompactado de ZIP/KMZ/XLSX, e a
+# distância abaixo da qual uma árvore nova é apontada como possível duplicata de uma existente.
+IMPORTACAO_TAMANHO_MAXIMO_MB = env.int("IMPORTACAO_TAMANHO_MAXIMO_MB", default=50)
+IMPORTACAO_MAX_MEMBROS_ZIP = env.int("IMPORTACAO_MAX_MEMBROS_ZIP", default=50)
+IMPORTACAO_MAX_DESCOMPACTADO_MB = env.int("IMPORTACAO_MAX_DESCOMPACTADO_MB", default=200)
+IMPORTACAO_RAIO_DUPLICATAS_M = env.float("IMPORTACAO_RAIO_DUPLICATAS_M", default=2.0)
 # --- Notificações: retenção -----------------------------------------------------
 # A tarefa diária apaga as lidas há mais de NOTIFICACOES_RETENCAO_LIDAS_DIAS e as não
 # lidas criadas há mais de NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS.

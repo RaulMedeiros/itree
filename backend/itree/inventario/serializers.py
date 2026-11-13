@@ -17,6 +17,8 @@ from .models import (
     LoteImportacao,
     Medida,
     MetodoMedida,
+    ModeloImportacao,
+    ModoImportacao,
     OrigemLocalizacao,
     OrigemValor,
 )
@@ -378,11 +380,50 @@ class ParRevisadoSerializer(serializers.Serializer):
     arvore_b = serializers.PrimaryKeyRelatedField(queryset=Arvore.objects.all())
 
 
+class DiferencaImportacaoSerializer(serializers.Serializer):
+    campo = serializers.CharField()
+    rotulo = serializers.CharField()
+    antigo = serializers.CharField(allow_blank=True, help_text="Valor atual; vazio se não há.")
+    novo = serializers.CharField()
+
+
+class ExistenteImportacaoSerializer(serializers.Serializer):
+    arvore_id = serializers.UUIDField()
+    codigo = serializers.CharField()
+    diferencas = DiferencaImportacaoSerializer(many=True)
+
+
+class DuplicataImportacaoSerializer(serializers.Serializer):
+    arvore_id = serializers.UUIDField()
+    codigo = serializers.CharField()
+    distancia_m = serializers.FloatField()
+
+
 class LinhaImportacaoSerializer(serializers.Serializer):
     indice = serializers.IntegerField()
     dados = serializers.DictField()
     erros = serializers.ListField(child=serializers.CharField())
     avisos = serializers.ListField(child=serializers.CharField())
+    existente = ExistenteImportacaoSerializer(
+        required=False,
+        help_text="O identificador já existe na fonte: a árvore e o que mudaria no modo atualizar.",
+    )
+    duplicata = DuplicataImportacaoSerializer(
+        required=False, help_text="Árvore ativa já cadastrada a poucos metros (linha nova)."
+    )
+    especie_ambigua = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text="Espécies do catálogo que têm o nome popular informado.",
+    )
+
+
+class ResumoImportacaoSerializer(serializers.Serializer):
+    a_criar = serializers.IntegerField()
+    a_atualizar = serializers.IntegerField()
+    sem_mudanca = serializers.IntegerField()
+    duplicatas = serializers.IntegerField()
+    ambiguas = serializers.IntegerField()
 
 
 class LoteImportacaoSerializer(serializers.ModelSerializer):
@@ -390,6 +431,7 @@ class LoteImportacaoSerializer(serializers.ModelSerializer):
     pode_desfazer = serializers.SerializerMethodField()
     motivo_nao_desfazer = serializers.SerializerMethodField()
     arvores_criadas = serializers.SerializerMethodField()
+    resumo = ResumoImportacaoSerializer(read_only=True)
 
     class Meta:
         model = LoteImportacao
@@ -407,6 +449,12 @@ class LoteImportacaoSerializer(serializers.ModelSerializer):
             "total_linhas",
             "linhas_validas",
             "arvores_criadas",
+            "modo",
+            "ignorar_duplicatas",
+            "usar_ponto_interior",
+            "resumo",
+            "linhas_atualizadas",
+            "linhas_ignoradas",
             "linhas_processadas",
             "linhas_com_falha",
             "erro",
@@ -451,6 +499,11 @@ class LoteImportacaoDetalheSerializer(LoteImportacaoSerializer):
 
 class NovaImportacaoSerializer(serializers.Serializer):
     arquivo = serializers.FileField()
+    usar_ponto_interior = serializers.BooleanField(
+        default=False,
+        help_text="Shapefile, GeoPackage e KML: polígonos entram pelo ponto interior; "
+        "sem isto, são recusados.",
+    )
     fonte = serializers.CharField(max_length=200)
     fonte_url = serializers.URLField(required=False, allow_blank=True)
     data_referencia = serializers.DateField(required=False, allow_null=True)
@@ -467,6 +520,69 @@ class NovaImportacaoSerializer(serializers.Serializer):
 
 class ColunasArquivoSerializer(serializers.Serializer):
     arquivo = serializers.FileField()
+
+
+class ConfirmarImportacaoSerializer(serializers.Serializer):
+    modo = serializers.ChoiceField(
+        choices=ModoImportacao.choices,
+        default=ModoImportacao.CRIAR,
+        help_text="`criar` só cria as novas; `atualizar` também atualiza, pelo identificador "
+        "externo da fonte, as árvores que já existem (só o que a pré-visualização mostrou).",
+    )
+    ignorar_duplicatas = serializers.BooleanField(
+        default=False,
+        help_text="Pula as linhas novas apontadas como duplicata de árvore existente.",
+    )
+
+
+CAMPOS_DO_MAPEAMENTO = (
+    "latitude",
+    "longitude",
+    "id_externo",
+    "especie",
+    "endereco",
+    "altura",
+    "dap",
+    "precisao",
+)
+
+
+class ModeloImportacaoSerializer(serializers.ModelSerializer):
+    mapeamento = serializers.DictField(
+        child=serializers.CharField(max_length=200, allow_blank=True),
+        help_text="{campo da plataforma: nome da coluna no arquivo}.",
+    )
+    criado_por_nome = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ModeloImportacao
+        fields = [
+            "id",
+            "nome",
+            "fonte",
+            "mapeamento",
+            "srid",
+            "usar_ponto_interior",
+            "criado_por_nome",
+            "criado_em",
+            "atualizado_em",
+        ]
+        read_only_fields = ["criado_em", "atualizado_em"]
+
+    def get_criado_por_nome(self, obj) -> str | None:
+        return (obj.criado_por.nome or obj.criado_por.email) if obj.criado_por else None
+
+    def validate_nome(self, valor):
+        return valor.strip()
+
+    def validate_fonte(self, valor):
+        return valor.strip()
+
+    def validate_mapeamento(self, valor):
+        desconhecidos = sorted(set(valor) - set(CAMPOS_DO_MAPEAMENTO))
+        if desconhecidos:
+            raise serializers.ValidationError(f"Campos desconhecidos: {', '.join(desconhecidos)}.")
+        return {campo: coluna for campo, coluna in valor.items() if coluna}
 
 
 class ContadoresSerializer(serializers.Serializer):
