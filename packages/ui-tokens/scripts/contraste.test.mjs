@@ -77,6 +77,10 @@ test("a rampa da supressão anual separa as pontas e a mais escura contrasta com
 
 test("uma rampa de supressão com pontas iguais ou escura fraca falha na verificação", () => {
   const sup = lerSupressao(simbologia);
-  assert.ok(daSupressao({ ...sup, cores: [sup.cores[1], sup.cores[1]] }).some((r) => r.razao < r.minimo));
-  assert.ok(daSupressao({ ...sup, cores: [sup.cores[0], "#f0c8d4"] }).some((r) => r.razao < r.minimo));
+  assert.ok(
+    daSupressao({ ...sup, cores: [sup.cores[1], sup.cores[1]] }).some((r) => r.razao < r.minimo),
+  );
+  assert.ok(
+    daSupressao({ ...sup, cores: [sup.cores[0], "#f0c8d4"] }).some((r) => r.razao < r.minimo),
+  );
 });
