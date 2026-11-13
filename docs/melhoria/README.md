@@ -25,13 +25,13 @@ flowchart LR
    - as specs (`docs/specs/`), que ganham de qualquer referência visual;
    - os [princípios e a direção visual](direcao-visual.md);
    - as decisões pendentes (`docs/decisoes/pendentes.md`), sem antecipar o que ainda não foi decidido.
-3. **Priorizar.** O achado entra no [backlog](backlog.md) com o problema, o efeito para quem usa, a regra afetada e um critério de pronto verificável. A ordem considera o efeito para o usuário e as dependências, não a facilidade.
+3. **Priorizar.** Antes de executar, estime o custo em tokens e escolha a estratégia (paralelismo, lotes, modelo), conforme as [estimativas](estimativas.md). O achado entra no [backlog](backlog.md) com o problema, o efeito para quem usa, a regra afetada e um critério de pronto verificável. A ordem considera o efeito para o usuário e as dependências, não a facilidade.
 4. **Implementar.** Um PR por item, ou por grupo coeso de itens. Toda regra nova de servidor vem com teste que falha sem a correção.
 5. **Verificar.**
    - O CI precisa passar.
    - As capturas afetadas são regeneradas, e o PR mostra o antes e o depois.
    - A própria entrega passa por uma nova crítica antes do merge: o que ainda está ruim volta para o backlog, sem bloquear o PR.
-6. **Integrar e registrar.** Merge e uma linha no histórico abaixo, com o que mudou e o que se aprendeu.
+6. **Integrar e registrar.** Merge e uma linha no histórico abaixo, com o que mudou e o que se aprendeu. Registre também o estimado e o real em [estimativas](estimativas.md) e ajuste a regra prática quando o erro passar de 25%.
 
 ## Regras do ciclo
 
