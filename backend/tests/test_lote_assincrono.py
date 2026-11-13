@@ -7,6 +7,7 @@ from django.contrib.gis.geos import Point
 from django.utils import timezone
 
 from itree.alertas.models import AlertaAmbiental, StatusAlerta
+from itree.contas.models import Usuario
 from itree.core import lote
 from itree.core.models import EstadoOperacao, OperacaoEmLote
 from itree.core.tasks import executar_operacao_em_lote
@@ -315,3 +316,49 @@ def test_alertas_todos_os_filtrados_acima_do_limite_rodam_em_segundo_plano(
     assert r.status_code == 202 and r.json()["total"] == 3
     executar_operacao_em_lote(fila[0])
     assert AlertaAmbiental.objects.filter(status="em_triagem").count() == 3
+
+
+@pytest.mark.parametrize("revogacao", ["desativado", "perdeu_papel"])
+def test_acesso_revogado_no_meio_encerra_a_operacao_sem_alterar_mais(
+    cliente, gestor_municipal, tipo_queda, fila, limite_baixo, monkeypatch, revogacao
+):
+    """Antes de cada bloco o acesso é relido: quem foi desativado ou perdeu a permissão para."""
+    monkeypatch.setattr(lote, "TAMANHO_BLOCO", 2)
+    for _ in range(5):
+        ocorrencia(gestor_municipal, tipo_queda)
+    cliente.como(gestor_municipal).post(
+        f"{OCORRENCIAS}/lote/prazo", {"filtros": {}, "prazo": "2026-12-15"}, format="json"
+    )
+    original = lote.aplicar_a_ids
+
+    def aplicar_e_revogar(*args, **kwargs):
+        resultado = original(*args, **kwargs)  # o primeiro bloco ainda é permitido
+        if revogacao == "desativado":
+            Usuario.objects.filter(pk=gestor_municipal.pk).update(is_active=False)
+        else:
+            Usuario.objects.filter(pk=gestor_municipal.pk).update(papeis=["consulta"])
+        return resultado
+
+    monkeypatch.setattr(lote, "aplicar_a_ids", aplicar_e_revogar)
+    executar_operacao_em_lote(fila[0])
+    op = OperacaoEmLote.objects.get()
+    assert op.estado == EstadoOperacao.FALHOU
+    assert "acesso revogado" in op.erro.lower() and op.concluida_em
+    assert (op.processados, op.atualizadas) == (2, 2)
+    assert Ocorrencia.objects.filter(prazo=date(2026, 12, 15)).count() == 2
+    assert Ocorrencia.objects.filter(prazo__isnull=True).count() == 3
+
+
+def test_usuario_desativado_antes_de_comecar_nao_altera_nada(
+    cliente, gestor_municipal, tipo_queda, fila, limite_baixo
+):
+    for _ in range(3):
+        ocorrencia(gestor_municipal, tipo_queda)
+    cliente.como(gestor_municipal).post(
+        f"{OCORRENCIAS}/lote/prazo", {"filtros": {}, "prazo": "2026-12-15"}, format="json"
+    )
+    Usuario.objects.filter(pk=gestor_municipal.pk).update(is_active=False)
+    executar_operacao_em_lote(fila[0])
+    op = OperacaoEmLote.objects.get()
+    assert op.estado == EstadoOperacao.FALHOU and op.processados == 0
+    assert not Ocorrencia.objects.filter(prazo__isnull=False).exists()

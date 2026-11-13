@@ -5,19 +5,21 @@ from datetime import date
 from django.utils import timezone
 
 from itree.contas.models import Equipe, Usuario
+from itree.contas.permissoes import Permissao as P
 from itree.core.lote import Preparo, acao_em_lote
 
 from .models import ESTADOS_FINAIS, Ocorrencia
 from .views import filtrar_ocorrencias, ocorrencias_do_escopo
 
 
-def _preparo(usuario, evento: str, alterar) -> Preparo:
+def _preparo(usuario, evento: str, alterar, permissao: str = P.OCORRENCIAS_EDITAR) -> Preparo:
     return Preparo(
         consulta=lambda: ocorrencias_do_escopo(usuario),
         filtrar=lambda qs, filtros: filtrar_ocorrencias(qs, filtros),
         finais=ESTADOS_FINAIS,
         alterar=alterar,
         evento=evento,
+        permissao=permissao,
     )
 
 
@@ -56,7 +58,7 @@ def prioridade(usuario, parametros: dict) -> Preparo:
             ]
         )
 
-    return _preparo(usuario, "prioridade_definida_em_lote", alterar)
+    return _preparo(usuario, "prioridade_definida_em_lote", alterar, P.OCORRENCIAS_PRIORIZAR)
 
 
 @acao_em_lote("ocorrencias", "prazo")

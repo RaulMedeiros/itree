@@ -20,6 +20,8 @@ from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from itree.contas.models import Usuario
+
 from .models import EstadoOperacao, OperacaoEmLote
 
 logger = logging.getLogger(__name__)
@@ -133,6 +135,10 @@ def resolver_ids_do_lote(validado: dict, escopo, filtrar) -> list:
 # --- Execução ------------------------------------------------------------------------------
 
 
+class AcessoRevogado(Exception):
+    """O usuário que pediu a operação foi desativado ou perdeu a permissão da ação."""
+
+
 class RegistroIgnorado(Exception):
     """Levantada por ``alterar`` para deixar um registro como está, dizendo o motivo."""
 
@@ -150,6 +156,7 @@ class Preparo:
     finais: Any  # estados que não aceitam mais alteração
     alterar: Callable[[Any], None]
     evento: str  # nome do evento na auditoria
+    permissao: str  # permissão que a ação exige; conferida de novo a cada bloco em segundo plano
     campo_estado: str = "estado"
 
 
@@ -257,6 +264,19 @@ def iniciar_acao_em_lote(
     return Response(OperacaoEmLoteSerializer(operacao).data, status=status.HTTP_202_ACCEPTED)
 
 
+MOTIVO_ACESSO_REVOGADO = (
+    "Acesso revogado: quem pediu a ação foi desativado ou perdeu a permissão antes do fim. "
+    "Os registros já processados foram alterados; os demais ficaram como estavam."
+)
+
+
+def _conferir_acesso(usuario_id, permissao: str) -> None:
+    """Levanta ``AcessoRevogado`` se o usuário (relido do banco) não pode mais executar a ação."""
+    usuario = Usuario.objects.get(pk=usuario_id)
+    if not usuario.is_active or not usuario.tem_permissao(permissao):
+        raise AcessoRevogado
+
+
 def executar_operacao(operacao_id) -> None:
     """Corpo da tarefa Celery: processa a operação em blocos, gravando o andamento a cada um."""
     carregar_acoes()
@@ -277,6 +297,8 @@ def executar_operacao(operacao_id) -> None:
             "operacao": str(operacao.pk),
         }
         for inicio in range(0, len(ids), TAMANHO_BLOCO):
+            # A operação pode durar minutos: o acesso é conferido de novo antes de cada bloco.
+            _conferir_acesso(operacao.usuario_id, preparo.permissao)
             bloco = ids[inicio : inicio + TAMANHO_BLOCO]
             atualizadas, ignoradas = aplicar_a_ids(
                 preparo,
@@ -294,6 +316,10 @@ def executar_operacao(operacao_id) -> None:
                 update_fields=["processados", "atualizadas", "falhas", "motivos", "atualizado_em"]
             )
         operacao.estado = EstadoOperacao.CONCLUIDA
+    except AcessoRevogado:
+        logger.warning("A operação em lote %s foi encerrada: acesso revogado", operacao.pk)
+        operacao.estado = EstadoOperacao.FALHOU
+        operacao.erro = MOTIVO_ACESSO_REVOGADO
     except Exception:
         logger.exception("A operação em lote %s foi interrompida", operacao.pk)
         operacao.estado = EstadoOperacao.FALHOU

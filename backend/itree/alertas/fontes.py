@@ -13,6 +13,7 @@ import csv
 import hashlib
 import io
 import json
+import logging
 import tempfile
 import unicodedata
 import zipfile
@@ -35,6 +36,8 @@ from itree.territorio.models import Territorio, TipoTerritorio
 
 from . import proximidade
 from .models import AlertaAmbiental, FonteAlerta, IngestaoAlertas, TipoAlerta
+
+logger = logging.getLogger(__name__)
 
 
 class ErroFonte(Exception):
@@ -348,6 +351,7 @@ def ingerir_leitura(
     except (ErroFonte, requests.RequestException) as exc:
         ingestao.erro = str(exc)
     except Exception as exc:  # noqa: BLE001 - registrar qualquer falha da fonte
+        logger.exception("Falha inesperada na ingestão de alertas da fonte %s", fonte)
         ingestao.erro = f"Falha inesperada: {exc.__class__.__name__}: {exc}"
     ingestao.concluida_em = timezone.now()
     ingestao.save()

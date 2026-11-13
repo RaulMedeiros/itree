@@ -101,6 +101,18 @@ def test_ingestao_sem_municipio_registra_erro(db):
     assert IngestaoAlertas.objects.get().concluida_em is not None
 
 
+def test_falha_inesperada_da_ingestao_vai_para_o_log_com_traceback(db, caplog):
+    def leitor():
+        raise RuntimeError("explodiu")
+
+    with caplog.at_level("ERROR", logger="itree.alertas.fontes"):
+        r = fontes.ingerir_leitura("inpe_focos", leitor, "teste")
+    assert not r.sucesso and "Falha inesperada: RuntimeError: explodiu" in r.erro
+    registros = [x for x in caplog.records if x.name == "itree.alertas.fontes"]
+    assert len(registros) == 1
+    assert registros[0].exc_info is not None and "inpe_focos" in registros[0].getMessage()
+
+
 @responses.activate
 def test_tarefa_periodica_baixa_fontes_configuradas(territorios, settings):
     settings.ALERTAS_FONTES = {

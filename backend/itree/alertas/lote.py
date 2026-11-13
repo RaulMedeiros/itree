@@ -1,5 +1,6 @@
 """Ações em lote sobre alertas (M-26): mudança de status pelas transições permitidas."""
 
+from itree.contas.permissoes import Permissao as P
 from itree.core.lote import Preparo, RegistroIgnorado, acao_em_lote
 
 from .escopo import filtrar_alertas_por_escopo
@@ -41,5 +42,6 @@ def status(usuario, parametros: dict) -> Preparo:
         finais=FINAIS_ALERTA,
         alterar=alterar,
         evento="alertas_status_em_lote",
+        permissao=P.ALERTAS_TRIAR,
         campo_estado="status",
     )
