@@ -3,3 +3,6 @@
 **/.turbo
 backend/.venv
 .git
+**/.env
+**/.env.*
+!**/.env.example
