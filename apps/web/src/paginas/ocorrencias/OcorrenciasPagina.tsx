@@ -12,7 +12,8 @@ import { Map as IconeMapa, Plus, ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
-import { BotaoExportarCsv, filtrosParaExportar } from "../../componentes/BotaoExportarCsv";
+import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
+import { filtrosParaExportar } from "../../componentes/filtrosExportacao";
 import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { PrazoEmLoteDialogo } from "../../componentes/PrazoEmLoteDialogo";
 import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
