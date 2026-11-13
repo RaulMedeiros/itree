@@ -271,6 +271,30 @@ export function camadasDoAlerta(fonte: string, pontual: boolean) {
       ];
 }
 
+/**
+ * Abaixo deste zoom, o servidor entrega as árvores agrupadas por bairro (um grupo por bairro,
+ * no ponto interior do polígono), e não em células (M-29). O mesmo valor está em
+ * `ZOOM_AGRUPA_BAIRRO`, em `backend/itree/mapa/views.py`.
+ */
+export const ZOOM_AGRUPA_BAIRRO = 12;
+
+/** Grupo de bairro: só ele traz o nome do bairro; célula e árvore individual, não. */
+const ehGrupoDeBairro: ExpressionSpecification = ["has", "bairro"];
+
+/** Árvore individual: uma só no registro e fora de qualquer grupo de bairro. */
+export const filtroArvoreIndividual: ExpressionSpecification = [
+  "all",
+  ["==", ["get", "quantidade"], 1],
+  ["!", ehGrupoDeBairro],
+];
+
+/** Grupo de árvores: célula com mais de uma, ou grupo de bairro (mesmo com uma só árvore). */
+export const filtroGrupoDeArvores: ExpressionSpecification = [
+  "any",
+  [">", ["get", "quantidade"], 1],
+  ehGrupoDeBairro,
+];
+
 /** Condições na ordem de gravidade usada pelo backend em `pior_condicao`. */
 const CONDICOES_GRUPO = Object.keys(CORES_CONDICAO);
 

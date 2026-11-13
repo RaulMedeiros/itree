@@ -753,7 +753,8 @@ export const getMapaTileUrl = (camada: string,
  * Vector tile (MVT) da camada, restrito ao escopo do usuário.
  *
  * Abaixo do zoom 16, os pontos são agrupados em células com a contagem
- * (``quantidade``); a partir dele, cada registro vira uma feição.
+ * (``quantidade``); a partir dele, cada registro vira uma feição. Só as árvores, abaixo do zoom
+ * 12, vêm agrupadas por bairro, com a contagem, a pior condição e o nome do bairro.
  */
 export const mapaTile = async (camada: string,
     z: number,

@@ -96,6 +96,9 @@ import {
   OPACIDADE_AREA_VERDE,
   OPACIDADE_AREA_VERDE_UC,
   OPACIDADE_SUPRESSAO_ANUAL,
+  ZOOM_AGRUPA_BAIRRO,
+  filtroArvoreIndividual,
+  filtroGrupoDeArvores,
   aoFaltarImagem,
   corDaSupressao,
   layoutGrupo,
@@ -580,7 +583,7 @@ export function MapaPagina() {
       type: "circle",
       source: "arvores",
       "source-layer": "arvores",
-      filter: ["==", ["get", "quantidade"], 1],
+      filter: filtroArvoreIndividual,
       paint: pinturaArvores(modoCor) as never,
     });
     m.addLayer({
@@ -588,7 +591,7 @@ export function MapaPagina() {
       type: "symbol",
       source: "arvores",
       "source-layer": "arvores",
-      filter: [">", ["get", "quantidade"], 1],
+      filter: filtroGrupoDeArvores,
       layout: layoutGrupo("arvores") as never,
     });
 
@@ -689,8 +692,9 @@ export function MapaPagina() {
         const p = e.features?.[0]?.properties ?? {};
         const quantidade = Number(p.quantidade ?? 1);
         const ehArvore = camada.startsWith("arvores");
-        const texto =
-          quantidade > 1
+        const texto = p.bairro
+          ? `${p.bairro} · ${plural(quantidade, "árvore")} — clique para aproximar`
+          : quantidade > 1
             ? `${quantidade} ${ehArvore ? "árvores" : "ocorrências"} — clique para aproximar`
             : ehArvore
               ? `ARV-${String(p.numero).padStart(6, "0")}${p.especie ? ` · ${p.especie}` : ""} · ${
@@ -704,8 +708,12 @@ export function MapaPagina() {
         const f = e.features?.[0];
         if (!f) return;
         const p = f.properties ?? {};
-        if (Number(p.quantidade ?? 1) > 1) {
-          m.easeTo({ center: e.lngLat, zoom: Math.min(m.getZoom() + 2.5, 18) });
+        if (p.bairro || Number(p.quantidade ?? 1) > 1) {
+          // Grupo de bairro: aproxima até sair do agrupamento por bairro (M-29).
+          const alvo = p.bairro
+            ? Math.max(m.getZoom() + 2.5, ZOOM_AGRUPA_BAIRRO + 0.5)
+            : m.getZoom() + 2.5;
+          m.easeTo({ center: e.lngLat, zoom: Math.min(alvo, 18) });
           return;
         }
         if (desenhando.current) return;

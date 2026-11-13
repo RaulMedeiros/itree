@@ -51,7 +51,9 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
 ### Densidade e seleção
 
 - **RF-MAPA-020** — Agrupar pontos em alta densidade, com contagem; expandir ao
-  aproximar.
+  aproximar. As árvores, abaixo do zoom 12, aparecem em um grupo por bairro (no ponto interior
+  do polígono, com a contagem de todo o bairro no escopo e o anel da pior condição); a partir
+  do zoom 12, em células.
 - **RF-MAPA-021** — Selecionar árvore/ocorrência abre painel contextual com
   resumo, selo de origem da localização, precisão, última inspeção, ocorrências
   abertas e link para o detalhe.

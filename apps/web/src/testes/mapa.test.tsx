@@ -8,6 +8,11 @@ import { criarServidor } from "./servidorPadrao";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { COR_POR_VALOR, ROTULOS_CLASSES_ARBORIZACAO } from "../mapa/coropletica";
+import {
+  ZOOM_AGRUPA_BAIRRO,
+  filtroArvoreIndividual,
+  filtroGrupoDeArvores,
+} from "../mapa/simbologia";
 import { mapasCriados } from "./mapaFalso";
 
 vi.mock("react-oidc-context", () => ({
@@ -979,5 +984,71 @@ describe("Supressão anual (PRODES Caatinga) (F-02)", () => {
     expect(
       await screen.findByText("Supressão mapeada em 2021 · imagem de 23/07/2021 · 10 ha"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("árvores agrupadas por bairro no zoom afastado (M-29)", () => {
+  it("o grupo de bairro é um grupo mesmo com uma só árvore, e nunca uma árvore individual", async () => {
+    const mapa = await abrirMapa();
+    expect((mapa.camadaDe("arvores-pontos") as { filter?: unknown }).filter).toEqual(
+      filtroArvoreIndividual,
+    );
+    expect((mapa.camadaDe("arvores-grupos") as { filter?: unknown }).filter).toEqual(
+      filtroGrupoDeArvores,
+    );
+    // Só o grupo de bairro traz `bairro`: `has` o separa da célula e da árvore.
+    expect(JSON.stringify(filtroArvoreIndividual)).toContain('["!",["has","bairro"]]');
+    expect(JSON.stringify(filtroGrupoDeArvores)).toContain('["has","bairro"]');
+  });
+
+  it("a dica do grupo de bairro diz o bairro e a contagem", async () => {
+    const mapa = await abrirMapa();
+    act(() =>
+      mapa.emitir(
+        "mousemove",
+        {
+          point: { x: 5, y: 5 },
+          features: [{ properties: { bairro: "Meireles", quantidade: 37 } }],
+        },
+        "arvores-grupos",
+      ),
+    );
+    expect(
+      await screen.findByText("Meireles · 37 árvores — clique para aproximar"),
+    ).toBeInTheDocument();
+    act(() =>
+      mapa.emitir(
+        "mousemove",
+        { point: { x: 5, y: 5 }, features: [{ properties: { bairro: "Aldeota", quantidade: 1 } }] },
+        "arvores-grupos",
+      ),
+    );
+    expect(
+      await screen.findByText("Aldeota · 1 árvore — clique para aproximar"),
+    ).toBeInTheDocument();
+  });
+
+  it("clicar no grupo de bairro aproxima até sair do agrupamento por bairro", async () => {
+    const mapa = await abrirMapa();
+    mapa.zoom = 9;
+    const evento = {
+      lngLat: { lng: -38.5, lat: -3.7 },
+      features: [{ properties: { bairro: "Meireles", quantidade: 37 } }],
+    };
+    act(() => mapa.emitir("click", evento, "arvores-grupos"));
+    // 9 + 2,5 ainda estaria agrupado por bairro: vai a 12,5, já em células.
+    expect(mapa.easeTo).toHaveBeenCalledWith(
+      expect.objectContaining({ zoom: ZOOM_AGRUPA_BAIRRO + 0.5 }),
+    );
+    // A célula comum segue com +2,5.
+    mapa.easeTo.mockClear();
+    act(() =>
+      mapa.emitir(
+        "click",
+        { ...evento, features: [{ properties: { quantidade: 12 } }] },
+        "arvores-grupos",
+      ),
+    );
+    expect(mapa.easeTo).toHaveBeenCalledWith(expect.objectContaining({ zoom: 11.5 }));
   });
 });
