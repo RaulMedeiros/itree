@@ -3,6 +3,7 @@ import { ROTULOS_ACAO_AUDITORIA, ROTULOS_ORIGEM } from "@itree/domain";
 import { Fragment } from "react";
 
 import { Carregando, Erro, Vazio } from "../ui/estados";
+import { Recolhivel } from "../ui/recolhivel";
 import { Selo } from "../ui/selo";
 import { formatarDataHora } from "../util/formatos";
 import { VAZIO, ehVazio, formatarValorCampo, rotuloDoCampo } from "./historicoFormatos";
@@ -108,16 +109,15 @@ export function DetalhesEvento({ evento }: { evento: EventoAuditoria }) {
 /** JSON bruto do evento, só para quem precisa conferir o registro (Auditoria). */
 export function DadosTecnicos({ evento }: { evento: EventoAuditoria }) {
   return (
-    <details className="mt-2 text-xs">
-      <summary className="cursor-pointer text-texto-suave">Ver dados técnicos</summary>
-      <pre className="mt-1 max-h-64 overflow-auto rounded bg-superficie p-2 font-mono">
+    <Recolhivel titulo="Ver dados técnicos" className="text-xs text-texto-suave">
+      <pre className="max-h-64 overflow-auto rounded bg-superficie p-2 font-mono">
         {JSON.stringify(
           { diferencas: evento.diferencas, dados: evento.dados, contexto: evento.contexto },
           null,
           2,
         )}
       </pre>
-    </details>
+    </Recolhivel>
   );
 }
 

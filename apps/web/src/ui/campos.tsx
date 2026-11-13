@@ -11,7 +11,8 @@ import {
 
 import { cn } from "../util/cn";
 import { dataBrParaIso, dataIsoParaBr, mascararDataBr } from "../util/formatos";
-import { Botao } from "./botao";
+import { Botao, ContextoLinhaFormulario } from "./botao";
+import { Recolhivel } from "./recolhivel";
 
 const base =
   "w-full rounded-md border border-borda-campo bg-superficie px-3 text-sm text-texto placeholder:text-texto-suave disabled:opacity-60 aria-invalid:border-perigo";
@@ -252,5 +253,74 @@ export function ListaMarcavel({
         </p>
       ))}
     </fieldset>
+  );
+}
+
+/** Máximo de filtros sempre visíveis; os demais vão para "Mais filtros". */
+export const MAX_FILTROS_PRINCIPAIS = 4;
+
+/**
+ * Linha de campos e botões alinhados pela base. Os botões dela têm a altura
+ * dos campos (R3-07).
+ */
+export function LinhaFormulario({
+  className,
+  children,
+}: {
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <ContextoLinhaFormulario.Provider value>
+      <div className={cn("flex flex-wrap items-end gap-2", className)}>{children}</div>
+    </ContextoLinhaFormulario.Provider>
+  );
+}
+
+/**
+ * Barra de filtros de uma lista (R3-09): até 4 filtros principais numa só
+ * linha; o que passar disso, e os `extras`, ficam em "Mais filtros", com a
+ * contagem dos ativos. `extrasAtivos` é quantos filtros de dentro estão em uso.
+ */
+export function BarraFiltros({
+  principais,
+  extras = [],
+  extrasAtivos = 0,
+  className,
+}: {
+  principais: ReactNode[];
+  extras?: ReactNode[];
+  extrasAtivos?: number;
+  className?: string;
+}) {
+  const visiveis = principais.slice(0, MAX_FILTROS_PRINCIPAIS);
+  const escondidos = [...principais.slice(MAX_FILTROS_PRINCIPAIS), ...extras];
+  return (
+    <div className={cn("mb-3", className)}>
+      <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+        {visiveis.map((filtro, n) => (
+          <div key={n} className="min-w-0 flex-1 basis-40 [&>*]:w-full">
+            {filtro}
+          </div>
+        ))}
+      </div>
+      {escondidos.length > 0 && (
+        <Recolhivel
+          titulo={
+            <>
+              Mais filtros
+              {extrasAtivos > 0 && (
+                <span className="rounded-sm bg-marca-clara px-1.5 py-0.5 text-xs text-marca-escura">
+                  {extrasAtivos} {extrasAtivos === 1 ? "ativo" : "ativos"}
+                </span>
+              )}
+            </>
+          }
+          open={extrasAtivos > 0 ? true : undefined}
+        >
+          <div className="flex flex-wrap items-center gap-2">{escondidos}</div>
+        </Recolhivel>
+      )}
+    </div>
   );
 }

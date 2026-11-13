@@ -1,6 +1,6 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ComponentPropsWithRef } from "react";
+import { createContext, useContext, type ComponentPropsWithRef } from "react";
 
 import { cn } from "../util/cn";
 
@@ -29,12 +29,20 @@ const variantes = cva(
 type Props = ComponentPropsWithRef<"button"> &
   VariantProps<typeof variantes> & { asChild?: boolean };
 
+/**
+ * Dentro de uma linha de formulário (`LinhaFormulario`) o botão tem a mesma
+ * altura dos campos ao lado: `pequeno` só vale em linhas de tabela e cartões (R3-07).
+ */
+export const ContextoLinhaFormulario = createContext(false);
+
 export function Botao({ className, variante, tamanho, asChild, type, ...props }: Props) {
   const Componente = asChild ? Slot : "button";
+  const noFormulario = useContext(ContextoLinhaFormulario);
+  const tamanhoEfetivo = noFormulario && tamanho === "pequeno" ? "normal" : tamanho;
   return (
     <Componente
       type={asChild ? undefined : (type ?? "button")}
-      className={cn(variantes({ variante, tamanho }), className)}
+      className={cn(variantes({ variante, tamanho: tamanhoEfetivo }), className)}
       {...props}
     />
   );
