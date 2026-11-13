@@ -87,5 +87,8 @@ A hospedagem ainda está em aberto (DP-21). Independentemente do provedor:
 - Rode o Keycloak em modo `start` (não `start-dev`), com banco próprio e
   redirect URIs do domínio real; ou federe com o SSO da prefeitura (DP-19).
 - Use um bucket privado; nunca torne o armazenamento público.
+- Defina `EMAIL_HOST` (e `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
+  `EMAIL_USE_TLS`) do SMTP da prefeitura. Sem `DJANGO_DEBUG`, o padrão de
+  `EMAIL_BACKEND` é o SMTP; o console só vale com `DJANGO_DEBUG=true`.
 - Gere segredos fortes e guarde-os num cofre, não no compose.
 - Rode `manage criar_administrador` uma vez para o primeiro acesso.

@@ -263,9 +263,14 @@ REFERENCIAS_INTERVALO_SEGUNDOS = env.float("REFERENCIAS_INTERVALO_SEGUNDOS", def
 NOTIFICACOES_RETENCAO_LIDAS_DIAS = env.int("NOTIFICACOES_RETENCAO_LIDAS_DIAS", default=90)
 NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS = env.int("NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS", default=365)
 # --- Notificações: e-mail (M-14) ------------------------------------------------
-# Em desenvolvimento as mensagens saem no console. Em produção, aponte EMAIL_BACKEND para o
-# SMTP da prefeitura (django.core.mail.backends.smtp.EmailBackend) e preencha EMAIL_HOST etc.
-EMAIL_BACKEND = env.str("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+# Com DEBUG as mensagens saem no console. Fora dele o padrão é o SMTP (preencha EMAIL_HOST etc.),
+# para um deploy sem EMAIL_BACKEND não "enviar" e-mails só para o log.
+EMAIL_BACKEND = env.str(
+    "EMAIL_BACKEND",
+    default="django.core.mail.backends.console.EmailBackend"
+    if DEBUG
+    else "django.core.mail.backends.smtp.EmailBackend",
+)
 EMAIL_HOST = env.str("EMAIL_HOST", default="localhost")
 EMAIL_PORT = env.int("EMAIL_PORT", default=25)
 EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default="")
