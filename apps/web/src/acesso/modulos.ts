@@ -22,6 +22,8 @@ export interface Modulo {
   /** Basta uma das permissões para ver o módulo. */
   permissoes: PermissaoEnum[];
   spec: string;
+  /** Outros caminhos que pertencem ao módulo e o mantêm ativo na barra lateral. */
+  prefixos?: string[];
 }
 
 /** Navegação principal do painel web (W-01 §2). */
@@ -70,6 +72,8 @@ export const MODULOS: Modulo[] = [
     fase: "F1",
     permissoes: ["ocorrencias.ler", "alertas.ler"],
     spec: "W-04 / W-08",
+    // Os alertas ambientais vivem em /alertas, dentro deste módulo (R3-02).
+    prefixos: ["/alertas"],
   },
   {
     id: "equipes-tarefas",
@@ -169,3 +173,22 @@ export const SECOES_ADMIN: SecaoAdmin[] = [
     permissao: "admin.auditoria",
   },
 ];
+
+const dentroDe = (caminho: string, prefixo: string) =>
+  caminho === prefixo || caminho.startsWith(`${prefixo}/`);
+
+/** Módulo da barra lateral que contém o caminho atual (o prefixo mais longo vence). */
+export function moduloAtivo(
+  modulos: readonly Pick<Modulo, "id" | "caminho" | "prefixos">[],
+  caminho: string,
+): string | undefined {
+  let melhor: { id: string; tamanho: number } | undefined;
+  for (const m of modulos) {
+    for (const prefixo of [m.caminho, ...(m.prefixos ?? [])]) {
+      if (dentroDe(caminho, prefixo) && (!melhor || prefixo.length > melhor.tamanho)) {
+        melhor = { id: m.id, tamanho: prefixo.length };
+      }
+    }
+  }
+  return melhor?.id;
+}
