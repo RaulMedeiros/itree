@@ -1,9 +1,15 @@
 # Telas do painel web
 
-Capturas do painel web nas fases F0–F3, em 1440 × 900, com **dados
-sintéticos**: bairros, árvores, pessoas e alertas são inventados, e as fotos
-são ilustrações geradas por código. Nada aqui representa a realidade de
-Fortaleza.
+Capturas do painel web em 1440 × 900, em modo demonstração. **Os dados
+operacionais são sintéticos**: árvores, ocorrências, inspeções, tarefas, pessoas
+e alertas são inventados, e as fotos são ilustrações geradas por código. Nada
+disso representa a realidade de Fortaleza.
+
+Os limites territoriais e o contexto, ao contrário, são **dados públicos reais,
+com fonte**: os 121 bairros e as 12 regionais oficiais (Fortaleza em Mapas,
+Ipplan), as áreas verdes (praças, parques e unidades de conservação) e a
+arborização do entorno por bairro (IBGE, Censo 2022). Sem acesso a essas
+fontes, o `gerar.sh` volta a três bairros sintéticos.
 
 - **Mapa base.** O mapa usa os tiles padrão do OpenStreetMap, sobre ruas
   reais de Fortaleza. Os bairros, árvores e ocorrências desenhados por cima
@@ -67,9 +73,14 @@ Seleção por área, com resumo por condição, lista, criação de tarefas e ex
 ![Seleção por área](34-mapa-selecao-area.png)
 
 Áreas verdes oficiais (praças, parques e unidades de conservação do Fortaleza em
-Mapas, dado real com fonte) sobre os bairros sintéticos:
+Mapas, dado real com fonte) sobre os bairros oficiais:
 
 ![Áreas verdes](35-mapa-areas-verdes.png)
+
+Arborização do entorno por bairro (IBGE, Censo 2022), sobre os 121 bairros oficiais
+de Fortaleza (Fortaleza em Mapas, Ipplan):
+
+![Censo por bairro](37-mapa-censo.png)
 
 Notificações no cabeçalho:
 
