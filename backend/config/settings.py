@@ -275,7 +275,7 @@ EMAIL_HOST = env.str("EMAIL_HOST", default="localhost")
 EMAIL_PORT = env.int("EMAIL_PORT", default=25)
 EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="iTree <nao-responda@itree.local>")
 # Endereço público do painel web, usado nos links dos e-mails; vazio = só o texto.
 WEB_URL_PUBLICA = env.str("WEB_URL_PUBLICA", default="").rstrip("/")

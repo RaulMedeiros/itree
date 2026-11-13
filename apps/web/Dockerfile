@@ -14,6 +14,8 @@ RUN pnpm --filter @itree/web build
 
 FROM nginx:1.31-alpine@sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606
 ENV ITREE_API_UPSTREAM=api:8000
+# Proxy de borda confiável que termina o TLS (ver default.conf.template).
+ENV ITREE_CONFIAR_X_FORWARDED_PROTO=nao
 # Origens extras liberadas na CSP para imagens, conexões e iframes (provedor OIDC,
 # armazenamento S3, servidores de mapa base). Separe por espaço.
 ENV ITREE_CSP_ORIGENS="https:"

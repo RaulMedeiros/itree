@@ -3,11 +3,14 @@ upstream api {
   server ${ITREE_API_UPSTREAM};
 }
 
-# Preserva o esquema informado pelo proxy de borda que termina o TLS; sem
-# borda, usa o da própria conexão.
-map $http_x_forwarded_proto $itree_proto {
-  default $http_x_forwarded_proto;
-  ""      $scheme;
+# Esquema repassado à API. Por padrão é o da própria conexão: o cabeçalho
+# X-Forwarded-Proto vindo do cliente é ignorado (senão um cliente em HTTP se
+# passaria por HTTPS). Só com ITREE_CONFIAR_X_FORWARDED_PROTO=sim, quando há um
+# proxy de borda confiável que termina o TLS e sobrescreve o cabeçalho, o valor
+# dele (http ou https) é aceito.
+map "${ITREE_CONFIAR_X_FORWARDED_PROTO}:$http_x_forwarded_proto" $itree_proto {
+  default              $scheme;
+  "~^sim:(?<p>https?)$" $p;
 }
 
 # Cache por caminho. Definido com map + um único add_header no nível server

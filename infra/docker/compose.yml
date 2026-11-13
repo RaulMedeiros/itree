@@ -37,7 +37,7 @@ x-backend: &backend
 
 services:
   db:
-    image: postgis/postgis:16-3.4
+    image: postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
     environment:
       POSTGRES_USER: itree
       POSTGRES_PASSWORD: itree
@@ -51,12 +51,12 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:7f7d30b7fdd09467bac58198a1f166dd69789d348d4fe859cccb20e0cf287fbe
     ports: ["6379:6379"]
     restart: unless-stopped
 
   keycloak:
-    image: keycloak/keycloak:26.4
+    image: keycloak/keycloak:26.4@sha256:9409c59bdfb65dbffa20b11e6f18b8abb9281d480c7ca402f51ed3d5977e6007
     command: ["start-dev", "--import-realm"]
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -70,7 +70,7 @@ services:
 
   # Armazenamento S3-compatível para fotos e documentos (SeaweedFS, Apache 2.0).
   armazenamento:
-    image: chrislusf/seaweedfs:4.50
+    image: chrislusf/seaweedfs:4.50@sha256:c2658820e763294a9e9de7b36c81e59b879e3459148351aee4e31a126ca64860
     command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json"]
     ports: ["8333:8333"]
     volumes:

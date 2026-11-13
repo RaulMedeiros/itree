@@ -36,7 +36,7 @@ case "$1" in
       --workers "${GUNICORN_WORKERS:-3}" \
       --access-logfile - \
       --access-logformat '%(t)s "%(m)s %(U)s" %(s)s %(b)s %(M)sms' \
-      --forwarded-allow-ips "*"
+      --forwarded-allow-ips "${GUNICORN_FORWARDED_ALLOW_IPS:-*}"
     ;;
   worker)
     esperar_banco
