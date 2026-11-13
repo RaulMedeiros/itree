@@ -37,7 +37,7 @@ x-backend: &backend
 
 services:
   db:
-    image: postgis/postgis:16-3.4@sha256:44126d872ac91993766c341e369c539e8196614321765d36a6f1bab0419a5fa5
+    image: postgis/postgis:16-3.7@sha256:f37d93931b5af8bb67f7da00d2afef0dd951c8c49591389bde06cb6d720a7f9e
     environment:
       POSTGRES_USER: itree
       POSTGRES_PASSWORD: itree
