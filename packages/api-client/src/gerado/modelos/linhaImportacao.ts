@@ -5,6 +5,8 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { DuplicataImportacao } from './duplicataImportacao';
+import type { ExistenteImportacao } from './existenteImportacao';
 import type { LinhaImportacaoDados } from './linhaImportacaoDados';
 
 export interface LinhaImportacao {
@@ -12,4 +14,10 @@ export interface LinhaImportacao {
   dados: LinhaImportacaoDados;
   erros: string[];
   avisos: string[];
+  /** O identificador já existe na fonte: a árvore e o que mudaria no modo atualizar. */
+  existente?: ExistenteImportacao;
+  /** Árvore ativa já cadastrada a poucos metros (linha nova). */
+  duplicata?: DuplicataImportacao;
+  /** Espécies do catálogo que têm o nome popular informado. */
+  especie_ambigua?: string[];
 }

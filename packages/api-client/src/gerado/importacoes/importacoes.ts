@@ -28,6 +28,7 @@ import type {
   AcaoComMotivoRequest,
   ColunasArquivo,
   ColunasArquivoRequest,
+  ConfirmarImportacaoRequest,
   ImportacoesListarParams,
   LoteImportacao,
   LoteImportacaoDetalhe,
@@ -199,6 +200,9 @@ export const getImportacoesCriarUrl = () => {
 export const importacoesCriar = async (novaImportacaoRequest: NovaImportacaoRequest, options?: Parameters<typeof requisicao>[1]): Promise<importacoesCriarResponse> => {
     const formData = new FormData();
 formData.append(`arquivo`, novaImportacaoRequest.arquivo);
+if(novaImportacaoRequest.usar_ponto_interior !== undefined) {
+ formData.append(`usar_ponto_interior`, novaImportacaoRequest.usar_ponto_interior.toString())
+ }
 formData.append(`fonte`, novaImportacaoRequest.fonte);
 if(novaImportacaoRequest.fonte_url !== undefined) {
  formData.append(`fonte_url`, novaImportacaoRequest.fonte_url);
@@ -428,19 +432,34 @@ export const getImportacoesConfirmarUrl = (id: string,) => {
 /**
  * Cria as árvores do lote.
  *
- * Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas válidas, cria na hora e responde
- * 200 com o lote confirmado. Acima disso, responde 202: o lote fica "em processamento" e
- * a tela acompanha `linhas_processadas`, `linhas_com_falha` e o estado em
+ * Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas a criar ou atualizar, grava na
+ * hora e responde 200 com o lote confirmado. Acima disso, responde 202: o lote fica
+ * "em processamento" e a tela acompanha `linhas_processadas`, `linhas_com_falha` e o estado em
  * `GET /importacoes/{id}`. A tela pode ser fechada sem interromper a importação.
  */
-export const importacoesConfirmar = async (id: string, options?: Parameters<typeof requisicao>[1]): Promise<importacoesConfirmarResponse> => {
+export const importacoesConfirmar = async (id: string,
+    confirmarImportacaoRequest?: ConfirmarImportacaoRequest, options?: Parameters<typeof requisicao>[1]): Promise<importacoesConfirmarResponse> => {
 
-  return requisicao<importacoesConfirmarResponse>(getImportacoesConfirmarUrl(id),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<importacoesConfirmarResponse>(getImportacoesConfirmarUrl(id),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(confirmarImportacaoRequest)
   }
 );}
 
@@ -465,9 +484,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof importacoesConfirmar>>, ImportacoesConfirmarMutationVariables> = (props) => {
-          const {id} = props ?? {};
+          const {id,data} = props ?? {};
 
-          return  importacoesConfirmar(id,requestOptions)
+          return  importacoesConfirmar(id,data,requestOptions)
         }
 
 
@@ -478,9 +497,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ImportacoesConfirmarMutationResult = NonNullable<Awaited<ReturnType<typeof importacoesConfirmar>>>
-
+    export type ImportacoesConfirmarMutationBody = ConfirmarImportacaoRequest | undefined
     export type ImportacoesConfirmarMutationError = unknown
-    export type ImportacoesConfirmarMutationVariables = {id: string}
+    export type ImportacoesConfirmarMutationVariables = {id: string;data?: ConfirmarImportacaoRequest}
 
     export const useImportacoesConfirmar = <TError = unknown,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importacoesConfirmar>>, TError,ImportacoesConfirmarMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}

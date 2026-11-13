@@ -13,7 +13,12 @@ from itree.evidencias.views import EvidenciaViewSet
 from itree.indicadores.implantacao import primeiros_passos
 from itree.indicadores.views import arborizacao_entorno_geojson, painel
 from itree.inspecoes.views import InspecaoViewSet
-from itree.inventario.views import ArvoreViewSet, EspecieViewSet, ImportacaoViewSet
+from itree.inventario.views import (
+    ArvoreViewSet,
+    EspecieViewSet,
+    ImportacaoViewSet,
+    ModeloImportacaoViewSet,
+)
 from itree.mapa import selecao as mapa_selecao
 from itree.mapa import views as mapa
 from itree.notificacoes.views import NotificacaoViewSet
@@ -32,6 +37,7 @@ roteador.register("admin/usuarios", UsuarioAdminViewSet, basename="usuario-admin
 roteador.register("especies", EspecieViewSet, basename="especie")
 roteador.register("arvores", ArvoreViewSet, basename="arvore")
 roteador.register("importacoes", ImportacaoViewSet, basename="importacao")
+roteador.register("modelos-importacao", ModeloImportacaoViewSet, basename="modelo-importacao")
 roteador.register("tipos-ocorrencia", TipoOcorrenciaViewSet, basename="tipo-ocorrencia")
 roteador.register("ocorrencias", OcorrenciaViewSet, basename="ocorrencia")
 roteador.register("evidencias", EvidenciaViewSet, basename="evidencia")

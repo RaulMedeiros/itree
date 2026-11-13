@@ -117,3 +117,48 @@ def fundir(manter: Arvore, descartar: Arvore, campos_da_outra: list[str]) -> Arv
     descartar.fundida_em = manter
     descartar.save(update_fields=["situacao", "fundida_em", "atualizado_em"])
     return manter
+
+
+def vizinhas_de_pontos(
+    pontos: list[tuple[int, float, float]], raio_m: float, arvores: QuerySet | None = None
+) -> dict[int, dict]:
+    """Para cada ponto ``(chave, longitude, latitude)``, a árvore ativa mais próxima a até
+    ``raio_m`` metros dentro de ``arvores`` (padrão: todas). Serve à importação, que aponta
+    linhas novas coladas a árvores já cadastradas. Devolve ``{chave: {id, numero, distancia_m}}``
+    só para os pontos que têm vizinha."""
+    if not pontos:
+        return {}
+    base = Arvore.objects.all() if arvores is None else arvores
+    visiveis = base.filter(situacao=SituacaoArvore.ATIVA, geom__isnull=False).values("id")
+    sub_sql, sub_params = visiveis.query.get_compiler(connection=connection).as_sql()
+    grau = raio_m / 100_000
+    sql = f"""
+        SELECT p.chave, v.id, v.numero, v.distancia
+          FROM unnest(%s::int[], %s::float8[], %s::float8[]) AS p(chave, lon, lat)
+          CROSS JOIN LATERAL (
+                SELECT a.id, a.numero,
+                       ST_Distance(a.geom::geography, pt.g::geography) AS distancia
+                  FROM (SELECT ST_SetSRID(ST_MakePoint(p.lon, p.lat), 4326) AS g) pt
+                  JOIN inventario_arvore a
+                    ON a.geom && ST_Expand(pt.g, %s)
+                   AND ST_DWithin(a.geom::geography, pt.g::geography, %s)
+                 WHERE a.id IN ({sub_sql})
+                 ORDER BY distancia
+                 LIMIT 1) v
+    """  # noqa: S608 - só a subconsulta gerada pelo ORM é interpolada; valores vão como parâmetros
+    achadas = {}
+    for inicio in range(0, len(pontos), 2000):
+        bloco = pontos[inicio : inicio + 2000]
+        parametros = [
+            [p[0] for p in bloco],
+            [p[1] for p in bloco],
+            [p[2] for p in bloco],
+            grau,
+            raio_m,
+            *sub_params,
+        ]
+        with connection.cursor() as cursor:
+            cursor.execute(sql, parametros)
+            for chave, id_, numero, distancia in cursor.fetchall():
+                achadas[chave] = {"id": id_, "numero": numero, "distancia_m": round(distancia, 2)}
+    return achadas

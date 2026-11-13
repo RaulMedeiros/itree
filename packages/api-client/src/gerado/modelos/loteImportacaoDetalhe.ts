@@ -8,6 +8,8 @@
 import type { EstadoLoteEnum } from './estadoLoteEnum';
 import type { FalhaImportacao } from './falhaImportacao';
 import type { LinhaImportacao } from './linhaImportacao';
+import type { ModoEnum } from './modoEnum';
+import type { ResumoImportacao } from './resumoImportacao';
 
 export interface LoteImportacaoDetalhe {
   readonly id: string;
@@ -35,6 +37,30 @@ export interface LoteImportacaoDetalhe {
      */
   linhas_validas?: number;
   readonly arvores_criadas: number;
+  /**
+     * Escolhido na confirmação: só criar ou também atualizar pelo identificador.
+     *
+     * * `criar` - Criar só as novas
+     * * `atualizar` - Criar as novas e atualizar as existentes
+     */
+  modo?: ModoEnum;
+  /** Na confirmação, pula as linhas apontadas como duplicata. */
+  ignorar_duplicatas?: boolean;
+  /** Polígonos entram pelo ponto interior em vez de serem recusados. */
+  usar_ponto_interior?: boolean;
+  readonly resumo: ResumoImportacao;
+  /**
+     * Árvores existentes atualizadas pela confirmação.
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  linhas_atualizadas?: number;
+  /**
+     * Linhas válidas puladas por escolha: existentes, duplicatas, sem mudança.
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  linhas_ignoradas?: number;
   /**
      * Quantas das `linhas` já foram vistas na confirmação. É o ponto de retomada: avança na mesma transação que cria as árvores do bloco.
      * @minimum 0

@@ -62,8 +62,9 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
 
 ### 3.4 Importação em lote
 
-- **RF-INV-010** — Importar CSV e GeoJSON com mapeamento de colunas, prévia,
-  validação e relatório de erros antes de confirmar.
+- **RF-INV-010** — Importar CSV, XLSX, GeoJSON, Shapefile (em ZIP), GeoPackage e
+  KML/KMZ com mapeamento de colunas, prévia, validação e relatório de erros antes
+  de confirmar (formatos geográficos: RF-INV-015).
 - **RF-INV-011** — Cada registro importado guarda: fonte, arquivo, data de
   importação, usuário, identificador externo, e origem `Importado` em todos os
   campos.
@@ -77,6 +78,50 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
   interromper nada. Linha que falha é desfeita e listada; as demais seguem. Se
   a execução for interrompida, o lote fica "interrompido" e "Retomar" continua
   do ponto em que parou.
+
+- **RF-INV-015** — Formatos de planilha e geográficos. XLSX lê a primeira aba,
+  com os nomes das colunas na primeira linha (latitude e longitude são mapeadas
+  como no CSV). Shapefile (ZIP), GeoPackage e KML/KMZ são lidos pela GDAL/OGR a
+  partir de um diretório temporário próprio, apagado em seguida: nenhum caminho
+  vem do usuário, o ZIP só extrai membros de extensões conhecidas, sem
+  diretórios, com limite de tamanho do envio (`IMPORTACAO_TAMANHO_MAXIMO_MB`, 50),
+  de membros (`IMPORTACAO_MAX_MEMBROS_ZIP`, 50) e de tamanho descompactado
+  (`IMPORTACAO_MAX_DESCOMPACTADO_MB`, 200). A geometria é reprojetada para
+  WGS 84 a partir do SRC do próprio arquivo; o SRC informado na tela só vale para
+  arquivo sem SRC (Shapefile sem `.prj`). Só feições de ponto são importadas:
+  polígonos e linhas são recusados com o motivo na linha, a menos que a opção
+  "Aceitar polígonos pelo ponto interior" esteja marcada. Arquivo com mais de uma
+  camada com feições é recusado, pedindo uma só.
+- **RF-INV-016** — Modo atualização. Na confirmação, a pessoa escolhe entre
+  "criar só as novas" (padrão) e "criar as novas e atualizar as existentes", pelo
+  identificador externo da mesma fonte (`IdentificadorExterno`). A prévia traz o
+  relatório de diferenças: quantas serão criadas, quantas atualizadas e, para
+  cada uma, os campos que mudam com o valor antigo e o novo. Só muda o que a
+  prévia mostrou: endereço, espécie (enquanto não estiver confirmada nem
+  sugerida por IA), localização (só se a origem atual for "importada") e altura e
+  DAP, que entram como **novas medidas** da fonte quando diferem da última que
+  ela gravou. Se a árvore mudar entre a prévia e a confirmação, a linha falha com
+  motivo e nada é gravado nela. Árvore fora do escopo da pessoa não aparece nem
+  é atualizada. A auditoria registra o lote e o modo no contexto de cada
+  alteração. Lote que atualizou árvores existentes não pode ser desfeito
+  (RF-INV-012). Segue o processamento em segundo plano da RF-INV-012a,
+  contando as linhas a criar e atualizar.
+- **RF-INV-017** — Espécie por nome popular. Se a coluna de espécie não casa com
+  o nome científico, a importação tenta os nomes comuns do catálogo, sem acento e
+  sem diferenciar maiúsculas. Uma espécie só: entra como "informada" (nunca
+  confirmada), com o texto original guardado, e a prévia avisa. Mais de uma: a
+  árvore fica sem espécie e a prévia lista a linha como ambígua.
+- **RF-INV-018** — Duplicatas por proximidade. A prévia aponta as linhas novas a
+  menos de `IMPORTACAO_RAIO_DUPLICATAS_M` (padrão 2 m) de uma árvore ativa do
+  escopo da pessoa, com o código da árvore e a distância. Não é erro: sem a opção
+  "Ignorar duplicatas" na confirmação, a linha é criada mesmo assim. Reaproveita
+  a consulta espacial de `duplicidades.py`.
+- **RF-INV-019** — Modelos de importação. O mapeamento de colunas (e o SRC)
+  pode ser salvo com nome e fonte. Na próxima importação da mesma fonte, o
+  passo de colunas sugere os modelos salvos; usar um preenche só as colunas que
+  existem no arquivo e avisa das que faltam. Quem pode importar vê, atualiza e
+  apaga os modelos (guardam nomes de colunas, nunca dados); alterações ficam na
+  auditoria. API em `/modelos-importacao`.
 
 ### 3.5 Possíveis duplicidades
 
@@ -129,7 +174,8 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
 - **CA-INV-005** — Aceitar uma sugestão de IA gera auditoria com o resultado
   original da IA preservado.
 - **CA-INV-006** — Importar o mesmo arquivo duas vezes não cria duplicatas
-  silenciosas: o sistema detecta IDs externos repetidos e pede decisão.
+  silenciosas: o sistema detecta IDs externos repetidos e pede decisão (ignorar
+  ou, no modo atualização, atualizar o que a prévia mostrou).
 - **CA-INV-007** — Fundir dois registros preserva o histórico de ambos e
   redireciona o ID descontinuado para o ID resultante.
 
