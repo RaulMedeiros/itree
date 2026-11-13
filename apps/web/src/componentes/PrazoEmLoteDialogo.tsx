@@ -13,8 +13,8 @@ import { AreaTexto, Campo, EntradaData } from "../ui/campos";
 import { Dialogo } from "../ui/dialogo";
 import { invalidarCaminhos } from "../util/cache";
 import { descreverPrazo, plural } from "../util/formatos";
-import type { AlvoLote } from "../util/lote";
-import { ResultadoDoLote, alterouRegistros } from "./lote";
+import { alterouRegistros, type AlvoLote } from "../util/lote";
+import { ResultadoDoLote } from "./lote";
 
 const RECURSOS = {
   ocorrencias: { singular: "ocorrência", plural: "ocorrências", caminho: "/api/v1/ocorrencias" },

@@ -79,11 +79,6 @@ export function BarraAcoesEmLote({
   );
 }
 
-/** A ação mudou (ou vai mudar) registros: a seleção pode ser limpa. */
-export function alterouRegistros(resultado: ResultadoAcaoEmLote | OperacaoEmLote): boolean {
-  return "estado" in resultado ? resultado.estado !== "falhou" : resultado.atualizadas > 0;
-}
-
 /** Resultado de uma ação em lote: quantos mudaram e, de cada um que não mudou, o motivo. */
 export function ResultadoDoLote({
   resultado,

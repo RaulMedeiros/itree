@@ -9,13 +9,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
-import { ResultadoDoLote, alterouRegistros } from "../../componentes/lote";
+import { ResultadoDoLote } from "../../componentes/lote";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { invalidarCaminhos } from "../../util/cache";
 import { plural } from "../../util/formatos";
-import type { AlvoLote } from "../../util/lote";
+import { alterouRegistros, type AlvoLote } from "../../util/lote";
 
 /**
  * Passa as tarefas marcadas para outra equipe. O responsável de cada tarefa só continua

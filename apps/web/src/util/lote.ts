@@ -1,3 +1,4 @@
+import type { OperacaoEmLote, ResultadoAcaoEmLote } from "@itree/api-client";
 import { useState } from "react";
 
 /** Registros por ação em lote. O servidor é quem impõe (`LIMITE_ACOES_EM_LOTE`); aqui só avisa antes. */
@@ -59,4 +60,9 @@ export function useSelecaoEmLote(
       ),
     limpar: () => definir([]),
   };
+}
+
+/** A ação mudou (ou vai mudar) registros: a seleção pode ser limpa. */
+export function alterouRegistros(resultado: ResultadoAcaoEmLote | OperacaoEmLote): boolean {
+  return "estado" in resultado ? resultado.estado !== "falhou" : resultado.atualizadas > 0;
 }
