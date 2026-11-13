@@ -32,3 +32,9 @@ def test_padrao_do_backend_de_email(monkeypatch, debug, esperado):
 def test_email_backend_explicito_vale_com_ou_sem_debug(monkeypatch):
     for debug in ("true", "false"):
         assert carregar_settings(monkeypatch, debug, CONSOLE).EMAIL_BACKEND == CONSOLE
+
+
+def test_smtp_usa_tls_por_padrao(monkeypatch):
+    """Sem EMAIL_USE_TLS definido, a senha do SMTP não trafega em texto claro."""
+    monkeypatch.delenv("EMAIL_USE_TLS", raising=False)
+    assert carregar_settings(monkeypatch, "false").EMAIL_USE_TLS is True

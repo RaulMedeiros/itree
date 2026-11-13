@@ -33,6 +33,13 @@ updates:
     ignore:
       - dependency-name: node
         update-types: [version-update:semver-major]
+  # Imagens de serviço da pilha de desenvolvimento e do CI (fixadas por digest).
+  - package-ecosystem: docker-compose
+    directory: /infra/docker
+    schedule: { interval: weekly }
+    ignore:
+      - dependency-name: postgis/postgis
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }

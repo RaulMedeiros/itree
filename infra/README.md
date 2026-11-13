@@ -80,15 +80,18 @@ respostas do painel; as rotas da API recebem os cabeçalhos do próprio Django.
 
 A hospedagem ainda está em aberto (DP-21). Independentemente do provedor:
 
-- Termine o TLS num proxy de borda e envie `X-Forwarded-Proto`; o nginx do
-  painel repassa esse valor à API (sem ele, usa o esquema da própria conexão).
-  Não exponha o nginx do painel diretamente sem a borda: o cabeçalho viria do cliente.
+- Termine o TLS num proxy de borda que sobrescreva `X-Forwarded-Proto` e defina
+  `ITREE_CONFIAR_X_FORWARDED_PROTO=sim` no contêiner do painel. Só assim o nginx
+  repassa esse valor à API. O padrão (`nao`) ignora o cabeçalho vindo do cliente
+  e usa o esquema da própria conexão.
+- Não publique a porta 8000 da API: ela deve receber só o nginx do painel. Se
+  publicar, restrinja `GUNICORN_FORWARDED_ALLOW_IPS` ao endereço do nginx.
 - Use PostgreSQL com PostGIS gerenciado ou com backup e restauração testados.
 - Rode o Keycloak em modo `start` (não `start-dev`), com banco próprio e
   redirect URIs do domínio real; ou federe com o SSO da prefeitura (DP-19).
 - Use um bucket privado; nunca torne o armazenamento público.
 - Defina `EMAIL_HOST` (e `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
-  `EMAIL_USE_TLS`) do SMTP da prefeitura. Sem `DJANGO_DEBUG`, o padrão de
+  `EMAIL_USE_TLS`, que já vem ligado por padrão) do SMTP da prefeitura. Sem `DJANGO_DEBUG`, o padrão de
   `EMAIL_BACKEND` é o SMTP; o console só vale com `DJANGO_DEBUG=true`.
 - Gere segredos fortes e guarde-os num cofre, não no compose.
 - Rode `manage criar_administrador` uma vez para o primeiro acesso.
