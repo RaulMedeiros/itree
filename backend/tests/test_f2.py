@@ -6,6 +6,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
+from itree.inspecoes.models import Inspecao
 from itree.inventario.models import Arvore, Especie, Medida
 from itree.tarefas.models import Tarefa
 
@@ -82,6 +83,20 @@ def test_atualizacao_com_versao_e_conflito(cliente, tecnico_a, arvore_a):
     # Dispositivo com versão desatualizada: conflito explícito.
     r = sincronizar(cliente, tecnico_a, {**item, "versao_base": 1, "observacoes": "Outra"})
     assert r.json()[0]["status"] == "conflito"
+
+
+def test_inspecao_de_outro_tecnico_com_mesmo_id_e_conflito_sem_alterar_nada(
+    cliente, territorios, tecnico_a, arvore_a
+):
+    item = inspecao(arvore_a["id"], observacoes="Original")
+    sincronizar(cliente, tecnico_a, item)
+    outro = com_escopo(criar_usuario("tecnico2@itree.teste", ["tecnico"]), territorios["a"])
+    r = sincronizar(cliente, outro, {**item, "versao_base": 1, "observacoes": "Sobrescrita"})
+    resultado = r.json()[0]
+    assert resultado["status"] == "conflito"
+    assert "outro técnico" in resultado["mensagem"]
+    salva = Inspecao.objects.get(pk=item["id"])
+    assert (salva.observacoes, salva.versao, salva.tecnico_id) == ("Original", 1, tecnico_a.pk)
 
 
 def test_item_invalido_nao_derruba_o_lote(cliente, tecnico_a, arvore_a):
