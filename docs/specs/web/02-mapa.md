@@ -36,7 +36,7 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
   ("Contexto (fontes externas)"), desligadas por padrão, com fonte, data e
   definição na legenda. A primeira é "Arborização do entorno (Censo 2022)":
   bairros pintados pelo percentual de faces de quadra com árvore, em cinco
-  classes de um só matiz com quebras fixas (20, 40, 60 e 80%); bairro sem dado
+  classes de um só matiz com quebras fixas (40, 50, 60 e 70%, escolhidas pela distribuição real de Fortaleza); bairro sem dado
   fica hachurado e aparece como "Sem dado" na legenda, nunca como zero.
 
 ### Navegação e busca
