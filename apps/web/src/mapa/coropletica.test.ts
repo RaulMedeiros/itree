@@ -10,8 +10,8 @@ import {
 
 describe("classes da arborização do entorno", () => {
   it("usa quebras fixas, com o limite inferior em cada classe", () => {
-    expect(QUEBRAS_ARBORIZACAO).toEqual([20, 40, 60, 80]);
-    const classes = [0, 19.99, 20, 39.99, 40, 59.99, 60, 79.99, 80, 100].map(classeArborizacao);
+    expect(QUEBRAS_ARBORIZACAO).toEqual([40, 50, 60, 70]);
+    const classes = [0, 39.99, 40, 49.99, 50, 59.99, 60, 69.99, 70, 100].map(classeArborizacao);
     expect(classes).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
   });
 
@@ -29,13 +29,13 @@ describe("classes da arborização do entorno", () => {
       "step",
       ["get", "valor"],
       CORES_ARBORIZACAO[0],
-      20,
-      CORES_ARBORIZACAO[1],
       40,
+      CORES_ARBORIZACAO[1],
+      50,
       CORES_ARBORIZACAO[2],
       60,
       CORES_ARBORIZACAO[3],
-      80,
+      70,
       CORES_ARBORIZACAO[4],
     ]);
   });

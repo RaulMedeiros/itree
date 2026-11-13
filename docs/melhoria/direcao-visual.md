@@ -45,8 +45,9 @@ base e as duas pontas a ≥ 1,4:1 entre si, em cada fundo do OSM.
 
 A rampa da arborização do entorno é azul de propósito: o verde e o laranja são da
 condição das árvores, e o dado do Censo é percepção do recenseador sobre a face
-de quadra, não saúde nem cobertura de copa. As quebras são fixas (20, 40, 60 e
-80%) para o mesmo valor ter sempre a mesma cor. O contraste é conferido por
+de quadra, não saúde nem cobertura de copa. As quebras são fixas (40, 50, 60 e
+70%) para o mesmo valor ter sempre a mesma cor; os valores seguem a distribuição
+real de Fortaleza no Censo 2022 (quintis perto de 43, 48, 54 e 61%). O contraste é conferido por
 `packages/ui-tokens/scripts/contraste.mjs`: classes vizinhas a ≥ 1,4:1 e a mais
 escura a ≥ 3:1 sobre o mapa base, em cada fundo do OSM. A mais clara (perto de
 zero) se aproxima do fundo, como em toda rampa sequencial; o contorno do bairro e
