@@ -156,3 +156,18 @@ def test_exporta_alertas_com_o_filtro_de_status_da_lista(cliente, territorios, g
     assert len(linhas) == na_lista == total - 1
     _, todos = linhas_csv(exportar(cliente, gestor_municipal, "alertas"))
     assert len(todos) == total
+
+
+def test_exporta_so_as_inspecoes_marcadas_na_lista(cliente, revisor, tecnico_a, gestor_municipal):
+    """M-26: a seleção de inspeções exporta os `ids` marcados, dentro do escopo."""
+    arvore = (
+        cliente.como(revisor)
+        .post("/api/v1/arvores", {"localizacao": PONTO_A}, format="json")
+        .json()
+    )
+    enviada(cliente, tecnico_a, arvore["id"], condicao_aparente="ruim")
+    enviada(cliente, tecnico_a, arvore["id"], condicao_aparente="boa")
+    marcada = Inspecao.objects.get(condicao_aparente="boa")
+    _, linhas = linhas_csv(exportar(cliente, gestor_municipal, "inspecoes", ids=str(marcada.pk)))
+    assert [linha["codigo"] for linha in linhas] == [marcada.codigo]
+    assert exportar(cliente, gestor_municipal, "inspecoes", ids="não-é-uuid").status_code == 400

@@ -2,6 +2,7 @@ import {
   ErroApi,
   useOcorrenciasPrazoEmLote,
   useTarefasPrazoEmLote,
+  type OperacaoEmLote,
   type ResultadoAcaoEmLote,
 } from "@itree/api-client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,7 +13,7 @@ import { AreaTexto, Campo, EntradaData } from "../ui/campos";
 import { Dialogo } from "../ui/dialogo";
 import { invalidarCaminhos } from "../util/cache";
 import { descreverPrazo, plural } from "../util/formatos";
-import type { AlvoLote } from "../util/lote";
+import { alterouRegistros, type AlvoLote } from "../util/lote";
 import { ResultadoDoLote } from "./lote";
 
 const RECURSOS = {
@@ -39,7 +40,7 @@ export function PrazoEmLoteDialogo({
   const [prazo, setPrazo] = useState("");
   const [remover, setRemover] = useState(false);
   const [motivo, setMotivo] = useState("");
-  const [resultado, setResultado] = useState<ResultadoAcaoEmLote | null>(null);
+  const [resultado, setResultado] = useState<ResultadoAcaoEmLote | OperacaoEmLote | null>(null);
   const deOcorrencias = useOcorrenciasPrazoEmLote<ErroApi>();
   const deTarefas = useTarefasPrazoEmLote<ErroApi>();
   const mutacao = recurso === "ocorrencias" ? deOcorrencias : deTarefas;
@@ -50,7 +51,7 @@ export function PrazoEmLoteDialogo({
       <ResultadoDoLote
         titulo="Prazo definido"
         resultado={resultado}
-        aoFechar={() => aoFechar(resultado.atualizadas > 0)}
+        aoFechar={() => aoFechar(alterouRegistros(resultado))}
       />
     );
   }

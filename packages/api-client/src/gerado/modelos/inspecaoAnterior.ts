@@ -12,6 +12,7 @@ import type { EstadoInspecaoEnum } from './estadoInspecaoEnum';
 import type { Medida } from './medida';
 import type { OrigemInspecaoEnum } from './origemInspecaoEnum';
 import type { SinalObservadoEnum } from './sinalObservadoEnum';
+import type { TarefaDaInspecao } from './tarefaDaInspecao';
 import type { UsuarioResumo } from './usuarioResumo';
 
 /**
@@ -42,6 +43,8 @@ export interface InspecaoAnterior {
      * @maximum 2147483647
      */
   versao?: number;
+  /** Tarefa de inspeção que originou esta inspeção, quando houve (início da cadeia tarefa → inspeção → ocorrência). */
+  readonly tarefa: TarefaDaInspecao | null;
   /** Medidas da inspeção em revisão que ainda não valem no cadastro da árvore (vazio em qualquer outro estado). */
   readonly medidas_propostas: readonly Medida[];
   readonly medidas: readonly Medida[];

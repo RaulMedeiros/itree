@@ -1,11 +1,14 @@
 from django.conf import settings
 from django.db import connection
-from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import serializers
+from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
+from rest_framework import mixins, serializers, viewsets
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
+
+from .lote import OperacaoEmLoteSerializer
+from .models import OperacaoEmLote
 
 
 @extend_schema(
@@ -39,3 +42,16 @@ def saude(request: Request) -> Response:
         },
         status=status,
     )
+
+
+@extend_schema_view(retrieve=extend_schema(operation_id="operacoes_em_lote_obter"))
+class OperacaoEmLoteViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    """Andamento e resultado de uma ação em lote em segundo plano (M-26). Só a quem a pediu."""
+
+    serializer_class = OperacaoEmLoteSerializer
+    lookup_value_converter = "uuid"
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return OperacaoEmLote.objects.none()
+        return OperacaoEmLote.objects.filter(usuario=self.request.user)

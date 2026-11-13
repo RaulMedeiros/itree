@@ -11,6 +11,7 @@ import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { invalidarCaminhos } from "../../util/cache";
+import { AjustesNotificacao } from "./AjustesNotificacao";
 
 /** Minha conta (M-14): quem sou no sistema e como quero ser avisado. */
 export function MinhaContaPagina() {
@@ -43,6 +44,7 @@ export function MinhaContaPagina() {
           Nome, e-mail e papéis são administrados pela equipe responsável pelo sistema.
         </p>
       </section>
+      <AjustesNotificacao />
       <PreferenciasNotificacao />
     </div>
   );

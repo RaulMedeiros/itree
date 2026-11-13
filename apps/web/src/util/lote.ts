@@ -1,7 +1,15 @@
+import type { OperacaoEmLote, ResultadoAcaoEmLote } from "@itree/api-client";
 import { useState } from "react";
 
 /** Registros por ação em lote. O servidor é quem impõe (`LIMITE_ACOES_EM_LOTE`); aqui só avisa antes. */
 export const LIMITE_ACOES_EM_LOTE = 200;
+/** Até aqui, "todos os filtrados" acima de 200 roda em segundo plano (M-26). */
+export const LIMITE_OPERACAO_EM_LOTE = 20000;
+
+/** A ação não pode ser enviada: marcadas passam de 200, ou filtradas passam do teto em segundo plano. */
+export function excedeLimiteDoLote(total: number, todosFiltrados: boolean): boolean {
+  return total > (todosFiltrados ? LIMITE_OPERACAO_EM_LOTE : LIMITE_ACOES_EM_LOTE);
+}
 
 /** O que a ação em lote alcança: as linhas marcadas ou todas as que os filtros mostram (M-23). */
 export type AlvoLote = { ids: string[] } | { filtros: Record<string, string> };
@@ -52,4 +60,9 @@ export function useSelecaoEmLote(
       ),
     limpar: () => definir([]),
   };
+}
+
+/** A ação mudou (ou vai mudar) registros: a seleção pode ser limpa. */
+export function alterouRegistros(resultado: ResultadoAcaoEmLote | OperacaoEmLote): boolean {
+  return "estado" in resultado ? resultado.estado !== "falhou" : resultado.atualizadas > 0;
 }

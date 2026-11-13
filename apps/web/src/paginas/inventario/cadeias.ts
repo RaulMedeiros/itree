@@ -2,11 +2,13 @@ import type { InspecaoResumo, Ocorrencia } from "@itree/api-client";
 
 /** A inspeção que abre a cadeia. Quando só se conhece o vínculo da ocorrência, vem sem estado e data. */
 export type InspecaoDaCadeia = Pick<InspecaoResumo, "id" | "codigo"> &
-  Partial<Pick<InspecaoResumo, "estado" | "realizada_em" | "condicao_aparente" | "tecnico">> & {
+  Partial<
+    Pick<InspecaoResumo, "estado" | "realizada_em" | "condicao_aparente" | "tecnico" | "tarefa">
+  > & {
     requer_encaminhamento?: boolean;
   };
 
-/** Um encadeamento (M-21): a inspeção, as ocorrências que ela gerou e as tarefas de cada uma. */
+/** Um encadeamento (M-21, M-28): a tarefa de inspeção, a inspeção, as ocorrências que ela gerou e as tarefas de cada uma. */
 export interface Cadeia {
   chave: string;
   /** Início da cadeia, para a linha do tempo (a inspeção ou, sem ela, a primeira ocorrência). */

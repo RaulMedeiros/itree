@@ -44,12 +44,26 @@ class ArvoreDaInspecaoSerializer(serializers.ModelSerializer):
         ]
 
 
+class TarefaDaInspecaoSerializer(serializers.Serializer):
+    """A tarefa de inspeção que originou a inspeção (M-28)."""
+
+    id = serializers.UUIDField()
+    codigo = serializers.CharField()
+    estado = serializers.CharField()
+
+
 class InspecaoResumoSerializer(serializers.ModelSerializer):
     codigo = serializers.CharField(read_only=True)
     arvore = ArvoreDaInspecaoSerializer(read_only=True)
     tecnico = UsuarioResumoSerializer(read_only=True)
     revisor = UsuarioResumoSerializer(read_only=True, allow_null=True)
     especie = EspecieResumoSerializer(read_only=True, allow_null=True)
+    tarefa = TarefaDaInspecaoSerializer(
+        read_only=True,
+        allow_null=True,
+        help_text="Tarefa de inspeção que originou esta inspeção, quando houve (início da cadeia "
+        "tarefa → inspeção → ocorrência).",
+    )
     medidas_propostas = serializers.SerializerMethodField(
         help_text="Medidas da inspeção em revisão que ainda não valem no cadastro da árvore "
         "(vazio em qualquer outro estado)."
@@ -74,6 +88,7 @@ class InspecaoResumoSerializer(serializers.ModelSerializer):
             "revisor",
             "validada_em",
             "versao",
+            "tarefa",
             "medidas_propostas",
         ]
 
@@ -112,7 +127,6 @@ class InspecaoSerializer(InspecaoResumoSerializer):
         help_text="Inspeção validada anterior da mesma árvore, com as medidas dela, "
         "para comparação (RF-INSP-004)."
     )
-    tarefa = serializers.SerializerMethodField()
     ocorrencias_geradas = serializers.SerializerMethodField(
         help_text="Ocorrências abertas a partir desta inspeção (validar e encaminhar)."
     )
@@ -131,7 +145,6 @@ class InspecaoSerializer(InspecaoResumoSerializer):
             "medidas",
             "medidas_do_cadastro",
             "anterior",
-            "tarefa",
         ]
 
     @extend_schema_field(MedidaSerializer(many=True))
@@ -160,10 +173,6 @@ class InspecaoSerializer(InspecaoResumoSerializer):
             {"id": o.pk, "codigo": o.codigo, "estado": o.estado}
             for o in obj.ocorrencias_geradas.all()
         ]
-
-    @extend_schema_field(serializers.DictField(allow_null=True))
-    def get_tarefa(self, obj):
-        return {"id": str(obj.tarefa_id), "codigo": obj.tarefa.codigo} if obj.tarefa_id else None
 
 
 class MedidaDeCampoSerializer(serializers.Serializer):

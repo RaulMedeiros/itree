@@ -28,7 +28,7 @@ import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarData, formatarDataHora, prazoRestante } from "../../util/formatos";
 import { AbasOcorrencias } from "../alertas/AlertasPagina";
-import { LIMITE_ACOES_EM_LOTE, useSelecaoEmLote } from "../../util/lote";
+import { excedeLimiteDoLote, useSelecaoEmLote } from "../../util/lote";
 import { PrioridadeEmLoteDialogo, ReatribuirEmLoteDialogo } from "./AcoesEmLote";
 import { NovaOcorrenciaDialogo } from "./NovaOcorrenciaDialogo";
 
@@ -270,7 +270,7 @@ export function OcorrenciasPagina() {
             {podeRegistrar && (
               <Botao
                 variante="secundario"
-                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
+                disabled={excedeLimiteDoLote(selecao.total, selecao.todosFiltrados)}
                 onClick={() => setAcaoEmLote("reatribuir")}
               >
                 Reatribuir
@@ -279,7 +279,7 @@ export function OcorrenciasPagina() {
             {podeRegistrar && (
               <Botao
                 variante="secundario"
-                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
+                disabled={excedeLimiteDoLote(selecao.total, selecao.todosFiltrados)}
                 onClick={() => setAcaoEmLote("prazo")}
               >
                 Definir prazo
@@ -288,7 +288,7 @@ export function OcorrenciasPagina() {
             {podePriorizar && (
               <Botao
                 variante="secundario"
-                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
+                disabled={excedeLimiteDoLote(selecao.total, selecao.todosFiltrados)}
                 onClick={() => setAcaoEmLote("prioridade")}
               >
                 Alterar prioridade

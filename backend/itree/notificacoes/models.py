@@ -57,6 +57,25 @@ class PreferenciaNotificacao(ModeloBase):
         ]
 
 
+class AjustesNotificacao(ModeloBase):
+    """Ajustes gerais de quem recebe notificações, além da escolha por tipo (M-27).
+
+    - ``territorios``: só notifica o que acontece nesses bairros (dentro do escopo da pessoa).
+      Vazio = todo o escopo.
+    - ``silenciada_ate``: até essa data (inclusive) nenhuma notificação nova é criada, nem no
+      sino nem por e-mail (férias, licença). As que já chegaram ficam.
+    """
+
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="ajustes_notificacao"
+    )
+    territorios = models.ManyToManyField("territorio.Territorio", blank=True, related_name="+")
+    silenciada_ate = models.DateField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = "ajustes de notificação"
+
+
 # Texto de um grupo (mesmo tipo, mesmo dia) e tela que abre a lista inteira. O singular vale
 # para um só evento no grupo com o título gravado; o plural para dois ou mais.
 GRUPOS: dict[str, tuple[str, str, str]] = {

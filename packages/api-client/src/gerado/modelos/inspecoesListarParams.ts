@@ -17,6 +17,8 @@ export type InspecoesListarParams = {
   desde?: string;
   /** Um ou mais, separados por vírgula. */
   estado?: string;
+  /** IDs separados por vírgula (as marcadas na lista). */
+  ids?: string;
   /** realizada_em, recebida_em ou condicao (da pior para a melhor), com '-' na frente para inverter. Padrão: -realizada_em. */
   ordenar?: string;
   /** Um número de página dentro do conjunto de resultados paginado. */

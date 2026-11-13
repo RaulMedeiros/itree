@@ -5,6 +5,7 @@ import {
   useOcorrenciasPrioridadeEmLote,
   useOcorrenciasReatribuirEmLote,
   useUsuariosListar,
+  type OperacaoEmLote,
   type ResultadoAcaoEmLote,
 } from "@itree/api-client";
 import { ROTULOS_PRIORIDADE } from "@itree/domain";
@@ -18,7 +19,7 @@ import { AreaTexto, Campo, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { invalidarCaminhos } from "../../util/cache";
 import { plural } from "../../util/formatos";
-import type { AlvoLote } from "../../util/lote";
+import { alterouRegistros, type AlvoLote } from "../../util/lote";
 
 /** Valor da opção que deixa o campo como está em cada ocorrência. */
 const MANTER = "__manter__";
@@ -51,7 +52,7 @@ export function ReatribuirEmLoteDialogo({
   const [responsavel, setResponsavel] = useState(MANTER);
   const [equipe, setEquipe] = useState(MANTER);
   const [motivo, setMotivo] = useState("");
-  const [resultado, setResultado] = useState<ResultadoAcaoEmLote | null>(null);
+  const [resultado, setResultado] = useState<ResultadoAcaoEmLote | OperacaoEmLote | null>(null);
   const mutacao = useOcorrenciasReatribuirEmLote<ErroApi>();
   const cliente = useQueryClient();
   // Sem acesso à lista de usuários, oferece ao menos os membros das equipes.
@@ -65,7 +66,7 @@ export function ReatribuirEmLoteDialogo({
       <ResultadoDoLote
         titulo="Reatribuição concluída"
         resultado={resultado}
-        aoFechar={() => aoFechar(resultado.atualizadas > 0)}
+        aoFechar={() => aoFechar(alterouRegistros(resultado))}
       />
     );
   }
@@ -159,7 +160,7 @@ export function PrioridadeEmLoteDialogo({
 }) {
   const [prioridade, setPrioridade] = useState<PrioridadeEnum>("media");
   const [motivo, setMotivo] = useState("");
-  const [resultado, setResultado] = useState<ResultadoAcaoEmLote | null>(null);
+  const [resultado, setResultado] = useState<ResultadoAcaoEmLote | OperacaoEmLote | null>(null);
   const mutacao = useOcorrenciasPrioridadeEmLote<ErroApi>();
   const cliente = useQueryClient();
   if (resultado) {
@@ -167,7 +168,7 @@ export function PrioridadeEmLoteDialogo({
       <ResultadoDoLote
         titulo="Prioridade definida"
         resultado={resultado}
-        aoFechar={() => aoFechar(resultado.atualizadas > 0)}
+        aoFechar={() => aoFechar(alterouRegistros(resultado))}
       />
     );
   }

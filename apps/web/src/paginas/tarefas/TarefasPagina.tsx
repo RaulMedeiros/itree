@@ -32,7 +32,7 @@ import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { invalidarCaminhos } from "../../util/cache";
 import { contar, formatarData } from "../../util/formatos";
-import { LIMITE_ACOES_EM_LOTE, useSelecaoEmLote } from "../../util/lote";
+import { excedeLimiteDoLote, useSelecaoEmLote } from "../../util/lote";
 import { EquipeEmLoteDialogo } from "./EquipeEmLoteDialogo";
 import { rotuloDaAcao } from "./rotulos";
 
@@ -215,14 +215,14 @@ export function TarefasPagina() {
             >
               <Botao
                 variante="secundario"
-                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
+                disabled={excedeLimiteDoLote(selecao.total, selecao.todosFiltrados)}
                 onClick={() => setAcaoEmLote("equipe")}
               >
                 Reatribuir equipe
               </Botao>
               <Botao
                 variante="secundario"
-                disabled={selecao.total > LIMITE_ACOES_EM_LOTE}
+                disabled={excedeLimiteDoLote(selecao.total, selecao.todosFiltrados)}
                 onClick={() => setAcaoEmLote("prazo")}
               >
                 Definir prazo

@@ -494,6 +494,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/Ingestao'
           description: ''
+  /api/v1/alertas/lote/status:
+    post:
+      operationId: alertas_status_em_lote
+      description: |-
+        Muda o status dos alertas marcados ou de todos os filtrados, respeitando as
+        transições permitidas. Com mais de 200 alertas, roda em segundo plano.
+      tags:
+      - alertas
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusEmLoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StatusEmLoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StatusEmLoteRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoAcaoEmLote'
+          description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperacaoEmLote'
+          description: ''
   /api/v1/areas-verdes:
     get:
       operationId: areas_verdes_listar
@@ -1761,6 +1796,11 @@ paths:
           type: string
         description: Um ou mais, separados por vírgula.
       - in: query
+        name: ids
+        schema:
+          type: string
+        description: IDs separados por vírgula (as marcadas na lista).
+      - in: query
         name: ordenar
         schema:
           type: string
@@ -2261,6 +2301,54 @@ paths:
                 items:
                   $ref: '#/components/schemas/GrupoNotificacoes'
           description: ''
+  /api/v1/notificacoes/ajustes:
+    get:
+      operationId: notificacoes_ajustes
+      description: |-
+        Bairros de interesse dentro do escopo e "silenciar até" uma data (M-27).
+
+        Vale para todos os tipos. Em silêncio, ou fora dos bairros escolhidos, a notificação
+        nem chega a ser criada (sino e e-mail).
+      tags:
+      - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AjustesNotificacao'
+          description: ''
+    put:
+      operationId: notificacoes_atualizar_ajustes
+      description: |-
+        Bairros de interesse dentro do escopo e "silenciar até" uma data (M-27).
+
+        Vale para todos os tipos. Em silêncio, ou fora dos bairros escolhidos, a notificação
+        nem chega a ser criada (sino e e-mail).
+      tags:
+      - notificacoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AtualizarAjustesRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AtualizarAjustesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AtualizarAjustesRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AjustesNotificacao'
+          description: ''
   /api/v1/notificacoes/contagem:
     get:
       operationId: notificacoes_contar
@@ -2690,6 +2778,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResultadoAcaoEmLote'
           description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperacaoEmLote'
+          description: ''
   /api/v1/ocorrencias/lote/prioridade:
     post:
       operationId: ocorrencias_prioridade_em_lote
@@ -2718,6 +2812,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResultadoAcaoEmLote'
           description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperacaoEmLote'
+          description: ''
   /api/v1/ocorrencias/lote/reatribuir:
     post:
       operationId: ocorrencias_reatribuir_em_lote
@@ -2744,6 +2844,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResultadoAcaoEmLote'
+          description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperacaoEmLote'
+          description: ''
+  /api/v1/operacoes-em-lote/{id}:
+    get:
+      operationId: operacoes_em_lote_obter
+      description: Andamento e resultado de uma ação em lote em segundo plano (M-26).
+        Só a quem a pediu.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este operacao em lote.
+        required: true
+      tags:
+      - operacoes-em-lote
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperacaoEmLote'
           description: ''
   /api/v1/qualidade/pendencias:
     get:
@@ -3181,6 +3311,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ResultadoAcaoEmLote'
           description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperacaoEmLote'
+          description: ''
   /api/v1/tarefas/lote/prazo:
     post:
       operationId: tarefas_prazo_em_lote
@@ -3208,6 +3344,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResultadoAcaoEmLote'
+          description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperacaoEmLote'
           description: ''
   /api/v1/territorios:
     get:
@@ -3396,6 +3538,32 @@ components:
           maxLength: 500
       required:
       - motivo
+    AjustesNotificacao:
+      type: object
+      description: Bairros de interesse e silêncio temporário (M-27).
+      properties:
+        territorios:
+          type: array
+          items:
+            $ref: '#/components/schemas/TerritorioEscolhido'
+          readOnly: true
+          description: Bairros dos quais a pessoa quer receber. Vazio = todo o seu
+            escopo.
+        silenciada_ate:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: Até esta data (inclusive) nenhuma notificação nova é criada.
+            Vazio ou no passado = recebe normalmente.
+        silenciada:
+          type: boolean
+          readOnly: true
+          description: Hoje a pessoa está em silêncio.
+      required:
+      - silenciada
+      - silenciada_ate
+      - territorios
     Alerta:
       type: object
       properties:
@@ -3919,6 +4087,24 @@ components:
       - origem_registro
       - ultima_inspecao_em
       - valida
+    AtualizarAjustesRequest:
+      type: object
+      description: |-
+        Só o que vem no corpo muda: ``territorios_ids`` vazio volta a receber de todo o escopo
+        e ``silenciada_ate`` nulo encerra o silêncio.
+      properties:
+        territorios_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Bairros, todos dentro do escopo territorial de quem pede.
+          maxItems: 200
+        silenciada_ate:
+          type: string
+          format: date
+          nullable: true
+          description: Hoje ou depois (AAAA-MM-DD).
     AtualizarPreferenciasRequest:
       type: object
       properties:
@@ -4263,8 +4449,9 @@ components:
           additionalProperties:
             type: string
           description: Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...),
-            no lugar dos ids. Alcança todos os registros filtrados, até o limite de
-            200; com mais que isso, a ação é recusada.
+            no lugar dos ids. Alcança todos os registros filtrados. Até 200 a ação
+            é imediata (200); acima disso, roda em segundo plano (202, com uma operação
+            para acompanhar), até 20000; com mais que isso, é recusada.
         motivo:
           type: string
           description: Fica no histórico de cada registro alterado.
@@ -5273,6 +5460,13 @@ components:
           maximum: 2147483647
           minimum: 0
           description: Controle de concorrência na sincronização.
+        tarefa:
+          allOf:
+          - $ref: '#/components/schemas/TarefaDaInspecao'
+          readOnly: true
+          nullable: true
+          description: Tarefa de inspeção que originou esta inspeção, quando houve
+            (início da cadeia tarefa → inspeção → ocorrência).
         medidas_propostas:
           type: array
           items:
@@ -5330,11 +5524,6 @@ components:
           readOnly: true
           description: Inspeção validada anterior da mesma árvore, com as medidas
             dela, para comparação (RF-INSP-004).
-        tarefa:
-          type: object
-          additionalProperties: {}
-          nullable: true
-          readOnly: true
       required:
       - anterior
       - arvore
@@ -5412,6 +5601,13 @@ components:
           maximum: 2147483647
           minimum: 0
           description: Controle de concorrência na sincronização.
+        tarefa:
+          allOf:
+          - $ref: '#/components/schemas/TarefaDaInspecao'
+          readOnly: true
+          nullable: true
+          description: Tarefa de inspeção que originou esta inspeção, quando houve
+            (início da cadeia tarefa → inspeção → ocorrência).
         medidas_propostas:
           type: array
           items:
@@ -5434,6 +5630,7 @@ components:
       - realizada_em
       - recebida_em
       - revisor
+      - tarefa
       - tecnico
     InspecaoResumo:
       type: object
@@ -5495,6 +5692,13 @@ components:
           maximum: 2147483647
           minimum: 0
           description: Controle de concorrência na sincronização.
+        tarefa:
+          allOf:
+          - $ref: '#/components/schemas/TarefaDaInspecao'
+          readOnly: true
+          nullable: true
+          description: Tarefa de inspeção que originou esta inspeção, quando houve
+            (início da cadeia tarefa → inspeção → ocorrência).
         medidas_propostas:
           type: array
           items:
@@ -5511,6 +5715,7 @@ components:
       - realizada_em
       - recebida_em
       - revisor
+      - tarefa
       - tecnico
     ItemArvore:
       type: object
@@ -6271,6 +6476,93 @@ components:
       required:
       - descricao
       - tipo_id
+    OperacaoEmLote:
+      type: object
+      description: Andamento e resultado de uma ação em lote em segundo plano.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        recurso:
+          type: string
+          readOnly: true
+          description: ocorrencias, tarefas ou alertas.
+        acao:
+          type: string
+          readOnly: true
+        estado:
+          allOf:
+          - $ref: '#/components/schemas/OperacaoEmLoteEstadoEnum'
+          readOnly: true
+        total:
+          type: integer
+          readOnly: true
+        processados:
+          type: integer
+          readOnly: true
+        atualizadas:
+          type: integer
+          readOnly: true
+        falhas:
+          type: integer
+          readOnly: true
+          description: Registros que não foram alterados (encerrados, fora do escopo,
+            erro).
+        motivos:
+          type: array
+          items:
+            $ref: '#/components/schemas/IgnoradoEmLote'
+          readOnly: true
+        motivos_omitidos:
+          type: integer
+          readOnly: true
+          description: Registros não alterados cujo motivo não foi guardado (passou
+            do limite).
+        erro:
+          type: string
+          readOnly: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        iniciada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        concluida_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - acao
+      - atualizadas
+      - concluida_em
+      - criado_em
+      - erro
+      - estado
+      - falhas
+      - id
+      - iniciada_em
+      - motivos
+      - motivos_omitidos
+      - processados
+      - recurso
+      - total
+    OperacaoEmLoteEstadoEnum:
+      enum:
+      - pendente
+      - em_andamento
+      - concluida
+      - falhou
+      type: string
+      description: |-
+        * `pendente` - Na fila
+        * `em_andamento` - Em andamento
+        * `concluida` - Concluída
+        * `falhou` - Interrompida por erro
     OrigemInspecaoEnum:
       enum:
       - app
@@ -7039,8 +7331,9 @@ components:
           additionalProperties:
             type: string
           description: Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...),
-            no lugar dos ids. Alcança todos os registros filtrados, até o limite de
-            200; com mais que isso, a ação é recusada.
+            no lugar dos ids. Alcança todos os registros filtrados. Até 200 a ação
+            é imediata (200); acima disso, roda em segundo plano (202, com uma operação
+            para acompanhar), até 20000; com mais que isso, é recusada.
         motivo:
           type: string
           description: Fica no histórico de cada registro alterado.
@@ -7117,8 +7410,9 @@ components:
           additionalProperties:
             type: string
           description: Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...),
-            no lugar dos ids. Alcança todos os registros filtrados, até o limite de
-            200; com mais que isso, a ação é recusada.
+            no lugar dos ids. Alcança todos os registros filtrados. Até 200 a ação
+            é imediata (200); acima disso, roda em segundo plano (202, com uma operação
+            para acompanhar), até 20000; com mais que isso, é recusada.
         motivo:
           type: string
           description: Fica no histórico de cada registro alterado.
@@ -7170,8 +7464,9 @@ components:
           additionalProperties:
             type: string
           description: Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...),
-            no lugar dos ids. Alcança todos os registros filtrados, até o limite de
-            200; com mais que isso, a ação é recusada.
+            no lugar dos ids. Alcança todos os registros filtrados. Até 200 a ação
+            é imediata (200); acima disso, roda em segundo plano (202, com uma operação
+            para acompanhar), até 20000; com mais que isso, é recusada.
         motivo:
           type: string
           description: Fica no histórico de cada registro alterado.
@@ -7521,6 +7816,42 @@ components:
         * `encaminhado` - Encaminhado à fiscalização
         * `confirmado` - Confirmado pela autoridade
         * `descartado` - Descartado
+    StatusEmLoteRequest:
+      type: object
+      description: |-
+        Novo status para os alertas marcados ou todos os filtrados (M-26).
+
+        Vale a mesma regra da triagem de um alerta: só passa quem tem a transição permitida a
+        partir do status atual; os demais ficam como estão, com o motivo. Justificativa e
+        referência (quando o status exige) valem para todos.
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Registros marcados na lista (de 1 a 200). Use `ids` ou `filtros`,
+            nunca os dois.
+          maxItems: 200
+          minItems: 1
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+          description: Os mesmos parâmetros da listagem (busca, estado, tipo, bairro...),
+            no lugar dos ids. Alcança todos os registros filtrados. Até 200 a ação
+            é imediata (200); acima disso, roda em segundo plano (202, com uma operação
+            para acompanhar), até 20000; com mais que isso, é recusada.
+        status:
+          $ref: '#/components/schemas/StatusAlertaEnum'
+        justificativa:
+          type: string
+          maxLength: 2000
+        referencia:
+          type: string
+          maxLength: 200
+      required:
+      - status
     Tarefa:
       type: object
       properties:
@@ -7633,6 +7964,21 @@ components:
       - tipo
       - total_evidencias
       - transicoes_possiveis
+    TarefaDaInspecao:
+      type: object
+      description: A tarefa de inspeção que originou a inspeção (M-28).
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigo:
+          type: string
+        estado:
+          type: string
+      required:
+      - codigo
+      - estado
+      - id
     TarefaIaEnum:
       enum:
       - especie
@@ -7793,6 +8139,17 @@ components:
       - nome
       - pai
       - tipo
+    TerritorioEscolhido:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+      required:
+      - id
+      - nome
     TerritorioResumo:
       type: object
       properties:
