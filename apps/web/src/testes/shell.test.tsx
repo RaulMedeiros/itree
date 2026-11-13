@@ -297,7 +297,7 @@ describe("cabeçalho", () => {
   it("a busca fica numa coluna central fixa do cabeçalho (R3-33)", async () => {
     await abrir("/administracao/integracoes");
     const busca = await screen.findByRole("combobox", { name: "Busca global" });
-    const cabecalho = screen.getByRole("banner");
+    const cabecalho = screen.getByTestId("shell").querySelector("header")!;
     expect(cabecalho).toHaveClass("grid-cols-[1fr_auto_1fr]");
     expect(busca.closest("header")).toBe(cabecalho);
   });

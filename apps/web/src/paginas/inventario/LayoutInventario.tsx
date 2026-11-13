@@ -1,36 +1,28 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
 
 import { useUsuario } from "../../acesso/ContextoUsuario";
+import { AbasSecao } from "../../ui/pagina";
 
 const SECOES = [
-  { caminho: "/inventario/arvores", rotulo: "Árvores", permissao: "inventario.ler" },
-  { caminho: "/inventario/especies", rotulo: "Espécies", permissao: "inventario.ler" },
-  { caminho: "/inventario/importacoes", rotulo: "Importações", permissao: "inventario.importar" },
+  { para: "/inventario/arvores", rotulo: "Árvores", permissao: "inventario.ler" },
+  { para: "/inventario/especies", rotulo: "Espécies", permissao: "inventario.ler" },
+  { para: "/inventario/importacoes", rotulo: "Importações", permissao: "inventario.importar" },
   {
-    caminho: "/inventario/duplicidades",
+    para: "/inventario/duplicidades",
     rotulo: "Possíveis duplicidades",
     permissao: "inventario.ler",
   },
-  { caminho: "/inventario/qualidade", rotulo: "Qualidade de dados", permissao: "inventario.ler" },
+  { para: "/inventario/qualidade", rotulo: "Qualidade de dados", permissao: "inventario.ler" },
 ] as const;
 
 export function LayoutInventario() {
   const eu = useUsuario();
   return (
     <div className="mx-auto max-w-7xl">
-      <nav aria-label="Seções do inventário" className="mb-5 flex gap-1 border-b border-borda">
-        {SECOES.filter((s) => eu.permissoes.includes(s.permissao)).map((s) => (
-          <Link
-            key={s.caminho}
-            to={s.caminho}
-            className="-mb-px border-b-2 border-transparent px-3 py-2 text-sm text-texto-suave hover:text-texto"
-            activeProps={{ className: "border-marca! font-medium text-texto!" }}
-            activeOptions={{ exact: false }}
-          >
-            {s.rotulo}
-          </Link>
-        ))}
-      </nav>
+      <AbasSecao
+        rotulo="Seções do inventário"
+        abas={SECOES.filter((s) => eu.permissoes.includes(s.permissao))}
+      />
       <Outlet />
     </div>
   );
