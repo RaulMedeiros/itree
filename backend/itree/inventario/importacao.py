@@ -2,23 +2,27 @@
 
 Fluxo: o arquivo é interpretado e validado numa **pré-visualização** guardada no
 lote; nada é criado até a confirmação. A confirmação cria as árvores com
-origem ``importado`` em todos os valores e pode ser desfeita como lote enquanto
-nenhum registro tiver sido alterado depois.
+origem ``importado`` em todos os valores, na requisição (lote pequeno) ou em tarefa Celery
+(lote grande), e pode ser desfeita como lote enquanto nenhum registro tiver sido alterado depois.
 """
 
 import csv
 import io
 import json
+import logging
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 
+import pghistory
 from django.apps import apps
+from django.conf import settings
 from django.contrib.gis.geos import MultiPolygon, Point
 from django.db import transaction
 from django.db.models import ProtectedError
 from django.utils import timezone
 
 from itree.contas.acesso import area_do_escopo
+from itree.core.geo import ResolvedorDeBairro
 from itree.territorio.models import Territorio
 
 from .models import (
@@ -37,7 +41,14 @@ from .models import (
     TipoMedida,
 )
 
+logger = logging.getLogger(__name__)
+
 LIMITE_LINHAS = 20_000
+# Linhas por transação na confirmação: o andamento é gravado a cada bloco.
+TAMANHO_BLOCO = 200
+# Linhas com falha cujo motivo é guardado no lote; as demais só entram na contagem.
+LIMITE_FALHAS_GUARDADAS = 500
+MOTIVO_FALHA = "Erro inesperado ao criar a árvore desta linha; as demais seguiram."
 
 CAMPOS_MAPEAVEIS = {
     "latitude": "Latitude (ou Y)",
@@ -232,14 +243,11 @@ def interpretar(
     return linhas
 
 
-@transaction.atomic
-def confirmar(lote: LoteImportacao, usuario) -> int:
-    lote = LoteImportacao.objects.select_for_update().get(pk=lote.pk)
-    if lote.estado != EstadoLote.PRE_VISUALIZADO:
-        raise ErroArquivo("Este lote não está aguardando confirmação.")
-
+def _validar_confirmacao(lote: LoteImportacao, usuario) -> None:
+    """Confere o que pode ter mudado desde a pré-visualização, só nas linhas ainda pendentes."""
     fonte_ids = lote.mapeamento.get("fonte_ids") or lote.fonte
-    validas = [linha["dados"] for linha in lote.linhas if not linha["erros"]]
+    pendentes = lote.linhas[lote.linhas_processadas :]
+    validas = [linha["dados"] for linha in pendentes if not linha["erros"]]
 
     # O escopo do usuário e o cadastro podem ter mudado desde a pré-visualização.
     escopo = area_do_escopo(usuario)
@@ -258,49 +266,139 @@ def confirmar(lote: LoteImportacao, usuario) -> int:
             "Há identificadores deste lote importados depois da pré-visualização; refaça-a."
         )
 
-    criadas = 0
-    for linha in lote.linhas:
-        if linha["erros"]:
-            continue
-        d = linha["dados"]
-        arvore = Arvore.objects.create(
-            geom=Point(d["longitude"], d["latitude"], srid=4326),
-            localizacao_origem=OrigemLocalizacao.IMPORTADA,
-            precisao_m=float(d["precisao"]) if d.get("precisao") else None,
-            endereco=d.get("endereco", ""),
-            especie_id=d.get("especie_id"),
-            especie_estado=(
-                EstadoEspecie.INFORMADA
-                if d.get("especie_texto")
-                else EstadoEspecie.NAO_IDENTIFICADA
-            ),
-            especie_texto_original=d.get("especie_texto", ""),
-            origem_registro=OrigemRegistro.IMPORTACAO,
-            lote=lote,
-            criado_por=usuario,
-        )
-        if d.get("id_externo"):
-            IdentificadorExterno.objects.create(
-                arvore=arvore, fonte=fonte_ids, valor=d["id_externo"]
-            )
-        for tipo, chave in ((TipoMedida.ALTURA, "altura"), (TipoMedida.DAP, "dap")):
-            if d.get(chave):
-                Medida.objects.create(
-                    arvore=arvore,
-                    tipo=tipo,
-                    valor=Decimal(d[chave]),
-                    unidade=UNIDADES_POR_TIPO[tipo],
-                    metodo=MetodoMedida.DESCONHECIDO,
-                    origem=OrigemValor.IMPORTADO,
-                    data_medicao=lote.data_referencia,
-                    responsavel_texto=lote.fonte,
-                )
-        criadas += 1
 
-    lote.estado = EstadoLote.CONFIRMADO
-    lote.confirmado_em = timezone.now()
-    lote.save(update_fields=["estado", "confirmado_em", "atualizado_em"])
-    return criadas
+def preparar_confirmacao(lote: LoteImportacao, usuario) -> bool:
+    """Valida o pedido e marca o lote "em processamento"; não cria nenhuma árvore.
+
+    Só um pedido passa por aqui por vez (trava da linha do lote): o segundo encontra o lote já
+    em processamento e é recusado, então a mesma importação nunca é confirmada duas vezes.
+    Aceita também um lote interrompido, que retoma do ponto em que parou.
+
+    Devolve ``True`` se o lote é grande (acima de ``IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA``
+    linhas válidas pendentes) e deve ir para a fila; ``False`` se cabe na própria requisição.
+    """
+    with transaction.atomic():
+        lote = LoteImportacao.objects.select_for_update().get(pk=lote.pk)
+        if lote.estado not in (EstadoLote.PRE_VISUALIZADO, EstadoLote.INTERROMPIDO):
+            raise ErroArquivo("Este lote não está aguardando confirmação.")
+        _validar_confirmacao(lote, usuario)
+        pendentes = sum(1 for linha in lote.linhas[lote.linhas_processadas :] if not linha["erros"])
+        lote.estado = EstadoLote.EM_PROCESSAMENTO
+        lote.confirmado_por = usuario
+        lote.erro = ""
+        lote.save(update_fields=["estado", "confirmado_por", "erro", "atualizado_em"])
+    return pendentes > settings.IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA
+
+
+def _criar_arvore(lote: LoteImportacao, d: dict, usuario, fonte_ids: str, bairros) -> None:
+    ponto = Point(d["longitude"], d["latitude"], srid=4326)
+    arvore = Arvore(
+        geom=ponto,
+        localizacao_origem=OrigemLocalizacao.IMPORTADA,
+        precisao_m=float(d["precisao"]) if d.get("precisao") else None,
+        endereco=d.get("endereco", ""),
+        especie_id=d.get("especie_id"),
+        especie_estado=(
+            EstadoEspecie.INFORMADA if d.get("especie_texto") else EstadoEspecie.NAO_IDENTIFICADA
+        ),
+        especie_texto_original=d.get("especie_texto", ""),
+        origem_registro=OrigemRegistro.IMPORTACAO,
+        lote=lote,
+        criado_por=usuario,
+    )
+    arvore.bairro_id = bairros.id_do_ponto(ponto)
+    arvore._bairro_pronto = True
+    arvore.save()
+    if d.get("id_externo"):
+        IdentificadorExterno.objects.create(arvore=arvore, fonte=fonte_ids, valor=d["id_externo"])
+    for tipo, chave in ((TipoMedida.ALTURA, "altura"), (TipoMedida.DAP, "dap")):
+        if d.get(chave):
+            Medida.objects.create(
+                arvore=arvore,
+                tipo=tipo,
+                valor=Decimal(d[chave]),
+                unidade=UNIDADES_POR_TIPO[tipo],
+                metodo=MetodoMedida.DESCONHECIDO,
+                origem=OrigemValor.IMPORTADO,
+                data_medicao=lote.data_referencia,
+                responsavel_texto=lote.fonte,
+            )
+
+
+def executar_confirmacao(lote_id) -> None:
+    """Cria as árvores do lote em blocos; serve à requisição (lote pequeno) e à tarefa Celery.
+
+    Cada bloco é uma transação que cria as árvores **e** avança ``linhas_processadas``: ou o
+    bloco inteiro vale, com o ponto de retomada, ou nada dele vale. Uma reentrega da tarefa, ou
+    duas execuções ao mesmo tempo, travam a linha do lote a cada bloco e seguem do ponto
+    gravado, então nenhuma linha é aplicada duas vezes (a unicidade do identificador externo é
+    a segunda barreira). Cada linha roda em um ponto de salvamento: uma que falha entra em
+    ``falhas`` e as demais seguem. Um erro fora das linhas deixa o lote "interrompido", e
+    confirmar de novo retoma de onde parou.
+    """
+    lote = LoteImportacao.objects.select_related("confirmado_por").get(pk=lote_id)
+    if lote.estado != EstadoLote.EM_PROCESSAMENTO:
+        return
+    usuario = lote.confirmado_por
+    linhas = lote.linhas  # lido uma vez; o JSON é grande e não muda durante a confirmação
+    fonte_ids = lote.mapeamento.get("fonte_ids") or lote.fonte
+    contexto = {"user": str(usuario.pk), "origem": "web", "evento": "importacao_inventario"}
+    try:
+        bairros = ResolvedorDeBairro()
+        with pghistory.context(lote=lote.numero, **contexto):
+            while True:
+                with transaction.atomic():
+                    atual = (
+                        LoteImportacao.objects.select_for_update()
+                        .defer("linhas")
+                        .get(pk=lote_id)  # estado e ponto de retomada atuais
+                    )
+                    if atual.estado != EstadoLote.EM_PROCESSAMENTO:
+                        return
+                    inicio = atual.linhas_processadas
+                    if inicio >= len(linhas):
+                        atual.estado = EstadoLote.CONFIRMADO
+                        atual.confirmado_em = timezone.now()
+                        atual.save(update_fields=["estado", "confirmado_em", "atualizado_em"])
+                        return
+                    falhas = []
+                    bloco = linhas[inicio : inicio + TAMANHO_BLOCO]
+                    for linha in bloco:
+                        if linha["erros"]:
+                            continue
+                        try:
+                            with transaction.atomic():
+                                _criar_arvore(atual, linha["dados"], usuario, fonte_ids, bairros)
+                        except Exception:
+                            logger.exception(
+                                "Falha na linha %s do lote %s", linha["indice"], atual.numero
+                            )
+                            falhas.append({"indice": linha["indice"], "motivo": MOTIVO_FALHA})
+                    atual.linhas_processadas = inicio + len(bloco)
+                    atual.linhas_com_falha += len(falhas)
+                    espaco = max(LIMITE_FALHAS_GUARDADAS - len(atual.falhas), 0)
+                    atual.falhas = [*atual.falhas, *falhas[:espaco]]
+                    atual.save(
+                        update_fields=[
+                            "linhas_processadas",
+                            "linhas_com_falha",
+                            "falhas",
+                            "atualizado_em",
+                        ]
+                    )
+    except Exception:
+        logger.exception("A confirmação do lote %s foi interrompida", lote_id)
+        registrar_interrupcao(
+            lote_id,
+            "A confirmação foi interrompida por um erro inesperado. As árvores já criadas "
+            "continuam no inventário; confirme de novo para continuar do ponto em que parou.",
+        )
+
+
+def registrar_interrupcao(lote_id, erro: str) -> None:
+    LoteImportacao.objects.filter(pk=lote_id, estado=EstadoLote.EM_PROCESSAMENTO).update(
+        estado=EstadoLote.INTERROMPIDO, erro=erro, atualizado_em=timezone.now()
+    )
 
 
 def motivo_impede_desfazer(lote: LoteImportacao) -> str | None:

@@ -76,6 +76,8 @@ export const ROTULOS_ORIGEM_REGISTRO: Record<OrigemRegistroEnum, string> = {
 
 export const ROTULOS_ESTADO_LOTE: Record<EstadoLoteEnum, string> = {
   pre_visualizado: "Pré-visualizado",
+  em_processamento: "Em processamento",
+  interrompido: "Interrompido",
   confirmado: "Confirmado",
   desfeito: "Desfeito",
   descartado: "Descartado",

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { EstadoLoteEnum } from './estadoLoteEnum';
+import type { FalhaImportacao } from './falhaImportacao';
 import type { LinhaImportacao } from './linhaImportacao';
 
 export interface LoteImportacaoDetalhe {
@@ -34,6 +35,20 @@ export interface LoteImportacaoDetalhe {
      */
   linhas_validas?: number;
   readonly arvores_criadas: number;
+  /**
+     * Quantas das `linhas` já foram vistas na confirmação. É o ponto de retomada: avança na mesma transação que cria as árvores do bloco.
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  linhas_processadas?: number;
+  /**
+     * Linhas válidas que não viraram árvore por erro inesperado.
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  linhas_com_falha?: number;
+  /** Por que a confirmação foi interrompida. */
+  erro?: string;
   /** @nullable */
   confirmado_em?: string | null;
   /** @nullable */
@@ -42,5 +57,6 @@ export interface LoteImportacaoDetalhe {
   readonly pode_desfazer: boolean;
   /** @nullable */
   readonly motivo_nao_desfazer: string | null;
+  readonly falhas: readonly FalhaImportacao[];
   readonly linhas: readonly LinhaImportacao[];
 }

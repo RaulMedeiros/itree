@@ -257,6 +257,12 @@ REFERENCIAS_AUTOMATICAS = env.bool("REFERENCIAS_AUTOMATICAS", default=True)
 # Reconsulta mensal das referências antigas (M-09).
 REFERENCIAS_IDADE_MAXIMA_DIAS = env.int("REFERENCIAS_IDADE_MAXIMA_DIAS", default=30)
 REFERENCIAS_INTERVALO_SEGUNDOS = env.float("REFERENCIAS_INTERVALO_SEGUNDOS", default=1.0)
+
+# Importação de inventário: até este número de linhas válidas, a confirmação roda na própria
+# requisição (resposta 200); acima disso vai para uma tarefa Celery (resposta 202).
+IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA = env.int(
+    "IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA", default=500
+)
 # --- Notificações: retenção -----------------------------------------------------
 # A tarefa diária apaga as lidas há mais de NOTIFICACOES_RETENCAO_LIDAS_DIAS e as não
 # lidas criadas há mais de NOTIFICACOES_RETENCAO_NAO_LIDAS_DIAS.

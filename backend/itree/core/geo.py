@@ -19,6 +19,27 @@ def bairro_do_ponto(geom):
     return Territorio.objects.filter(tipo=TipoTerritorio.BAIRRO, geom__contains=geom).first()
 
 
+class ResolvedorDeBairro:
+    """Resolve o bairro de muitos pontos com uma única leitura dos bairros.
+
+    ``bairro_do_ponto`` faz uma consulta espacial por ponto; na importação de milhares de
+    árvores isso domina o custo. Aqui os bairros são lidos uma vez, com geometria preparada, na
+    mesma ordem da consulta (``.first()``), então o resultado é o mesmo.
+    """
+
+    def __init__(self):
+        from itree.territorio.models import Territorio, TipoTerritorio
+
+        bairros = Territorio.objects.filter(tipo=TipoTerritorio.BAIRRO).only("id", "geom")
+        self._bairros = [(b.pk, b.geom.prepared) for b in bairros]
+
+    def id_do_ponto(self, geom):
+        """Id do bairro que contém o ponto, ou ``None``."""
+        if geom is None:
+            return None
+        return next((pk for pk, preparada in self._bairros if preparada.contains(geom)), None)
+
+
 def ampliar(geom, metros: float):
     """Cópia de ``geom`` (EPSG:4326) ampliada em ``metros`` em todas as direções.
 
