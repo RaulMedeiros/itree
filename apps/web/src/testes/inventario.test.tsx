@@ -903,6 +903,7 @@ describe("assistente de importação: passos coerentes com a tela (R2-20)", () =
           tem_geometria: false,
         }),
       ),
+      http.get(`${API}/api/v1/modelos-importacao`, () => HttpResponse.json(pagina([]))),
     );
     await abrir("/inventario/importacoes");
     await usuario.click((await screen.findAllByRole("button", { name: /Nova importação/ }))[0]!);

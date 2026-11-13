@@ -7,8 +7,14 @@ import {
   useImportacoesDesfazer,
   useImportacoesListar,
   useImportacoesObter,
+  useModelosImportacaoApagar,
+  useModelosImportacaoAtualizar,
+  useModelosImportacaoCriar,
+  useModelosImportacaoListar,
   type ColunasArquivo,
   type LoteImportacao,
+  type ModeloImportacao,
+  type ModoEnum,
 } from "@itree/api-client";
 import { ROTULOS_ESTADO_LOTE } from "@itree/domain";
 import { useQueryClient } from "@tanstack/react-query";
@@ -30,12 +36,26 @@ const CAMPOS = [
   { id: "latitude", rotulo: "Latitude (ou Y)", obrigatorioCsv: true },
   { id: "longitude", rotulo: "Longitude (ou X)", obrigatorioCsv: true },
   { id: "id_externo", rotulo: "Identificador na fonte" },
-  { id: "especie", rotulo: "Nome científico" },
+  { id: "especie", rotulo: "Espécie (nome científico ou popular)" },
   { id: "endereco", rotulo: "Endereço" },
   { id: "altura", rotulo: "Altura (m)" },
   { id: "dap", rotulo: "DAP (cm)" },
   { id: "precisao", rotulo: "Precisão da localização (m)" },
 ] as const;
+
+const ROTULOS_FORMATO: Record<string, string> = {
+  csv: "CSV",
+  xlsx: "XLSX",
+  geojson: "GeoJSON",
+  shapefile: "Shapefile",
+  geopackage: "GeoPackage",
+  kml: "KML",
+  kmz: "KMZ",
+};
+/** Planilhas não trazem geometria: as colunas de latitude e longitude são obrigatórias. */
+const FORMATOS_TABULARES = ["csv", "xlsx"];
+/** Formatos em que uma feição pode ser polígono: a opção do ponto interior só vale aqui. */
+const FORMATOS_COM_POLIGONO = ["shapefile", "geopackage", "kml", "kmz"];
 
 /** Sugere a coluna pelo nome (lat, lon, especie…). */
 function sugerir(colunas: string[], campo: string): string {
@@ -72,7 +92,7 @@ export function ImportacoesPagina() {
     <>
       <CabecalhoPagina
         titulo="Importações"
-        descricao="Importe inventários existentes (CSV ou GeoJSON). Nada é criado antes da confirmação, e cada registro guarda a fonte."
+        descricao="Importe inventários existentes (CSV, XLSX, GeoJSON, Shapefile, GeoPackage ou KML). Nada é criado ou alterado antes da confirmação, e cada registro guarda a fonte."
         acoes={
           <Botao onClick={() => setAssistente(true)}>
             <FileUp /> Nova importação
@@ -95,7 +115,7 @@ export function ImportacoesPagina() {
               <Th>Lote</Th>
               <Th>Fonte</Th>
               <Th>Linhas</Th>
-              <Th>Árvores criadas</Th>
+              <Th>Árvores</Th>
               <Th>Situação</Th>
               <Th>Responsável</Th>
               <Th />
@@ -121,13 +141,20 @@ export function ImportacoesPagina() {
                 </Td>
                 <Td>
                   {l.estado === "confirmado" ? (
-                    <Link
-                      to="/inventario/arvores"
-                      search={{ situacao: "todas" }}
-                      className="text-marca-escura hover:underline"
-                    >
-                      Ver {l.arvores_criadas} {l.arvores_criadas === 1 ? "árvore" : "árvores"}
-                    </Link>
+                    <>
+                      <Link
+                        to="/inventario/arvores"
+                        search={{ situacao: "todas" }}
+                        className="text-marca-escura hover:underline"
+                      >
+                        Ver {l.arvores_criadas} {l.arvores_criadas === 1 ? "árvore" : "árvores"}
+                      </Link>
+                      {(l.linhas_atualizadas ?? 0) > 0 && (
+                        <p className="text-xs text-texto-suave">
+                          {plural(l.linhas_atualizadas ?? 0, "atualizada", "atualizadas")}
+                        </p>
+                      )}
+                    </>
                   ) : (
                     "—"
                   )}
@@ -323,6 +350,7 @@ function AssistenteImportacao({
   const [dataReferencia, setDataReferencia] = useState("");
   const [srid, setSrid] = useState("4326");
   const [mapeamento, setMapeamento] = useState<Record<string, string>>({});
+  const [pontoInterior, setPontoInterior] = useState(false);
   const criar = useImportacoesCriar<ErroApi>();
   const erros = criar.error?.errosDeCampo ?? {};
 
@@ -372,6 +400,7 @@ function AssistenteImportacao({
           fonte_url: fonteUrl,
           data_referencia: dataReferencia || null,
           srid: Number(srid),
+          usar_ponto_interior: pontoInterior,
           ...campos,
         },
       },
@@ -415,14 +444,15 @@ function AssistenteImportacao({
         <Etapas atual={etapa} />
         <div hidden={etapa === 2}>
           <Campo
-            rotulo="Arquivo (.csv ou .geojson)"
+            rotulo="Arquivo"
+            ajuda="CSV, XLSX, GeoJSON, Shapefile (ZIP), GeoPackage, KML ou KMZ."
             obrigatorio
             erros={erroLeitura ? [erroLeitura] : erros.arquivo}
           >
             {(p) => (
               <EntradaArquivo
                 {...p}
-                accept=".csv,.txt,.geojson,.json"
+                accept=".csv,.txt,.geojson,.json,.xlsx,.zip,.gpkg,.kml,.kmz"
                 onChange={(arquivo) => void escolher(arquivo)}
               />
             )}
@@ -431,7 +461,8 @@ function AssistenteImportacao({
         {leitura && etapa === 1 && (
           <>
             <p className="text-sm text-texto-suave">
-              {leitura.total_linhas} linhas · formato {leitura.formato.toUpperCase()}
+              {leitura.total_linhas} linhas · formato{" "}
+              {ROTULOS_FORMATO[leitura.formato] ?? leitura.formato.toUpperCase()}
               {leitura.tem_geometria && " · geometria de pontos encontrada no arquivo"}
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -488,6 +519,45 @@ function AssistenteImportacao({
                   .join(" ")}
               </p>
             )}
+            <ModelosDeMapeamento
+              fonte={fonte}
+              colunas={leitura.colunas}
+              mapeamento={mapeamento}
+              srid={srid}
+              pontoInterior={pontoInterior}
+              aoAplicar={(m) => {
+                setMapeamento((atual) => ({
+                  ...atual,
+                  ...Object.fromEntries(
+                    CAMPOS.map((c) => [
+                      c.id,
+                      leitura.colunas.includes(m.mapeamento[c.id] ?? "")
+                        ? (m.mapeamento[c.id] ?? "")
+                        : "",
+                    ]),
+                  ),
+                }));
+                if (m.srid) setSrid(String(m.srid));
+                setPontoInterior(Boolean(m.usar_ponto_interior));
+              }}
+            />
+            {FORMATOS_COM_POLIGONO.includes(leitura.formato) && (
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4 accent-marca"
+                  checked={pontoInterior}
+                  onChange={(e) => setPontoInterior(e.target.checked)}
+                />
+                <span>
+                  Aceitar polígonos pelo ponto interior
+                  <span className="block text-xs text-texto-suave">
+                    Sem isto, só feições de ponto são importadas e as demais são recusadas com o
+                    motivo.
+                  </span>
+                </span>
+              </label>
+            )}
             <fieldset>
               <legend className="mb-2 text-sm font-medium">Correspondência de colunas</legend>
               <div className="grid grid-cols-2 gap-3">
@@ -497,7 +567,9 @@ function AssistenteImportacao({
                   <Campo
                     key={c.id}
                     rotulo={c.rotulo}
-                    obrigatorio={"obrigatorioCsv" in c && leitura.formato === "csv"}
+                    obrigatorio={
+                      "obrigatorioCsv" in c && FORMATOS_TABULARES.includes(leitura.formato)
+                    }
                     erros={erros[`campo_${c.id}`]}
                   >
                     {(p) => (
@@ -525,18 +597,190 @@ function AssistenteImportacao({
   );
 }
 
+/** Modelos de importação: o mapeamento de colunas salvo, por fonte, para a próxima vez. */
+function ModelosDeMapeamento({
+  fonte,
+  colunas,
+  mapeamento,
+  srid,
+  pontoInterior,
+  aoAplicar,
+}: {
+  fonte: string;
+  colunas: string[];
+  mapeamento: Record<string, string>;
+  srid: string;
+  pontoInterior: boolean;
+  aoAplicar: (modelo: ModeloImportacao) => void;
+}) {
+  const cliente = useQueryClient();
+  const consulta = useModelosImportacaoListar({ fonte: fonte.trim() });
+  const criar = useModelosImportacaoCriar<ErroApi>();
+  const atualizar = useModelosImportacaoAtualizar<ErroApi>();
+  const apagar = useModelosImportacaoApagar<ErroApi>();
+  const [nome, setNome] = useState("");
+  const [escolhido, setEscolhido] = useState("");
+  const [apagando, setApagando] = useState(false);
+  const modelos = consulta.data?.data.results ?? [];
+  const atual = modelos.find((m) => m.id === escolhido) ?? modelos[0];
+  const corpo = {
+    mapeamento: Object.fromEntries(Object.entries(mapeamento).filter(([, coluna]) => coluna)),
+    srid: Number(srid),
+    usar_ponto_interior: pontoInterior,
+  };
+  const refazer = () => invalidarCaminhos(cliente, "/api/v1/modelos-importacao");
+  const erro = criar.error ?? atualizar.error ?? apagar.error;
+  const faltantes = atual
+    ? Object.values(atual.mapeamento).filter((coluna) => !colunas.includes(coluna))
+    : [];
+
+  return (
+    <section
+      aria-label="Modelos de importação"
+      className="flex flex-col gap-2 rounded-md border border-borda p-3 text-sm"
+    >
+      <h3 className="font-medium">Modelos de mapeamento desta fonte</h3>
+      {consulta.isPending ? (
+        <p className="text-texto-suave">Procurando modelos salvos…</p>
+      ) : atual ? (
+        <>
+          <p role="status">
+            Há {plural(modelos.length, "modelo salvo", "modelos salvos")} para “{fonte.trim()}”: use
+            um para preencher as colunas.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {modelos.length > 1 && (
+              <Selecao
+                aria-label="Modelo salvo"
+                className="max-w-56"
+                value={atual.id}
+                onChange={(e) => (setEscolhido(e.target.value), setApagando(false))}
+              >
+                {modelos.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nome}
+                  </option>
+                ))}
+              </Selecao>
+            )}
+            <Botao tamanho="pequeno" onClick={() => aoAplicar(atual)}>
+              Usar o modelo “{atual.nome}”
+            </Botao>
+            <Botao
+              tamanho="pequeno"
+              variante="secundario"
+              disabled={atualizar.isPending}
+              onClick={() =>
+                atualizar.mutate({ id: atual.id, data: corpo }, { onSuccess: () => refazer() })
+              }
+            >
+              Atualizar com as colunas atuais
+            </Botao>
+            <Botao tamanho="pequeno" variante="perigoContorno" onClick={() => setApagando(true)}>
+              Apagar
+            </Botao>
+          </div>
+          {faltantes.length > 0 && (
+            <p className="text-xs text-atencao">
+              Este arquivo não tem as colunas {faltantes.map((c) => `“${c}”`).join(", ")} do modelo;
+              esses campos ficam sem correspondência.
+            </p>
+          )}
+          {apagando && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center gap-2 rounded-md bg-perigo-clara px-3 py-2"
+            >
+              <span>Apagar o modelo “{atual.nome}”? As importações já feitas não mudam.</span>
+              <Botao
+                tamanho="pequeno"
+                variante="perigo"
+                disabled={apagar.isPending}
+                onClick={() =>
+                  apagar.mutate(
+                    { id: atual.id },
+                    { onSuccess: () => (setApagando(false), setEscolhido(""), refazer()) },
+                  )
+                }
+              >
+                Confirmar exclusão
+              </Botao>
+              <Botao tamanho="pequeno" variante="secundario" onClick={() => setApagando(false)}>
+                Manter
+              </Botao>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="text-texto-suave">Nenhum modelo salvo para esta fonte ainda.</p>
+      )}
+      <div className="flex flex-wrap items-end gap-2">
+        <Campo rotulo="Salvar o mapeamento atual como modelo">
+          {(p) => (
+            <Entrada
+              {...p}
+              placeholder="Nome do modelo"
+              maxLength={100}
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+            />
+          )}
+        </Campo>
+        <Botao
+          variante="secundario"
+          disabled={!nome.trim() || criar.isPending}
+          onClick={() =>
+            criar.mutate(
+              { data: { nome: nome.trim(), fonte: fonte.trim(), ...corpo } },
+              { onSuccess: () => (setNome(""), setEscolhido(""), refazer()) },
+            )
+          }
+        >
+          Salvar modelo
+        </Botao>
+      </div>
+      {erro && (
+        <p role="alert" className="text-xs text-perigo">
+          {Object.values(erro.errosDeCampo).flat()[0] ?? erro.message}
+        </p>
+      )}
+    </section>
+  );
+}
+
 function PreVisualizacao({ id, aoFechar }: { id: string; aoFechar: () => void }) {
   const consulta = useImportacoesObter(id);
   const confirmar = useImportacoesConfirmar<ErroApi>();
   const descartar = useImportacoesDescartar<ErroApi>();
   const cliente = useQueryClient();
-  const [filtro, setFiltro] = useState<"todas" | "erros" | "avisos">("todas");
+  const [filtro, setFiltro] = useState<"todas" | "erros" | "avisos" | "atualizacoes">("todas");
+  const [modo, setModo] = useState<ModoEnum>("criar");
+  const [ignorarDuplicatas, setIgnorarDuplicatas] = useState(false);
   const atualizar = () => invalidarCaminhos(cliente, "/api/v1/importacoes");
 
   const lote = consulta.data?.data;
-  const linhas = (lote?.linhas ?? []).filter((l) =>
-    filtro === "erros" ? l.erros.length > 0 : filtro === "avisos" ? l.avisos.length > 0 : true,
+  const resumo = lote?.resumo;
+  const existentes = resumo ? resumo.a_atualizar + resumo.sem_mudanca : 0;
+  const duplicatas = resumo?.duplicatas ?? 0;
+  const aCriar = Math.max(
+    (resumo?.a_criar ?? lote?.linhas_validas ?? 0) - (ignorarDuplicatas ? duplicatas : 0),
+    0,
   );
+  const aAtualizar = modo === "atualizar" ? (resumo?.a_atualizar ?? 0) : 0;
+  const linhas = (lote?.linhas ?? []).filter((l) =>
+    filtro === "erros"
+      ? l.erros.length > 0 && !l.existente
+      : filtro === "avisos"
+        ? l.avisos.length > 0
+        : filtro === "atualizacoes"
+          ? (l.existente?.diferencas.length ?? 0) > 0
+          : true,
+  );
+  const comErro = (lote?.linhas ?? []).filter((l) => l.erros.length > 0 && !l.existente).length;
+  const rotuloImportar =
+    modo === "atualizar" && existentes > 0
+      ? `Importar ${plural(aCriar, "nova")} e atualizar ${plural(aAtualizar, "árvore")}`
+      : `Importar ${plural(aCriar, "árvore")}`;
 
   return (
     <Dialogo
@@ -558,14 +802,15 @@ function PreVisualizacao({ id, aoFechar }: { id: string; aoFechar: () => void })
               Descartar
             </Botao>
             <Botao
-              disabled={lote.linhas_validas === 0 || confirmar.isPending}
+              disabled={aCriar + aAtualizar === 0 || confirmar.isPending}
               onClick={() =>
-                confirmar.mutate({ id }, { onSuccess: async () => (await atualizar(), aoFechar()) })
+                confirmar.mutate(
+                  { id, data: { modo, ignorar_duplicatas: ignorarDuplicatas } },
+                  { onSuccess: async () => (await atualizar(), aoFechar()) },
+                )
               }
             >
-              {confirmar.isPending
-                ? "Importando…"
-                : `Importar ${plural(lote.linhas_validas ?? 0, "árvore")}`}
+              {confirmar.isPending ? "Importando…" : rotuloImportar}
             </Botao>
           </>
         )
@@ -580,20 +825,99 @@ function PreVisualizacao({ id, aoFechar }: { id: string; aoFechar: () => void })
           <Etapas atual={3} />
           {confirmar.error && <p className="text-sm text-perigo">{confirmar.error.message}</p>}
           <p className="text-sm">
-            <strong>{lote!.linhas_validas}</strong> de {lote!.total_linhas} linhas serão importadas.
-            Linhas com erro são ignoradas; avisos não impedem a importação. Todos os valores entram
-            com origem <strong>Importado</strong>. Lotes grandes são importados em segundo plano:
-            você pode fechar esta janela e acompanhar o andamento na lista.
+            <strong>{resumo?.a_criar ?? lote!.linhas_validas}</strong> de {lote!.total_linhas}{" "}
+            linhas viram árvores novas
+            {existentes > 0 && (
+              <>
+                ; <strong>{existentes}</strong> já existem na fonte ({resumo?.a_atualizar ?? 0} com
+                mudanças e {resumo?.sem_mudanca ?? 0} sem mudança)
+              </>
+            )}
+            . {plural(comErro, "linha com erro é ignorada", "linhas com erro são ignoradas")};
+            avisos não impedem a importação. Os valores entram com origem <strong>Importado</strong>
+            . Lotes grandes são importados em segundo plano: você pode fechar esta janela e
+            acompanhar o andamento na lista.
           </p>
-          <div className="flex gap-2">
-            {(["todas", "erros", "avisos"] as const).map((f) => (
+          {lote!.estado === "pre_visualizado" && existentes > 0 && (
+            <fieldset className="rounded-md border border-borda p-3 text-sm">
+              <legend className="px-1 font-medium">Se o identificador já existir na fonte</legend>
+              <label className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="modo-importacao"
+                  className="mt-0.5 size-4 accent-marca"
+                  checked={modo === "criar"}
+                  onChange={() => setModo("criar")}
+                />
+                <span>
+                  Criar só as novas
+                  <span className="block text-xs text-texto-suave">
+                    As árvores que já existem ficam como estão.
+                  </span>
+                </span>
+              </label>
+              <label className="mt-2 flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="modo-importacao"
+                  className="mt-0.5 size-4 accent-marca"
+                  checked={modo === "atualizar"}
+                  onChange={() => setModo("atualizar")}
+                />
+                <span>
+                  Criar as novas e atualizar as existentes
+                  <span className="block text-xs text-texto-suave">
+                    Só muda o que aparece no relatório de diferenças abaixo. Localização só muda se
+                    a origem atual for “importada”, e altura e DAP entram como novas medidas. Lotes
+                    que atualizam árvores não podem ser desfeitos.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+          )}
+          {lote!.estado === "pre_visualizado" && duplicatas > 0 && (
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 size-4 accent-marca"
+                checked={ignorarDuplicatas}
+                onChange={(e) => setIgnorarDuplicatas(e.target.checked)}
+              />
+              <span>
+                Ignorar {plural(duplicatas, "linha apontada", "linhas apontadas")} como possível
+                duplicata
+                <span className="block text-xs text-texto-suave">
+                  São linhas novas a poucos metros de uma árvore ativa já cadastrada. Sem marcar,
+                  elas são criadas mesmo assim.
+                </span>
+              </span>
+            </label>
+          )}
+          {(resumo?.ambiguas ?? 0) > 0 && (
+            <p className="text-sm text-atencao">
+              {plural(
+                resumo?.ambiguas ?? 0,
+                "linha tem nome popular ambíguo e ficará",
+                "linhas têm nome popular ambíguo e ficarão",
+              )}{" "}
+              sem espécie (veja os avisos).
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {(["todas", "erros", "avisos", "atualizacoes"] as const).map((f) => (
               <Botao
                 key={f}
                 tamanho="pequeno"
                 variante={filtro === f ? "primario" : "secundario"}
                 onClick={() => setFiltro(f)}
               >
-                {f === "todas" ? "Todas" : f === "erros" ? "Com erro" : "Com aviso"}
+                {f === "todas"
+                  ? "Todas"
+                  : f === "erros"
+                    ? "Com erro"
+                    : f === "avisos"
+                      ? "Com aviso"
+                      : "Atualizações"}
               </Botao>
             ))}
           </div>
@@ -603,14 +927,14 @@ function PreVisualizacao({ id, aoFechar }: { id: string; aoFechar: () => void })
                 <tr>
                   <Th>Linha</Th>
                   <Th>Dados interpretados</Th>
-                  <Th>Problemas</Th>
+                  <Th>Problemas e diferenças</Th>
                 </tr>
               </thead>
               <tbody>
                 {linhas.slice(0, 500).map((l) => (
                   <Linha
                     key={l.indice}
-                    className={l.erros.length ? "bg-perigo-clara/40" : undefined}
+                    className={l.erros.length && !l.existente ? "bg-perigo-clara/40" : undefined}
                   >
                     <Td>{l.indice}</Td>
                     <Td className="font-mono text-xs">
@@ -620,11 +944,32 @@ function PreVisualizacao({ id, aoFechar }: { id: string; aoFechar: () => void })
                         .join(" · ") || "—"}
                     </Td>
                     <Td className="text-xs">
-                      {l.erros.map((e) => (
-                        <p key={e} className="text-perigo">
-                          {e}
-                        </p>
-                      ))}
+                      {l.existente ? (
+                        <div>
+                          <p className="font-medium">Já existe: {l.existente.codigo}</p>
+                          {l.existente.diferencas.length === 0 ? (
+                            <p className="text-texto-suave">Sem mudanças.</p>
+                          ) : (
+                            <ul aria-label={`Diferenças da linha ${l.indice}`}>
+                              {l.existente.diferencas.map((d) => (
+                                <li key={d.campo}>
+                                  <strong>{d.rotulo}:</strong>{" "}
+                                  <span className="text-texto-suave line-through">
+                                    {d.antigo || "vazio"}
+                                  </span>{" "}
+                                  → <span className="font-medium">{d.novo}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ) : (
+                        l.erros.map((e) => (
+                          <p key={e} className="text-perigo">
+                            {e}
+                          </p>
+                        ))
+                      )}
                       {l.avisos.map((a) => (
                         <p key={a} className="text-atencao">
                           {a}
