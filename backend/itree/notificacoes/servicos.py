@@ -8,13 +8,14 @@ escopo territorial, e o autor da ação nunca notifica a si mesmo.
 from collections.abc import Iterable
 
 from django.db import transaction
+from django.utils import timezone
 
 from itree.alertas.escopo import alerta_no_escopo
 from itree.contas.acesso import area_do_escopo
 from itree.contas.models import Usuario
 from itree.contas.permissoes import Permissao
 
-from .models import Notificacao, PreferenciaNotificacao, TipoNotificacao
+from .models import AjustesNotificacao, Notificacao, PreferenciaNotificacao, TipoNotificacao
 
 
 def destinatarios(permissao: str, geom, excluir=()) -> list[Usuario]:
@@ -37,12 +38,48 @@ def preferencias_do_usuario(usuario) -> dict[str, tuple[bool, bool]]:
     return escolhas
 
 
-def _agendar(usuarios: Iterable[Usuario], tipo: str, titulo: str, texto: str, link: str) -> None:
+def _silenciada(ajustes: AjustesNotificacao | None) -> bool:
+    return bool(
+        ajustes and ajustes.silenciada_ate and timezone.localdate() <= ajustes.silenciada_ate
+    )
+
+
+def _fora_dos_territorios(ajustes: AjustesNotificacao | None, geom) -> bool:
+    """Escolheu bairros e o fato aconteceu fora deles. Sem local, ou sem escolha, não filtra."""
+    if ajustes is None or geom is None:
+        return False
+    escolhidos = list(ajustes.territorios.all())
+    return bool(escolhidos) and not any(t.geom.intersects(geom) for t in escolhidos)
+
+
+def territorios_escolhidos(usuario):
+    """Bairros escolhidos (M-27), ou ``None`` se a pessoa recebe de todo o escopo."""
+    ajustes = AjustesNotificacao.objects.filter(usuario=usuario).first()
+    escolhidos = list(ajustes.territorios.all()) if ajustes else []
+    return escolhidos or None
+
+
+def _agendar(
+    usuarios: Iterable[Usuario], tipo: str, titulo: str, texto: str, link: str, geom=None
+) -> None:
+    """``geom`` é onde o fato aconteceu: quem escolheu bairros só recebe se cair neles."""
     ids = [u.pk for u in usuarios]
     if not ids:
         return
 
     def gravar() -> None:
+        ajustes = {
+            a.usuario_id: a
+            for a in AjustesNotificacao.objects.filter(usuario_id__in=ids).prefetch_related(
+                "territorios"
+            )
+        }
+        # Em silêncio (férias) ou fora dos bairros escolhidos: nada é criado.
+        dispensados = {
+            i
+            for i in ids
+            if _silenciada(ajustes.get(i)) or _fora_dos_territorios(ajustes.get(i), geom)
+        }
         # A preferência vale na hora de gravar: quem silenciou o tipo não recebe nada.
         silenciam = set(
             PreferenciaNotificacao.objects.filter(
@@ -58,7 +95,7 @@ def _agendar(usuarios: Iterable[Usuario], tipo: str, titulo: str, texto: str, li
             [
                 Notificacao(usuario_id=i, tipo=tipo, titulo=titulo, texto=texto, link=link)
                 for i in ids
-                if i not in silenciam
+                if i not in silenciam and i not in dispensados
             ]
         )
         for_email = [str(n.pk) for n in criadas if n.usuario_id in por_email]
@@ -91,6 +128,7 @@ def tarefa_atribuida(tarefa, autor=None) -> None:
         f"Tarefa {tarefa.codigo} atribuída",
         tarefa.descricao[:200] or tarefa.get_tipo_display(),
         "/equipes-tarefas?responsavel=eu",
+        geom=tarefa.geom,
     )
 
 
@@ -122,7 +160,7 @@ def tarefa_concluida_ou_bloqueada(tarefa, autor=None) -> None:
             f"Tarefa {tarefa.codigo} bloqueada",
             tarefa.motivo_estado[:200],
         )
-    _agendar([criador], tipo, titulo, texto, "/equipes-tarefas")
+    _agendar([criador], tipo, titulo, texto, "/equipes-tarefas", geom=tarefa.geom)
 
 
 def risco_confirmado(ocorrencia, autor=None) -> None:
@@ -133,6 +171,7 @@ def risco_confirmado(ocorrencia, autor=None) -> None:
         f"Risco confirmado na ocorrência {ocorrencia.codigo}",
         ocorrencia.risco_descricao[:200],
         f"/ocorrencias/{ocorrencia.pk}",
+        geom=ocorrencia.geom,
     )
 
 
@@ -159,6 +198,7 @@ def inspecao_para_revisao(inspecao) -> None:
         f"Inspeção {inspecao.codigo} aguardando revisão",
         "",
         f"/inspecoes/{inspecao.pk}",
+        geom=inspecao.arvore.geom,
     )
 
 
@@ -170,6 +210,9 @@ def alertas_novos(alertas: list) -> None:
         if not u.tem_permissao(Permissao.ALERTAS_LER):
             continue
         no_escopo = [a for a in alertas if alerta_no_escopo(a, u)]
+        if bairros := territorios_escolhidos(u):
+            # Só os alertas dos bairros escolhidos entram na contagem do aviso.
+            no_escopo = [a for a in no_escopo if any(t.geom.intersects(a.geom) for t in bairros)]
         n = len(no_escopo)
         if n == 0:
             continue

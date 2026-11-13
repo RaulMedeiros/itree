@@ -7,6 +7,7 @@
  */
 
 export * from './acaoComMotivoRequest';
+export * from './ajustesNotificacao';
 export * from './alerta';
 export * from './alertaOcorrencia';
 export * from './alertasArvoresProximasParams';
@@ -35,6 +36,7 @@ export * from './arvoreResumoLocalizacaoOrigem';
 export * from './arvoresContadoresParams';
 export * from './arvoresDuplicidadesParams';
 export * from './arvoresListarParams';
+export * from './atualizarAjustesRequest';
 export * from './atualizarPreferenciasRequest';
 export * from './auditoriaListarParams';
 export * from './blankEnum';
@@ -235,6 +237,7 @@ export * from './tarefasEmLoteRequestFiltrosArvores';
 export * from './tarefasListarParams';
 export * from './tarefaVinculada';
 export * from './territorio';
+export * from './territorioEscolhido';
 export * from './territorioResumo';
 export * from './territorioResumoRequest';
 export * from './territoriosGeojson200';

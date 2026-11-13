@@ -7,8 +7,19 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from .models import GRUPOS, Notificacao, PreferenciaNotificacao, TipoNotificacao
+from itree.contas.acesso import area_do_escopo
+from itree.territorio.models import Territorio, TipoTerritorio
+
+from .models import (
+    GRUPOS,
+    AjustesNotificacao,
+    Notificacao,
+    PreferenciaNotificacao,
+    TipoNotificacao,
+)
 from .serializers import (
+    AjustesNotificacaoSerializer,
+    AtualizarAjustesSerializer,
     AtualizarPreferenciasSerializer,
     ContagemNaoLidasSerializer,
     GrupoNotificacoesSerializer,
@@ -96,6 +107,67 @@ class NotificacaoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                     for t, rotulo in TipoNotificacao.choices
                 ],
                 many=True,
+            ).data
+        )
+
+    @extend_schema(
+        methods=["GET"],
+        operation_id="notificacoes_ajustes",
+        responses=AjustesNotificacaoSerializer,
+    )
+    @extend_schema(
+        methods=["PUT"],
+        operation_id="notificacoes_atualizar_ajustes",
+        request=AtualizarAjustesSerializer,
+        responses=AjustesNotificacaoSerializer,
+    )
+    @action(detail=False, methods=["get", "put"], pagination_class=None)
+    def ajustes(self, request):
+        """Bairros de interesse dentro do escopo e "silenciar até" uma data (M-27).
+
+        Vale para todos os tipos. Em silêncio, ou fora dos bairros escolhidos, a notificação
+        nem chega a ser criada (sino e e-mail).
+        """
+        ajustes = AjustesNotificacao.objects.filter(usuario=request.user).first()
+        if request.method == "PUT":
+            dados = AtualizarAjustesSerializer(data=request.data)
+            dados.is_valid(raise_exception=True)
+            v = dados.validated_data
+            escolhidos = None
+            if "territorios_ids" in v:
+                escolhidos = list(Territorio.objects.filter(pk__in=v["territorios_ids"]))
+                area = area_do_escopo(request.user)
+                invalidos = [
+                    t
+                    for t in escolhidos
+                    if t.tipo != TipoTerritorio.BAIRRO
+                    or area is None
+                    or not area.intersects(t.geom)
+                ]
+                if len(escolhidos) != len(set(v["territorios_ids"])) or invalidos:
+                    raise ValidationError(
+                        {
+                            "territorios_ids": [
+                                "Escolha só bairros dentro do seu escopo territorial."
+                            ]
+                        }
+                    )
+            ajustes, _ = AjustesNotificacao.objects.get_or_create(usuario=request.user)
+            if "silenciada_ate" in v:
+                ajustes.silenciada_ate = v["silenciada_ate"]
+                ajustes.save(update_fields=["silenciada_ate", "atualizado_em"])
+            if escolhidos is not None:
+                ajustes.territorios.set(escolhidos)
+        territorios = list(ajustes.territorios.order_by("nome")) if ajustes else []
+        ate = ajustes.silenciada_ate if ajustes else None
+        hoje = timezone.localdate()
+        return Response(
+            AjustesNotificacaoSerializer(
+                {
+                    "territorios": [{"id": t.pk, "nome": t.nome} for t in territorios],
+                    "silenciada_ate": ate if ate and ate >= hoje else None,
+                    "silenciada": bool(ate and ate >= hoje),
+                }
             ).data
         )
 

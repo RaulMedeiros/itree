@@ -2301,6 +2301,54 @@ paths:
                 items:
                   $ref: '#/components/schemas/GrupoNotificacoes'
           description: ''
+  /api/v1/notificacoes/ajustes:
+    get:
+      operationId: notificacoes_ajustes
+      description: |-
+        Bairros de interesse dentro do escopo e "silenciar até" uma data (M-27).
+
+        Vale para todos os tipos. Em silêncio, ou fora dos bairros escolhidos, a notificação
+        nem chega a ser criada (sino e e-mail).
+      tags:
+      - notificacoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AjustesNotificacao'
+          description: ''
+    put:
+      operationId: notificacoes_atualizar_ajustes
+      description: |-
+        Bairros de interesse dentro do escopo e "silenciar até" uma data (M-27).
+
+        Vale para todos os tipos. Em silêncio, ou fora dos bairros escolhidos, a notificação
+        nem chega a ser criada (sino e e-mail).
+      tags:
+      - notificacoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AtualizarAjustesRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AtualizarAjustesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AtualizarAjustesRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AjustesNotificacao'
+          description: ''
   /api/v1/notificacoes/contagem:
     get:
       operationId: notificacoes_contar
@@ -3490,6 +3538,32 @@ components:
           maxLength: 500
       required:
       - motivo
+    AjustesNotificacao:
+      type: object
+      description: Bairros de interesse e silêncio temporário (M-27).
+      properties:
+        territorios:
+          type: array
+          items:
+            $ref: '#/components/schemas/TerritorioEscolhido'
+          readOnly: true
+          description: Bairros dos quais a pessoa quer receber. Vazio = todo o seu
+            escopo.
+        silenciada_ate:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+          description: Até esta data (inclusive) nenhuma notificação nova é criada.
+            Vazio ou no passado = recebe normalmente.
+        silenciada:
+          type: boolean
+          readOnly: true
+          description: Hoje a pessoa está em silêncio.
+      required:
+      - silenciada
+      - silenciada_ate
+      - territorios
     Alerta:
       type: object
       properties:
@@ -4013,6 +4087,24 @@ components:
       - origem_registro
       - ultima_inspecao_em
       - valida
+    AtualizarAjustesRequest:
+      type: object
+      description: |-
+        Só o que vem no corpo muda: ``territorios_ids`` vazio volta a receber de todo o escopo
+        e ``silenciada_ate`` nulo encerra o silêncio.
+      properties:
+        territorios_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Bairros, todos dentro do escopo territorial de quem pede.
+          maxItems: 200
+        silenciada_ate:
+          type: string
+          format: date
+          nullable: true
+          description: Hoje ou depois (AAAA-MM-DD).
     AtualizarPreferenciasRequest:
       type: object
       properties:
@@ -8014,6 +8106,17 @@ components:
       - nome
       - pai
       - tipo
+    TerritorioEscolhido:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+      required:
+      - id
+      - nome
     TerritorioResumo:
       type: object
       properties:

@@ -25,6 +25,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AjustesNotificacao,
+  AtualizarAjustesRequest,
   AtualizarPreferenciasRequest,
   ContagemNaoLidas,
   GrupoNotificacoes,
@@ -374,7 +376,218 @@ export function useNotificacoesAgrupadas<TData = Awaited<ReturnType<typeof notif
 
 
 
-export type notificacoesContarResponse200 = {
+export type notificacoesAjustesResponse200 = {
+  data: AjustesNotificacao
+  status: 200
+}
+
+export type notificacoesAjustesResponseSuccess = (notificacoesAjustesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type notificacoesAjustesResponse = (notificacoesAjustesResponseSuccess)
+
+export const getNotificacoesAjustesUrl = () => {
+
+
+
+
+  return `/api/v1/notificacoes/ajustes`
+}
+
+/**
+ * Bairros de interesse dentro do escopo e "silenciar até" uma data (M-27).
+ *
+ * Vale para todos os tipos. Em silêncio, ou fora dos bairros escolhidos, a notificação
+ * nem chega a ser criada (sino e e-mail).
+ */
+export const notificacoesAjustes = async ( options?: Parameters<typeof requisicao>[1]): Promise<notificacoesAjustesResponse> => {
+
+  return requisicao<notificacoesAjustesResponse>(getNotificacoesAjustesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getNotificacoesAjustesQueryKey = () => {
+    return [
+    `/api/v1/notificacoes/ajustes`
+    ] as const;
+    }
+
+
+export const getNotificacoesAjustesQueryOptions = <TData = Awaited<ReturnType<typeof notificacoesAjustes>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAjustes>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getNotificacoesAjustesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof notificacoesAjustes>>> = ({ signal }) => notificacoesAjustes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof notificacoesAjustes>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type NotificacoesAjustesQueryResult = NonNullable<Awaited<ReturnType<typeof notificacoesAjustes>>>
+export type NotificacoesAjustesQueryError = unknown
+
+
+export function useNotificacoesAjustes<TData = Awaited<ReturnType<typeof notificacoesAjustes>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAjustes>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof notificacoesAjustes>>,
+          TError,
+          Awaited<ReturnType<typeof notificacoesAjustes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useNotificacoesAjustes<TData = Awaited<ReturnType<typeof notificacoesAjustes>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAjustes>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof notificacoesAjustes>>,
+          TError,
+          Awaited<ReturnType<typeof notificacoesAjustes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useNotificacoesAjustes<TData = Awaited<ReturnType<typeof notificacoesAjustes>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAjustes>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useNotificacoesAjustes<TData = Awaited<ReturnType<typeof notificacoesAjustes>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof notificacoesAjustes>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getNotificacoesAjustesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type notificacoesAtualizarAjustesResponse200 = {
+  data: AjustesNotificacao
+  status: 200
+}
+
+export type notificacoesAtualizarAjustesResponseSuccess = (notificacoesAtualizarAjustesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type notificacoesAtualizarAjustesResponse = (notificacoesAtualizarAjustesResponseSuccess)
+
+export const getNotificacoesAtualizarAjustesUrl = () => {
+
+
+
+
+  return `/api/v1/notificacoes/ajustes`
+}
+
+/**
+ * Bairros de interesse dentro do escopo e "silenciar até" uma data (M-27).
+ *
+ * Vale para todos os tipos. Em silêncio, ou fora dos bairros escolhidos, a notificação
+ * nem chega a ser criada (sino e e-mail).
+ */
+export const notificacoesAtualizarAjustes = async (atualizarAjustesRequest?: AtualizarAjustesRequest, options?: Parameters<typeof requisicao>[1]): Promise<notificacoesAtualizarAjustesResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<notificacoesAtualizarAjustesResponse>(getNotificacoesAtualizarAjustesUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(atualizarAjustesRequest)
+  }
+);}
+
+
+
+
+
+export const getNotificacoesAtualizarAjustesMutationKey = () => ['notificacoesAtualizarAjustes'] as const;
+
+export const getNotificacoesAtualizarAjustesMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificacoesAtualizarAjustes>>, TError,NotificacoesAtualizarAjustesMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof notificacoesAtualizarAjustes>>, TError,NotificacoesAtualizarAjustesMutationVariables, TContext> => {
+
+const mutationKey = getNotificacoesAtualizarAjustesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof notificacoesAtualizarAjustes>>, NotificacoesAtualizarAjustesMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  notificacoesAtualizarAjustes(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type NotificacoesAtualizarAjustesMutationResult = NonNullable<Awaited<ReturnType<typeof notificacoesAtualizarAjustes>>>
+    export type NotificacoesAtualizarAjustesMutationBody = AtualizarAjustesRequest | undefined
+    export type NotificacoesAtualizarAjustesMutationError = unknown
+    export type NotificacoesAtualizarAjustesMutationVariables = {data?: AtualizarAjustesRequest}
+
+    export const useNotificacoesAtualizarAjustes = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof notificacoesAtualizarAjustes>>, TError,NotificacoesAtualizarAjustesMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof notificacoesAtualizarAjustes>>,
+        TError,
+        NotificacoesAtualizarAjustesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getNotificacoesAtualizarAjustesMutationOptions(options), queryClient);
+    }
+    export type notificacoesContarResponse200 = {
   data: ContagemNaoLidas
   status: 200
 }

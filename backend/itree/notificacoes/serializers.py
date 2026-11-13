@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Notificacao, TipoNotificacao
@@ -56,4 +57,48 @@ class AtualizarPreferenciasSerializer(serializers.Serializer):
         tipos = [p["tipo"] for p in valor]
         if len(tipos) != len(set(tipos)):
             raise serializers.ValidationError("Cada tipo pode aparecer uma só vez.")
+        return valor
+
+
+class TerritorioEscolhidoSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    nome = serializers.CharField()
+
+
+class AjustesNotificacaoSerializer(serializers.Serializer):
+    """Bairros de interesse e silêncio temporário (M-27)."""
+
+    territorios = TerritorioEscolhidoSerializer(
+        many=True,
+        read_only=True,
+        help_text="Bairros dos quais a pessoa quer receber. Vazio = todo o seu escopo.",
+    )
+    silenciada_ate = serializers.DateField(
+        read_only=True,
+        allow_null=True,
+        help_text="Até esta data (inclusive) nenhuma notificação nova é criada. "
+        "Vazio ou no passado = recebe normalmente.",
+    )
+    silenciada = serializers.BooleanField(
+        read_only=True, help_text="Hoje a pessoa está em silêncio."
+    )
+
+
+class AtualizarAjustesSerializer(serializers.Serializer):
+    """Só o que vem no corpo muda: ``territorios_ids`` vazio volta a receber de todo o escopo
+    e ``silenciada_ate`` nulo encerra o silêncio."""
+
+    territorios_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=False,
+        max_length=200,
+        help_text="Bairros, todos dentro do escopo territorial de quem pede.",
+    )
+    silenciada_ate = serializers.DateField(
+        required=False, allow_null=True, help_text="Hoje ou depois (AAAA-MM-DD)."
+    )
+
+    def validate_silenciada_ate(self, valor):
+        if valor is not None and valor < timezone.localdate():
+            raise serializers.ValidationError("Escolha hoje ou uma data futura.")
         return valor
