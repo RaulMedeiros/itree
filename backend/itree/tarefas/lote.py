@@ -3,6 +3,7 @@
 from datetime import date
 
 from itree.contas.models import Equipe
+from itree.contas.permissoes import Permissao as P
 from itree.core.lote import Preparo, acao_em_lote
 from itree.notificacoes import servicos as notificacoes
 
@@ -17,6 +18,7 @@ def _preparo(usuario, evento: str, alterar) -> Preparo:
         finais=ESTADOS_FINAIS_TAREFA,
         alterar=alterar,
         evento=evento,
+        permissao=P.TAREFAS_EDITAR,
     )
 
 
