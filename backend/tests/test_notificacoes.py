@@ -479,3 +479,35 @@ def test_ler_grupo_marca_so_o_tipo_e_o_dia_pedidos(cliente, revisor, tecnico_a):
         cliente.post(f"{URL}/ler-grupo", {"tipo": "x", "dia": hoje}, format="json").status_code
         == 400
     )
+
+
+def test_aviso_de_revisao_sai_do_sino_quando_a_inspecao_deixa_a_fila(
+    cliente, executar, tecnico_a, revisor, arvore_a
+):
+    """R3-19: o sino contava avisos velhos; a contagem acompanha a fila de revisão."""
+    itens = [inspecao(arvore_a["id"], enviar_para_revisao=True) for _ in range(3)]
+    with executar():
+        for item in itens:
+            sincronizar(cliente, tecnico_a, item)
+    c = cliente.como(revisor)
+    assert c.get(f"{URL}/contagem").json() == {"nao_lidas": 3}
+    (grupo,) = c.get(f"{URL}/agrupadas").json()
+    assert (grupo["quantidade"], grupo["titulo"]) == (3, "3 inspeções aguardando revisão")
+
+    with executar():
+        r = c.post(f"/api/v1/inspecoes/{itens[0]['id']}/validar", {"aplicar": []}, format="json")
+        assert r.status_code == 200, r.json()
+        r = c.post(
+            f"/api/v1/inspecoes/{itens[1]['id']}/devolver",
+            {"motivo": "Foto ilegível"},
+            format="json",
+        )
+        assert r.status_code == 200, r.json()
+
+    # Só resta uma inspeção em revisão: o sino e o grupo dizem 1, como a fila.
+    assert c.get(f"{URL}/contagem").json() == {"nao_lidas": 1}
+    (grupo,) = c.get(f"{URL}/agrupadas").json()
+    assert grupo["quantidade"] == 1
+    assert grupo["link"] == f"/inspecoes/{itens[2]['id']}"
+    # A lista completa continua mostrando o histórico.
+    assert c.get(URL).json()["count"] == 3

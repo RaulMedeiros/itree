@@ -1,5 +1,5 @@
-from django.db.models import Case, Count, F, IntegerField, Max, Q, When
-from django.db.models.functions import TruncDate
+from django.db.models import Case, CharField, Count, F, IntegerField, Max, Q, Value, When
+from django.db.models.functions import Cast, Concat, TruncDate
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import mixins, viewsets
@@ -8,6 +8,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from itree.contas.acesso import area_do_escopo
+from itree.inspecoes.models import EstadoInspecao, Inspecao
 from itree.territorio.models import Territorio, TipoTerritorio
 
 from .models import (
@@ -53,6 +54,22 @@ class NotificacaoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     def _proprias(self):
         return Notificacao.objects.filter(usuario=self.request.user)
+
+    def _vigentes(self):
+        """As próprias, sem os avisos de "aguardando revisão" de inspeções que já saíram da fila.
+
+        O aviso é um fato do momento em que a inspeção foi enviada. Depois de validada ou
+        devolvida, ele deixa de ser pendência: sem este filtro o sino contava avisos velhos
+        (28) enquanto a fila de revisão tinha 6 (R3-19).
+        """
+        resolvidas = (
+            Inspecao.objects.exclude(estado=EstadoInspecao.EM_REVISAO)
+            .annotate(caminho=Concat(Value("/inspecoes/"), Cast("pk", CharField())))
+            .values("caminho")
+        )
+        return self._proprias().exclude(
+            tipo=TipoNotificacao.INSPECAO_PARA_REVISAO, link__in=resolvidas
+        )
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
@@ -174,7 +191,7 @@ class NotificacaoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     @extend_schema(operation_id="notificacoes_contar", responses=ContagemNaoLidasSerializer)
     @action(detail=False, pagination_class=None)
     def contagem(self, request):
-        return Response({"nao_lidas": self._proprias().filter(lida_em__isnull=True).count()})
+        return Response({"nao_lidas": self._vigentes().filter(lida_em__isnull=True).count()})
 
     @extend_schema(
         operation_id="notificacoes_agrupadas",
@@ -192,7 +209,7 @@ class NotificacaoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         except ValueError:
             raise ValidationError({"limite": ["Informe um número inteiro."]}) from None
         linhas = (
-            self._proprias()
+            self._vigentes()
             .annotate(dia=TruncDate("criado_em"))
             .values("tipo", "dia")
             .annotate(
@@ -208,7 +225,7 @@ class NotificacaoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         grupos = []
         for g in linhas:
             ultima = (
-                self._proprias()
+                self._vigentes()
                 .annotate(dia=TruncDate("criado_em"))
                 .filter(tipo=g["tipo"], dia=g["dia"])
                 .order_by("-criado_em", "-id")
@@ -251,7 +268,7 @@ class NotificacaoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             )
             .update(lida_em=agora, atualizado_em=agora)
         )
-        return Response({"nao_lidas": self._proprias().filter(lida_em__isnull=True).count()})
+        return Response({"nao_lidas": self._vigentes().filter(lida_em__isnull=True).count()})
 
     @extend_schema(operation_id="notificacoes_ler", request=None, responses=NotificacaoSerializer)
     @action(detail=True, methods=["post"])
