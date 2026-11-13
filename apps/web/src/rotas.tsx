@@ -504,6 +504,7 @@ const alertasLista = createRoute({
     fonte: z.enum(["inpe_focos", "inpe_deter", "mapbiomas"]).optional().catch(undefined),
     bairro: textoOpcional,
     raio: raioOpcional,
+    junto_area_verde: z.enum(["1"]).optional().catch(undefined),
     deteccao_desde: dataOpcionalF2,
     deteccao_ate: dataOpcionalF2,
     ordem: z

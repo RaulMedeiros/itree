@@ -236,6 +236,12 @@ paths:
           type: string
         description: AAAA-MM-DD
       - in: query
+        name: junto_area_verde
+        schema:
+          type: string
+        description: '''1'' mantém só os focos junto de parque ou unidade de conservação;
+          ''parque'' ou ''unidade_conservacao'' restringe ao tipo da área.'
+      - in: query
         name: ordem
         schema:
           type: string

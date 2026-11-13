@@ -199,8 +199,15 @@ uv run python manage.py ingerir_focos_historico --desde 2023-01 --ate 2023-03
 ### Focos junto de áreas verdes
 
 - Ao ingerir um foco, o sistema grava o parque ou a unidade de conservação (`areas_verdes`;
-  praça não conta) a até `ALERTAS_FOCOS_RAIO_AREA_VERDE_KM` (padrão 1 km), mesmo fora do
-  município, e o alerta mostra "a 0,6 km do Parque Estadual do Cocó".
+  praça não conta) a até o raio do tipo da área, mesmo fora do município, e o alerta mostra
+  "a 0,6 km do Parque Estadual do Cocó".
+- A distância é geodésica **até o contorno** da área (`ST_Distance` sobre `geography`), não até
+  o centro: um foco a 200 m da borda de um parque grande está a 200 m, e dentro da área está a 0.
+- Raio por tipo: `ALERTAS_FOCOS_RAIO_PARQUE_KM` e `ALERTAS_FOCOS_RAIO_UC_KM`. Sem eles, vale
+  `ALERTAS_FOCOS_RAIO_AREA_VERDE_KM` (padrão 1 km). O buffer do município e do escopo usa o maior
+  dos raios.
+- Na lista de alertas, o filtro "Junto de área verde" (`?junto_area_verde=1`, ou `parque` e
+  `unidade_conservacao` na API) mostra só os focos com a marca.
 - Fora do município só entra o foco que cai no buffer do município e está junto de área
   verde. O escopo dos focos (lista, mapa, painel, relatórios e notificações) ganha o mesmo
   buffer; os outros tipos de alerta seguem o escopo exato.

@@ -235,6 +235,10 @@ ALERTAS_INTERVALO_HORAS = env.int("ALERTAS_INTERVALO_HORAS", default=6)
 # Focos de calor a até este raio (km) de um parque ou unidade de conservação ficam
 # marcados no alerta, mesmo fora do município; o escopo dos focos ganha o mesmo buffer.
 ALERTAS_FOCOS_RAIO_AREA_VERDE_KM = env.float("ALERTAS_FOCOS_RAIO_AREA_VERDE_KM", default=1.0)
+# Raio por tipo de área (AV-07): vazio usa o raio geral acima. A distância é medida até o
+# contorno da área, não até o centro.
+ALERTAS_FOCOS_RAIO_PARQUE_KM = env.float("ALERTAS_FOCOS_RAIO_PARQUE_KM", default=None)
+ALERTAS_FOCOS_RAIO_UC_KM = env.float("ALERTAS_FOCOS_RAIO_UC_KM", default=None)
 
 # --- Referências das espécies (M-01) ------------------------------------------
 # Wikidata, Wikipedia e Wikimedia Commons; a política de uso pede identificação.
