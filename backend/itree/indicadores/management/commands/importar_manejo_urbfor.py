@@ -10,6 +10,7 @@ grava ``IndicadorTerritorialExterno`` (fonte URBFOR, 2023, licença não declara
 ``itree.indicadores.manejo_urbfor``.
 """
 
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -19,20 +20,35 @@ from django.core.management.base import BaseCommand, CommandError
 from itree.indicadores import manejo_urbfor as m
 
 TIMEOUT_S = 120
+TENTATIVAS = 4
+
+
+def _obter(url: str, **kwargs) -> requests.Response:
+    """GET com repetição: o portal de dados abertos de Fortaleza responde 502 e 504 de vez em
+    quando (visto na validação com o dado real) e acerta na tentativa seguinte."""
+    for i in range(TENTATIVAS):
+        try:
+            resposta = requests.get(url, timeout=TIMEOUT_S, **kwargs)
+            resposta.raise_for_status()
+            return resposta
+        except requests.RequestException as exc:
+            status = getattr(exc.response, "status_code", None)
+            if i == TENTATIVAS - 1 or (status is not None and status < 500):
+                raise
+            time.sleep(2 * (i + 1))
+    raise requests.RequestException("sem resposta")  # inalcançável
 
 
 def baixar(api: str = m.API_CKAN, dataset: str = m.DATASET) -> list[tuple[str, bytes]]:
     """Os CSVs do dataset, pela API do CKAN: lista de (nome, conteúdo)."""
     try:
-        resposta = requests.get(api, params={"id": dataset}, timeout=TIMEOUT_S)
-        resposta.raise_for_status()
+        resposta = _obter(api, params={"id": dataset})
         recursos = resposta.json()["result"]["resources"]
         baixados = []
         for recurso in recursos:
             if str(recurso.get("format", "")).lower() != "csv":
                 continue
-            arquivo = requests.get(recurso["url"], timeout=TIMEOUT_S)
-            arquivo.raise_for_status()
+            arquivo = _obter(recurso["url"])
             baixados.append((recurso.get("name") or recurso["url"], arquivo.content))
     except (requests.RequestException, KeyError, ValueError) as exc:
         raise CommandError(f"Não foi possível obter os CSVs da URBFOR: {exc}") from exc

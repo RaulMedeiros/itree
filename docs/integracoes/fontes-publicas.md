@@ -136,12 +136,16 @@ uv run python manage.py importar_manejo_urbfor --arquivo jan2023.csv --arquivo f
   ignoradas. O mês é o do título do arquivo ("JANEIRO (2023)"), não o da data da linha (quatro
   linhas de junho trazem data de julho). As quantidades são as colunas Poda, Supressão e
   Recolhimento; a soma de cada planilha bate com a linha TOTAL dela (conferido nas 10 que a têm).
-- Bairro: lido do fim de cada trecho da descrição ("... - Bairro" ou "..., Bairro.") e comparado
-  com os bairros cadastrados, sem acento nem caixa, com poucas variações de grafia da URBFOR
-  (`APELIDOS` em `itree/indicadores/manejo_urbfor.py`). O serviço só vai a um bairro se todos os
-  trechos apontam para ele. "Praia do Futuro" e "Conjunto Ceará" servem a dois bairros (I e II) e
-  ficam **ambíguos**; o que não se reconhece fica **sem bairro identificado**. Esses dois totais
-  ficam no município, para a soma nunca perder árvore.
+- Bairro: lido do fim de cada trecho da descrição ("... - Bairro", "..., Bairro." ou "3161- Bairro")
+  e comparado com os bairros cadastrados, sem acento nem caixa, com a
+  [tabela de aliases](#aliases-de-bairro-do-manejo-da-urbfor) abaixo. Os trechos se separam por
+  quebra de linha **seguida de uma ação** (Poda, Supressão, Recolhimento) ou por três espaços ou mais;
+  uma quebra de linha no meio do nome ("Luciano \nCavalcante") é só a largura da célula e não separa.
+  "MUTIRÃO" no lugar do bairro ("Parangaba - MUTIRÃO") vale o que vem antes. O serviço só vai a um
+  bairro se todos os trechos apontam para ele. "Praia do Futuro" e "Conjunto Ceará" servem a dois
+  bairros (I e II, **na mesma regional**, então a coluna Regional não desempata) e ficam
+  **ambíguos**; o que não se reconhece fica **sem bairro identificado**. Esses dois totais ficam no
+  município, para a soma nunca perder árvore.
 - Gravação: `IndicadorTerritorialExterno`, um por bairro, mês e ação
   (`manejo_urbfor_poda_202301`, `..._supressao_...`, `..._recolhimento_...`; `manejo_urbfor_sem_bairro_...`
   no município), em árvores, com fonte, URL, licença, data de referência (último dia do mês) e
@@ -151,10 +155,64 @@ uv run python manage.py importar_manejo_urbfor --arquivo jan2023.csv --arquivo f
   bairro com poda, supressão e recolhimento, "Sem bairro identificado" (só no escopo municipal),
   fonte e ressalvas. Não depende do período escolhido e não entra nos indicadores da visão geral.
 - Validação com o dado real (2026-11-12, 11 arquivos): 20.305 árvores (poda 18.056, supressão
-  1.636 e recolhimento 613). Com bairro identificado: 87,3%; ambíguo: 6,2%; sem bairro: 6,5%.
-  182 árvores vêm de serviços cuja "SER n" difere da regional do bairro cadastrado (mantido o
-  bairro). A coluna "Regional" usa a numeração "SER n" do Fortaleza em Mapas (ver a equivalência
-  das regionais).
+  1.636 e recolhimento 613). Com a primeira leitura: bairro identificado 87,3%; ambíguo 6,2%; sem
+  bairro 6,5%. **Depois dos aliases e da leitura das quebras de linha (F-06, 2026-11-13): bairro
+  identificado 91,4% (18.568 árvores); ambíguo 6,2% (1.260); sem bairro 2,3% (477).** Nenhum
+  serviço que já tinha bairro mudou de bairro. 182 árvores vêm de serviços cuja "SER n" difere da
+  regional do bairro cadastrado (mantido o bairro). A coluna "Regional" usa a numeração "SER n" do
+  Fortaleza em Mapas (ver a equivalência das regionais).
+- O que sobra sem bairro (2,3%) é, em ordem de peso: serviços sem bairro no texto (306), "Sítio São
+  João" (49, localidade que não é um dos 121 bairros), só número de imóvel ("n° 330", "n° 65"),
+  esquinas e praças sem bairro. Não entram na tabela: seria chute.
+- Análise e gráficos: a análise "Manejo registrado pela URBFOR (2023)" traz a evolução mensal em
+  dois gráficos (podas; supressão e recolhimento), porque as ordens de grandeza diferem e a paleta
+  validada tem duas cores. **Setembro**, que a fonte não publicou, aparece como "sem dado na fonte"
+  (faixa hachurada, linha interrompida, nunca zero) e vem em `serie_mensal.sem_dado` na API.
+
+#### Aliases de bairro do manejo da URBFOR
+
+Tabela `APELIDOS` em `backend/itree/indicadores/manejo_urbfor.py`. A chave é o texto sem acento,
+caixa nem pontuação. O valor é o nome oficial do bairro no Fortaleza em Mapas (mapa 21) e o teste
+confere que existe entre os 121. Critério: só entra equivalência clara (abreviação, nome parcial ou
+erro de digitação que não casa com outro bairro). Ambiguidade e o que não é bairro ficam de fora.
+
+| Grafia da URBFOR | Bairro oficial | Tipo |
+| --- | --- | --- |
+| Jose Walter, Pref. Jose Walter | Prefeito José Walter | nome parcial |
+| Luciano Cavalcante | Engenheiro Luciano Cavalcante | nome parcial |
+| São João do Tauape, Sã João do Tauape | Tauape | nome parcial |
+| Manoel Dias Branco | Manuel Dias Branco | grafia |
+| Vicente Pizon | Vicente Pinzón | grafia |
+| Manuel Sátiro, Vila Manuel/Manoel Sátiro | Manoel Sátiro | grafia |
+| Jóquei Club, Jóquei | Jóquei Clube | nome parcial |
+| Lourdes | De Lourdes | nome parcial |
+| Bom Sucesso | Bonsucesso | grafia |
+| Palmeiras | Conjunto Palmeiras | nome parcial |
+| Airton Sena | Planalto Ayrton Senna | grafia |
+| Parque Irmãos, Parque Dois Irmão | Parque Dois Irmãos | nome parcial |
+| Monstese | Montese | digitação |
+| Fáima | Fátima | digitação |
+| Aldetoa, Aldeora | Aldeota | digitação |
+| Mondumbi, Mondunbim, Mundubim | Mondubim | digitação |
+| Canidezinho, Canindenzinho | Canindezinho | digitação |
+| Árvaro Weyne | Álvaro Weyne | digitação |
+| Vla Peri | Vila Peri | digitação |
+| Papupina | Paupina | digitação |
+| Panamericando | Panamericano | digitação |
+| Sabiaguababa | Sabiaguaba | digitação |
+| Edsom Queiroz | Edson Queiroz | digitação |
+| Lagoa Redona | Lagoa Redonda | digitação |
+| Padre Adrade | Padre Andrade | digitação |
+| Hennrique Jorge | Henrique Jorge | digitação |
+| Cristo Redentos | Cristo Redentor | digitação |
+| Dionísio T orres, Cid. dos funcionários | Dionísio Torres, Cidade dos Funcionários | quebra de linha ou abreviação |
+| Lagoa Sapiranga | Sapiranga / Coité | nome parcial |
+
+Para acrescentar um alias: confirme no dado real que o texto aparece e só pode ser aquele bairro,
+inclua a linha em `APELIDOS` e um caso no teste (`tests/test_manejo_urbfor.py`, com a linha real em
+`tests/dados/urbfor_aliases_trecho.csv`). O comando lista os textos não reconhecidos que mais pesam.
+O download dos CSVs repete até 4 vezes quando o portal responde 502 ou 504, o que aconteceu na
+validação.
 
 ### Focos de calor diários do INPE
 

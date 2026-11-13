@@ -21,7 +21,7 @@ export interface Analise {
   base_rotulo: string;
   linhas: AnaliseLinhasItem[];
   /**
-     * Evolução mensal (meses AAAA-MM e séries), só nas análises com dimensão temporal.
+     * Evolução mensal (meses AAAA-MM e séries), só nas análises com dimensão temporal. Valor nulo é mês sem dado na fonte (listado em `sem_dado`); `grupos` pede um gráfico por grupo de séries.
      * @nullable
      */
   serie_mensal: AnaliseSerieMensal;

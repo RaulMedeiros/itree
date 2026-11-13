@@ -27,19 +27,37 @@ function teto(maximo: number) {
 export interface Serie {
   id: string;
   rotulo: string;
-  valores: number[];
+  /** Um valor por mês; `null` é mês sem dado na fonte (não é zero). */
+  valores: (number | null)[];
 }
 
-export function GraficoMensal({ meses, series }: { meses: string[]; series: Serie[] }) {
+/** Rótulo do mês que a fonte não publicou, no gráfico, na dica e na tabela. */
+export const ROTULO_SEM_DADO = "sem dado na fonte";
+
+export function GraficoMensal({
+  meses,
+  series,
+  semDado = [],
+}: {
+  meses: string[];
+  series: Serie[];
+  /** Meses (AAAA-MM) que a fonte não publicou: a linha se interrompe e a faixa é marcada. */
+  semDado?: string[];
+}) {
   const [ativo, setAtivo] = useState<number | null>(null);
   const [tabela, setTabela] = useState(false);
   const idTabela = useId();
+  const idHachura = `hachura-${idTabela.replace(/[^a-zA-Z0-9]/g, "")}`;
   const L = 640;
   const A = 220;
   const m = { esq: 36, dir: 96, topo: 12, base: 28 };
   const largura = L - m.esq - m.dir;
   const altura = A - m.topo - m.base;
-  const maximo = teto(Math.max(1, ...series.flatMap((s) => s.valores)));
+  const maximo = teto(
+    Math.max(1, ...series.flatMap((s) => s.valores.filter((v): v is number => v !== null))),
+  );
+  const faltam = new Set(semDado);
+  const passo = largura / Math.max(1, meses.length - 1);
   const x = (i: number) => m.esq + (largura * i) / Math.max(1, meses.length - 1);
   const y = (v: number) => m.topo + altura - (altura * v) / maximo;
   const marcas = [0, maximo / 2, maximo];
@@ -68,6 +86,17 @@ export function GraficoMensal({ meses, series }: { meses: string[]; series: Seri
           aria-label={`Evolução mensal: ${series.map((s) => s.rotulo).join(" e ")}, de ${rotuloMes(meses[0] ?? "")} a ${rotuloMes(meses[meses.length - 1] ?? "")}. Valores na tabela.`}
           onMouseLeave={() => setAtivo(null)}
         >
+          <defs>
+            <pattern
+              id={idHachura}
+              width={6}
+              height={6}
+              patternUnits="userSpaceOnUse"
+              patternTransform="rotate(45)"
+            >
+              <line x1={0} y1={0} x2={0} y2={6} stroke="#9aa59f" strokeWidth={1.5} opacity={0.45} />
+            </pattern>
+          </defs>
           {marcas.map((v) => (
             <g key={v}>
               <line
@@ -101,6 +130,30 @@ export function GraficoMensal({ meses, series }: { meses: string[]; series: Seri
               </text>
             ),
           )}
+          {meses.map((mes, i) =>
+            faltam.has(mes) ? (
+              <g key={`sem-${mes}`} data-testid={`sem-dado-${mes}`}>
+                <rect
+                  x={x(i) - passo / 2}
+                  y={m.topo}
+                  width={passo}
+                  height={altura}
+                  fill={`url(#${idHachura})`}
+                />
+                <text
+                  x={x(i)}
+                  y={m.topo + 12}
+                  textAnchor="middle"
+                  className="fill-texto-suave text-[9px]"
+                >
+                  <tspan x={x(i)}>sem dado</tspan>
+                  <tspan x={x(i)} dy={11}>
+                    na fonte
+                  </tspan>
+                </text>
+              </g>
+            ) : null,
+          )}
           {ativo !== null && (
             <line
               x1={x(ativo)}
@@ -113,44 +166,69 @@ export function GraficoMensal({ meses, series }: { meses: string[]; series: Seri
           )}
           {series.map((s, i) => {
             const cor = CORES_SERIES[i]!;
-            const pontos = s.valores.map((v, j) => `${x(j)},${y(v)}`).join(" ");
-            const ultimo = s.valores.length - 1;
+            // A linha se interrompe nos meses sem dado: nunca liga um mês ao outro por cima do vazio.
+            const trechos: string[][] = [[]];
+            s.valores.forEach((v, j) => {
+              if (v === null) trechos.push([]);
+              else trechos[trechos.length - 1]!.push(`${x(j)},${y(v)}`);
+            });
+            const ultimo = s.valores.findLastIndex((v) => v !== null);
+            const valorAtivo = ativo !== null ? s.valores[ativo] : null;
             return (
               <g key={s.id}>
-                <polyline
-                  points={pontos}
-                  fill="none"
-                  stroke={cor}
-                  strokeWidth={2}
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                />
-                {ativo !== null && (
+                {trechos
+                  .filter((t) => t.length > 0)
+                  .map((t) =>
+                    t.length === 1 ? (
+                      <circle
+                        key={t[0]}
+                        cx={Number(t[0]!.split(",")[0])}
+                        cy={Number(t[0]!.split(",")[1])}
+                        r={2.5}
+                        fill={cor}
+                      />
+                    ) : (
+                      <polyline
+                        key={t[0]}
+                        points={t.join(" ")}
+                        fill="none"
+                        stroke={cor}
+                        strokeWidth={2}
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                      />
+                    ),
+                  )}
+                {ativo !== null && valorAtivo !== null && valorAtivo !== undefined && (
                   <circle
                     cx={x(ativo)}
-                    cy={y(s.valores[ativo] ?? 0)}
+                    cy={y(valorAtivo)}
                     r={4}
                     fill={cor}
                     stroke="#fff"
                     strokeWidth={2}
                   />
                 )}
-                <circle
-                  cx={x(ultimo)}
-                  cy={y(s.valores[ultimo] ?? 0)}
-                  r={4}
-                  fill={cor}
-                  stroke="#fff"
-                  strokeWidth={2}
-                />
-                {/* Rótulo só no fim da linha; texto em cor de texto, identidade pela marca. */}
-                <text
-                  x={x(ultimo) + 8}
-                  y={y(s.valores[ultimo] ?? 0) + 4}
-                  className="fill-texto text-[11px] font-medium tabular-nums"
-                >
-                  {(s.valores[ultimo] ?? 0).toLocaleString("pt-BR")}
-                </text>
+                {ultimo >= 0 && (
+                  <>
+                    <circle
+                      cx={x(ultimo)}
+                      cy={y(s.valores[ultimo] ?? 0)}
+                      r={4}
+                      fill={cor}
+                      stroke="#fff"
+                      strokeWidth={2}
+                    />
+                    {/* Rótulo só no fim da linha; texto em cor de texto, identidade pela marca. */}
+                    <text
+                      x={x(ultimo) + 8}
+                      y={y(s.valores[ultimo] ?? 0) + 4}
+                      className="fill-texto text-[11px] font-medium tabular-nums"
+                    >
+                      {(s.valores[ultimo] ?? 0).toLocaleString("pt-BR")}
+                    </text>
+                  </>
+                )}
               </g>
             );
           })}
@@ -164,7 +242,7 @@ export function GraficoMensal({ meses, series }: { meses: string[]; series: Seri
               height={altura}
               fill="transparent"
               tabIndex={0}
-              aria-label={`${rotuloMes(mes)}: ${series.map((s) => `${s.rotulo} ${s.valores[i]}`).join(", ")}`}
+              aria-label={`${rotuloMes(mes)}: ${faltam.has(mes) ? ROTULO_SEM_DADO : series.map((s) => `${s.rotulo} ${s.valores[i]}`).join(", ")}`}
               onMouseEnter={() => setAtivo(i)}
               onFocus={() => setAtivo(i)}
               onBlur={() => setAtivo(null)}
@@ -182,15 +260,19 @@ export function GraficoMensal({ meses, series }: { meses: string[]; series: Seri
             role="status"
           >
             <p className="mb-0.5 font-semibold">{rotuloMes(meses[ativo] ?? "")}</p>
-            {series.map((s, i) => (
-              <p key={s.id} className="flex items-center gap-1.5 whitespace-nowrap">
-                <span
-                  className="inline-block size-2 rounded-full"
-                  style={{ background: CORES_SERIES[i] }}
-                />
-                {s.rotulo}: <span className="font-medium tabular-nums">{s.valores[ativo]}</span>
-              </p>
-            ))}
+            {faltam.has(meses[ativo] ?? "") ? (
+              <p className="whitespace-nowrap text-texto-suave">{ROTULO_SEM_DADO}</p>
+            ) : (
+              series.map((s, i) => (
+                <p key={s.id} className="flex items-center gap-1.5 whitespace-nowrap">
+                  <span
+                    className="inline-block size-2 rounded-full"
+                    style={{ background: CORES_SERIES[i] }}
+                  />
+                  {s.rotulo}: <span className="font-medium tabular-nums">{s.valores[ativo]}</span>
+                </p>
+              ))
+            )}
           </div>
         )}
       </div>
@@ -218,11 +300,17 @@ export function GraficoMensal({ meses, series }: { meses: string[]; series: Seri
             {meses.map((mes, i) => (
               <tr key={mes} className="border-t border-borda">
                 <td className="py-1">{rotuloMes(mes)}</td>
-                {series.map((s) => (
-                  <td key={s.id} className="py-1 text-right tabular-nums">
-                    {s.valores[i]}
+                {faltam.has(mes) ? (
+                  <td colSpan={series.length} className="py-1 text-right text-texto-suave">
+                    {ROTULO_SEM_DADO}
                   </td>
-                ))}
+                ) : (
+                  series.map((s) => (
+                    <td key={s.id} className="py-1 text-right tabular-nums">
+                      {s.valores[i]}
+                    </td>
+                  ))
+                )}
               </tr>
             ))}
           </tbody>
