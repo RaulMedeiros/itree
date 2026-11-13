@@ -6,7 +6,14 @@ import { Carregando, Erro, Vazio } from "../ui/estados";
 import { Recolhivel } from "../ui/recolhivel";
 import { Selo } from "../ui/selo";
 import { formatarDataHora } from "../util/formatos";
-import { VAZIO, ehVazio, formatarValorCampo, rotuloDoCampo } from "./historicoFormatos";
+import {
+  VAZIO,
+  ehVazio,
+  formatarValorCampo,
+  modeloBase,
+  rotuloDoCampo,
+  valorComUnidade,
+} from "./historicoFormatos";
 
 export interface ContextoEvento {
   user?: string | null;
@@ -36,10 +43,21 @@ export function autorDoEvento(
   return "Sistema";
 }
 
-const OCULTOS = new Set(["criado_em", "atualizado_em", "geom", "id", "numero"]);
+/** `versao` é controle interno de concorrência: não diz nada a quem lê o histórico. */
+const OCULTOS = new Set(["criado_em", "atualizado_em", "geom", "id", "numero", "versao"]);
+
+/** Medida: a unidade vai junto do valor ("38 cm") e não ganha linha própria. */
+const ehMedida = (modelo?: string) => modeloBase(modelo) === "Medida";
 
 /** Campos *_id são referências internas: mostram só que mudaram. */
 const ehReferencia = (campo: string) => campo.endsWith("_id");
+
+function textoDoValor(campo: string, valor: unknown, modelo: string, unidade: unknown): string {
+  if (ehMedida(modelo) && campo === "valor") {
+    return valorComUnidade(valor, unidade) ?? formatarValorCampo(campo, valor, modelo);
+  }
+  return formatarValorCampo(campo, valor, modelo);
+}
 
 export function DetalhesEvento({ evento }: { evento: EventoAuditoria }) {
   const diferencas = evento.diferencas as Record<string, [unknown, unknown]> | null;
@@ -47,7 +65,13 @@ export function DetalhesEvento({ evento }: { evento: EventoAuditoria }) {
   const modelo = evento.entidade_modelo;
 
   if (evento.acao === "alteracao") {
-    const linhas = Object.entries(diferencas ?? {}).filter(([campo]) => !OCULTOS.has(campo));
+    const unidade = dados.unidade;
+    const linhas = Object.entries(diferencas ?? {}).filter(
+      ([campo]) =>
+        !OCULTOS.has(campo) &&
+        // A unidade só ganha linha própria quando ela mesma mudou e não há valor ao lado.
+        !(ehMedida(modelo) && campo === "unidade" && diferencas?.valor),
+    );
     if (diferencas?.geom) linhas.unshift(["localizacao", ["(anterior)", "(nova)"]]);
     if (linhas.length === 0) {
       return (
@@ -76,14 +100,14 @@ export function DetalhesEvento({ evento }: { evento: EventoAuditoria }) {
                   ? antes
                     ? "Referência anterior"
                     : VAZIO
-                  : formatarValorCampo(campo, antes, modelo)}
+                  : textoDoValor(campo, antes, modelo, unidade)}
               </td>
               <td className="text-sucesso">
                 {ehReferencia(campo)
                   ? depois
                     ? "Nova referência"
                     : VAZIO
-                  : formatarValorCampo(campo, depois, modelo)}
+                  : textoDoValor(campo, depois, modelo, unidade)}
               </td>
             </tr>
           ))}
@@ -92,14 +116,18 @@ export function DetalhesEvento({ evento }: { evento: EventoAuditoria }) {
     );
   }
   const itens = Object.entries(dados).filter(
-    ([campo, valor]) => !OCULTOS.has(campo) && !ehReferencia(campo) && !ehVazio(valor),
+    ([campo, valor]) =>
+      !OCULTOS.has(campo) &&
+      !ehReferencia(campo) &&
+      !ehVazio(valor) &&
+      !(ehMedida(modelo) && campo === "unidade" && valorComUnidade(dados.valor, valor)),
   );
   return (
     <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-0.5 text-sm">
       {itens.map(([campo, valor]) => (
         <Fragment key={campo}>
           <dt className="text-texto-suave">{rotuloDoCampo(campo)}</dt>
-          <dd className="break-words">{formatarValorCampo(campo, valor, modelo)}</dd>
+          <dd className="break-words">{textoDoValor(campo, valor, modelo, dados.unidade)}</dd>
         </Fragment>
       ))}
     </dl>

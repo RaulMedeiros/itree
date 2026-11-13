@@ -116,3 +116,71 @@ describe("formatarValorCampo", () => {
     expect(rotuloDoCampo("campo_inedito")).toBe("Campo inedito");
   });
 });
+
+describe("histórico de medidas (R3-26)", () => {
+  it("lê o modelo como a API o manda e mostra valor com unidade, sem a versão", () => {
+    render(
+      <LinhaDoTempo
+        carregando={false}
+        eventos={[
+          evento({
+            // A API manda o modelo rastreado, sem o sufixo "Event".
+            entidade_modelo: "inventario.Medida",
+            dados: {
+              tipo: "dap",
+              origem: "medido",
+              valor: "38.00",
+              unidade: "cm",
+              versao: 1,
+            },
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("DAP")).toBeInTheDocument();
+    expect(screen.getByText("Medido")).toBeInTheDocument();
+    expect(screen.getByText("38 cm")).toBeInTheDocument();
+    expect(screen.queryByText("Unidade")).not.toBeInTheDocument();
+    expect(screen.queryByText("Versão")).not.toBeInTheDocument();
+    expect(screen.queryByText("dap")).not.toBeInTheDocument();
+  });
+
+  it("usa o rótulo com acento do estado da inspeção, também com o modelo sem sufixo", () => {
+    render(
+      <LinhaDoTempo
+        carregando={false}
+        eventos={[
+          evento({
+            entidade: "Inspeção",
+            entidade_modelo: "inspecoes.Inspecao",
+            acao: "alteracao",
+            diferencas: { estado: ["rascunho", "em_revisao"], versao: [1, 2] },
+            dados: {},
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("Em revisão")).toBeInTheDocument();
+    expect(screen.getByText("Rascunho")).toBeInTheDocument();
+    expect(screen.queryByText(/revisao/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("rowheader", { name: "Versão" })).not.toBeInTheDocument();
+  });
+
+  it("mostra o valor alterado de uma medida com a unidade", () => {
+    render(
+      <LinhaDoTempo
+        carregando={false}
+        eventos={[
+          evento({
+            entidade_modelo: "inventario.Medida",
+            acao: "alteracao",
+            diferencas: { valor: ["38.00", "40.00"] },
+            dados: { unidade: "cm" },
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("38 cm")).toBeInTheDocument();
+    expect(screen.getByText("40 cm")).toBeInTheDocument();
+  });
+});

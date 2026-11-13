@@ -183,8 +183,26 @@ export function rotuloDoCampo(campo: string): string {
   return ROTULOS_CAMPO[campo] ?? humanizar(campo);
 }
 
-/** "inventario.ArvoreEvent" -> "ArvoreEvent". */
-const nomeDoModelo = (modelo?: string) => (modelo ?? "").split(".").pop() ?? "";
+/**
+ * "inventario.Medida" ou "inventario.MedidaEvent" -> "MedidaEvent". A API manda o modelo
+ * rastreado ("inventario.Medida"); os mapas abaixo usam o nome do modelo de evento.
+ */
+const nomeDoModelo = (modelo?: string) => {
+  const nome = (modelo ?? "").split(".").pop() ?? "";
+  return nome && !nome.endsWith("Event") ? `${nome}Event` : nome;
+};
+
+/** Nome do modelo sem o prefixo do app nem o sufixo "Event": "Medida", "Inspecao". */
+export const modeloBase = (modelo?: string) => nomeDoModelo(modelo).replace(/Event$/, "");
+
+/**
+ * Valor de uma medida com a unidade na mesma linha ("38 cm"). Devolve `undefined`
+ * quando a unidade não vem nos dados.
+ */
+export function valorComUnidade(valor: unknown, unidade: unknown): string | undefined {
+  if (ehVazio(valor) || typeof unidade !== "string" || unidade.trim() === "") return undefined;
+  return `${formatarValorCampo("valor", valor)} ${unidade.trim()}`;
+}
 
 function rotulosDoCampo(campo: string, modelo?: string): Rotulos | undefined {
   const m = nomeDoModelo(modelo);
