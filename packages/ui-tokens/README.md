@@ -46,6 +46,7 @@ também em `tokens.ts`.
 | selo marca-escura sobre marca-clara                            | 8,10:1  | 4,5:1  |
 | selo info sobre info-clara                                     | 5,50:1  | 4,5:1  |
 | selo atencao sobre atencao-clara                               | 5,28:1  | 4,5:1  |
+| selo alerta sobre alerta-clara                                 | 6,28:1  | 4,5:1  |
 | selo perigo sobre perigo-clara                                 | 5,50:1  | 4,5:1  |
 | selo sucesso sobre sucesso-clara                               | 5,55:1  | 4,5:1  |
 | marca sobre fundo                                              | 6,02:1  | 4,5:1  |
@@ -56,6 +57,8 @@ também em `tokens.ts`.
 | info sobre superficie                                          | 6,45:1  | 4,5:1  |
 | atencao sobre fundo                                            | 5,52:1  | 4,5:1  |
 | atencao sobre superficie                                       | 5,93:1  | 4,5:1  |
+| alerta sobre fundo                                             | 6,88:1  | 4,5:1  |
+| alerta sobre superficie                                        | 7,40:1  | 4,5:1  |
 | perigo sobre fundo                                             | 6,08:1  | 4,5:1  |
 | perigo sobre superficie                                        | 6,54:1  | 4,5:1  |
 | sucesso sobre fundo                                            | 6,02:1  | 4,5:1  |

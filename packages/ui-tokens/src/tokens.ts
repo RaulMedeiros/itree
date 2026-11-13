@@ -22,6 +22,8 @@ export const cores = {
   infoClara: "#e4eefa",
   atencao: "#8a5a00",
   atencaoClara: "#fcf1d9",
+  alerta: "#5a3bc2",
+  alertaClara: "#efeafc",
   perigo: "#b3261e",
   perigoClara: "#fbe7e5",
   sucesso: "#1f6b45",

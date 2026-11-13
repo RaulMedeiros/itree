@@ -262,13 +262,23 @@ function montarPares(t) {
     ["marca-escura", "marca-clara"],
     ["info", "info-clara"],
     ["atencao", "atencao-clara"],
+    ["alerta", "alerta-clara"],
     ["perigo", "perigo-clara"],
     ["sucesso", "sucesso-clara"],
   ]) {
     p(`selo ${texto} sobre ${fundo}`, texto, fundo);
   }
   // Texto semântico solto (mensagens, valores) sobre fundo e superfície.
-  for (const texto of ["marca", "marca-escura", "info", "atencao", "perigo", "sucesso", "neutro"]) {
+  for (const texto of [
+    "marca",
+    "marca-escura",
+    "info",
+    "atencao",
+    "alerta",
+    "perigo",
+    "sucesso",
+    "neutro",
+  ]) {
     for (const fundo of ["fundo", "superficie"]) p(`${texto} sobre ${fundo}`, texto, fundo);
   }
   p(
@@ -309,6 +319,8 @@ export function verificar(css, mapa, coropletica, supressao) {
     "info-clara",
     "atencao",
     "atencao-clara",
+    "alerta",
+    "alerta-clara",
     "perigo",
     "perigo-clara",
     "sucesso",
