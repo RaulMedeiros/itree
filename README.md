@@ -140,6 +140,8 @@ cd backend && uv run ruff check . && uv run pytest
 A CI (`.github/workflows/ci.yml`) roda tudo isso e também confere se o contrato
 OpenAPI e o cliente gerado estão atualizados.
 
+Para reportar uma vulnerabilidade, veja [`SECURITY.md`](SECURITY.md).
+
 ## Como contribuir com as specs
 
 1. Toda mudança de spec é feita via pull request.
