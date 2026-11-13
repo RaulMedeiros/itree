@@ -175,7 +175,26 @@ describe("sino de notificações (RF-SHELL-002)", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Notificações: 5 não lidas/ }));
     const item = await screen.findByRole("menuitem", { name: /5 inspeções aguardando revisão/ });
     expect(screen.queryByText(/Inspeção INS-0/)).toBeNull();
-    expect(screen.getAllByRole("menuitem").filter((m) => m !== item)).toHaveLength(1); // "Ver todas"
+    expect(screen.getAllByRole("menuitem").filter((m) => m !== item)).toHaveLength(2); // "Marcar todas como lidas" e "Ver todas"
+  });
+
+  it("alcança 'Marcar todas como lidas' pelas setas e marca com Enter, sem fechar o menu", async () => {
+    notificacoes = [notificacao({ id: "a" })];
+    grupos = [grupo({})];
+    await abrir();
+    const sino = await screen.findByRole("button", { name: /Notificações: 1 não lida/ });
+    sino.focus();
+    await userEvent.keyboard("{Enter}");
+    await screen.findByRole("menuitem", { name: /1 novo alerta ambiental/ });
+    const todas = screen.getByRole("menuitem", { name: "Marcar todas como lidas" });
+    // Setas até o item (a ordem exata depende do foco inicial do Radix).
+    for (let i = 0; i < 4 && document.activeElement !== todas; i++) {
+      await userEvent.keyboard("{ArrowDown}");
+    }
+    expect(todas).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(chamadas).toEqual(["ler-todas"]));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
   it("leva à central de notificações pelo link Ver todas", async () => {
@@ -205,7 +224,7 @@ describe("sino de notificações (RF-SHELL-002)", () => {
     ];
     await abrir();
     await userEvent.click(await screen.findByRole("button", { name: /Notificações: 2 não lidas/ }));
-    await userEvent.click(await screen.findByRole("button", { name: "Marcar todas como lidas" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Marcar todas como lidas" }));
     await waitFor(() => expect(chamadas).toEqual(["ler-todas"]));
     // O menu continua aberto (o resto da página fica oculto para leitores de tela).
     expect(
