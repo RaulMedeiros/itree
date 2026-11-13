@@ -82,6 +82,7 @@ async function abrir(caminho: string) {
       <RouterProvider router={roteador} />
     </QueryClientProvider>,
   );
+  return roteador;
 }
 
 describe("formatos em português", () => {
@@ -283,6 +284,16 @@ describe("cabeçalho", () => {
     expect(screen.queryByRole("note")).toBeNull();
     expect(screen.getByTestId("shell")).toHaveClass("h-dvh", "overflow-hidden");
     expect(screen.getByRole("main")).toHaveClass("min-h-0", "flex-1", "overflow-auto");
+  });
+
+  it("volta a área de conteúdo ao topo ao trocar de página (R3-01)", async () => {
+    const roteador = await abrir("/administracao/integracoes");
+    await screen.findByText("Ana Admin");
+    const principal = screen.getByRole("main");
+    const rolar = vi.fn();
+    principal.scrollTo = rolar as unknown as typeof principal.scrollTo;
+    await roteador.navigate({ to: "/alertas" });
+    await vi.waitFor(() => expect(rolar).toHaveBeenCalledWith({ top: 0 }));
   });
 
   it("marca Ocorrências como ativo na lista de alertas ambientais (R3-02)", async () => {

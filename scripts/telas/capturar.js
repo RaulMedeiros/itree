@@ -31,6 +31,17 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     await p.waitForLoadState("networkidle").catch(() => undefined);
     if (acao) await acao(p);
     await p.waitForTimeout(espera);
+    if (inteira) {
+      // O shell limita a altura à janela e rola o <main>; para a captura da página
+      // inteira, solta os limites.
+      await p.evaluate(() => {
+        const shell = document.querySelector('[data-testid="shell"]');
+        const main = shell?.querySelector("main");
+        for (const el of [shell, main?.parentElement, main?.parentElement?.parentElement, main]) {
+          if (el) Object.assign(el.style, { height: "auto", overflow: "visible" });
+        }
+      });
+    }
     await p.screenshot({ path: `${SAIDA}/${nome}.png`, fullPage: inteira });
     console.log("ok", nome, "—", await p.title());
   } catch (e) {

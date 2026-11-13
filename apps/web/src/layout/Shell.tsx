@@ -1,4 +1,5 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { ChevronDown, CircleHelp, LogOut, UserRound } from "lucide-react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { ROTULOS_PAPEL } from "@itree/domain";
@@ -19,6 +20,13 @@ export function Shell() {
   const modulos = modulosVisiveis(eu.permissoes, config.mostrarModulosFuturos);
   const caminho = useRouterState({ select: (e) => e.location.pathname });
   const ativo = moduloAtivo(modulos, caminho);
+  const principal = useRef<HTMLElement>(null);
+
+  // Quem rola agora é o <main>, não a janela: ao trocar de página, volta ao topo
+  // como a janela voltaria.
+  useEffect(() => {
+    principal.current?.scrollTo?.({ top: 0 });
+  }, [caminho]);
 
   // Altura limitada à janela (R3-01): a faixa de demonstração e o cabeçalho
   // ficam com a altura própria, a área de conteúdo ocupa o restante e rola por
@@ -74,7 +82,7 @@ export function Shell() {
         </aside>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Cabecalho />
-          <main className="min-h-0 flex-1 overflow-auto p-6">
+          <main ref={principal} className="min-h-0 flex-1 overflow-auto p-6">
             <Outlet />
           </main>
         </div>
