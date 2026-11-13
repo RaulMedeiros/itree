@@ -105,6 +105,15 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
       espera: 5000,
     },
   );
+  await tela(
+    p,
+    "37-mapa-censo",
+    `/mapa?lon=${-38.54}&lat=${-3.76}&zoom=11.6&arborizacao_entorno=1`,
+    {
+      esperar: "Legenda",
+      espera: 5000,
+    },
+  );
   await tela(p, "36-notificacoes", "/visao-geral", {
     esperar: "Como é calculado",
     espera: 1500,

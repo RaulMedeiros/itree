@@ -30,14 +30,14 @@ done
 MAPAS="https://mapas.fortaleza.ce.gov.br/api/v1/geojson?id="
 CENSO="https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/Agregados_por_Bairro_csv/Agregados_por_bairros_entorno_faces_BR.zip"
 TMP="$(mktemp -d)"
-if curl -sf -m 60 "${MAPAS}17" -o "$TMP/regionais.geojson" && curl -sf -m 60 "${MAPAS}21" -o "$TMP/bairros.geojson"; then
+if curl -sf -m 90 --retry 4 --retry-all-errors "${MAPAS}17" -o "$TMP/regionais.geojson" && curl -sf -m 90 --retry 4 --retry-all-errors "${MAPAS}21" -o "$TMP/bairros.geojson"; then
   docker compose cp "$TMP/regionais.geojson" api:/tmp/telas-dados/regionais-oficiais.geojson
   docker compose cp "$TMP/bairros.geojson" api:/tmp/telas-dados/bairros-oficiais.geojson
   $M importar_limites_fortaleza --arquivo-regionais /tmp/telas-dados/regionais-oficiais.geojson \
     --arquivo-bairros /tmp/telas-dados/bairros-oficiais.geojson --municipio Fortaleza
   MUNICIPIO="Fortaleza"
   # Arborização do entorno por bairro (IBGE, Censo 2022), cruzada pelo código IBGE.
-  if curl -sf -m 120 "$CENSO" -o "$TMP/censo.zip"; then
+  if curl -sf -m 180 --retry 4 --retry-all-errors "$CENSO" -o "$TMP/censo.zip"; then
     docker compose cp "$TMP/censo.zip" api:/tmp/telas-dados/censo-entorno.zip
     $M importar_censo_arborizacao --arquivo /tmp/telas-dados/censo-entorno.zip || true
   fi
