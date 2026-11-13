@@ -8,9 +8,9 @@ Instruções permanentes para sessões do Claude Code neste repositório.
   termina com o **registro do estimado e do real**. A base, a regra prática e a
   tabela de registro estão em [docs/melhoria/estimativas.md](docs/melhoria/estimativas.md).
   Leia esse arquivo antes de estimar e atualize-o ao terminar.
-- **Regra prática atual:** cerca de 50 mil tokens por item de backlog, mais
-  40 mil por PR integrado, mais 20% de folga. Ela será revista conforme os
-  registros.
+- **Regra prática atual:** item pequeno ~25 mil tokens; item de funcionalidade
+  ~50 mil; item estrutural 150–200 mil; mais 40 mil por PR integrado e 20% de
+  folga. Detalhes e histórico em `docs/melhoria/estimativas.md`.
 - **Aprenda a cada plano.** Compare o estimado com o real, que é a soma dos
   `subagent_tokens` de cada entrega mais a integração. Se o erro passar de 25%,
   anote a causa e ajuste a regra prática no documento.
