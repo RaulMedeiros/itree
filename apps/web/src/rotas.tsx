@@ -251,6 +251,7 @@ const mapa = createRoute({
     ocorrencias: bandeira("0"),
     bairros: bandeira("0"),
     areas_verdes: bandeira("1"),
+    supressao_anual: bandeira("1"),
     /** Subtipo das praças mostrado na camada de áreas verdes; vazio mostra todos. */
     subtipo_praca: z
       .enum(["praca", "areninha", "calcadao", "rotatoria", "sem_denominacao"])
@@ -504,6 +505,7 @@ const alertasLista = createRoute({
     fonte: z.enum(["inpe_focos", "inpe_deter", "mapbiomas"]).optional().catch(undefined),
     bairro: textoOpcional,
     raio: raioOpcional,
+    junto_area_verde: z.enum(["1"]).optional().catch(undefined),
     deteccao_desde: dataOpcionalF2,
     deteccao_ate: dataOpcionalF2,
     ordem: z

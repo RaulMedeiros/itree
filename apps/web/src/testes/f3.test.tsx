@@ -272,6 +272,26 @@ describe("alertas ambientais", () => {
     expect(screen.getByText("1 aberta a até 250 m")).toBeInTheDocument();
   });
 
+  it("o filtro 'Junto de área verde' vai para a API e fica na URL", async () => {
+    const usuario = userEvent.setup();
+    const { criarRoteador } = await import("../rotas");
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <RouterProvider
+          router={criarRoteador(createMemoryHistory({ initialEntries: ["/alertas"] }))}
+        />
+      </QueryClientProvider>,
+    );
+    const caixa = await screen.findByRole("checkbox", { name: "Junto de área verde" });
+    expect(caixa).not.toBeChecked();
+    expect(parametrosLista.at(-1)?.get("junto_area_verde")).toBeNull();
+    await usuario.click(caixa);
+    await vi.waitFor(() => expect(parametrosLista.at(-1)?.get("junto_area_verde")).toBe("1"));
+    expect(await screen.findByRole("checkbox", { name: "Junto de área verde" })).toBeChecked();
+  });
+
   it("o raio do detalhe vale para a contagem e para a lista de árvores", async () => {
     const usuario = userEvent.setup();
     const { criarRoteador } = await import("../rotas");

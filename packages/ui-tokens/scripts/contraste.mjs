@@ -148,6 +148,16 @@ export function lerCoropletica(coropleticaTs) {
   return { cores, opacidade: Number(opacidade[1]) };
 }
 
+/** Lê a rampa e a opacidade da supressão anual (PRODES) em `simbologia.ts`. */
+export function lerSupressao(simbologiaTs) {
+  const lista = simbologiaTs.match(/CORES_SUPRESSAO_ANUAL\s*=\s*\[([^\]]+)\]/);
+  if (!lista) throw new Error("Não achei CORES_SUPRESSAO_ANUAL para checar o contraste do mapa.");
+  const cores = [...lista[1].matchAll(/"(#[0-9a-fA-F]{6})"/g)].map((m) => m[1].toLowerCase());
+  const opacidade = simbologiaTs.match(/OPACIDADE_SUPRESSAO_ANUAL\s*=\s*([0-9.]+)/);
+  if (!opacidade) throw new Error("Não achei OPACIDADE_SUPRESSAO_ANUAL.");
+  return { cores, opacidade: Number(opacidade[1]) };
+}
+
 /** Separação mínima entre classes vizinhas da rampa: o suficiente para ler a ordem. */
 const ENTRE_CLASSES = 1.4;
 
@@ -175,6 +185,32 @@ function paresDaColoropletica(coro, mapa) {
     pares.push({
       descricao: `arborização do entorno: classe mais escura sobre ${nome}`,
       frente: pintadas.at(-1),
+      fundo: base,
+      minimo: NAO_TEXTO,
+    });
+  }
+  return pares;
+}
+
+/**
+ * Supressão anual (PRODES): rampa de duas pontas, do mais antigo ao mais recente. As pontas se
+ * distinguem entre si (≥ 1,4:1) e a mais escura contrasta ≥ 3:1 com o mapa base, em cada fundo
+ * do OSM. A mais clara pode se aproximar do fundo; o contorno e a legenda delimitam o polígono.
+ */
+function paresDaSupressao(sup, mapa) {
+  const pares = [];
+  for (const [nome, osm] of FUNDOS_OSM) {
+    const base = pinturaRaster(osm, mapa.raster);
+    const [clara, escura] = sup.cores.map((c) => compor(c, base, sup.opacidade));
+    pares.push({
+      descricao: `supressão anual: ano mais recente sobre ano mais antigo, sobre ${nome}`,
+      frente: escura,
+      fundo: clara,
+      minimo: ENTRE_CLASSES,
+    });
+    pares.push({
+      descricao: `supressão anual: ano mais recente sobre ${nome}`,
+      frente: escura,
       fundo: base,
       minimo: NAO_TEXTO,
     });
@@ -252,7 +288,7 @@ function montarPares(t) {
   return pares.map((x) => ({ ...x, frente: cor(x.frente), fundo: cor(x.fundo) }));
 }
 
-export function verificar(css, mapa, coropletica) {
+export function verificar(css, mapa, coropletica, supressao) {
   const t = lerTokens(css);
   const ausentes = [];
   const exigidos = [
@@ -286,6 +322,7 @@ export function verificar(css, mapa, coropletica) {
     ...montarPares(t),
     ...(mapa ? paresDoMapa(mapa) : []),
     ...(mapa && coropletica ? paresDaColoropletica(coropletica, mapa) : []),
+    ...(mapa && supressao ? paresDaSupressao(supressao, mapa) : []),
   ];
   return pares.map((x) => ({ ...x, razao: razao(x.frente, x.fundo) }));
 }
@@ -312,7 +349,8 @@ function principal() {
     readFileSync(join(web, "estilo.ts"), "utf8"),
   );
   const coropletica = lerCoropletica(readFileSync(join(web, "coropletica.ts"), "utf8"));
-  const resultados = verificar(css, mapa, coropletica);
+  const supressao = lerSupressao(readFileSync(join(web, "simbologia.ts"), "utf8"));
+  const resultados = verificar(css, mapa, coropletica, supressao);
   let falhas = 0;
   for (const r of resultados) {
     const ok = r.razao >= r.minimo;

@@ -5,8 +5,19 @@ polígono do alerta; árvore dentro do polígono está a 0 m. Tudo respeita o
 escopo territorial de quem consulta.
 """
 
+from django.conf import settings
 from django.contrib.gis.db.models import GeometryField
-from django.db.models import BooleanField, Count, F, FloatField, Func, OuterRef, Subquery, Value
+from django.db.models import (
+    BooleanField,
+    Count,
+    F,
+    FloatField,
+    Func,
+    OuterRef,
+    Q,
+    Subquery,
+    Value,
+)
 
 from itree.areas_verdes.models import AreaVerde, TipoAreaVerde
 from itree.contas.acesso import filtrar_por_escopo
@@ -109,23 +120,44 @@ def Coalesce0(expressao):  # noqa: N802 - atalho local
 TIPOS_AREA_VERDE_PROXIMA = (TipoAreaVerde.PARQUE, TipoAreaVerde.UNIDADE_CONSERVACAO)
 
 
-def area_verde_proxima(geom, raio_km: float) -> dict | None:
-    """Parque ou unidade de conservação mais próximo a até ``raio_km`` de ``geom``.
+def raios_area_verde_km() -> dict[str, float]:
+    """Raio (km) de cada tipo de área verde que conta como "junto" de um foco (AV-07).
 
-    Praça não conta: o sinal é de foco perto de vegetação de maior porte. A área
-    pode estar fora do município. Devolve nome, tipo e distância em metros (0 se o
-    foco está dentro da área), ou ``None`` quando não há nenhuma no raio.
+    Parque e unidade de conservação podem ter raios próprios (``ALERTAS_FOCOS_RAIO_PARQUE_KM``
+    e ``ALERTAS_FOCOS_RAIO_UC_KM``); sem eles, vale o raio geral.
     """
+    geral = settings.ALERTAS_FOCOS_RAIO_AREA_VERDE_KM
+    return {
+        TipoAreaVerde.PARQUE: getattr(settings, "ALERTAS_FOCOS_RAIO_PARQUE_KM", None) or geral,
+        TipoAreaVerde.UNIDADE_CONSERVACAO: getattr(settings, "ALERTAS_FOCOS_RAIO_UC_KM", None)
+        or geral,
+    }
+
+
+def raio_maximo_km() -> float:
+    """Maior raio entre os tipos: é o buffer do município e do escopo para os focos."""
+    return max(raios_area_verde_km().values())
+
+
+def area_verde_proxima(geom, raio_km: float | None = None) -> dict | None:
+    """Parque ou unidade de conservação mais próximo de ``geom``, dentro do raio do seu tipo.
+
+    A distância é geodésica **até o contorno** da área (``ST_Distance`` sobre ``geography``),
+    e não até o centro: um foco a 200 m da borda de um parque grande está a 200 m, mesmo que o
+    centro fique a quilômetros. Dentro da área, 0. Praça não conta: o sinal é de foco perto de
+    vegetação de maior porte. A área pode estar fora do município. ``raio_km`` força o mesmo
+    raio para os dois tipos; sem ele, vale o raio de cada tipo (``raios_area_verde_km``).
+    Devolve nome, tipo e distância em metros, ou ``None`` quando não há nenhuma no raio.
+    """
+    alvo = Value(geom, output_field=GeometryField(srid=4326))
+    raios = raios_area_verde_km()
+    dentro = Q()
+    for tipo in TIPOS_AREA_VERDE_PROXIMA:
+        raio = raio_km if raio_km is not None else raios[tipo]
+        dentro |= Q(tipo=tipo) & Q(DentroDoRaio(F("geom"), alvo, Value(raio * 1000)))
     area = (
-        AreaVerde.objects.filter(tipo__in=TIPOS_AREA_VERDE_PROXIMA)
-        .filter(
-            DentroDoRaio(
-                F("geom"), Value(geom, output_field=GeometryField(srid=4326)), Value(raio_km * 1000)
-            )
-        )
-        .annotate(
-            distancia_m=DistanciaM(F("geom"), Value(geom, output_field=GeometryField(srid=4326)))
-        )
+        AreaVerde.objects.filter(dentro)
+        .annotate(distancia_m=DistanciaM(F("geom"), alvo))
         .order_by("distancia_m", "nome")
         .only("id", "nome", "tipo")
         .first()

@@ -562,6 +562,75 @@ describe("análises", () => {
     expect(screen.getByText("418")).toBeInTheDocument();
   });
 
+  it("o manejo da URBFOR tem dois gráficos e marca setembro como sem dado na fonte (F-06)", async () => {
+    const meses = Array.from({ length: 12 }, (_, i) => `2023-${String(i + 1).padStart(2, "0")}`);
+    const comSetembro = (valores: number[]) => valores.map((v, i) => (i === 8 ? null : v));
+    servidor.use(
+      http.get(`${API}/api/v1/relatorios/analise`, () =>
+        HttpResponse.json({
+          id: "manejo_urbfor_por_bairro",
+          titulo: "Manejo registrado pela URBFOR (2023)",
+          definicao: "d",
+          fonte: "URBFOR",
+          periodo: { inicio: "2025-11-10", fim: "2026-11-10" },
+          calculado_em: "2026-11-10T12:00:00Z",
+          por_bairro: true,
+          unidade: "",
+          base_rotulo: "árvores",
+          linhas: [{ rotulo: "Aldeota", valor: 298 }],
+          total: 298,
+          serie_mensal: {
+            meses,
+            sem_dado: ["2023-09"],
+            series: [
+              {
+                id: "poda",
+                rotulo: "Poda",
+                valores: comSetembro([
+                  1032, 1500, 1200, 1100, 1900, 1800, 2375, 1964, 0, 953, 1316, 1568,
+                ]),
+              },
+              {
+                id: "supressao",
+                rotulo: "Supressão",
+                valores: comSetembro([82, 100, 90, 70, 150, 120, 159, 180, 0, 79, 80, 194]),
+              },
+              {
+                id: "recolhimento",
+                rotulo: "Recolhimento",
+                valores: comSetembro([119, 40, 30, 20, 60, 50, 37, 25, 0, 60, 41, 54]),
+              },
+            ],
+            grupos: [
+              { titulo: "Podas por mês", series: ["poda"] },
+              { titulo: "Supressão e recolhimento por mês", series: ["supressao", "recolhimento"] },
+            ],
+          },
+        }),
+      ),
+    );
+    const usuario = userEvent.setup();
+    await abrir("/analises");
+    expect(await screen.findByRole("heading", { name: "Podas por mês" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Supressão e recolhimento por mês" }),
+    ).toBeInTheDocument();
+    // Dois gráficos, no máximo duas séries em cada (paleta de duas cores).
+    const graficos = screen.getAllByRole("img", { name: /Evolução mensal/ });
+    expect(graficos).toHaveLength(2);
+    expect(graficos[0]).toHaveAccessibleName(/Poda, de jan\/23 a dez\/23/);
+    expect(graficos[1]).toHaveAccessibleName(/Supressão e Recolhimento/);
+    // Setembro marcado nos dois gráficos, e a linha não passa por zero nesse mês.
+    expect(screen.getAllByTestId("sem-dado-2023-09")).toHaveLength(2);
+    expect(screen.getAllByText("na fonte")).toHaveLength(2);
+    expect(screen.getAllByLabelText("set/23: sem dado na fonte")).toHaveLength(2);
+    expect(screen.queryByLabelText(/set\/23: Poda 0/)).toBeNull();
+    // Tabela equivalente diz "sem dado na fonte" em vez de zero.
+    await usuario.click(screen.getAllByRole("button", { name: "Ver em tabela" })[0]!);
+    const linhaSet = screen.getByRole("cell", { name: "set/23" }).closest("tr")!;
+    expect(within(linhaSet).getByText("sem dado na fonte")).toBeInTheDocument();
+  });
+
   it("sem série mensal (análise sem dimensão temporal) não desenha o gráfico", async () => {
     await abrir("/analises");
     await screen.findByText("Total");

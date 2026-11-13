@@ -87,13 +87,19 @@ MESES = {
     "dezembro": 12,
 }
 
-# Grafias da URBFOR que não são o nome oficial do bairro (mapa 21, Fortaleza em Mapas).
-# Só entram equivalências claras; erros de digitação soltos ficam sem bairro identificado.
+# Tabela de aliases de bairro: grafias da URBFOR que não são o nome oficial do bairro (mapa 21,
+# Fortaleza em Mapas). A chave é o texto sem acento, caixa nem pontuação; o valor é o nome oficial,
+# que precisa existir entre os bairros cadastrados. Só entram equivalências claras (abreviação,
+# nome parcial ou erro de digitação de uma só letra que não casa com outro bairro). O que é ambíguo
+# ou não é bairro fica "sem bairro identificado". A tabela e os critérios estão documentados em
+# docs/integracoes/fontes-publicas.md ("Aliases de bairro do manejo da URBFOR").
 APELIDOS = {
+    # Nome parcial ou abreviado.
     "jose walter": "Prefeito José Walter",
     "pref jose walter": "Prefeito José Walter",
     "luciano cavalcante": "Engenheiro Luciano Cavalcante",
     "sao joao do tauape": "Tauape",
+    "sa joao do tauape": "Tauape",
     "manoel dias branco": "Manuel Dias Branco",
     "vicente pizon": "Vicente Pinzón",
     "manuel satiro": "Manoel Sátiro",
@@ -103,6 +109,34 @@ APELIDOS = {
     "joquei": "Jóquei Clube",
     "lourdes": "De Lourdes",
     "bom sucesso": "Bonsucesso",
+    "palmeiras": "Conjunto Palmeiras",
+    "airton sena": "Planalto Ayrton Senna",
+    "parque irmaos": "Parque Dois Irmãos",
+    "parque dois irmao": "Parque Dois Irmãos",
+    # Erros de digitação.
+    "monstese": "Montese",
+    "faima": "Fátima",
+    "aldetoa": "Aldeota",
+    "aldeora": "Aldeota",
+    "mondumbi": "Mondubim",
+    "mondunbim": "Mondubim",
+    "mundubim": "Mondubim",
+    "canidezinho": "Canindezinho",
+    "canindenzinho": "Canindezinho",
+    "arvaro weyne": "Álvaro Weyne",
+    "vla peri": "Vila Peri",
+    "papupina": "Paupina",
+    "panamericando": "Panamericano",
+    "sabiaguababa": "Sabiaguaba",
+    "edsom queiroz": "Edson Queiroz",
+    "lagoa redona": "Lagoa Redonda",
+    "padre adrade": "Padre Andrade",
+    "hennrique jorge": "Henrique Jorge",
+    "cristo redentos": "Cristo Redentor",
+    # Quebra de linha ou abreviação dentro do nome.
+    "dionisio t orres": "Dionísio Torres",
+    "cid dos funcionarios": "Cidade dos Funcionários",
+    "lagoa sapiranga": "Sapiranga / Coité",
 }
 
 NAO_IDENTIFICADO = "nao_identificado"
@@ -228,24 +262,36 @@ class IndiceBairros:
         return AMBIGUO if chave in self.ambiguos else NAO_IDENTIFICADO
 
 
+_ACAO = r"(?:poda|supress|recolh)"
+# Separadores entre a rua e o bairro: " - ", um traço depois de número ("3161- Meireles") e vírgula.
+_SEPARADOR_BAIRRO = re.compile(r"\s-\s|(?<=\d)-\s*|,")
+# Nomes de ação coletiva que a URBFOR escreve onde caberia o bairro ("... Parangaba - MUTIRÃO").
+_EVENTOS = {"mutirao", "multirao"}
+
+
 def _finais_dos_trechos(descricao: str) -> list[str | None]:
     """Fim de cada trecho da descrição: o texto depois do último " - " ou da última vírgula.
 
-    Os trechos se separam por quebra de linha ou por três espaços ou mais; " + " liga duas ações
-    no mesmo lugar e não separa trechos."""
+    Os trechos se separam por quebra de linha seguida de uma ação (Poda, Supressão, Recolhimento)
+    ou por três espaços ou mais; " + " liga duas ações no mesmo lugar e não separa trechos. Uma
+    quebra de linha no meio do nome ("Luciano \nCavalcante", "São João do \nTauape") é só a
+    largura da célula da planilha: o nome continua na linha de baixo."""
     finais = []
-    for trecho in re.split(r"\n|\s{3,}", descricao):
-        trecho = trecho.strip().rstrip(". ;")
+    for trecho in re.split(rf"\n(?=\s*{_ACAO})|\s{{3,}}", descricao, flags=re.IGNORECASE):
+        trecho = re.sub(r"\s+", " ", trecho).strip().rstrip(". ;-").strip()
         if not trecho:
             continue
-        if " - " in trecho:
-            final = trecho.rsplit(" - ", 1)[1]
-        elif "," in trecho:
-            final = trecho.rsplit(",", 1)[1]
-        else:
+        segmentos = [x.strip() for x in _SEPARADOR_BAIRRO.split(trecho)]
+        if len(segmentos) == 1:
             finais.append(None)
             continue
-        finais.append(re.sub(r"\s*\(.*?\)\s*$", "", final.strip().rstrip(". ")))
+        while len(segmentos) > 1 and _simples(segmentos[-1]) in _EVENTOS:
+            segmentos.pop()  # "Parangaba - MUTIRÃO": o bairro é o que vem antes
+        if len(segmentos) == 1:  # só restou a rua: o texto não traz bairro
+            finais.append(None)
+            continue
+        final = re.sub(r"\s*\(.*?\)\s*$", "", segmentos[-1].rstrip(". "))
+        finais.append(final or None)
     return finais
 
 

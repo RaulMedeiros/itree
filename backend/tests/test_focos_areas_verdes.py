@@ -146,3 +146,54 @@ def test_mapa_de_alertas_respeita_o_buffer(cenario, cliente):
     mapa = cliente.como(gestor).get("/api/v1/mapa/alertas")
     assert mapa.status_code == 200
     assert len(mapa.json()["features"]) == 1
+
+
+# --- AV-07: distância até o contorno, raio por tipo e filtro na lista ---------------------
+
+
+def test_distancia_e_ate_o_contorno_e_nao_ate_o_centro(cenario):
+    # Parque grande: 4 km de lado. O foco fica a ~0,3 km da borda leste, mas a ~2 km do centro.
+    _area("parque", "Parque Grande", (-38.54, -3.79, -38.504, -3.754), "9")
+    foco = Point(-38.5012, -3.772, srid=4326)
+    proxima = area_verde_proxima(foco, 0.5)
+    assert proxima["nome"] == "Parque Grande"
+    assert 250 <= proxima["distancia_m"] <= 350
+    centro = AreaVerde.objects.get(nome="Parque Grande").geom.centroid
+    assert centro.distance(foco) * 111_000 > 1_500  # o centro estaria fora de qualquer raio
+
+
+def test_raio_por_tipo_de_area(cenario, settings):
+    # Parque a ~0,6 km e UC a ~0,6 km: com raio de 0,3 km no parque e 1 km na UC, só a UC conta.
+    _area("unidade_conservacao", "UC Teste", (-38.507, -3.78, -38.5059, -3.77), "4")
+    settings.ALERTAS_FOCOS_RAIO_PARQUE_KM = 0.3
+    settings.ALERTAS_FOCOS_RAIO_UC_KM = 1.0
+    proxima = area_verde_proxima(Point(-38.5005, -3.775, srid=4326))
+    assert proxima["nome"] == "UC Teste" and proxima["tipo"] == "unidade_conservacao"
+    settings.ALERTAS_FOCOS_RAIO_UC_KM = 0.3
+    assert area_verde_proxima(Point(-38.5005, -3.775, srid=4326)) is None
+
+
+def test_raio_por_tipo_vale_na_ingestao_e_o_buffer_usa_o_maior(cenario, settings):
+    settings.ALERTAS_FOCOS_RAIO_AREA_VERDE_KM = 0.3
+    settings.ALERTAS_FOCOS_RAIO_PARQUE_KM = 1.0
+    r = _ingerir(("perto", -38.5005, -3.775), ("fora", -38.4925, -3.775))
+    # A 0,6 km do parque, que tem raio de 1 km: o foco do município é marcado e o de fora entra
+    # no buffer (o maior dos raios).
+    assert AlertaAmbiental.objects.get(id_externo="perto").area_verde_proxima["nome"]
+    assert (r.novos, r.fora_do_municipio) == (2, 0)
+
+
+def test_lista_filtra_os_alertas_junto_de_area_verde(cenario, cliente):
+    municipio, _ = cenario
+    gestor = com_escopo(criar_usuario("g@itree.teste", ["gestor"]), municipio)
+    _ingerir(("perto", -38.5005, -3.775), ("longe", -38.55, -3.72))
+    api = cliente.como(gestor)
+    todos = api.get("/api/v1/alertas", {"status": "todos"}).json()["results"]
+    assert {a["id_externo"] for a in todos} == {"perto", "longe"}
+    junto = api.get("/api/v1/alertas", {"status": "todos", "junto_area_verde": "1"}).json()
+    assert [a["id_externo"] for a in junto["results"]] == ["perto"]
+    parque = api.get("/api/v1/alertas", {"junto_area_verde": "parque"}).json()["results"]
+    assert [a["id_externo"] for a in parque] == ["perto"]
+    uc = api.get("/api/v1/alertas", {"junto_area_verde": "unidade_conservacao"}).json()
+    assert uc["results"] == []
+    assert api.get("/api/v1/alertas", {"junto_area_verde": "xis"}).status_code == 400

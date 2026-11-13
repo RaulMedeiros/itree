@@ -231,6 +231,14 @@ FILTROS = [
     OpenApiParameter("fonte", str),
     OpenApiParameter("tipo", str),
     OpenApiParameter("bairro", str),
+    OpenApiParameter(
+        "junto_area_verde",
+        str,
+        description=(
+            "'1' mantém só os focos junto de parque ou unidade de conservação; "
+            "'parque' ou 'unidade_conservacao' restringe ao tipo da área."
+        ),
+    ),
     OpenApiParameter("deteccao_desde", str, description="AAAA-MM-DD"),
     OpenApiParameter("deteccao_ate", str, description="AAAA-MM-DD"),
     OpenApiParameter("ingestao_desde", str, description="AAAA-MM-DD"),
@@ -255,6 +263,18 @@ def filtrar_por_bairro(qs, bairro):
     return qs.filter(bairros__contains=[{"id": str(uuid_do_parametro(bairro, "bairro"))}])
 
 
+def filtrar_junto_de_area_verde(qs, valor):
+    """Alertas gravados com parque ou unidade de conservação próximo (AV-07).
+
+    ``valor`` é '1' (qualquer um dos dois) ou o tipo da área. Só os focos de calor têm a marca.
+    """
+    if valor in ("1", "true", "sim"):
+        return qs.filter(area_verde_proxima__isnull=False)
+    if valor in ("parque", "unidade_conservacao"):
+        return qs.filter(area_verde_proxima__tipo=valor)
+    raise ValidationError({"junto_area_verde": ["Use 1, parque ou unidade_conservacao."]})
+
+
 def filtrar_alertas(qs, p):
     """Filtros da listagem de alertas, compartilhados com a exportação."""
     situacao = p.get("status", "abertos")
@@ -266,6 +286,8 @@ def filtrar_alertas(qs, p):
         if valor := p.get(campo):
             qs = qs.filter(**{campo: valor})
     qs = filtrar_por_bairro(qs, p.get("bairro"))
+    if v := p.get("junto_area_verde"):
+        qs = filtrar_junto_de_area_verde(qs, v)
     if v := p.get("deteccao_desde"):
         qs = qs.filter(data_deteccao__date__gte=v)
     if v := p.get("deteccao_ate"):

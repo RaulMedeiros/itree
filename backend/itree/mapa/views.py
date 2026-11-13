@@ -26,6 +26,9 @@ ZOOM_INDIVIDUAL = 16
 CIRCUNFERENCIA_3857 = 40075016.68557849
 # Zoom até o qual as células de agrupamento são maiores (menos agrupamentos amontoados).
 ZOOM_MUNICIPIO = 11
+# Abaixo deste zoom, as árvores vêm agrupadas por bairro (um grupo por bairro, no ponto interior
+# do polígono), e não em células (M-29). O mesmo valor está em `apps/web/src/mapa/simbologia.ts`.
+ZOOM_AGRUPA_BAIRRO = 12
 # O MapLibre desenha tiles vetoriais de 512 px. A célula é dimensionada em pixels de tela,
 # acima do maior ícone de grupo (46 px, em `simbologia.ts`), para as bolhas não se tocarem.
 TILE_PX = 512
@@ -158,6 +161,61 @@ CAMADAS = {
 }
 
 
+def _sql_arvores_por_bairro(definicao: dict, extra: str) -> str:
+    """Tile de árvores em zoom afastado: um grupo por bairro (M-29).
+
+    O grupo conta **todas** as árvores do bairro dentro do escopo e dos filtros, e não só as que
+    caem no tile, e é desenhado no ponto interior do polígono (``ST_PointOnSurface``, sempre dentro
+    do bairro, ao contrário do centroide de um bairro em "C"). Só o tile que contém esse ponto
+    desenha o grupo. Leva a contagem (``quantidade``), a pior condição (``pior_condicao``, para o
+    anel) e o nome do bairro (``bairro``), que também distingue o grupo de bairro da árvore
+    individual. Árvores sem bairro não somem: seguem em células, como nos zooms médios."""
+    propriedades = [p.strip() for p in definicao["propriedades"].split(",")]
+    celulas = ",\n                   ".join(
+        f"CASE WHEN count(*) = 1 THEN (array_agg({p}))[1] END AS {p}" for p in propriedades
+    )
+    nulas = ", ".join("NULL" for _ in propriedades)
+    colunas = ", ".join(propriedades)
+    return f"""
+        WITH env AS (SELECT ST_TileEnvelope(%(z)s, %(x)s, %(y)s) AS g),
+             pontos AS (
+                SELECT t.id, t.nome, ST_Transform(ST_PointOnSurface(t.geom), 3857) AS p
+                  FROM territorio_territorio t, env
+                 WHERE t.tipo = 'bairro' AND t.geom && ST_Transform(env.g, 4326)
+             ),
+             no_tile AS (SELECT pontos.* FROM pontos, env WHERE pontos.p && env.g),
+             base AS (
+                SELECT a.bairro_id,
+                       COALESCE(NULLIF(a.condicao_aparente, ''), 'nao_avaliada') AS condicao
+                  FROM inventario_arvore a
+                 WHERE a.situacao = 'ativa' AND a.geom IS NOT NULL
+                   AND a.bairro_id IN (SELECT id FROM no_tile)
+                   AND ST_Intersects(a.geom, ST_GeomFromEWKB(%(area)s)){extra}
+             ),
+             por_bairro AS (
+                SELECT count(*)::int AS quantidade, {SQL_PIOR_CONDICAO} AS pior_condicao,
+                       n.nome AS bairro, ST_AsMVTGeom(n.p, env.g, 4096, 64, true) AS geom
+                  FROM base JOIN no_tile n ON n.id = base.bairro_id, env
+                 GROUP BY n.id, n.nome, n.p, env.g
+             ),
+             avulsas AS ({definicao["base"]}{extra} AND a.bairro_id IS NULL),
+             em_celulas AS (
+                SELECT count(*)::int AS quantidade, {celulas},
+                       {SQL_PIOR_CONDICAO} AS pior_condicao,
+                       NULL::text AS bairro,
+                       ST_AsMVTGeom(ST_Centroid(ST_Collect(g3857)), env.g, 4096, 64, true) AS geom
+                  FROM avulsas, env
+                 GROUP BY ST_SnapToGrid(g3857, %(celula)s), env.g
+             )
+        SELECT ST_AsMVT(t, %(camada)s, 4096, 'geom')
+          FROM (
+            SELECT quantidade, {colunas}, pior_condicao, bairro, geom FROM em_celulas
+            UNION ALL
+            SELECT quantidade, {nulas}, pior_condicao, bairro, geom FROM por_bairro
+          ) t
+    """
+
+
 @extend_schema(
     operation_id="mapa_tile",
     parameters=[
@@ -176,7 +234,8 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
     """Vector tile (MVT) da camada, restrito ao escopo do usuário.
 
     Abaixo do zoom 16, os pontos são agrupados em células com a contagem
-    (``quantidade``); a partir dele, cada registro vira uma feição.
+    (``quantidade``); a partir dele, cada registro vira uma feição. Só as árvores, abaixo do zoom
+    12, vêm agrupadas por bairro, com a contagem, a pior condição e o nome do bairro.
     """
     definicao = CAMADAS.get(camada)
     if definicao is None:
@@ -193,6 +252,16 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
     extra, valores = definicao["filtros"](request.query_params)
     parametros = {"z": z, "x": x, "y": y, "area": area.ewkb, **valores}
     base = definicao["base"] + extra
+    if camada == "arvores" and z < ZOOM_AGRUPA_BAIRRO:
+        # SQL montado só a partir de constantes deste módulo; valores vão como parâmetros.
+        parametros["celula"] = tamanho_da_celula(z)
+        parametros["camada"] = camada
+        with connection.cursor() as cursor:
+            cursor.execute(_sql_arvores_por_bairro(definicao, extra), parametros)
+            dados = cursor.fetchone()[0]
+        resposta = HttpResponse(bytes(dados or b""), content_type=TIPO_MVT)
+        resposta["Cache-Control"] = "private, max-age=30"
+        return resposta
     if z >= ZOOM_INDIVIDUAL:
         # SQL montado só a partir de constantes deste módulo; valores vão como parâmetros.
         selecao = f"""
@@ -451,3 +520,67 @@ def alertas(request: Request):
     if not request.user.tem_permissao("alertas.ler"):
         raise PermissionDenied()
     return Response(alertas_geojson(request.user, request.query_params))
+
+
+@extend_schema(
+    operation_id="mapa_supressao_anual",
+    parameters=[OpenApiParameter("precisao", int, description="Casas decimais (padrão 5).")],
+    responses={(200, "application/geo+json"): OpenApiTypes.OBJECT},
+)
+@api_view(["GET"])
+def supressao_anual(request: Request):
+    """Supressão anual do PRODES Caatinga (INPE) como GeoJSON: camada de referência histórica.
+
+    Não são alertas: o PRODES é anual, de escala regional (polígonos de cerca de 1 ha ou mais)
+    e não prova irregularidade. A resposta traz fonte, licença, escala e o intervalo de anos.
+    """
+    import json
+
+    from django.contrib.gis.db.models.functions import AsGeoJSON
+
+    from itree.alertas.escopo import filtrar_supressao_por_escopo
+    from itree.alertas.models import SupressaoAnual
+    from itree.alertas.prodes import ESCALA
+
+    if not request.user.tem_permissao("alertas.ler"):
+        raise PermissionDenied()
+    try:
+        precisao = min(max(int(request.query_params.get("precisao", 5)), 1), 8)
+    except ValueError:
+        precisao = 5
+    qs = filtrar_supressao_por_escopo(SupressaoAnual.objects.all(), request.user)
+    resumo = qs.aggregate(
+        anos_min=Min("ano"), anos_max=Max("ano"), total=Count("id"), ingerido_em=Max("ingerido_em")
+    )
+    fonte = qs.values("fonte", "fonte_url", "licenca").first() or {}
+    feicoes = [
+        {
+            "type": "Feature",
+            "id": str(s.id),
+            "geometry": json.loads(s.g),
+            "properties": {
+                "ano": s.ano,
+                "data_imagem": s.data_imagem.isoformat(),
+                "area_ha": s.area_ha,
+                "satelite": s.satelite,
+            },
+        }
+        for s in qs.annotate(g=AsGeoJSON("geom", precision=precisao)).order_by("ano")
+    ]
+    return Response(
+        {
+            "type": "FeatureCollection",
+            "features": feicoes,
+            "proveniencia": {
+                "nome": "Supressão anual (PRODES Caatinga)",
+                "fonte": fonte.get("fonte", ""),
+                "fonte_url": fonte.get("fonte_url", ""),
+                "licenca": fonte.get("licenca", ""),
+                "ingerido_em": resumo["ingerido_em"],
+                "ano_inicial": resumo["anos_min"],
+                "ano_final": resumo["anos_max"],
+                "quantidade": resumo["total"],
+                "escala": ESCALA,
+            },
+        }
+    )

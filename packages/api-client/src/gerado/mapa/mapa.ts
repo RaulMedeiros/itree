@@ -29,6 +29,8 @@ import type {
   MapaAlertas200,
   MapaAlertasParams,
   MapaBuscaParams,
+  MapaSupressaoAnual200,
+  MapaSupressaoAnualParams,
   MapaTileParams,
   ResultadoBusca,
   SelecaoEntradaRequest,
@@ -597,7 +599,126 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getMapaSelecaoExportarMutationOptions(options), queryClient);
     }
-    export type mapaTileResponse200 = {
+    export type mapaSupressaoAnualResponse200 = {
+  data: MapaSupressaoAnual200
+  status: 200
+}
+
+export type mapaSupressaoAnualResponseSuccess = (mapaSupressaoAnualResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mapaSupressaoAnualResponse = (mapaSupressaoAnualResponseSuccess)
+
+export const getMapaSupressaoAnualUrl = (params?: MapaSupressaoAnualParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/mapa/supressao-anual?${stringifiedParams}` : `/api/v1/mapa/supressao-anual`
+}
+
+/**
+ * Supressão anual do PRODES Caatinga (INPE) como GeoJSON: camada de referência histórica.
+ *
+ * Não são alertas: o PRODES é anual, de escala regional (polígonos de cerca de 1 ha ou mais)
+ * e não prova irregularidade. A resposta traz fonte, licença, escala e o intervalo de anos.
+ */
+export const mapaSupressaoAnual = async (params?: MapaSupressaoAnualParams, options?: Parameters<typeof requisicao>[1]): Promise<mapaSupressaoAnualResponse> => {
+
+  return requisicao<mapaSupressaoAnualResponse>(getMapaSupressaoAnualUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getMapaSupressaoAnualQueryKey = (params?: MapaSupressaoAnualParams,) => {
+    return [
+    `/api/v1/mapa/supressao-anual`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getMapaSupressaoAnualQueryOptions = <TData = Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError = unknown>(params?: MapaSupressaoAnualParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMapaSupressaoAnualQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof mapaSupressaoAnual>>> = ({ signal }) => mapaSupressaoAnual(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type MapaSupressaoAnualQueryResult = NonNullable<Awaited<ReturnType<typeof mapaSupressaoAnual>>>
+export type MapaSupressaoAnualQueryError = unknown
+
+
+export function useMapaSupressaoAnual<TData = Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError = unknown>(
+ params: undefined |  MapaSupressaoAnualParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaSupressaoAnual>>,
+          TError,
+          Awaited<ReturnType<typeof mapaSupressaoAnual>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaSupressaoAnual<TData = Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError = unknown>(
+ params?: MapaSupressaoAnualParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaSupressaoAnual>>,
+          TError,
+          Awaited<ReturnType<typeof mapaSupressaoAnual>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaSupressaoAnual<TData = Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError = unknown>(
+ params?: MapaSupressaoAnualParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useMapaSupressaoAnual<TData = Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError = unknown>(
+ params?: MapaSupressaoAnualParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSupressaoAnual>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getMapaSupressaoAnualQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type mapaTileResponse200 = {
   data: Blob
   status: 200
 }
@@ -632,7 +753,8 @@ export const getMapaTileUrl = (camada: string,
  * Vector tile (MVT) da camada, restrito ao escopo do usuário.
  *
  * Abaixo do zoom 16, os pontos são agrupados em células com a contagem
- * (``quantidade``); a partir dele, cada registro vira uma feição.
+ * (``quantidade``); a partir dele, cada registro vira uma feição. Só as árvores, abaixo do zoom
+ * 12, vêm agrupadas por bairro, com a contagem, a pior condição e o nome do bairro.
  */
 export const mapaTile = async (camada: string,
     z: number,

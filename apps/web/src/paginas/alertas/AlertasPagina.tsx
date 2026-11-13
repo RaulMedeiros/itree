@@ -41,6 +41,8 @@ export interface BuscaAlertas {
   fonte?: FonteAlertaEnum;
   bairro?: string;
   raio?: RaioM;
+  /** Só os focos de calor junto de parque ou unidade de conservação (AV-07). */
+  junto_area_verde?: "1";
   deteccao_desde?: string;
   deteccao_ate?: string;
   /** Ausente = mais recentes primeiro. */
@@ -176,6 +178,14 @@ export function AlertasPagina() {
           ))}
         </Selecao>
         <SeletorRaio valor={raio} aoMudar={(r) => filtrar({ raio: r })} />
+        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
+          <input
+            type="checkbox"
+            checked={filtros.junto_area_verde === "1"}
+            onChange={(e) => filtrar({ junto_area_verde: e.target.checked ? "1" : undefined })}
+          />
+          Junto de área verde
+        </label>
         <label className="flex items-center gap-1.5 text-sm text-texto-suave">
           Detectados de
           <EntradaData

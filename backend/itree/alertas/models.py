@@ -151,3 +151,33 @@ class IngestaoAlertas(models.Model):
 
     class Meta:
         ordering = ["-iniciada_em"]
+
+
+class SupressaoAnual(ModeloBase):
+    """Polígono anual de supressão de vegetação do PRODES Caatinga (INPE), em escala regional.
+
+    É **camada de referência histórica**: não é alerta, não entra na triagem e nunca
+    sugere irregularidade. O polígono mínimo mapeado é de cerca de 1 ha e a leitura é
+    anual (F-02).
+    """
+
+    id_externo = models.CharField(max_length=200, unique=True)
+    ano = models.PositiveSmallIntegerField(help_text="Ano do PRODES (classe dAAAA).")
+    data_imagem = models.DateField(help_text="Data da imagem em que o polígono foi detectado.")
+    area_ha = models.FloatField(null=True, blank=True)
+    satelite = models.CharField(max_length=60, blank=True)
+    geom = models.MultiPolygonField(srid=4326)
+    src_original = models.CharField(max_length=100, blank=True)
+    propriedades = models.JSONField(default=dict, help_text="Atributos originais da fonte.")
+
+    fonte = models.CharField(max_length=250)
+    fonte_url = models.URLField(max_length=500, blank=True)
+    licenca = models.CharField(max_length=300, blank=True)
+    ingerido_em = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-ano", "id_externo"]
+        indexes = [models.Index(fields=["ano"])]
+
+    def __str__(self) -> str:
+        return f"Supressão PRODES {self.ano} ({self.id_externo})"

@@ -8,6 +8,11 @@ import { criarServidor } from "./servidorPadrao";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { COR_POR_VALOR, ROTULOS_CLASSES_ARBORIZACAO } from "../mapa/coropletica";
+import {
+  ZOOM_AGRUPA_BAIRRO,
+  filtroArvoreIndividual,
+  filtroGrupoDeArvores,
+} from "../mapa/simbologia";
 import { mapasCriados } from "./mapaFalso";
 
 vi.mock("react-oidc-context", () => ({
@@ -885,5 +890,165 @@ describe("agrupamentos legíveis no zoom afastado (R2-07)", () => {
     expect(mapa.getLayer("arvores-grupos")?.layout?.["icon-allow-overlap"]).toBe(false);
     expect(mapa.getLayer("ocorrencias-grupos")?.layout?.["icon-allow-overlap"]).toBe(true);
     expect(mapa.getLayer("ocorrencias-pontos")?.layout?.["icon-allow-overlap"]).toBe(true);
+  });
+});
+
+describe("Supressão anual (PRODES Caatinga) (F-02)", () => {
+  const DADOS = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        id: "s-1",
+        geometry: BAIRRO.geometry,
+        properties: { ano: 2021, data_imagem: "2021-07-23", area_ha: 10.03, satelite: "landsat8" },
+      },
+    ],
+    proveniencia: {
+      nome: "Supressão anual (PRODES Caatinga)",
+      fonte: "INPE, TerraBrasilis (PRODES Caatinga)",
+      licenca: "Não declarada para os dados.",
+      ingerido_em: "2026-11-13T12:00:00Z",
+      ano_inicial: 2004,
+      ano_final: 2025,
+      quantidade: 1304,
+      escala: "polígonos de cerca de 1 ha ou mais, leitura anual, escala regional",
+    },
+  };
+  const pedidos: URL[] = [];
+
+  beforeEach(() => {
+    pedidos.length = 0;
+    servidor.use(
+      http.get(`${API}/api/v1/eu`, () =>
+        HttpResponse.json({ ...GESTOR, permissoes: [...GESTOR.permissoes, "alertas.ler"] }),
+      ),
+      http.get(`${API}/api/v1/mapa/supressao-anual`, ({ request }) => {
+        pedidos.push(new URL(request.url));
+        return HttpResponse.json(DADOS);
+      }),
+    );
+  });
+
+  it("fica no grupo Ambientais, desligada por padrão e sem baixar nada", async () => {
+    const mapa = await abrirMapa();
+    const grupo = (await screen.findByText("Ambientais — sinais externos")).closest("details")!;
+    const caixa = within(grupo).getByRole("checkbox", {
+      name: /Supressão anual \(PRODES Caatinga\)/,
+    });
+    expect(caixa).not.toBeChecked();
+    expect(within(grupo).getByText(/Camada de referência, não é alerta/)).toBeInTheDocument();
+    expect(pedidos).toHaveLength(0);
+    expect(mapa.setLayoutProperty).not.toHaveBeenCalledWith(
+      "supressao-anual-preenchimento",
+      "visibility",
+      "visible",
+    );
+  });
+
+  it("ao ligar, carrega uma vez e a legenda mostra o intervalo de anos e a escala", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await usuario.click(
+      await screen.findByRole("checkbox", { name: /Supressão anual \(PRODES Caatinga\)/ }),
+    );
+    await vi.waitFor(() => expect(mapa.dadosDe("supressao-anual").features).toHaveLength(1));
+    expect(pedidos).toHaveLength(1);
+    expect(
+      (mapa.dadosDe("supressao-anual") as unknown as Record<string, unknown>).proveniencia,
+    ).toBeUndefined();
+    expect(mapa.setLayoutProperty).toHaveBeenCalledWith(
+      "supressao-anual-preenchimento",
+      "visibility",
+      "visible",
+    );
+    const legenda = await screen.findByRole("region", { name: "Legenda" });
+    await usuario.click(within(legenda).getByRole("button", { name: "Legenda" }));
+    const bloco = within(legenda).getByTestId("legenda-supressao");
+    expect(await within(bloco).findByText("2004")).toBeInTheDocument();
+    expect(within(bloco).getByText("2025")).toBeInTheDocument();
+    expect(within(bloco).getByText(/≥ ~1 ha, anual, escala regional/)).toBeInTheDocument();
+    expect(within(bloco).getByText(/Não é alerta nem prova irregularidade/)).toBeInTheDocument();
+  });
+
+  it("a dica do polígono mostra o ano, a data da imagem e a área", async () => {
+    const mapa = await abrirMapa("/mapa?supressao_anual=1");
+    await vi.waitFor(() => expect(pedidos).toHaveLength(1));
+    act(() =>
+      mapa.emitir(
+        "mousemove",
+        { point: { x: 5, y: 5 }, features: [{ properties: DADOS.features[0]!.properties }] },
+        "supressao-anual-preenchimento",
+      ),
+    );
+    expect(
+      await screen.findByText("Supressão mapeada em 2021 · imagem de 23/07/2021 · 10 ha"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("árvores agrupadas por bairro no zoom afastado (M-29)", () => {
+  it("o grupo de bairro é um grupo mesmo com uma só árvore, e nunca uma árvore individual", async () => {
+    const mapa = await abrirMapa();
+    expect((mapa.camadaDe("arvores-pontos") as { filter?: unknown }).filter).toEqual(
+      filtroArvoreIndividual,
+    );
+    expect((mapa.camadaDe("arvores-grupos") as { filter?: unknown }).filter).toEqual(
+      filtroGrupoDeArvores,
+    );
+    // Só o grupo de bairro traz `bairro`: `has` o separa da célula e da árvore.
+    expect(JSON.stringify(filtroArvoreIndividual)).toContain('["!",["has","bairro"]]');
+    expect(JSON.stringify(filtroGrupoDeArvores)).toContain('["has","bairro"]');
+  });
+
+  it("a dica do grupo de bairro diz o bairro e a contagem", async () => {
+    const mapa = await abrirMapa();
+    act(() =>
+      mapa.emitir(
+        "mousemove",
+        {
+          point: { x: 5, y: 5 },
+          features: [{ properties: { bairro: "Meireles", quantidade: 37 } }],
+        },
+        "arvores-grupos",
+      ),
+    );
+    expect(
+      await screen.findByText("Meireles · 37 árvores — clique para aproximar"),
+    ).toBeInTheDocument();
+    act(() =>
+      mapa.emitir(
+        "mousemove",
+        { point: { x: 5, y: 5 }, features: [{ properties: { bairro: "Aldeota", quantidade: 1 } }] },
+        "arvores-grupos",
+      ),
+    );
+    expect(
+      await screen.findByText("Aldeota · 1 árvore — clique para aproximar"),
+    ).toBeInTheDocument();
+  });
+
+  it("clicar no grupo de bairro aproxima até sair do agrupamento por bairro", async () => {
+    const mapa = await abrirMapa();
+    mapa.zoom = 9;
+    const evento = {
+      lngLat: { lng: -38.5, lat: -3.7 },
+      features: [{ properties: { bairro: "Meireles", quantidade: 37 } }],
+    };
+    act(() => mapa.emitir("click", evento, "arvores-grupos"));
+    // 9 + 2,5 ainda estaria agrupado por bairro: vai a 12,5, já em células.
+    expect(mapa.easeTo).toHaveBeenCalledWith(
+      expect.objectContaining({ zoom: ZOOM_AGRUPA_BAIRRO + 0.5 }),
+    );
+    // A célula comum segue com +2,5.
+    mapa.easeTo.mockClear();
+    act(() =>
+      mapa.emitir(
+        "click",
+        { ...evento, features: [{ properties: { quantidade: 12 } }] },
+        "arvores-grupos",
+      ),
+    );
+    expect(mapa.easeTo).toHaveBeenCalledWith(expect.objectContaining({ zoom: 11.5 }));
   });
 });

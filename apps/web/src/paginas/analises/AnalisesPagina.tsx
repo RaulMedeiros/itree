@@ -27,6 +27,10 @@ export interface BuscaAnalises {
 interface SerieMensal {
   meses: string[];
   series: Serie[];
+  /** Meses (AAAA-MM) que a fonte não publicou. */
+  sem_dado?: string[];
+  /** Um gráfico por grupo (a paleta validada tem duas cores, no máximo duas séries por gráfico). */
+  grupos?: { titulo: string; series: string[] }[];
 }
 
 interface LinhaAnalise {
@@ -246,8 +250,20 @@ export function AnalisesPagina() {
               </Tabela>
               {evolucao && (
                 <div>
-                  <h3 className="mb-2 text-sm font-semibold">Evolução mensal</h3>
-                  <GraficoMensal meses={evolucao.meses} series={evolucao.series} />
+                  {(evolucao.grupos ?? [{ titulo: "Evolução mensal", series: [] }]).map((g) => (
+                    <div key={g.titulo} className="mb-4">
+                      <h3 className="mb-2 text-sm font-semibold">{g.titulo}</h3>
+                      <GraficoMensal
+                        meses={evolucao.meses}
+                        series={
+                          g.series.length
+                            ? evolucao.series.filter((s) => g.series.includes(s.id))
+                            : evolucao.series
+                        }
+                        semDado={evolucao.sem_dado}
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

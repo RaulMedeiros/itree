@@ -149,6 +149,11 @@ CHAVES_GEOJSON = {
         "id": ("alertCode", "alert_code", "id"),
         "data": ("detectedAt", "detected_at", "data"),
     },
+    # PRODES Caatinga (camada de referência, não alerta): a data é a da imagem (F-02).
+    "inpe_prodes_caatinga": {
+        "id": ("uuid", "gid", "id", "fid"),
+        "data": ("image_date", "view_date", "data"),
+    },
 }
 
 
@@ -299,7 +304,7 @@ def ingerir_leitura(
             ).values_list("id_externo", flat=True)
         )
         foco = fonte == FonteAlerta.INPE_FOCOS
-        raio_km = settings.ALERTAS_FOCOS_RAIO_AREA_VERDE_KM
+        raio_km = proximidade.raio_maximo_km()
         # Focos: o município ganha um buffer de raio_km, para pegar o foco logo além do
         # limite que fica junto de um parque ou unidade de conservação.
         busca = ampliar(municipio, raio_km * 1000) if foco else municipio
@@ -312,7 +317,7 @@ def ingerir_leitura(
             if not dentro and not (foco and busca.intersects(r.geom)):
                 ingestao.fora_do_municipio += 1
                 continue
-            proxima = proximidade.area_verde_proxima(r.geom, raio_km) if foco else None
+            proxima = proximidade.area_verde_proxima(r.geom) if foco else None
             if not dentro and proxima is None:
                 # Fora do município, só interessa o foco junto de área verde.
                 ingestao.fora_do_municipio += 1

@@ -125,6 +125,8 @@ export * from './loteSincronizacaoRequestInspecoesItem';
 export * from './mapaAlertas200';
 export * from './mapaAlertasParams';
 export * from './mapaBuscaParams';
+export * from './mapaSupressaoAnual200';
+export * from './mapaSupressaoAnualParams';
 export * from './mapaTileParams';
 export * from './medida';
 export * from './medidaRequest';

@@ -15,6 +15,8 @@ export type AlertasListarParams = {
   fonte?: string;
   /** AAAA-MM-DD */
   ingestao_desde?: string;
+  /** '1' mantém só os focos junto de parque ou unidade de conservação; 'parque' ou 'unidade_conservacao' restringe ao tipo da área. */
+  junto_area_verde?: string;
   /** '-data_deteccao' (padrão), 'data_deteccao', 'arvores_proximas', '-arvores_proximas', 'ocorrencias_proximas' ou '-ocorrencias_proximas'. */
   ordem?: string;
   /** Um número de página dentro do conjunto de resultados paginado. */

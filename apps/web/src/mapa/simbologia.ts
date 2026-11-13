@@ -46,6 +46,28 @@ export const COR_ALERTA = "#7048e8";
 export const COR_SELECAO = "#0b7285";
 
 /**
+ * Supressão anual (PRODES Caatinga, INPE): camada histórica de referência, não alerta. Rampa
+ * rosa, do claro (mais antigo) ao escuro (mais recente), para não competir com o roxo dos alertas,
+ * o laranja da condição "Ruim" nem o azul do Censo.
+ */
+export const CORES_SUPRESSAO_ANUAL = ["#f4c0d1", "#8a0f3c"] as const;
+export const OPACIDADE_SUPRESSAO_ANUAL = 0.8;
+
+/** Cor do polígono pelo ano; com um ano só, a cor mais escura. */
+export const corDaSupressao = (inicio: number, fim: number): ExpressionSpecification =>
+  (fim > inicio
+    ? [
+        "interpolate",
+        ["linear"],
+        ["get", "ano"],
+        inicio,
+        CORES_SUPRESSAO_ANUAL[0],
+        fim,
+        CORES_SUPRESSAO_ANUAL[1],
+      ]
+    : CORES_SUPRESSAO_ANUAL[1]) as ExpressionSpecification;
+
+/**
  * Áreas verdes (praças, parques, unidades de conservação): camada de contexto,
  * translúcida e abaixo das árvores. As cores são deliberadamente diferentes da
  * cor "Boa" das árvores (#2f9e44): oliva, verde-azulado e musgo escuro, com
@@ -248,6 +270,30 @@ export function camadasDoAlerta(fonte: string, pontual: boolean) {
         },
       ];
 }
+
+/**
+ * Abaixo deste zoom, o servidor entrega as árvores agrupadas por bairro (um grupo por bairro,
+ * no ponto interior do polígono), e não em células (M-29). O mesmo valor está em
+ * `ZOOM_AGRUPA_BAIRRO`, em `backend/itree/mapa/views.py`.
+ */
+export const ZOOM_AGRUPA_BAIRRO = 12;
+
+/** Grupo de bairro: só ele traz o nome do bairro; célula e árvore individual, não. */
+const ehGrupoDeBairro: ExpressionSpecification = ["has", "bairro"];
+
+/** Árvore individual: uma só no registro e fora de qualquer grupo de bairro. */
+export const filtroArvoreIndividual: ExpressionSpecification = [
+  "all",
+  ["==", ["get", "quantidade"], 1],
+  ["!", ehGrupoDeBairro],
+];
+
+/** Grupo de árvores: célula com mais de uma, ou grupo de bairro (mesmo com uma só árvore). */
+export const filtroGrupoDeArvores: ExpressionSpecification = [
+  "any",
+  [">", ["get", "quantidade"], 1],
+  ehGrupoDeBairro,
+];
 
 /** Condições na ordem de gravidade usada pelo backend em `pior_condicao`. */
 const CONDICOES_GRUPO = Object.keys(CORES_CONDICAO);

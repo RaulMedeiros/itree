@@ -309,11 +309,31 @@ def test_baixa_os_csvs_pela_api_do_ckan(fortaleza):
 
 
 @responses.activate
-def test_falha_do_ckan_nao_grava_nada(fortaleza):
+def test_falha_do_ckan_nao_grava_nada(fortaleza, monkeypatch):
+    monkeypatch.setattr(
+        "itree.indicadores.management.commands.importar_manejo_urbfor.time.sleep", lambda s: None
+    )
     responses.get(f"{m.API_CKAN}?id=podas_recolhimento_supressao", status=503)
     with pytest.raises(CommandError, match="Não foi possível obter os CSVs"):
         call_command("importar_manejo_urbfor")
     assert not IndicadorTerritorialExterno.objects.exists()
+
+
+@responses.activate
+def test_repete_o_download_quando_o_portal_responde_504(fortaleza, monkeypatch):
+    # O portal respondeu 504 em planilhas isoladas na validação com o dado real.
+    monkeypatch.setattr(
+        "itree.indicadores.management.commands.importar_manejo_urbfor.time.sleep", lambda s: None
+    )
+    base = "https://dados.fortaleza.ce.gov.br"
+    responses.get(
+        f"{m.API_CKAN}?id=podas_recolhimento_supressao",
+        json={"result": {"resources": [{"format": "CSV", "url": f"{base}/jan2023.csv"}]}},
+    )
+    responses.get(f"{base}/jan2023.csv", status=504)
+    responses.get(f"{base}/jan2023.csv", body=JAN.read_bytes())
+    call_command("importar_manejo_urbfor", stdout=io.StringIO())
+    assert IndicadorTerritorialExterno.objects.filter(indicador="manejo_urbfor_poda_202301")
 
 
 # --- Análise "Manejo registrado pela URBFOR (2023)" -------------------------------
@@ -402,3 +422,139 @@ def test_manejo_nao_vaza_para_o_contexto_externo_da_visao_geral(cliente, fortale
     _importar(JAN)
     corpo = cliente.como(_gestor(fortaleza)).get("/api/v1/indicadores/painel").json()
     assert corpo["contexto_externo"] == []
+
+
+# --- F-06: tabela de aliases e quebras de linha no nome do bairro --------------------------
+
+ALIASES = DADOS / "urbfor_aliases_trecho.csv"
+# Trecho de linhas reais (abril a dezembro de 2023) cujo bairro a URBFOR escreveu de outro jeito
+# ou quebrou em duas linhas. Cada linha traz o bairro oficial esperado.
+BAIRRO_ESPERADO = {
+    "Padre Adrade": "Padre Andrade",
+    "Monstese": "Montese",
+    "Conjunto Palmeiras": "Conjunto Palmeiras",
+    "Mondumbi": "Mondubim",
+    "Lagoa Redona": "Lagoa Redonda",
+    "Sabiaguababa": "Sabiaguaba",
+    "Hennrique": "Henrique Jorge",
+    "Aldetoa": "Aldeota",
+    "Cristo Redentos": "Cristo Redentor",
+    "São João do \nTauape": "Tauape",
+    "Parangaba - \nMUTI": "Parangaba",
+    "Luciano \nCavalcante": "Engenheiro Luciano Cavalcante",
+    "Airton Sena": "Planalto Ayrton Senna",
+    "Panamericando": "Panamericano",
+    "Dionísio T\norres": "Dionísio Torres",
+    "Fáima": "Fátima",
+    "Vla Peri": "Vila Peri",
+    "Cid. dos \nfuncionários": "Cidade dos Funcionários",
+    "Edsom": "Edson Queiroz",
+    "Papupina": "Paupina",
+    "Parque Irmãos": "Parque Dois Irmãos",
+    "Canindenzinho": "Canindezinho",
+    "Árvaro": "Álvaro Weyne",
+    "3161- Meireles": "Meireles",
+    "na Rua Isabel Ferreira, \nCurió": "Curió",
+}
+
+
+def test_os_apelidos_apontam_para_bairros_oficiais_do_mapa_21():
+    oficiais = {b["Nome"] for b in BAIRROS_MAPAS}
+    assert set(m.APELIDOS.values()) <= oficiais
+
+
+def test_grafias_reais_da_urbfor_chegam_ao_bairro_oficial(fortaleza):
+    servicos = m.ler_mes(ALIASES.read_bytes()).servicos
+    assert len(servicos) == len(BAIRRO_ESPERADO)
+    for trecho, esperado in BAIRRO_ESPERADO.items():
+        descricao = next(s.descricao for s in servicos if trecho in s.descricao)
+        assert _bairro(fortaleza, descricao) == esperado, trecho
+
+
+def test_quebra_de_linha_no_meio_do_nome_nao_separa_trechos(fortaleza):
+    # A célula da planilha quebra o nome; a linha seguinte sem ação continua o mesmo trecho.
+    assert m._finais_dos_trechos("Poda de 12 árvores na Praça X, São João do \nTauape.") == [
+        "São João do Tauape"
+    ]
+    # Já a quebra seguida de uma ação separa os trechos, como antes.
+    texto = "Poda de 08 árvores na Rua A - Montese.\nSupressão de 05 árvores na Rua A - Montese."
+    assert m._finais_dos_trechos(texto) == ["Montese", "Montese"]
+
+
+def test_mutirao_no_lugar_do_bairro_nao_e_bairro(fortaleza):
+    # "Parangaba - MUTIRÃO": vale o que vem antes; sem bairro antes, fica sem bairro identificado.
+    assert m._finais_dos_trechos("Poda na Av. Cônego de Castro, Parangaba - MUTIRÃO.") == [
+        "Parangaba"
+    ]
+    assert _bairro(fortaleza, "Poda de 106 árvores na Av. José Bastos - MULTIRÃO") == (
+        m.NAO_IDENTIFICADO
+    )
+
+
+def test_o_que_segue_ambiguo_ou_desconhecido_continua_assim(fortaleza):
+    assert _bairro(fortaleza, "Poda de 10 árvores na Av. Dioguinho, Praia do Futuro") == m.AMBIGUO
+    assert _bairro(fortaleza, "Poda de 3 árvores na Rua A, Sítio São João") == m.NAO_IDENTIFICADO
+    # Dois trechos que apontam para bairros diferentes não se resolvem sozinhos.
+    assert _bairro(fortaleza, "Poda na Rua A - Meireles\nPoda na Rua B - Aldeota") == (
+        m.NAO_IDENTIFICADO
+    )
+
+
+def test_a_planilha_de_aliases_chega_toda_ao_bairro(fortaleza):
+    saida = _importar(ALIASES)
+    # As 25 linhas reais (351 árvores) tinham grafia fora do nome oficial ou quebra de linha;
+    # com a tabela de aliases, todas chegam ao bairro.
+    assert "Com bairro identificado: 351 (100,0%)." in saida
+    assert "Sem bairro identificado: 0 (0,0%)" in saida
+    assert "Bairro ambíguo (dois bairros com o mesmo nome): 0 (0,0%)." in saida
+
+
+# --- F-06: evolução mensal, com o mês sem dado marcado ---------------------------------------
+
+
+def _serie(corpo):
+    s = corpo["serie_mensal"]
+    return s, {x["id"]: x["valores"] for x in s["series"]}
+
+
+def test_serie_mensal_tem_os_12_meses_e_marca_o_mes_sem_dado_na_fonte(cliente, fortaleza):
+    _importar(JAN, MAR, MAI, JUN, AGO, NOV)
+    serie, valores = _serie(_analise(cliente, _gestor(fortaleza)))
+    assert serie["meses"] == [f"2023-{m:02d}" for m in range(1, 13)]
+    # Setembro não foi publicado: nulo (não zero) e listado em sem_dado.
+    assert "2023-09" in serie["sem_dado"] and "2023-01" not in serie["sem_dado"]
+    for acao in ("poda", "supressao", "recolhimento"):
+        assert valores[acao][8] is None
+        assert valores[acao][0] is not None  # janeiro tem dado
+    # Janeiro bate com a planilha inteira (linha TOTAL da URBFOR: 1032, 82 e 119).
+    assert (valores["poda"][0], valores["supressao"][0], valores["recolhimento"][0]) == (
+        1032,
+        82,
+        119,
+    )
+
+
+def test_serie_mensal_pede_dois_graficos_por_causa_da_paleta_de_duas_cores(cliente, fortaleza):
+    _importar(JAN)
+    serie, _ = _serie(_analise(cliente, _gestor(fortaleza)))
+    assert [g["series"] for g in serie["grupos"]] == [["poda"], ["supressao", "recolhimento"]]
+    assert all(len(g["series"]) <= 2 for g in serie["grupos"])
+
+
+def test_serie_mensal_respeita_o_escopo_e_nao_trata_mes_publicado_como_sem_dado(cliente, fortaleza):
+    _importar(JAN, MAI)
+    aldeota = fortaleza["bairros"]["Aldeota"]
+    x, y = aldeota.geom.centroid.coords
+    curto = com_escopo(
+        criar_usuario("curto@itree.teste", ["gestor"]),
+        criar_territorio("Quadra", geom=quadrado(x - 0.001, y - 0.001, 0.002)),
+    )
+    serie, valores = _serie(_analise(cliente, curto))
+    # O mês existe na fonte; no escopo pequeno o total é menor que o do município, e não nulo.
+    assert "2023-01" not in serie["sem_dado"] and valores["poda"][0] is not None
+    _, completo = _serie(_analise(cliente, _gestor(fortaleza)))
+    assert valores["poda"][0] < completo["poda"][0]
+
+
+def test_serie_mensal_nao_existe_sem_dado_importado(cliente, fortaleza):
+    assert _analise(cliente, _gestor(fortaleza))["serie_mensal"] is None

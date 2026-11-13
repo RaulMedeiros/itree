@@ -302,11 +302,55 @@ def _contagem_mensal(qs, campo: str, **agregado) -> dict[date, float]:
     }
 
 
+def _serie_manejo(usuario) -> dict | None:
+    """Evolução mensal do manejo da URBFOR em 2023, no escopo do usuário (F-06).
+
+    Os 12 meses do ano, independentes do período escolhido. Mês que a fonte não publicou
+    (setembro) vem como ``None`` e listado em ``sem_dado``: não é zero. Poda, supressão e
+    recolhimento têm ordens de grandeza diferentes e a paleta validada tem duas cores, então
+    ``grupos`` pede dois gráficos: as podas, e a supressão com o recolhimento."""
+    bairros = {b.pk for b in externos.bairros_do_escopo(usuario)}
+    municipal = tem_escopo_municipal(usuario)
+    com_dado: set[int] = set()
+    somas: dict[str, dict[int, int]] = {a: {} for a in manejo_urbfor.ACOES}
+    for i in IndicadorTerritorialExterno.objects.filter(
+        indicador__startswith=manejo_urbfor.PREFIXO
+    ):
+        interpretado = manejo_urbfor.interpretar_indicador(i.indicador)
+        if interpretado is None or interpretado[1] != manejo_urbfor.ANO:
+            continue
+        acao, _ano, mes, sem = interpretado
+        com_dado.add(mes)  # o mês existe na fonte, seja qual for o escopo de quem consulta
+        if (sem and municipal) or (not sem and i.territorio_id in bairros):
+            somas[acao][mes] = somas[acao].get(mes, 0) + i.numerador
+    if not com_dado:
+        return None
+    meses = range(1, 13)
+    return {
+        "meses": [f"{manejo_urbfor.ANO}-{m:02d}" for m in meses],
+        "sem_dado": [f"{manejo_urbfor.ANO}-{m:02d}" for m in meses if m not in com_dado],
+        "series": [
+            {
+                "id": acao,
+                "rotulo": rotulo,
+                "valores": [somas[acao].get(m, 0) if m in com_dado else None for m in meses],
+            }
+            for acao, rotulo in manejo_urbfor.ACOES.items()
+        ],
+        "grupos": [
+            {"titulo": "Podas por mês", "series": ["poda"]},
+            {"titulo": "Supressão e recolhimento por mês", "series": ["supressao", "recolhimento"]},
+        ],
+    }
+
+
 def _serie_mensal(chave: str, usuario, inicio: date, fim: date) -> dict | None:
     """Evolução mensal das análises com dimensão temporal (None nas demais).
 
     Cada série traz um valor por mês do período, com zero nos meses sem
     registro, para o gráfico e a tabela equivalente."""
+    if chave == "manejo_urbfor_por_bairro":
+        return _serie_manejo(usuario)
     if chave in ("ocorrencias_por_tipo", "ocorrencias_por_estado"):
         todas = filtrar_por_escopo(Ocorrencia.objects.all(), usuario)
         registradas = _contagem_mensal(
@@ -389,7 +433,11 @@ def _serie_mensal(chave: str, usuario, inicio: date, fim: date) -> dict | None:
             "linhas": serializers.ListField(child=serializers.DictField()),
             "serie_mensal": serializers.DictField(
                 allow_null=True,
-                help_text="Evolução mensal (meses AAAA-MM e séries), só nas análises com dimensão temporal.",
+                help_text=(
+                    "Evolução mensal (meses AAAA-MM e séries), só nas análises com dimensão "
+                    "temporal. Valor nulo é mês sem dado na fonte (listado em `sem_dado`); "
+                    "`grupos` pede um gráfico por grupo de séries."
+                ),
             ),
             "total": serializers.IntegerField(
                 allow_null=True,
