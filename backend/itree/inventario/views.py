@@ -33,7 +33,7 @@ from itree.core.geo import decodificar_area
 from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
 from itree.ocorrencias.models import ESTADOS_FINAIS
 
-from . import duplicidades, importacao, referencias
+from . import duplicidades, importacao, referencias, tasks
 from .models import (
     Arvore,
     Especie,
@@ -599,18 +599,39 @@ class ImportacaoViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewse
         return Response(LoteImportacaoDetalheSerializer(lote).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
-        operation_id="importacoes_confirmar", request=None, responses=LoteImportacaoSerializer
+        operation_id="importacoes_confirmar",
+        request=None,
+        responses={200: LoteImportacaoSerializer, 202: LoteImportacaoSerializer},
     )
     @action(detail=True, methods=["post"])
     def confirmar(self, request, pk=None):
+        """Cria as árvores do lote.
+
+        Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas válidas, cria na hora e responde
+        200 com o lote confirmado. Acima disso, responde 202: o lote fica "em processamento" e
+        a tela acompanha `linhas_processadas`, `linhas_com_falha` e o estado em
+        `GET /importacoes/{id}`. A tela pode ser fechada sem interromper a importação.
+        """
         lote = self.get_object()
         try:
-            with pghistory.context(evento="importacao_inventario", lote=lote.numero):
-                importacao.confirmar(lote, request.user)
+            em_segundo_plano = importacao.preparar_confirmacao(lote, request.user)
         except importacao.ErroArquivo as exc:
             raise ValidationError(str(exc)) from exc
+        if em_segundo_plano:
+            try:
+                tasks.confirmar_importacao.delay(str(lote.pk))
+            except Exception:  # noqa: BLE001 - sem fila o lote não pode ficar "em processamento"
+                logger.exception("Não foi possível enfileirar a confirmação do lote %s", lote.pk)
+                importacao.registrar_interrupcao(
+                    lote.pk, "Não foi possível colocar a importação na fila. Tente novamente."
+                )
+        else:
+            importacao.executar_confirmacao(lote.pk)
         lote.refresh_from_db()
-        return Response(LoteImportacaoSerializer(lote).data)
+        return Response(
+            LoteImportacaoSerializer(lote).data,
+            status=status.HTTP_202_ACCEPTED if em_segundo_plano else status.HTTP_200_OK,
+        )
 
     @extend_schema(
         operation_id="importacoes_descartar", request=None, responses=LoteImportacaoSerializer

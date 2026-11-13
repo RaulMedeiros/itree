@@ -91,6 +91,7 @@ export * from './evidencia';
 export * from './evidenciasListarParams';
 export * from './exportarArvoresRequest';
 export * from './exportarArvoresRequestFiltros';
+export * from './falhaImportacao';
 export * from './fonteAlertaEnum';
 export * from './fonteEstado';
 export * from './formatoEnum';

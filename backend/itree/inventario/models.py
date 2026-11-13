@@ -200,7 +200,8 @@ class Arvore(ModeloBase):
         campos = kwargs.get("update_fields")
         if not self.numero:
             self.numero = proximo_numero("inventario_arvore_numero_seq")
-        if campos is None or "geom" in campos:
+        # `_bairro_pronto`: a importação em lote resolve o bairro de vários pontos de uma vez.
+        if (campos is None or "geom" in campos) and not getattr(self, "_bairro_pronto", False):
             # Bairro sempre derivado da geometria, nunca informado à mão.
             self.bairro = bairro_do_ponto(self.geom)
             if campos is not None:
@@ -284,12 +285,14 @@ class Medida(ModeloBase):
 
 class EstadoLote(models.TextChoices):
     PRE_VISUALIZADO = "pre_visualizado", "Pré-visualizado"
+    EM_PROCESSAMENTO = "em_processamento", "Em processamento"
+    INTERROMPIDO = "interrompido", "Interrompido"
     CONFIRMADO = "confirmado", "Confirmado"
     DESFEITO = "desfeito", "Desfeito"
     DESCARTADO = "descartado", "Descartado"
 
 
-@pghistory.track(*eventos(), exclude=["linhas"])
+@pghistory.track(*eventos(), exclude=["linhas", "falhas"])
 class LoteImportacao(ModeloBase):
     """Importação em lote de inventário (RF-INV-010 a 012)."""
 
@@ -311,6 +314,28 @@ class LoteImportacao(ModeloBase):
     linhas = models.JSONField(default=list, help_text="Linhas interpretadas na pré-visualização.")
     confirmado_em = models.DateTimeField(null=True, blank=True)
     desfeito_em = models.DateTimeField(null=True, blank=True)
+    confirmado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+        help_text="Quem mandou confirmar: a confirmação em segundo plano age em nome dessa pessoa.",
+    )
+    linhas_processadas = models.PositiveIntegerField(
+        default=0,
+        help_text="Quantas das `linhas` já foram vistas na confirmação. É o ponto de retomada: "
+        "avança na mesma transação que cria as árvores do bloco.",
+    )
+    linhas_com_falha = models.PositiveIntegerField(
+        default=0, help_text="Linhas válidas que não viraram árvore por erro inesperado."
+    )
+    falhas = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="[{indice, motivo}] das linhas com falha, até `LIMITE_FALHAS_GUARDADAS`.",
+    )
+    erro = models.TextField(blank=True, help_text="Por que a confirmação foi interrompida.")
 
     class Meta:
         ordering = ["-numero"]

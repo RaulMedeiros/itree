@@ -69,6 +69,14 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
   campos.
 - **RF-INV-012** — Importação é reversível como lote (desfazer o lote inteiro,
   auditado), enquanto os registros não tiverem sido editados.
+- **RF-INV-012a** — A confirmação nunca fica meio aplicada nem roda duas vezes.
+  Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas válidas (padrão 500), cria
+  na hora; acima disso, o lote fica "em processamento" (resposta 202) e a
+  confirmação roda em segundo plano, em blocos de 200 linhas. A lista de
+  importações mostra o andamento e o resultado, e a tela pode ser fechada sem
+  interromper nada. Linha que falha é desfeita e listada; as demais seguem. Se
+  a execução for interrompida, o lote fica "interrompido" e "Retomar" continua
+  do ponto em que parou.
 
 ### 3.5 Possíveis duplicidades
 

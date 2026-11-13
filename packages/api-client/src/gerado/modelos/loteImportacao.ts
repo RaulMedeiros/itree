@@ -33,6 +33,20 @@ export interface LoteImportacao {
      */
   linhas_validas?: number;
   readonly arvores_criadas: number;
+  /**
+     * Quantas das `linhas` já foram vistas na confirmação. É o ponto de retomada: avança na mesma transação que cria as árvores do bloco.
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  linhas_processadas?: number;
+  /**
+     * Linhas válidas que não viraram árvore por erro inesperado.
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  linhas_com_falha?: number;
+  /** Por que a confirmação foi interrompida. */
+  erro?: string;
   /** @nullable */
   confirmado_em?: string | null;
   /** @nullable */

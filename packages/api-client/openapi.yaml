@@ -1520,8 +1520,13 @@ paths:
   /api/v1/importacoes/{id}/confirmar:
     post:
       operationId: importacoes_confirmar
-      description: Importação em lote com pré-visualização, confirmação e desfazer
-        (RF-INV-010 a 012).
+      description: |-
+        Cria as árvores do lote.
+
+        Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas válidas, cria na hora e responde
+        200 com o lote confirmado. Acima disso, responde 202: o lote fica "em processamento" e
+        a tela acompanha `linhas_processadas`, `linhas_com_falha` e o estado em
+        `GET /importacoes/{id}`. A tela pode ser fechada sem interromper a importação.
       parameters:
       - in: path
         name: id
@@ -1536,6 +1541,12 @@ paths:
       - oidc: []
       responses:
         '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteImportacao'
+          description: ''
+        '202':
           content:
             application/json:
               schema:
@@ -4881,12 +4892,16 @@ components:
     EstadoLoteEnum:
       enum:
       - pre_visualizado
+      - em_processamento
+      - interrompido
       - confirmado
       - desfeito
       - descartado
       type: string
       description: |-
         * `pre_visualizado` - Pré-visualizado
+        * `em_processamento` - Em processamento
+        * `interrompido` - Interrompido
         * `confirmado` - Confirmado
         * `desfeito` - Desfeito
         * `descartado` - Descartado
@@ -5117,6 +5132,17 @@ components:
           description: Mesmos filtros da listagem de árvores; só valem com `todos_filtrados`.
       required:
       - formato
+    FalhaImportacao:
+      type: object
+      properties:
+        indice:
+          type: integer
+          description: Número da linha no arquivo.
+        motivo:
+          type: string
+      required:
+      - indice
+      - motivo
     FonteAlertaEnum:
       enum:
       - inpe_focos
@@ -5905,6 +5931,20 @@ components:
         arvores_criadas:
           type: integer
           readOnly: true
+        linhas_processadas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 'Quantas das `linhas` já foram vistas na confirmação. É o ponto
+            de retomada: avança na mesma transação que cria as árvores do bloco.'
+        linhas_com_falha:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Linhas válidas que não viraram árvore por erro inesperado.
+        erro:
+          type: string
+          description: Por que a confirmação foi interrompida.
         confirmado_em:
           type: string
           format: date-time
@@ -5982,6 +6022,20 @@ components:
         arvores_criadas:
           type: integer
           readOnly: true
+        linhas_processadas:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: 'Quantas das `linhas` já foram vistas na confirmação. É o ponto
+            de retomada: avança na mesma transação que cria as árvores do bloco.'
+        linhas_com_falha:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          description: Linhas válidas que não viraram árvore por erro inesperado.
+        erro:
+          type: string
+          description: Por que a confirmação foi interrompida.
         confirmado_em:
           type: string
           format: date-time
@@ -6001,6 +6055,11 @@ components:
           type: string
           nullable: true
           readOnly: true
+        falhas:
+          type: array
+          items:
+            $ref: '#/components/schemas/FalhaImportacao'
+          readOnly: true
         linhas:
           type: array
           items:
@@ -6010,6 +6069,7 @@ components:
       - arquivo_nome
       - arvores_criadas
       - criado_em
+      - falhas
       - fonte
       - formato
       - id

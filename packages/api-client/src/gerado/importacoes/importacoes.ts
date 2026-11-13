@@ -405,7 +405,12 @@ export type importacoesConfirmarResponse200 = {
   status: 200
 }
 
-export type importacoesConfirmarResponseSuccess = (importacoesConfirmarResponse200) & {
+export type importacoesConfirmarResponse202 = {
+  data: LoteImportacao
+  status: 202
+}
+
+export type importacoesConfirmarResponseSuccess = (importacoesConfirmarResponse200 | importacoesConfirmarResponse202) & {
   headers: Headers;
 };
 ;
@@ -421,7 +426,12 @@ export const getImportacoesConfirmarUrl = (id: string,) => {
 }
 
 /**
- * Importação em lote com pré-visualização, confirmação e desfazer (RF-INV-010 a 012).
+ * Cria as árvores do lote.
+ *
+ * Até `IMPORTACAO_LIMITE_CONFIRMACAO_IMEDIATA` linhas válidas, cria na hora e responde
+ * 200 com o lote confirmado. Acima disso, responde 202: o lote fica "em processamento" e
+ * a tela acompanha `linhas_processadas`, `linhas_com_falha` e o estado em
+ * `GET /importacoes/{id}`. A tela pode ser fechada sem interromper a importação.
  */
 export const importacoesConfirmar = async (id: string, options?: Parameters<typeof requisicao>[1]): Promise<importacoesConfirmarResponse> => {
 

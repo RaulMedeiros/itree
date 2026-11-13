@@ -407,6 +407,9 @@ class LoteImportacaoSerializer(serializers.ModelSerializer):
             "total_linhas",
             "linhas_validas",
             "arvores_criadas",
+            "linhas_processadas",
+            "linhas_com_falha",
+            "erro",
             "confirmado_em",
             "desfeito_em",
             "criado_em",
@@ -433,11 +436,17 @@ class LoteImportacaoSerializer(serializers.ModelSerializer):
         return self._motivo(obj) if obj.estado == EstadoLote.CONFIRMADO else None
 
 
+class FalhaImportacaoSerializer(serializers.Serializer):
+    indice = serializers.IntegerField(help_text="Número da linha no arquivo.")
+    motivo = serializers.CharField()
+
+
 class LoteImportacaoDetalheSerializer(LoteImportacaoSerializer):
     linhas = LinhaImportacaoSerializer(many=True, read_only=True)
+    falhas = FalhaImportacaoSerializer(many=True, read_only=True)
 
     class Meta(LoteImportacaoSerializer.Meta):
-        fields = [*LoteImportacaoSerializer.Meta.fields, "linhas"]
+        fields = [*LoteImportacaoSerializer.Meta.fields, "falhas", "linhas"]
 
 
 class NovaImportacaoSerializer(serializers.Serializer):

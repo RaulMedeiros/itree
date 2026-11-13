@@ -8,6 +8,8 @@
 
 /**
  * * `pre_visualizado` - Pré-visualizado
+ * * `em_processamento` - Em processamento
+ * * `interrompido` - Interrompido
  * * `confirmado` - Confirmado
  * * `desfeito` - Desfeito
  * * `descartado` - Descartado
@@ -17,6 +19,8 @@ export type EstadoLoteEnum = typeof EstadoLoteEnum[keyof typeof EstadoLoteEnum];
 
 export const EstadoLoteEnum = {
   pre_visualizado: 'pre_visualizado',
+  em_processamento: 'em_processamento',
+  interrompido: 'interrompido',
   confirmado: 'confirmado',
   desfeito: 'desfeito',
   descartado: 'descartado',

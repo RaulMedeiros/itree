@@ -8,7 +8,7 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
-from . import referencias
+from . import importacao, referencias
 from .models import Especie
 
 logger = logging.getLogger(__name__)
@@ -50,3 +50,9 @@ def atualizar_referencias_antigas() -> dict:
             logger.exception("Falha ao atualizar as referências da espécie %s", pk)
             resultado["falhas"] += 1
     return resultado
+
+
+@shared_task
+def confirmar_importacao(lote_id: str) -> None:
+    """Confirma em segundo plano um lote de importação grande. Reentrega retoma do ponto gravado."""
+    importacao.executar_confirmacao(lote_id)

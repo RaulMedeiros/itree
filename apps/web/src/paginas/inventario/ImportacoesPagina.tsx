@@ -54,7 +54,16 @@ function sugerir(colunas: string[], campo: string): string {
 }
 
 export function ImportacoesPagina() {
-  const consulta = useImportacoesListar();
+  // Enquanto algum lote é confirmado em segundo plano, a lista se atualiza sozinha.
+  const consulta = useImportacoesListar(undefined, {
+    query: {
+      refetchInterval: (c) =>
+        c.state.data?.data.results.some((l) => l.estado === "em_processamento") ? 1500 : false,
+    },
+  });
+  const retomar = useImportacoesConfirmar<ErroApi>();
+  const cliente = useQueryClient();
+  const [falhas, setFalhas] = useState<LoteImportacao | null>(null);
   const [assistente, setAssistente] = useState(false);
   const [aberto, setAberto] = useState<string | null>(null);
   const [desfazendo, setDesfazendo] = useState<LoteImportacao | null>(null);
@@ -128,22 +137,59 @@ export function ImportacoesPagina() {
                     tom={
                       l.estado === "confirmado"
                         ? "sucesso"
-                        : l.estado === "pre_visualizado"
+                        : l.estado === "pre_visualizado" || l.estado === "em_processamento"
                           ? "info"
-                          : "neutro"
+                          : l.estado === "interrompido"
+                            ? "perigo"
+                            : "neutro"
                     }
                   >
                     {ROTULOS_ESTADO_LOTE[l.estado ?? "pre_visualizado"]}
                   </Selo>
+                  {l.estado === "em_processamento" && <AndamentoDoLote lote={l} />}
+                  {l.estado === "interrompido" && (
+                    <p role="alert" className="mt-1 max-w-64 text-xs text-perigo">
+                      {l.erro}
+                    </p>
+                  )}
                   <p className="text-xs text-texto-suave">
                     {formatarDataHora(l.confirmado_em ?? l.criado_em)}
                   </p>
+                  {l.estado === "confirmado" && (l.linhas_com_falha ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      className="mt-1 text-xs text-perigo hover:underline"
+                      onClick={() => setFalhas(l)}
+                    >
+                      {plural(
+                        l.linhas_com_falha ?? 0,
+                        "linha não virou árvore",
+                        "linhas não viraram árvore",
+                      )}
+                      : ver detalhes
+                    </button>
+                  )}
                 </Td>
                 <Td>{l.usuario_nome}</Td>
                 <Td className="text-right">
                   {l.estado === "pre_visualizado" && (
                     <Botao tamanho="pequeno" variante="secundario" onClick={() => setAberto(l.id)}>
                       Revisar
+                    </Botao>
+                  )}
+                  {l.estado === "interrompido" && (
+                    <Botao
+                      tamanho="pequeno"
+                      variante="secundario"
+                      disabled={retomar.isPending}
+                      onClick={() =>
+                        retomar.mutate(
+                          { id: l.id },
+                          { onSuccess: () => invalidarCaminhos(cliente, "/api/v1/importacoes") },
+                        )
+                      }
+                    >
+                      Retomar
                     </Botao>
                   )}
                   {l.estado === "confirmado" && (
@@ -181,7 +227,61 @@ export function ImportacoesPagina() {
       )}
       {aberto && <PreVisualizacao id={aberto} aoFechar={() => setAberto(null)} />}
       {desfazendo && <DesfazerDialogo lote={desfazendo} aoFechar={() => setDesfazendo(null)} />}
+      {falhas && <FalhasDialogo lote={falhas} aoFechar={() => setFalhas(null)} />}
     </>
+  );
+}
+
+/** Andamento da confirmação em segundo plano; a janela de revisão pode ter sido fechada. */
+function AndamentoDoLote({ lote }: { lote: LoteImportacao }) {
+  return (
+    <div role="status" className="mt-1 max-w-56 text-xs text-texto-suave">
+      <p>
+        {(lote.linhas_processadas ?? 0).toLocaleString("pt-BR")} de{" "}
+        {(lote.total_linhas ?? 0).toLocaleString("pt-BR")} linhas processadas.
+      </p>
+      <progress
+        className="mt-1 h-2 w-full accent-marca"
+        aria-label={`Andamento da importação do lote nº ${lote.numero}`}
+        max={lote.total_linhas ?? 0}
+        value={lote.linhas_processadas ?? 0}
+      />
+    </div>
+  );
+}
+
+function FalhasDialogo({ lote, aoFechar }: { lote: LoteImportacao; aoFechar: () => void }) {
+  const consulta = useImportacoesObter(lote.id);
+  const falhas = consulta.data?.data.falhas ?? [];
+  return (
+    <Dialogo
+      aberto
+      aoMudar={(v) => !v && aoFechar()}
+      titulo={`Linhas que não viraram árvore (lote nº ${lote.numero})`}
+      descricao="As demais linhas do lote foram importadas normalmente."
+      rodape={<Botao onClick={aoFechar}>Fechar</Botao>}
+    >
+      {consulta.isPending ? (
+        <Carregando />
+      ) : consulta.isError ? (
+        <Erro erro={consulta.error} />
+      ) : (
+        <>
+          <ul className="max-h-64 list-disc overflow-y-auto pl-5 text-sm">
+            {falhas.map((f) => (
+              <li key={f.indice}>
+                Linha {f.indice}: {f.motivo}
+              </li>
+            ))}
+          </ul>
+          {(lote.linhas_com_falha ?? 0) > falhas.length && (
+            <p className="mt-2 text-xs text-texto-suave">
+              E mais {(lote.linhas_com_falha ?? 0) - falhas.length}, sem o motivo guardado.
+            </p>
+          )}
+        </>
+      )}
+    </Dialogo>
   );
 }
 
@@ -482,7 +582,8 @@ function PreVisualizacao({ id, aoFechar }: { id: string; aoFechar: () => void })
           <p className="text-sm">
             <strong>{lote!.linhas_validas}</strong> de {lote!.total_linhas} linhas serão importadas.
             Linhas com erro são ignoradas; avisos não impedem a importação. Todos os valores entram
-            com origem <strong>Importado</strong>.
+            com origem <strong>Importado</strong>. Lotes grandes são importados em segundo plano:
+            você pode fechar esta janela e acompanhar o andamento na lista.
           </p>
           <div className="flex gap-2">
             {(["todas", "erros", "avisos"] as const).map((f) => (
