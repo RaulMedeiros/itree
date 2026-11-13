@@ -74,11 +74,8 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     acao: async (p) => {
       await p
         .getByPlaceholder("Buscar árvore, ocorrência, bairro ou coordenada")
-        .fill("Bairro de teste B");
-      await p
-        .getByRole("option", { name: /Bairro de teste B/ })
-        .first()
-        .click();
+        .fill(ids.bairro_demo);
+      await p.getByRole("option", { name: ids.bairro_demo }).first().click();
       await p.getByText("Bairro em destaque:").waitFor({ timeout: 15000 });
     },
   });
@@ -173,7 +170,7 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
   await tela(p, "20-alertas", "/alertas", { esperar: /ALR-/ });
   await tela(p, "21-alerta-detalhe", `/alertas/${ids.alerta}`, { esperar: /ALR-/, espera: 3000 });
   await tela(p, "22-analises", "/analises?analise=arvores_por_bairro", {
-    esperar: "Bairro de teste A",
+    esperar: ids.bairro_demo,
   });
   await ctx.close();
 
@@ -186,7 +183,7 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     esperar: "Equipe de Arborização Leste",
   });
   await tela(p, "26-admin-territorios", "/administracao/territorios", {
-    esperar: "Bairro de teste A",
+    esperar: /Bairro/,
   });
   await tela(p, "27-admin-especies", "/administracao/especies", { esperar: "Licania tomentosa" });
   await tela(p, "28-admin-tipos-ocorrencia", "/administracao/tipos-ocorrencia", {

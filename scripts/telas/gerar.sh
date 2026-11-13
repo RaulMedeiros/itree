@@ -24,9 +24,31 @@ for f in bairros-sinteticos.geojson focos-sinteticos.csv deter-sintetico.geojson
   docker compose cp "$AQUI/$f" "api:/tmp/telas-dados/$f"
 done
 
-$M importar_territorios /tmp/telas-dados/bairros-sinteticos.geojson --tipo bairro \
-  --campo-nome NOME --campo-codigo COD --fonte "Dados sintéticos de teste" --municipio "Município de teste"
-$M criar_administrador --email admin@itree.local --nome "Ana Administradora" --territorio "Município de teste"
+# Limites oficiais de Fortaleza (Fortaleza em Mapas, Ipplan: 12 regionais e 121
+# bairros com código IBGE). O contêiner não tem rede externa: os arquivos são
+# baixados no host. Sem acesso, ficam os três bairros sintéticos de antes.
+MAPAS="https://mapas.fortaleza.ce.gov.br/api/v1/geojson?id="
+CENSO="https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/Agregados_por_Bairro_csv/Agregados_por_bairros_entorno_faces_BR.zip"
+TMP="$(mktemp -d)"
+if curl -sf -m 60 "${MAPAS}17" -o "$TMP/regionais.geojson" && curl -sf -m 60 "${MAPAS}21" -o "$TMP/bairros.geojson"; then
+  docker compose cp "$TMP/regionais.geojson" api:/tmp/telas-dados/regionais-oficiais.geojson
+  docker compose cp "$TMP/bairros.geojson" api:/tmp/telas-dados/bairros-oficiais.geojson
+  $M importar_limites_fortaleza --arquivo-regionais /tmp/telas-dados/regionais-oficiais.geojson \
+    --arquivo-bairros /tmp/telas-dados/bairros-oficiais.geojson --municipio Fortaleza
+  MUNICIPIO="Fortaleza"
+  # Arborização do entorno por bairro (IBGE, Censo 2022), cruzada pelo código IBGE.
+  if curl -sf -m 120 "$CENSO" -o "$TMP/censo.zip"; then
+    docker compose cp "$TMP/censo.zip" api:/tmp/telas-dados/censo-entorno.zip
+    $M importar_censo_arborizacao --arquivo /tmp/telas-dados/censo-entorno.zip || true
+  fi
+else
+  echo "Sem acesso ao Fortaleza em Mapas: usando bairros sintéticos."
+  $M importar_territorios /tmp/telas-dados/bairros-sinteticos.geojson --tipo bairro \
+    --campo-nome NOME --campo-codigo COD --fonte "Dados sintéticos de teste" --municipio "Município de teste"
+  MUNICIPIO="Município de teste"
+fi
+rm -rf "$TMP"
+$M criar_administrador --email admin@itree.local --nome "Ana Administradora" --territorio "$MUNICIPIO"
 $M shell -c "
 from itree.contas.models import Usuario, EscopoUsuario
 from itree.territorio.models import Territorio

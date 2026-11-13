@@ -18,6 +18,7 @@ quando houver espaço ou decisão.
 | M-25 | P3 | Resumo de notificações por e-mail e SMTP de produção | Hoje sai um e-mail por evento; o SMTP real depende da hospedagem (DP-21). | Resumo diário opcional, verificação do e-mail e SMTP configurado no ambiente. |
 | M-30 | P3 | Resultado e foto quando a tarefa fecha pela ocorrência ou pela inspeção | Esses caminhos não passam pela regra de resultado e foto. Os tipos poda, remoção e plantio dependem da DP-17. | Regra decidida e aplicada nos três caminhos. |
 | M-32 | P3 | Grupos de bairro: nome no mapa e clique que enquadra o bairro | O grupo mostra contagem e anel, mas o nome só aparece na dica; o clique aproxima sem enquadrar o bairro. | Rótulo do bairro no grupo e clique que ajusta o mapa ao polígono. |
+| M-31 | P1 | Bairros reais na demonstração e nas capturas | Pedido da pessoa usuária: a demonstração mostrava três quadrados sintéticos como bairros. A fonte oficial (Fortaleza em Mapas, Ipplan) já é importada por `importar_limites_fortaleza`. | Demonstração e capturas com os 121 bairros e 12 regionais oficiais e o Censo por bairro; quadrados só como recurso sem rede. Em produção, a confirmação da fonte oficial e do responsável segue na DP-10. |
 
 ## Áreas verdes
 
