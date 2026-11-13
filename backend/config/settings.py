@@ -240,6 +240,11 @@ ALERTAS_FOCOS_RAIO_AREA_VERDE_KM = env.float("ALERTAS_FOCOS_RAIO_AREA_VERDE_KM",
 ALERTAS_FOCOS_RAIO_PARQUE_KM = env.float("ALERTAS_FOCOS_RAIO_PARQUE_KM", default=None)
 ALERTAS_FOCOS_RAIO_UC_KM = env.float("ALERTAS_FOCOS_RAIO_UC_KM", default=None)
 
+# --- PRODES Caatinga (F-02) ----------------------------------------------------
+# Camada de referência histórica: ingere os polígonos anuais de supressão do TerraBrasilis
+# que intersectam o município cadastrado ampliado por este buffer (km). Não gera alertas.
+PRODES_CAATINGA_BUFFER_KM = env.float("PRODES_CAATINGA_BUFFER_KM", default=2.0)
+
 # --- Referências das espécies (M-01) ------------------------------------------
 # Wikidata, Wikipedia e Wikimedia Commons; a política de uso pede identificação.
 REFERENCIAS_USER_AGENT = env.str(

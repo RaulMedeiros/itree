@@ -149,6 +149,11 @@ CHAVES_GEOJSON = {
         "id": ("alertCode", "alert_code", "id"),
         "data": ("detectedAt", "detected_at", "data"),
     },
+    # PRODES Caatinga (camada de referência, não alerta): a data é a da imagem (F-02).
+    "inpe_prodes_caatinga": {
+        "id": ("uuid", "gid", "id", "fid"),
+        "data": ("image_date", "view_date", "data"),
+    },
 }
 
 

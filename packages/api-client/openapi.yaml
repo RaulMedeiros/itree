@@ -2151,6 +2151,32 @@ paths:
                 type: string
                 format: binary
           description: ''
+  /api/v1/mapa/supressao-anual:
+    get:
+      operationId: mapa_supressao_anual
+      description: |-
+        Supressão anual do PRODES Caatinga (INPE) como GeoJSON: camada de referência histórica.
+
+        Não são alertas: o PRODES é anual, de escala regional (polígonos de cerca de 1 ha ou mais)
+        e não prova irregularidade. A resposta traz fonte, licença, escala e o intervalo de anos.
+      parameters:
+      - in: query
+        name: precisao
+        schema:
+          type: integer
+        description: Casas decimais (padrão 5).
+      tags:
+      - mapa
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/mapa/tiles/{camada}/{z}/{x}/{y}:
     get:
       operationId: mapa_tile

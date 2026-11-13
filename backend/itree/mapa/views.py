@@ -451,3 +451,67 @@ def alertas(request: Request):
     if not request.user.tem_permissao("alertas.ler"):
         raise PermissionDenied()
     return Response(alertas_geojson(request.user, request.query_params))
+
+
+@extend_schema(
+    operation_id="mapa_supressao_anual",
+    parameters=[OpenApiParameter("precisao", int, description="Casas decimais (padrão 5).")],
+    responses={(200, "application/geo+json"): OpenApiTypes.OBJECT},
+)
+@api_view(["GET"])
+def supressao_anual(request: Request):
+    """Supressão anual do PRODES Caatinga (INPE) como GeoJSON: camada de referência histórica.
+
+    Não são alertas: o PRODES é anual, de escala regional (polígonos de cerca de 1 ha ou mais)
+    e não prova irregularidade. A resposta traz fonte, licença, escala e o intervalo de anos.
+    """
+    import json
+
+    from django.contrib.gis.db.models.functions import AsGeoJSON
+
+    from itree.alertas.escopo import filtrar_supressao_por_escopo
+    from itree.alertas.models import SupressaoAnual
+    from itree.alertas.prodes import ESCALA
+
+    if not request.user.tem_permissao("alertas.ler"):
+        raise PermissionDenied()
+    try:
+        precisao = min(max(int(request.query_params.get("precisao", 5)), 1), 8)
+    except ValueError:
+        precisao = 5
+    qs = filtrar_supressao_por_escopo(SupressaoAnual.objects.all(), request.user)
+    resumo = qs.aggregate(
+        anos_min=Min("ano"), anos_max=Max("ano"), total=Count("id"), ingerido_em=Max("ingerido_em")
+    )
+    fonte = qs.values("fonte", "fonte_url", "licenca").first() or {}
+    feicoes = [
+        {
+            "type": "Feature",
+            "id": str(s.id),
+            "geometry": json.loads(s.g),
+            "properties": {
+                "ano": s.ano,
+                "data_imagem": s.data_imagem.isoformat(),
+                "area_ha": s.area_ha,
+                "satelite": s.satelite,
+            },
+        }
+        for s in qs.annotate(g=AsGeoJSON("geom", precision=precisao)).order_by("ano")
+    ]
+    return Response(
+        {
+            "type": "FeatureCollection",
+            "features": feicoes,
+            "proveniencia": {
+                "nome": "Supressão anual (PRODES Caatinga)",
+                "fonte": fonte.get("fonte", ""),
+                "fonte_url": fonte.get("fonte_url", ""),
+                "licenca": fonte.get("licenca", ""),
+                "ingerido_em": resumo["ingerido_em"],
+                "ano_inicial": resumo["anos_min"],
+                "ano_final": resumo["anos_max"],
+                "quantidade": resumo["total"],
+                "escala": ESCALA,
+            },
+        }
+    )

@@ -37,7 +37,7 @@ comando ou ingestão no código.
 | BDQueimadas, focos diários | INPE, Programa Queimadas | `https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_AAAAMMDD.csv` | CSV, 1 a 4 MB por dia | Não declarada (DP-11); citar "INPE, Programa Queimadas" | Diária; o do dia fica pronto ~21h (BRT), o fechado ~09h | V | Implementada: `FonteAlerta.INPE_FOCOS` |
 | BDQueimadas, mensal e 10 min | INPE | `.../focos/csv/mensal/Brasil/` e `.../focos/csv/10min/` | CSV (.zip até 2023), 23 a 137 MB por mês | idem | Mês corrente atualizado | V | Implementada: `ingerir_focos_historico` (filtra o Ceará na leitura) |
 | TerraBrasilis WFS | INPE | `https://terrabrasilis.dpi.inpe.br/geoserver/wfs` | WFS 2.0.0, GeoJSON | WMS informa Fees e AccessConstraints "none"; licença formal não declarada | Varia por camada | V | `FonteAlerta.INPE_DETER` (URL de WFS) |
-| PRODES Caatinga | INPE | camada `prodes-caatinga-nb:yearly_deforestation` | WFS, EPSG:4674 | idem | Anual | V | Backlog (exige a chave `image_date` em `CHAVES_GEOJSON`) |
+| PRODES Caatinga | INPE | camada `prodes-caatinga-nb:yearly_deforestation` | WFS, GeoJSON (saída em EPSG:4326 pedida por `srsName`) | idem | Anual | V | Implementada: `ingerir_prodes_caatinga` (camada de referência, não alerta) |
 | DETER Amazônia e Cerrado | INPE | `deter-amz`, `deter-cerrado-nb` | WFS | idem | Diária | A (não cobre Fortaleza) | Descartada |
 | CNUC, tabela e polígonos | MMA | `dados.mma.gov.br`, dataset do CNUC | CSV e Shapefile | `cc-by` | 2026-08 (tabela) | V | Backlog (conferir UCs) |
 | Censo 2022, entorno por bairro | IBGE | `ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/` | ZIP com CSV, 121 bairros de Fortaleza | Não declarada na listagem | 2025-04 | V | Implementada: importação, indicador na visão geral e camada coroplética no mapa |
@@ -212,6 +212,37 @@ uv run python manage.py ingerir_focos_historico --desde 2023-01 --ate 2023-03
   verde. O escopo dos focos (lista, mapa, painel, relatórios e notificações) ganha o mesmo
   buffer; os outros tipos de alerta seguem o escopo exato.
 - Depende de `importar_areas_verdes` ter rodado; sem áreas, nenhum foco ganha a marca.
+
+### PRODES Caatinga: supressão anual como camada de referência
+
+```bash
+cd backend
+uv run python manage.py ingerir_prodes_caatinga                 # baixa do TerraBrasilis
+uv run python manage.py ingerir_prodes_caatinga --buffer-km 5   # outro buffer
+uv run python manage.py ingerir_prodes_caatinga --arquivo prodes.geojson
+```
+
+- Fonte: WFS do TerraBrasilis, camada `prodes-caatinga-nb:yearly_deforestation` (INPE). Não há
+  DETER para a Caatinga; o PRODES cobre Fortaleza em **escala regional** (polígonos de cerca de
+  1 ha ou mais, o menor do dado real tem 1,0 ha) e **leitura anual**.
+- O comando pede só o retângulo do município cadastrado ampliado por um buffer (padrão
+  `PRODES_CAATINGA_BUFFER_KM`, 2 km; `--buffer-km` troca) e guarda os polígonos que intersectam o
+  município ampliado em `SupressaoAnual`. O servidor do INPE responde 503 quando está sobrecarregado:
+  o download repete até 4 vezes. Exige `importar_limites_fortaleza`.
+- Lê a data da chave `image_date` (data da imagem do mapeamento; ver `CHAVES_GEOJSON` em
+  `itree/alertas/fontes.py`) e o ano de `year`. A área vem de `area_km` (convertida para ha).
+- **Não cria alerta, pendência de triagem nem notificação.** É contexto histórico. A licença é
+  gravada como "não declarada" (DP-11), com a citação "INPE, TerraBrasilis, PRODES Caatinga".
+- Idempotente pelo `uuid` da fonte. A API `GET /api/v1/mapa/supressao-anual` devolve o GeoJSON no
+  escopo do usuário (com o mesmo buffer) e a proveniência: fonte, licença, escala e intervalo de anos.
+- No mapa: camada "Supressão anual (PRODES Caatinga)" no grupo "Ambientais — sinais externos",
+  **desligada por padrão**. A cor segue o ano (claro, mais antigo; escuro, mais recente), e a legenda
+  traz o intervalo de anos e "≥ ~1 ha, anual, escala regional".
+- Validação com o dado real (2026-11-13, limites reais de Fortaleza, buffer de 2 km): 1.990
+  polígonos no retângulo, 1.304 dentro do recorte (2004 a 2025, 16 anos mapeados; 2004 tem 230
+  polígonos e 1.546 ha, 2025 tem 21 e 151 ha), 0 inválidos; a segunda execução deu 0 novos e 1.304
+  atualizados, sem nenhum alerta criado. O teste usa 8 feições literais da resposta real
+  (`backend/tests/dados/prodes_caatinga_yearly_deforestation_trecho.geojson`).
 
 ### Praças: subtipo (areninha, calçadão, rotatória)
 

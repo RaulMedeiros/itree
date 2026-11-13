@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { lerCoropletica, lerMapa, pinturaRaster, verificar } from "./contraste.mjs";
+import { lerCoropletica, lerMapa, lerSupressao, pinturaRaster, verificar } from "./contraste.mjs";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const css = readFileSync(join(raiz, "src/tokens.css"), "utf8");
@@ -58,4 +58,25 @@ test("uma rampa com classes quase iguais, ou clara demais, falha na verificaçã
   assert.ok(daColoropletica(igual).some((r) => r.razao < r.minimo));
   const clara = { ...coro, cores: ["#cde2fb", "#d5e6fb", "#dbeafc", "#e2eefc", "#e8f1fd"] };
   assert.ok(daColoropletica(clara).some((r) => r.razao < r.minimo));
+});
+
+const simbologia = readFileSync(join(web, "simbologia.ts"), "utf8");
+const daSupressao = (sup) =>
+  verificar(css, lerMapa(realce, estilo), undefined, sup).filter((r) =>
+    r.descricao.startsWith("supressão anual"),
+  );
+
+test("a rampa da supressão anual separa as pontas e a mais escura contrasta com o mapa", () => {
+  const sup = lerSupressao(simbologia);
+  assert.equal(sup.cores.length, 2);
+  const pares = daSupressao(sup);
+  assert.equal(pares.length, 10); // 2 por fundo do OSM
+  for (const r of pares)
+    assert.ok(r.razao >= r.minimo, `${r.descricao}: ${r.razao.toFixed(2)}:1 (mín. ${r.minimo})`);
+});
+
+test("uma rampa de supressão com pontas iguais ou escura fraca falha na verificação", () => {
+  const sup = lerSupressao(simbologia);
+  assert.ok(daSupressao({ ...sup, cores: [sup.cores[1], sup.cores[1]] }).some((r) => r.razao < r.minimo));
+  assert.ok(daSupressao({ ...sup, cores: [sup.cores[0], "#f0c8d4"] }).some((r) => r.razao < r.minimo));
 });

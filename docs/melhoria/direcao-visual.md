@@ -35,7 +35,13 @@ A legenda usa as mesmas constantes.
 | Tarefa em aberto / atrasada | `#1c7ed6` / `#c92a2a` (quadrado) |
 | Alerta ambiental | `#7048e8` (losango, área hachurada) |
 | Seleção | `#0b7285` |
+| Supressão anual (PRODES Caatinga), rampa do ano mais antigo ao mais recente | `#f4c0d1` → `#8a0f3c` (rosa, a 80% de opacidade); camada de referência, desligada por padrão |
 | Arborização do entorno (Censo 2022), 5 classes de <20% a ≥80% | `#cde2fb` / `#86b6ef` / `#3987e5` / `#1c5cab` / `#0d366b` (um só matiz, claro → escuro, a 80% de opacidade); sem dado: hachura cinza `#a3ada7` |
+
+A rampa da supressão anual (PRODES) é rosa de propósito: o roxo é do alerta, o laranja e o marrom
+são da condição das árvores e o azul é do Censo. A cor segue o ano do mapeamento e nunca sugere
+irregularidade. As pontas são conferidas pelo mesmo `contraste.mjs`: a mais escura a ≥ 3:1 do mapa
+base e as duas pontas a ≥ 1,4:1 entre si, em cada fundo do OSM.
 
 A rampa da arborização do entorno é azul de propósito: o verde e o laranja são da
 condição das árvores, e o dado do Censo é percepção do recenseador sobre a face

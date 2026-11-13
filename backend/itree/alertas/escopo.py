@@ -5,6 +5,7 @@ Alertas de foco de calor usam o escopo do usuário com um buffer (o maior dos ra
 conservação, interessa a quem cuida da área vizinha. Os demais alertas seguem o escopo exato.
 """
 
+from django.conf import settings
 from django.db.models import Q, QuerySet
 
 from itree.contas.acesso import area_do_escopo
@@ -39,3 +40,12 @@ def alerta_no_escopo(alerta: AlertaAmbiental, usuario: Usuario) -> bool:
     if area.intersects(alerta.geom):
         return True
     return alerta.tipo == TipoAlerta.FOCO_CALOR and ampla.intersects(alerta.geom)
+
+
+def filtrar_supressao_por_escopo(qs: QuerySet, usuario: Usuario) -> QuerySet:
+    """Polígonos do PRODES (camada de referência) no escopo do usuário, ampliado pelo buffer
+    ``PRODES_CAATINGA_BUFFER_KM``, o mesmo da ingestão."""
+    area = area_do_escopo(usuario)
+    if area is None:
+        return qs.none()
+    return qs.filter(geom__intersects=ampliar(area, settings.PRODES_CAATINGA_BUFFER_KM * 1000))

@@ -58,6 +58,7 @@ api_v1 = [
         name="indicadores-arborizacao-entorno",
     ),
     path("mapa/alertas", mapa.alertas, name="mapa-alertas"),
+    path("mapa/supressao-anual", mapa.supressao_anual, name="mapa-supressao-anual"),
     path("relatorios/catalogo", relatorios.catalogo, name="relatorios-catalogo"),
     path("relatorios/analise", relatorios.analise, name="relatorios-analise"),
     path("relatorios/exportar", relatorios.exportar, name="relatorios-exportar"),

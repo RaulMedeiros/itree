@@ -2,6 +2,7 @@ import {
   areasVerdesListar,
   indicadoresArborizacaoEntornoGeojson,
   mapaAlertas,
+  mapaSupressaoAnual,
   territoriosGeojson,
   useArvoresObter,
   useEvidenciasListar,
@@ -88,12 +89,15 @@ import {
   COR_TAREFA,
   COR_TAREFA_ATRASADA,
   CORES_AREA_VERDE,
+  CORES_SUPRESSAO_ANUAL,
   CORES_CONDICAO,
   CORES_ORIGEM,
   CORES_PRIORIDADE,
   OPACIDADE_AREA_VERDE,
   OPACIDADE_AREA_VERDE_UC,
+  OPACIDADE_SUPRESSAO_ANUAL,
   aoFaltarImagem,
+  corDaSupressao,
   layoutGrupo,
   pinturaArvores,
   registrarIcones,
@@ -129,6 +133,8 @@ export interface BuscaMapa {
   arborizacao_entorno?: "1";
   tarefas?: "1";
   alertas?: "1";
+  /** Camada histórica "Supressão anual (PRODES Caatinga)"; desligada por padrão. */
+  supressao_anual?: "1";
   sem_inspecao_dias?: number;
   especie_estado?: EstadoEspecieEnum;
   localizacao_origem?: OrigemLocalizacaoEnum;
@@ -154,6 +160,19 @@ interface ProvenienciaIndicador {
   metodo?: string;
 }
 
+/** Proveniência e escala da camada "Supressão anual (PRODES Caatinga)", como a API as devolve. */
+interface ProvenienciaSupressao {
+  nome: string;
+  fonte: string;
+  fonte_url?: string;
+  licenca?: string;
+  ingerido_em?: string | null;
+  ano_inicial: number | null;
+  ano_final: number | null;
+  quantidade: number;
+  escala: string;
+}
+
 /** Texto curto da definição, enquanto a camada ainda não trouxe a proveniência da API. */
 const DEFINICAO_ARBORIZACAO =
   "Percentual das faces de quadra do bairro em que o Censo 2022 registrou ao menos uma árvore no entorno dos domicílios. Não mede copa nem cobertura vegetal.";
@@ -169,6 +188,7 @@ function urlTiles(
 }
 
 const ZOOM_ROTULOS = 12.5;
+const FONTE_SUPRESSAO = "supressao-anual";
 
 /** Camadas operacionais com clique próprio: o clique nelas não abre a área verde por baixo. */
 const CAMADAS_COM_CLIQUE = [
@@ -279,6 +299,10 @@ export function MapaPagina() {
   // Bairro clicado na camada do Censo: abre o painel com o dado e a proveniência (M-18).
   const [bairroCenso, setBairroCenso] = useState<DicaArborizacao | null>(null);
   const arborizacaoIniciada = useRef(false);
+  // Supressão anual do PRODES: carregada na primeira vez que a camada é ligada.
+  const [estadoSupressao, setEstadoSupressao] = useState<"inicial" | "pronto" | "erro">("inicial");
+  const [provSupressao, setProvSupressao] = useState<ProvenienciaSupressao | null>(null);
+  const supressaoIniciada = useRef(false);
   const [dica, setDica] = useState<{ x: number; y: number; texto: string } | null>(null);
   const [cursor, setCursor] = useState<{ lon: number; lat: number } | null>(null);
 
@@ -301,6 +325,7 @@ export function MapaPagina() {
   const mostrarArborizacao = podeMapa && busca.arborizacao_entorno === "1";
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
   const mostrarAlertas = podeAlertas && busca.alertas === "1";
+  const mostrarSupressao = podeAlertas && busca.supressao_anual === "1";
   const filtrosArvores = {
     bairro: territorioAtivo.id,
     especie_estado: busca.especie_estado,
@@ -488,6 +513,39 @@ export function MapaPagina() {
     });
 
     if (podeAlertas) {
+      // Supressão anual (PRODES Caatinga): referência histórica, abaixo dos alertas.
+      m.addSource(FONTE_SUPRESSAO, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      m.addLayer({
+        id: "supressao-anual-preenchimento",
+        type: "fill",
+        source: FONTE_SUPRESSAO,
+        layout: { visibility: "none" },
+        paint: {
+          "fill-color": corDaSupressao(2004, 2025),
+          "fill-opacity": OPACIDADE_SUPRESSAO_ANUAL,
+        },
+      });
+      m.addLayer({
+        id: "supressao-anual-contorno",
+        type: "line",
+        source: FONTE_SUPRESSAO,
+        layout: { visibility: "none" },
+        paint: { "line-color": CORES_SUPRESSAO_ANUAL[1], "line-width": 0.8, "line-opacity": 0.8 },
+      });
+      m.on("mousemove", "supressao-anual-preenchimento", (e: MapLayerMouseEvent) => {
+        const operacionais = CAMADAS_COM_CLIQUE.filter((id) => m.getLayer(id));
+        if (
+          desenhando.current ||
+          (operacionais.length && m.queryRenderedFeatures(e.point, { layers: operacionais }).length)
+        )
+          return;
+        const p = e.features?.[0]?.properties ?? {};
+        setDica({ x: e.point.x, y: e.point.y, texto: textoDicaSupressao(p as DicaSupressao) });
+      });
+      m.on("mouseleave", "supressao-anual-preenchimento", () => setDica(null));
       m.addSource("alertas", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
@@ -703,6 +761,31 @@ export function MapaPagina() {
     });
   }, [pronto, mostrarAlertas, territorioAtivo.id]);
 
+  // Supressão anual (PRODES): busca única, na primeira vez que a camada é ligada.
+  useEffect(() => {
+    if (!pronto || !mostrarSupressao || supressaoIniciada.current) return;
+    supressaoIniciada.current = true;
+    void mapaSupressaoAnual({ precisao: 5 })
+      .then(({ data }) => {
+        const { proveniencia: prov, ...colecao } = data as unknown as {
+          proveniencia: ProvenienciaSupressao;
+        };
+        const m = mapa.current;
+        (m?.getSource(FONTE_SUPRESSAO) as GeoJSONSource | undefined)?.setData(
+          colecao as unknown as Parameters<GeoJSONSource["setData"]>[0],
+        );
+        if (m?.getLayer("supressao-anual-preenchimento") && prov.ano_inicial && prov.ano_final)
+          m.setPaintProperty(
+            "supressao-anual-preenchimento",
+            "fill-color",
+            corDaSupressao(prov.ano_inicial, prov.ano_final),
+          );
+        setProvSupressao(prov);
+        setEstadoSupressao("pronto");
+      })
+      .catch(() => setEstadoSupressao("erro"));
+  }, [pronto, mostrarSupressao]);
+
   // Áreas verdes: busca única, na primeira vez que a camada é ligada (escopo do usuário).
   useEffect(() => {
     if (!pronto || !mostrarAreasVerdes || areasVerdesIniciadas.current) return;
@@ -916,6 +999,7 @@ export function MapaPagina() {
     definir(["arvores-grupos", "arvores-pontos"], mostrarArvores);
     definir(["ocorrencias-grupos", "ocorrencias-pontos"], mostrarOcorrencias);
     definir(["alertas-area", "alertas-borda", "alertas-pontos"], mostrarAlertas);
+    definir(["supressao-anual-preenchimento", "supressao-anual-contorno"], mostrarSupressao);
     definir(["tarefas-pontos"], mostrarTarefas);
     definir(CAMADAS_ARBORIZACAO, mostrarArborizacao);
     definir(["bairros-preenchimento", "bairros-contorno"], mostrarBairros);
@@ -933,6 +1017,7 @@ export function MapaPagina() {
     mostrarArborizacao,
     mostrarTarefas,
     mostrarAlertas,
+    mostrarSupressao,
   ]);
 
   // Subtipo das praças: some só o que é praça e não é do subtipo escolhido; parques e unidades
@@ -1129,6 +1214,26 @@ export function MapaPagina() {
                     <p className="text-xs text-texto-suave">
                       Detecções de satélite e focos de calor não provam irregularidade.
                     </p>
+                    <Camada
+                      rotulo="Supressão anual (PRODES Caatinga)"
+                      marcador={<AmostraSupressao />}
+                      ativa={mostrarSupressao}
+                      aoMudar={(v) => atualizarBusca({ supressao_anual: v ? "1" : undefined })}
+                    />
+                    <p className="text-xs text-texto-suave">
+                      Histórico anual de supressão de vegetação, de {ESCALA_SUPRESSAO}. Camada de
+                      referência, não é alerta.
+                    </p>
+                    {mostrarSupressao && pronto && estadoSupressao === "inicial" && (
+                      <p role="status" className="text-xs text-texto-suave">
+                        Carregando a supressão anual…
+                      </p>
+                    )}
+                    {mostrarSupressao && estadoSupressao === "erro" && (
+                      <p role="alert" className="text-xs text-perigo">
+                        Não foi possível carregar a supressão anual.
+                      </p>
+                    )}
                   </Grupo>
                 )}
 
@@ -1381,6 +1486,7 @@ export function MapaPagina() {
             ocorrencias={mostrarOcorrencias}
             tarefas={mostrarTarefas}
             alertas={mostrarAlertas}
+            supressao={mostrarSupressao ? (provSupressao ?? "carregando") : null}
             recolhidaPorPadrao={painel}
             areasVerdes={mostrarAreasVerdes}
             arborizacao={mostrarArborizacao}
@@ -1620,6 +1726,37 @@ function AmostraArborizacao() {
   );
 }
 
+const ESCALA_SUPRESSAO = "≥ ~1 ha, anual, escala regional";
+
+/** Amostra da rampa da supressão anual: do mais antigo (claro) ao mais recente (escuro). */
+function AmostraSupressao() {
+  return (
+    <span
+      aria-hidden
+      className="inline-block h-3 w-4 rounded-[2px]"
+      style={{
+        background: `linear-gradient(to right, ${CORES_SUPRESSAO_ANUAL[0]}, ${CORES_SUPRESSAO_ANUAL[1]})`,
+      }}
+    />
+  );
+}
+
+interface DicaSupressao {
+  ano?: number;
+  data_imagem?: string;
+  area_ha?: number | null;
+}
+
+/** Dica do polígono sob o cursor: ano do mapeamento, data da imagem e área. */
+function textoDicaSupressao(p: DicaSupressao): string {
+  const ha =
+    p.area_ha === null || p.area_ha === undefined
+      ? ""
+      : ` · ${Number(p.area_ha).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} ha`;
+  const imagem = p.data_imagem ? ` · imagem de ${formatarData(p.data_imagem)}` : "";
+  return `Supressão mapeada em ${p.ano ?? "ano desconhecido"}${imagem}${ha}`;
+}
+
 interface DicaArborizacao {
   nome?: string;
   valor?: number | null;
@@ -1666,6 +1803,7 @@ function Legenda({
   ocorrencias,
   tarefas,
   alertas,
+  supressao,
   recolhidaPorPadrao,
   areasVerdes,
   arborizacao,
@@ -1676,6 +1814,8 @@ function Legenda({
   ocorrencias: boolean;
   tarefas: boolean;
   alertas: boolean;
+  /** Supressão anual ligada: a proveniência (ou "carregando"); `null` com a camada desligada. */
+  supressao: ProvenienciaSupressao | "carregando" | null;
   /** Com o painel de camadas aberto, a legenda começa recolhida para não cobrir o mapa (C-09). */
   recolhidaPorPadrao: boolean;
   areasVerdes: boolean;
@@ -1683,7 +1823,16 @@ function Legenda({
   definicaoArborizacao: string;
 }) {
   const [aberta, setAberta] = useState(!recolhidaPorPadrao);
-  if (!arvores && !ocorrencias && !tarefas && !alertas && !areasVerdes && !arborizacao) return null;
+  if (
+    !arvores &&
+    !ocorrencias &&
+    !tarefas &&
+    !alertas &&
+    !supressao &&
+    !areasVerdes &&
+    !arborizacao
+  )
+    return null;
   return (
     <section
       aria-label="Legenda"
@@ -1813,6 +1962,32 @@ function Legenda({
               </ul>
               <p className="mt-1.5 text-texto-suave">Fonte: IBGE, Censo 2022.</p>
               <p className="mt-0.5 max-w-64 text-texto-suave">{definicaoArborizacao}</p>
+            </div>
+          )}
+          {supressao && (
+            <div data-testid="legenda-supressao">
+              <p className="font-semibold">Supressão anual (PRODES Caatinga)</p>
+              <p className="mt-1 flex items-center gap-1.5">
+                <span className="text-texto-suave">
+                  {typeof supressao === "object" && supressao.ano_inicial
+                    ? supressao.ano_inicial
+                    : "…"}
+                </span>
+                <span
+                  aria-hidden
+                  className="inline-block h-3 w-20 shrink-0 rounded-[2px] border border-black/20"
+                  style={{
+                    background: `linear-gradient(to right, ${CORES_SUPRESSAO_ANUAL[0]}, ${CORES_SUPRESSAO_ANUAL[1]})`,
+                  }}
+                />
+                <span className="text-texto-suave">
+                  {typeof supressao === "object" && supressao.ano_final ? supressao.ano_final : "…"}
+                </span>
+              </p>
+              <p className="mt-0.5 max-w-64 text-texto-suave">
+                Cor pelo ano do mapeamento: mais escuro, mais recente. Polígonos {ESCALA_SUPRESSAO}.
+                Fonte: INPE, TerraBrasilis. Não é alerta nem prova irregularidade.
+              </p>
             </div>
           )}
           {alertas && (

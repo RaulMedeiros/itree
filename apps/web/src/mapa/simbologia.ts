@@ -46,6 +46,28 @@ export const COR_ALERTA = "#7048e8";
 export const COR_SELECAO = "#0b7285";
 
 /**
+ * Supressão anual (PRODES Caatinga, INPE): camada histórica de referência, não alerta. Rampa
+ * rosa, do claro (mais antigo) ao escuro (mais recente), para não competir com o roxo dos alertas,
+ * o laranja da condição "Ruim" nem o azul do Censo.
+ */
+export const CORES_SUPRESSAO_ANUAL = ["#f4c0d1", "#8a0f3c"] as const;
+export const OPACIDADE_SUPRESSAO_ANUAL = 0.8;
+
+/** Cor do polígono pelo ano; com um ano só, a cor mais escura. */
+export const corDaSupressao = (inicio: number, fim: number): ExpressionSpecification =>
+  (fim > inicio
+    ? [
+        "interpolate",
+        ["linear"],
+        ["get", "ano"],
+        inicio,
+        CORES_SUPRESSAO_ANUAL[0],
+        fim,
+        CORES_SUPRESSAO_ANUAL[1],
+      ]
+    : CORES_SUPRESSAO_ANUAL[1]) as ExpressionSpecification;
+
+/**
  * Áreas verdes (praças, parques, unidades de conservação): camada de contexto,
  * translúcida e abaixo das árvores. As cores são deliberadamente diferentes da
  * cor "Boa" das árvores (#2f9e44): oliva, verde-azulado e musgo escuro, com
