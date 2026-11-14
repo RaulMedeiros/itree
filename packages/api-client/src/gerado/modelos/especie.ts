@@ -40,10 +40,11 @@ export interface Especie {
   readonly gbif_url: string;
   readonly flora_brasil_id: string;
   readonly flora_brasil_url: string;
-  /** Cópia local (URL temporária) quando houver; senão, a miniatura da Wikimedia. */
+  /** Cópia local (URL temporária) quando houver; senão, a miniatura da origem. */
   readonly imagem_url: string;
   readonly imagem_pagina_url: string;
   readonly imagem_autor: string;
   readonly imagem_licenca: string;
   readonly imagem_licenca_url: string;
+  readonly imagem_fonte: string;
 }

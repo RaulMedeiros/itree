@@ -7,10 +7,13 @@ import { cn } from "../util/cn";
 
 interface ComImagem {
   nome_cientifico: string;
+  nomes_comuns?: string[];
   imagem_url?: string;
   imagem_autor?: string;
   imagem_licenca?: string;
+  imagem_licenca_url?: string;
   imagem_pagina_url?: string;
+  imagem_fonte?: string;
 }
 
 /** Origem em relação ao Brasil, sem supor quando o catálogo não informa. */
@@ -30,37 +33,111 @@ export function SeloOrigem({ nativa }: { nativa: boolean | null | undefined }) {
   );
 }
 
-/** Imagem do Wikimedia Commons com autoria e licença sempre visíveis. */
-export function ImagemEspecie({
+/** Marcador neutro, igual em todo lugar, para a espécie sem imagem (ou com imagem que falhou). */
+export function MarcadorSemImagem({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center gap-1 bg-marca-clara text-marca-escura/70",
+        className,
+      )}
+    >
+      <Leaf className="size-7" aria-hidden />
+      <span className="text-xs">Sem imagem de referência</span>
+    </div>
+  );
+}
+
+function textoAlt(e: ComImagem) {
+  const comuns = e.nomes_comuns?.filter(Boolean).join(", ");
+  return comuns ? `${e.nome_cientifico} (${comuns})` : e.nome_cientifico;
+}
+
+/** Autoria, licença (com link) e fonte (com link) da imagem: nada é exibido sem atribuição. */
+export function AtribuicaoImagem({
   especie,
   className,
-  comCredito = true,
 }: {
   especie: ComImagem;
   className?: string;
-  comCredito?: boolean;
 }) {
-  // Imagem externa pode falhar (limite de taxa, rede): cai no marcador neutro.
-  const [falhou, setFalhou] = useState(false);
-  if (!especie.imagem_url || falhou)
+  const fonte = especie.imagem_fonte || "Wikimedia Commons";
+  return (
+    <p className={cn("text-xs text-texto-suave", className)}>
+      Foto: {especie.imagem_autor || "autor não informado"}
+      {especie.imagem_licenca && (
+        <>
+          {" · Licença: "}
+          {especie.imagem_licenca_url ? (
+            <a
+              href={especie.imagem_licenca_url}
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              {especie.imagem_licenca}
+            </a>
+          ) : (
+            especie.imagem_licenca
+          )}
+        </>
+      )}
+      {" · Fonte: "}
+      {especie.imagem_pagina_url ? (
+        <a href={especie.imagem_pagina_url} target="_blank" rel="noreferrer" className="underline">
+          {fonte}
+        </a>
+      ) : (
+        fonte
+      )}
+    </p>
+  );
+}
+
+/**
+ * Imagem de referência da espécie (Wikimedia Commons ou GBIF). O recipiente tem
+ * sempre o tamanho dado por `className`: sem imagem, ou se ela falhar ao
+ * carregar (limite de taxa, rede), aparece o marcador neutro no mesmo espaço.
+ * `credito`: "completo" mostra a atribuição abaixo da imagem (detalhe),
+ * "sobreposto" a mostra em uma faixa sobre ela, "nenhum" a omite (miniatura de
+ * cartão, cuja atribuição fica no detalhe).
+ */
+export function ImagemEspecie({
+  especie,
+  className,
+  credito = "sobreposto",
+}: {
+  especie: ComImagem;
+  className?: string;
+  credito?: "completo" | "sobreposto" | "nenhum";
+}) {
+  const [falhouEm, setFalhouEm] = useState<string | null>(null);
+  if (!especie.imagem_url || falhouEm === especie.imagem_url)
+    return <MarcadorSemImagem className={className} />;
+  const imagem = (
+    <img
+      src={especie.imagem_url}
+      alt={textoAlt(especie)}
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
+      className="size-full object-cover"
+      onError={() => setFalhouEm(especie.imagem_url ?? null)}
+    />
+  );
+  if (credito === "completo")
     return (
-      <div
-        className={cn("flex items-center justify-center bg-marca-clara text-marca/50", className)}
-        aria-hidden
-      >
-        <Leaf className="size-10" />
-      </div>
+      <figure className="flex flex-col gap-1.5">
+        <div className={cn("overflow-hidden bg-fundo", className)}>{imagem}</div>
+        <figcaption>
+          <AtribuicaoImagem especie={especie} />
+        </figcaption>
+      </figure>
     );
   return (
     <figure className={cn("relative overflow-hidden bg-fundo", className)}>
-      <img
-        src={especie.imagem_url}
-        alt={`Exemplar de ${especie.nome_cientifico}`}
-        loading="lazy"
-        className="size-full object-cover"
-        onError={() => setFalhou(true)}
-      />
-      {comCredito && (
+      {imagem}
+      {credito === "sobreposto" && (
         <figcaption className="absolute inset-x-0 bottom-0 truncate bg-black/55 px-2 py-0.5 text-[10px] text-white">
           {especie.imagem_autor || "Autor não informado"} · {especie.imagem_licenca} ·{" "}
           <a
@@ -69,7 +146,7 @@ export function ImagemEspecie({
             rel="noreferrer"
             className="underline"
           >
-            Wikimedia Commons
+            {especie.imagem_fonte || "Wikimedia Commons"}
           </a>
         </figcaption>
       )}

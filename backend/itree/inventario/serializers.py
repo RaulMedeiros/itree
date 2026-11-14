@@ -46,7 +46,7 @@ extend_schema_field(LocalizacaoSerializer(allow_null=True))(CampoLocalizacao)
 
 class ImagemEspecieMixin(serializers.Serializer):
     imagem_url = serializers.SerializerMethodField(
-        help_text="Cópia local (URL temporária) quando houver; senão, a miniatura da Wikimedia."
+        help_text="Cópia local (URL temporária) quando houver; senão, a miniatura da origem."
     )
 
     def get_imagem_url(self, obj) -> str:
@@ -97,6 +97,7 @@ class EspecieSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
             "imagem_autor",
             "imagem_licenca",
             "imagem_licenca_url",
+            "imagem_fonte",
         ]
         read_only_fields = [
             "referencias_situacao",
@@ -114,6 +115,7 @@ class EspecieSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
             "imagem_autor",
             "imagem_licenca",
             "imagem_licenca_url",
+            "imagem_fonte",
         ]
 
 
@@ -136,7 +138,9 @@ class EspecieCartaoSerializer(ImagemEspecieMixin, serializers.ModelSerializer):
             "imagem_url",
             "imagem_autor",
             "imagem_licenca",
+            "imagem_licenca_url",
             "imagem_pagina_url",
+            "imagem_fonte",
         ]
 
 

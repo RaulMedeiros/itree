@@ -262,6 +262,9 @@ REFERENCIAS_AUTOMATICAS = env.bool("REFERENCIAS_AUTOMATICAS", default=True)
 # Reconsulta mensal das referências antigas (M-09).
 REFERENCIAS_IDADE_MAXIMA_DIAS = env.int("REFERENCIAS_IDADE_MAXIMA_DIAS", default=30)
 REFERENCIAS_INTERVALO_SEGUNDOS = env.float("REFERENCIAS_INTERVALO_SEGUNDOS", default=1.0)
+# Espécie cuja consulta terminou em erro (limite de taxa, fonte fora do ar) é
+# retomada diariamente depois deste intervalo.
+REFERENCIAS_REPETIR_ERRO_HORAS = env.int("REFERENCIAS_REPETIR_ERRO_HORAS", default=12)
 
 # Importação de inventário: até este número de linhas válidas, a confirmação roda na própria
 # requisição (resposta 200); acima disso vai para uma tarefa Celery (resposta 202).
@@ -321,6 +324,10 @@ CELERY_BEAT_SCHEDULE = {
     "atualizar-referencias-especies": {
         "task": "itree.inventario.tasks.atualizar_referencias_antigas",
         "schedule": crontab(minute=30, hour=3, day_of_month=1),
+    },
+    "retomar-referencias-com-erro": {
+        "task": "itree.inventario.tasks.retomar_referencias_com_erro",
+        "schedule": crontab(minute=45, hour=5),
     },
     "reimportar-areas-verdes": {
         "task": "itree.areas_verdes.tasks.reimportar_areas_verdes",

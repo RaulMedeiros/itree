@@ -1,7 +1,7 @@
 import { configurarCliente, type Especie, type Eu } from "@itree/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { criarServidor } from "./servidorPadrao";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -127,7 +127,7 @@ describe("catálogo de espécies", () => {
     expect(consultas[0]?.get("ordem")).toBe("arvores");
   });
 
-  it("o cartão sem imagem não tem faixa de folha, e o que falta vira um ícone discreto (R3-12)", async () => {
+  it("o cartão sem imagem mostra o marcador neutro de tamanho fixo, e o que falta vira um ícone discreto", async () => {
     servidor.use(
       http.get(`${API}/api/v1/especies`, () =>
         HttpResponse.json({
@@ -140,11 +140,35 @@ describe("catálogo de espécies", () => {
     );
     await abrir("/inventario/especies");
     const cartao = (await screen.findByText("Cassia fistula")).closest("a")!;
-    expect(cartao.querySelector("svg.lucide-leaf")).toBeNull();
+    expect(within(cartao).getByText("Sem imagem de referência")).toBeInTheDocument();
+    expect(cartao.querySelector("svg.lucide-leaf")).not.toBeNull();
+    expect(within(cartao).queryByRole("img", { name: /Cassia fistula/ })).toBeNull();
     expect(within(cartao).queryByText("Referências não consultadas")).toBeNull();
     expect(
       within(cartao).getByRole("img", { name: "Referências não consultadas" }),
     ).toBeInTheDocument();
+  });
+
+  it("cada cartão traz uma miniatura de altura fixa, carregada sob demanda, com alt de nome científico e comum", async () => {
+    await abrir("/inventario/especies");
+    const imagem = await screen.findByRole("img", { name: "Licania tomentosa (Oiti)" });
+    expect(imagem).toHaveAttribute("src", "https://upload.wikimedia.org/oiti.jpg");
+    expect(imagem).toHaveAttribute("loading", "lazy");
+    expect(imagem.closest("figure")!.className).toMatch(/\bh-32\b/);
+    // A atribuição completa fica no detalhe, não na miniatura.
+    expect(screen.queryByText(/Fulana de Tal/)).toBeNull();
+    // A espécie sem imagem ocupa o mesmo espaço, com o marcador.
+    const marcador = screen.getByText("Sem imagem de referência");
+    expect(marcador.parentElement!.className).toMatch(/\bh-32\b/);
+  });
+
+  it("se a miniatura falhar ao carregar, o cartão cai no marcador neutro", async () => {
+    await abrir("/inventario/especies");
+    const imagem = await screen.findByRole("img", { name: "Licania tomentosa (Oiti)" });
+    fireEvent.error(imagem);
+    expect(screen.queryByRole("img", { name: "Licania tomentosa (Oiti)" })).toBeNull();
+    // Os dois cartões agora mostram o marcador.
+    expect(screen.getAllByText("Sem imagem de referência")).toHaveLength(2);
   });
 
   it("o detalhe sem imagem usa a largura toda, sem bloco vazio (R3-12)", async () => {
@@ -159,7 +183,18 @@ describe("catálogo de espécies", () => {
   it("detalhe mostra resumo com licença, crédito da imagem e links externos", async () => {
     await abrir("/inventario/especies/e-1");
     expect(await screen.findByText(/O oiti é uma árvore/)).toBeInTheDocument();
-    expect(screen.getByText(/Fulana de Tal · CC BY-SA 4.0/)).toBeInTheDocument();
+    const figura = (await screen.findByRole("img", { name: "Licania tomentosa (Oiti)" })).closest(
+      "figure",
+    )!;
+    expect(within(figura).getByText(/Foto: Fulana de Tal/)).toBeInTheDocument();
+    expect(within(figura).getByRole("link", { name: "CC BY-SA 4.0" })).toHaveAttribute(
+      "href",
+      "https://creativecommons.org/licenses/by-sa/4.0",
+    );
+    expect(within(figura).getByRole("link", { name: "Wikimedia Commons" })).toHaveAttribute(
+      "href",
+      "https://commons.wikimedia.org/wiki/File:Oiti.jpg",
+    );
     expect(screen.getByRole("link", { name: /^Wikipedia/ })).toHaveAttribute(
       "href",
       "https://pt.wikipedia.org/wiki/Oiti",
@@ -174,6 +209,36 @@ describe("catálogo de espécies", () => {
     );
     // Leitura não oferece a ação de administração.
     expect(screen.queryByRole("button", { name: /Atualizar referências/ })).toBeNull();
+  });
+
+  it("a atribuição de uma imagem do GBIF nomeia o publicador e linka licença e página de origem", async () => {
+    const gbif = {
+      ...OITI,
+      imagem_url: "https://exemplo.org/foto.jpg",
+      imagem_autor: "Beltrano",
+      imagem_licenca: "CC BY 4.0",
+      imagem_licenca_url: "https://creativecommons.org/licenses/by/4.0/",
+      imagem_pagina_url: "https://www.inaturalist.org/photos/1",
+      imagem_fonte: "GBIF — iNaturalist",
+    };
+    servidor.use(http.get(`${API}/api/v1/especies/e-1`, () => HttpResponse.json(gbif)));
+    await abrir("/inventario/especies/e-1");
+    const figura = (await screen.findByRole("img", { name: "Licania tomentosa (Oiti)" })).closest(
+      "figure",
+    )!;
+    expect(within(figura).getByRole("link", { name: "GBIF — iNaturalist" })).toHaveAttribute(
+      "href",
+      "https://www.inaturalist.org/photos/1",
+    );
+    expect(within(figura).getByRole("link", { name: "CC BY 4.0" })).toBeInTheDocument();
+    expect(within(figura).getByText(/Beltrano/)).toBeInTheDocument();
+  });
+
+  it("se a imagem do detalhe falhar, cai no marcador no mesmo espaço", async () => {
+    await abrir("/inventario/especies/e-1");
+    fireEvent.error(await screen.findByRole("img", { name: "Licania tomentosa (Oiti)" }));
+    expect(screen.getByText("Sem imagem de referência")).toBeInTheDocument();
+    expect(screen.queryByText(/Foto: Fulana de Tal/)).toBeNull();
   });
 
   it("sem referência correspondente, diz isso em vez de inventar", async () => {
