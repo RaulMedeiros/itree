@@ -42,6 +42,35 @@ Endereços de referência: ver §7.2 da [especificação consolidada](../../refe
 - **RF-INT-006** — Credenciais gerenciadas em W-10, nunca em código.
 - **RF-INT-007** — URLs de fontes com data no nome aceitam `{data}` (dia anterior,
   AAAAMMDD) e `{data_hoje}`, no fuso de Fortaleza.
+- **RF-INT-008** — Conectores de fontes externas, configuráveis em Administração >
+  Integrações: GeoJSON por endereço, WFS (GetFeature com saída GeoJSON), ArcGIS REST
+  (`query` com `f=geojson`, paginado por `resultOffset`) e CKAN (`package_show` e o recurso
+  GeoJSON ou CSV). Cada conector guarda destino, periodicidade (manual, diária, semanal ou
+  mensal), órgão, licença e página da fonte (atribuição obrigatória) e é auditado. Só quem tem
+  `admin.configuracao` cria, edita, testa ou sincroniza.
+- **RF-INT-009** — A busca de um conector é tratada como SSRF em potencial: só HTTPS, só hosts
+  da lista do servidor (`ITREE_CONECTORES_HOSTS_PERMITIDOS`, padrão
+  `mapas.fortaleza.ce.gov.br,dados.fortaleza.ce.gov.br`), sem credencial no endereço, só a
+  porta 443, IP privado, loopback, link-local ou reservado recusado depois de resolver o DNS (e
+  de novo no IP conectado), redirecionamento revalidado a cada salto (no máximo 3), tempo
+  limite, limite de bytes lidos por streaming, de feições e de páginas. O conteúdo baixado é
+  dado não confiável: só é interpretado (GeoJSON, CSV) e nunca executado; propriedades viram
+  texto, nunca HTML. Com proxy de saída configurado, quem resolve o nome é o proxy: a lista de
+  hosts e o HTTPS continuam valendo.
+- **RF-INT-010** — Cada sincronização gera um registro de execução (início, fim, sucesso,
+  recebidos, novos, atualizados, removidos, inválidos e erro), mostrado no histórico do
+  conector. Não há duas execuções simultâneas do mesmo conector. Um agendador de hora em hora
+  dispara os conectores ativos vencidos pela periodicidade; "Sincronizar agora" dispara na hora.
+- **RF-INT-011** — Destino camada de referência: as feições (id externo, geometria em 4326,
+  propriedades) são substituídas numa única transação, então uma falha mantém a camada
+  anterior. O id externo vem da propriedade indicada em `campo_id`, do `id` da feição ou, na
+  falta, de um hash do conteúdo. É contexto: não é inventário e não cria árvores.
+- **RF-INT-012** — Destino lote de importação: cria um lote **em prévia**, com o modelo de
+  mapeamento e o modo do conector, e nunca o confirma. Quem importa inventário recebe uma
+  notificação e a seção Conectores destaca a prévia aguardando. Enquanto houver uma prévia
+  do conector sem confirmar nem descartar, nenhuma nova é criada.
+- **RF-INT-013** — Conector ativo cuja última execução falhou, ou que passou de duas
+  periodicidades sem rodar, entra no indicador de fontes do cabeçalho como as demais fontes.
 
 ## 3. Fluxo para alertas ambientais
 

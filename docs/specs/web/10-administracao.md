@@ -36,11 +36,17 @@ Configurar acesso, catálogos, parâmetros e integrações, com auditoria comple
   (apenas substituídas); acesso restrito a administradores.
 - **RF-ADM-006** — Estado das integrações: última execução, sucesso/erro,
   registros ingeridos, próxima execução.
+- **RF-ADM-007** — Seção "Conectores" em Integrações (RF-INT-008 a RF-INT-013): lista com
+  destino, estado da última execução e prévia aguardando; formulário de criação e edição
+  com parâmetros por tipo, atribuição obrigatória e **teste de conexão** (quantas feições e as
+  primeiras colunas, sem gravar); "Sincronizar agora"; histórico de execuções por conector.
 
 ## 4. Critérios de aceite
 
 - **CA-ADM-001** — Toda alteração de configuração aparece na auditoria com
   valor anterior e novo.
 - **CA-ADM-002** — Credencial salva não pode ser lida pela interface nem pela API.
+- **CA-ADM-004** — Um host fora da lista do servidor, um endereço HTTP ou um IP não público
+  nunca é buscado por um conector, e a tela mostra o motivo.
 - **CA-ADM-003** — Remover uma permissão reflete na navegação do usuário afetado
   na próxima requisição.

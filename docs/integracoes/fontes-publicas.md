@@ -30,7 +30,7 @@ comando ou ingestão no código.
 | Parques e UCs (CKAN; Mapas ids 737 e 86) | SEUMA, CEUC/SEMA | CKAN `parques-uc`; Mapas `?id=737`, `?id=86` | KMZ; GeoJSON | `other-open`; termos da API | 2026-01; ano_ref 2023 | V | Backlog (falta tipo "área verde") |
 | Podas, recolhimento e supressão (CKAN) | URBFOR | dataset `podas_recolhimento_supressao` | CSV mensal, sem coordenadas | vazia | 2023 (falta setembro) | V | Implementada (parte segura): `importar_manejo_urbfor`, agregado por bairro e mês |
 | Doação de mudas e plantio (CKAN) | URBFOR | dataset `doacao-mudas-pf` | XLSX | `cc-by-sa` | 2022-12 | V | Backlog |
-| Atendimentos Plano de Arborização (Mapas, id 534) | SEUMA | `/api/v1/geojson?id=534` | GeoJSON, 577 pontos | termos da API | 2021 | V | Backlog |
+| Atendimentos Plano de Arborização (Mapas, id 534) | SEUMA | `/api/v1/geojson?id=534` | GeoJSON, 577 pontos | termos da API | 2021 | V | Implementada como conector, inativo até o administrador ativar: `criar_conectores_exemplo` (camada de referência) |
 | Adoção de Praças e Áreas Verdes (Mapas, id 622) | SEUMA | `/api/v1/geojson?id=622` | GeoJSON, 490 pontos; traz nome do adotante (dado pessoal) | termos da API | 2023 | V | Backlog |
 | Ocorrências COPDC (CKAN) | SESEC | dataset `ocorrencias-copdc` | CSV agregado | `cc-by` | 2026-06 | A | Não usar (sem queda de árvore) |
 | GeoServer, WMS e WFS de Fortaleza | Ipplan | `/geoserver/...` | n/a | n/a | n/a | A (404) | Não usar; preferir GeoJSON da API |
@@ -358,6 +358,36 @@ uv run python manage.py conferir_ucs_cnuc --simular           # só o relatório
   Parque Estadual Marinho da Pedra da Risca do Meio, com 3 zonas). Sem correspondente: APA da
   Sabiaguaba, ARIE Prof. Abreu Matos e ARIE da Matinha do Pici (unidades municipais que o
   CNUC não lista). Nenhuma divergência de esfera.
+
+### Conectores de fontes externas
+
+Capacidade genérica para buscar uma fonte por endereço, sem escolher o sistema municipal
+([DP-12](../decisoes/pendentes.md#dp-12) segue aberta) e sem tratar nada como inventário
+([DP-18](../decisoes/pendentes.md#dp-18) segue aberta). Requisitos: RF-INT-008 a RF-INT-013
+([T-05](../specs/transversal/05-integracoes.md)); tela: RF-ADM-007; mapa: RF-MAPA-033.
+
+- Tipos: `geojson_url`, `wfs`, `arcgis_rest` (paginação por `resultOffset`) e `ckan`.
+- Destinos: camada de referência no mapa ou lote de importação **em prévia** (a confirmação é
+  sempre humana).
+- Segurança: só HTTPS e só hosts de `ITREE_CONECTORES_HOSTS_PERMITIDOS`
+  (padrão `mapas.fortaleza.ce.gov.br,dados.fortaleza.ce.gov.br`). Limites por variável de
+  ambiente: `ITREE_CONECTORES_TIMEOUT` (30 s), `ITREE_CONECTORES_MAX_BYTES` (50 MB),
+  `ITREE_CONECTORES_MAX_FEICOES` (20.000) e `ITREE_CONECTORES_MAX_PAGINAS` (50). Para incluir
+  uma fonte nova, acrescente o host à lista no servidor; a tela não consegue ampliá-la.
+- O `id` de uma feição do Fortaleza em Mapas (`vw_...fid--<hash>`) muda a cada leitura: o
+  conector usa a propriedade `id` (`campo_id`), que é estável.
+- Exemplo: `manage.py criar_conectores_exemplo` cadastra, **inativo**, "Atendimentos do Plano de
+  Arborização" (Mapas, id 534), camada de referência, mensal.
+- Fontes ainda sem conector pronto: o dado pessoal da camada 622 (adoção de praças, com o nome
+  do adotante) não deve virar camada pública sem decisão; os demais itens da tabela seguem no
+  backlog.
+
+#### Validação do conector contra o dado real (2026-11-14)
+
+Sincronização real do conector 534 (camada de referência): 577 feições recebidas, 577 novas,
+0 inválidas. A segunda execução trouxe 577 recebidas, 0 novas, 0 atualizadas e 0 removidas, o
+que confirma o id estável. As geometrias vêm com coordenada Z igual a 0, descartada na leitura.
+O texto de `description` traz `<br>`, tratado como quebra de linha no popup.
 
 ### Validação contra o dado real (2026-11-11)
 
