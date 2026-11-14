@@ -31,5 +31,8 @@ export interface EspecieCartaoRequest {
   imagem_autor?: string;
   /** @maxLength 100 */
   imagem_licenca?: string;
+  imagem_licenca_url?: string;
   imagem_pagina_url?: string;
+  /** @maxLength 200 */
+  imagem_fonte?: string;
 }

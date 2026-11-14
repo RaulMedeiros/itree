@@ -12,14 +12,22 @@ declarar esse nome como sinônimo.
 Nada é inventado ou completado por aproximação: sem item correspondente, a
 espécie fica como "não encontrada"; uma imagem sem licença declarada não é
 usada. Os textos e imagens são exibidos com fonte, licença e data de consulta.
+
+Imagem: o Wikimedia Commons (P18) tem prioridade. Sem P18, sem licença
+reconhecida ou com o Wikidata fora do ar, a imagem vem do GBIF (ocorrências com
+foto), ver `_imagem_gbif`.
 """
 
 import html
 import io
+import ipaddress
 import re
+import socket
 import time
 from dataclasses import dataclass, field
-from urllib.parse import quote
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
+from urllib.parse import quote, urljoin, urlsplit
 
 import requests
 from django.conf import settings
@@ -35,6 +43,7 @@ WIKIDATA_ENTIDADE = "https://www.wikidata.org/wiki/Special:EntityData/{id}.json"
 WIKIPEDIA_API = "https://{idioma}.wikipedia.org/w/api.php"
 WIKIPEDIA_RESUMO = "https://{idioma}.wikipedia.org/api/rest_v1/page/summary/{titulo}"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+GBIF_API = "https://api.gbif.org/v1"
 # Flora e Funga do Brasil no Wikidata (observado em 2026-11): a propriedade é a
 # P10701 ("Reflora ID"; formatter URL https://floradobrasil.jbrj.gov.br/$1;
 # formato FB[0-9]{2,6}). Valores reais: Licania tomentosa Q9022290 = FB16857,
@@ -56,6 +65,10 @@ class Referencias:
     encontrada: bool
     mensagem: str = ""
     campos: dict = field(default_factory=dict)
+    # Consulta que terminou com falha em uma fonte secundária (ex.: GBIF fora do
+    # ar): o que foi obtido é gravado, mas a situação fica "erro" para o beat
+    # tentar de novo.
+    parcial: bool = False
 
 
 def _sessao() -> requests.Session:
@@ -67,33 +80,68 @@ def _sessao() -> requests.Session:
 
 TAMANHO_MAXIMO_ORIGINAL = 30 * 1024 * 1024
 LADO_MAXIMO_COPIA = 960
-TENTATIVAS = 3
-ESPERA_MAXIMA = 30.0
+# Nova tentativa com espera crescente (2, 4, 8, 16 s), no mínimo o `Retry-After`
+# da resposta. Com `Retry-After` acima de ESPERA_MAXIMA o trabalhador não fica
+# preso esperando: a consulta termina em erro e o beat a retoma depois.
+TENTATIVAS = 5
+ESPERA_BASE = 2.0
+ESPERA_MAXIMA = 60.0
+STATUS_COM_NOVA_TENTATIVA = (429, 502, 503, 504)
 
 
 def _esperar(segundos: float) -> None:
     time.sleep(segundos)
 
 
+def _retry_after(resposta) -> float | None:
+    """Segundos pedidos em `Retry-After` (número ou data HTTP); None se ausente."""
+    valor = str(resposta.headers.get("Retry-After", "")).strip()
+    if not valor:
+        return None
+    try:
+        return max(float(valor), 0.0)
+    except ValueError:
+        pass
+    try:
+        data = parsedate_to_datetime(valor)
+    except (TypeError, ValueError):
+        return None
+    if data.tzinfo is None:
+        data = data.replace(tzinfo=UTC)
+    return max((data - datetime.now(UTC)).total_seconds(), 0.0)
+
+
+def _espera(tentativa: int, retry_after: float | None) -> float:
+    """Espera antes da próxima tentativa: crescente, nunca menor que o Retry-After."""
+    return min(max(ESPERA_BASE * 2 ** (tentativa - 1), retry_after or 0.0), ESPERA_MAXIMA)
+
+
 def _json(sessao: requests.Session, url: str, **params) -> dict:
-    """GET com JSON. Respeita o limite de taxa da Wikimedia (429 + Retry-After)."""
+    """GET com JSON. 429 e 5xx transitórios têm nova tentativa com espera crescente
+    (respeitando `Retry-After`) até TENTATIVAS; esgotadas, vira ErroConsulta."""
     host = url.split("/")[2]
     for tentativa in range(1, TENTATIVAS + 1):
         try:
             r = sessao.get(url, params=params or None, timeout=settings.REFERENCIAS_TIMEOUT)
         except requests.RequestException as exc:
             raise ErroConsulta(f"Falha de rede ao consultar {host}.") from exc
-        if r.status_code == 429 and tentativa < TENTATIVAS:
-            try:
-                espera = float(r.headers.get("Retry-After", 5))
-            except ValueError:
-                espera = 5.0
-            _esperar(min(max(espera, 1.0), ESPERA_MAXIMA))
+        if r.status_code in STATUS_COM_NOVA_TENTATIVA:
+            pedida = _retry_after(r)
+            if tentativa == TENTATIVAS or (pedida is not None and pedida > ESPERA_MAXIMA):
+                motivo = (
+                    f"{host} limitou as consultas (429)"
+                    if r.status_code == 429
+                    else f"{host} respondeu {r.status_code}"
+                )
+                detalhe = f", pedindo espera de {pedida:.0f} s" if pedida is not None else ""
+                raise ErroConsulta(
+                    f"{motivo} após {tentativa} tentativa(s){detalhe}; "
+                    "nova tentativa automática mais tarde."
+                )
+            _esperar(_espera(tentativa, pedida))
             continue
         if r.status_code == 404:
             return {}
-        if r.status_code == 429:
-            raise ErroConsulta(f"{host} limitou as consultas (429); tente mais tarde.")
         if r.status_code >= 400:
             raise ErroConsulta(f"{host} respondeu {r.status_code}.")
         try:
@@ -105,7 +153,7 @@ def _json(sessao: requests.Session, url: str, **params) -> dict:
         if isinstance(dados, dict) and "error" in dados:
             codigo = str(dados["error"].get("code", "erro"))
             if tentativa < TENTATIVAS:
-                _esperar(5.0)
+                _esperar(_espera(tentativa, None))
                 continue
             raise ErroConsulta(f"{host} recusou a consulta ({codigo}).")
         return dados
@@ -308,8 +356,163 @@ def _imagem(sessao: requests.Session, entidade: dict) -> dict:
             "imagem_autor": _texto_simples(meta.get("Artist", {}).get("value", ""))[:300],
             "imagem_licenca": licenca[:100],
             "imagem_licenca_url": _texto_simples(meta.get("LicenseUrl", {}).get("value", ""))[:500],
+            "imagem_fonte": FONTE_COMMONS,
+            "_imagem_confiavel": True,
         }
     return {}
+
+
+# --- Imagem alternativa: GBIF -------------------------------------------------
+#
+# Decisão de licenças (documentada também na spec, RN-INV-023): só entram
+# licenças abertas declaradas pelo registro: CC0, CC BY e CC BY-SA, e CC BY-NC,
+# esta só porque autor, licença (com link) e fonte ficam sempre visíveis ao lado
+# da imagem e a plataforma é de uso público não comercial. Versões com
+# restrição a obras derivadas (ND) e "todos os direitos reservados" são
+# descartadas, assim como licença ausente ou desconhecida. A ordem de preferência
+# é a da lista: a menos restritiva primeiro.
+FONTE_COMMONS = "Wikimedia Commons"
+_LICENCAS_GBIF = (
+    # (padrão da URL da licença, rótulo, prefixo do link canônico)
+    (
+        re.compile(r"creativecommons\.org/publicdomain/zero/(\d\.\d)"),
+        "CC0 {v}",
+        "publicdomain/zero",
+    ),
+    (re.compile(r"creativecommons\.org/licenses/by/(\d\.\d)"), "CC BY {v}", "licenses/by"),
+    (re.compile(r"creativecommons\.org/licenses/by-sa/(\d\.\d)"), "CC BY-SA {v}", "licenses/by-sa"),
+    (re.compile(r"creativecommons\.org/licenses/by-nc/(\d\.\d)"), "CC BY-NC {v}", "licenses/by-nc"),
+)
+# Registros de observação (foto de campo) antes de espécime de herbário/museu.
+_BASES_OBSERVACAO = {"HUMAN_OBSERVATION", "MACHINE_OBSERVATION", "OBSERVATION", "LIVING_SPECIMEN"}
+_FORMATOS_IMAGEM = ("image/jpeg", "image/png", "image/webp")
+LIMITE_OCORRENCIAS_GBIF = 300
+
+
+def licenca_aberta(url: str) -> tuple[int, str, str] | None:
+    """(posição na preferência, rótulo, link) de uma licença aceita; None se não for."""
+    for posicao, (padrao, rotulo, caminho) in enumerate(_LICENCAS_GBIF):
+        achado = padrao.search(str(url or "").lower())
+        if achado:
+            versao = achado.group(1)
+            return (
+                posicao,
+                rotulo.format(v=versao),
+                f"https://creativecommons.org/{caminho}/{versao}/",
+            )
+    return None
+
+
+def _https(url: str) -> str:
+    """O navegador só carrega imagem por https (CSP e conteúdo misto)."""
+    return "https://" + url[len("http://") :] if url.lower().startswith("http://") else url
+
+
+def _miniatura_gbif(url: str) -> str:
+    """O GBIF só informa o original. Quando a origem oferece tamanho médio de forma
+    documentada (iNaturalist: original -> medium), usa-se esse; senão, o original
+    (a cópia local o reduz para 960 px)."""
+    if "inaturalist-open-data.s3.amazonaws.com/photos/" in url:
+        return url.replace("/original.", "/medium.")
+    return url
+
+
+def _url_http(valor) -> str:
+    texto = str(valor or "").strip()
+    return texto if urlsplit(texto).scheme in ("http", "https") else ""
+
+
+def _candidata_gbif(registro: dict) -> dict | None:
+    """Transforma uma ocorrência do GBIF em candidata, ou None se não servir
+    (sem imagem utilizável, licença não aceita ou, quando a licença exige
+    atribuição, sem autor)."""
+    for media in registro.get("media") or []:
+        identificador = _url_http(media.get("identifier"))
+        formato = str(media.get("format") or "").lower()
+        if not identificador or (formato and formato not in _FORMATOS_IMAGEM):
+            continue
+        licenca = licenca_aberta(media.get("license") or registro.get("license"))
+        if licenca is None:
+            continue
+        posicao, rotulo, link = licenca
+        autor = _texto_simples(
+            media.get("rightsHolder")
+            or media.get("creator")
+            or registro.get("rightsHolder")
+            or registro.get("recordedBy")
+            or ""
+        )
+        # CC0 dispensa atribuição; as demais a exigem. Sem autor, não é usada.
+        if not autor and posicao != 0:
+            continue
+        publicador = _texto_simples(
+            media.get("publisher")
+            or registro.get("datasetName")
+            or registro.get("institutionCode")
+            or ""
+        )
+        pagina = (
+            _url_http(media.get("references"))
+            or _url_http(registro.get("references"))
+            or f"https://www.gbif.org/occurrence/{registro.get('key')}"
+        )
+        observacao = registro.get("basisOfRecord") in _BASES_OBSERVACAO
+        return {
+            "ordem": (0 if observacao else 1, posicao),
+            "imagem_url": _https(_miniatura_gbif(identificador))[:1000],
+            "_imagem_fontes": [
+                _https(_miniatura_gbif(identificador)),
+                _https(identificador),
+                identificador,
+            ],
+            "imagem_pagina_url": pagina[:1000],
+            "imagem_autor": autor[:300],
+            "imagem_licenca": rotulo,
+            "imagem_licenca_url": link,
+            "imagem_fonte": (f"GBIF — {publicador}" if publicador else "GBIF")[:200],
+            "_imagem_confiavel": False,
+        }
+    return None
+
+
+def _chave_gbif(sessao: requests.Session, nome_cientifico: str, gbif_id) -> int | None:
+    """Chave do táxon no GBIF: a do Wikidata (P846) ou, na falta, a do
+    `species/match`, aceita só se o casamento for EXATO e o nome canônico igual ao
+    do catálogo (nada por aproximação)."""
+    if gbif_id:
+        return int(gbif_id)
+    achado = _json(sessao, f"{GBIF_API}/species/match", name=nome_cientifico, kingdom="Plantae")
+    if (
+        achado.get("matchType") == "EXACT"
+        and _normalizar(str(achado.get("canonicalName", ""))) == _normalizar(nome_cientifico)
+        and achado.get("usageKey")
+    ):
+        return int(achado["usageKey"])
+    return None
+
+
+def _imagem_gbif(sessao: requests.Session, nome_cientifico: str, gbif_id=None) -> dict:
+    """Melhor imagem do GBIF para o táxon, ou {}. Usa `occurrence/search` com
+    `mediaType=StillImage` (o `/species/{key}/media` vem vazio para quase todas as
+    espécies do catálogo, verificado em 2026-11). Entre as candidatas, vale a de
+    foto de campo (observação) sobre a de herbário e, dentro dessa, a licença
+    menos restritiva (CC0, CC BY, CC BY-SA, CC BY-NC)."""
+    chave = _chave_gbif(sessao, nome_cientifico, gbif_id)
+    if chave is None:
+        return {}
+    dados = _json(
+        sessao,
+        f"{GBIF_API}/occurrence/search",
+        taxonKey=chave,
+        mediaType="StillImage",
+        limit=LIMITE_OCORRENCIAS_GBIF,
+    )
+    candidatas = [c for r in dados.get("results", []) if (c := _candidata_gbif(r))]
+    if not candidatas:
+        return {}
+    melhor = min(candidatas, key=lambda c: c["ordem"])  # empate: a primeira devolvida
+    melhor.pop("ordem")
+    return melhor
 
 
 def consultar(nome_cientifico: str) -> Referencias:
@@ -327,6 +530,13 @@ def consultar(nome_cientifico: str) -> Referencias:
         **_wikipedia(sessao, entidade, nome_cientifico),
         **_imagem(sessao, entidade),
     }
+    erro_gbif = ""
+    if not campos.get("imagem_url"):
+        # Sem imagem no Commons (sem P18 ou sem licença): tenta o GBIF.
+        try:
+            campos.update(_imagem_gbif(sessao, nome_cientifico, campos["gbif_id"]))
+        except ErroConsulta as exc:
+            erro_gbif = str(exc)
     nota = campos.pop("nota", "")
     faltando = [
         nome
@@ -334,8 +544,8 @@ def consultar(nome_cientifico: str) -> Referencias:
         if not campos.get(chave)
     ]
     sem = f"Sem {' nem '.join(faltando)}." if faltando else ""
-    mensagem = " ".join(parte for parte in (nota, sem) if parte)[:300]
-    return Referencias(True, mensagem, campos)
+    mensagem = " ".join(parte for parte in (nota, sem, erro_gbif) if parte)[:300]
+    return Referencias(True, mensagem, campos, parcial=bool(erro_gbif))
 
 
 CAMPOS_REFERENCIA = (
@@ -352,23 +562,48 @@ CAMPOS_REFERENCIA = (
     "imagem_autor",
     "imagem_licenca",
     "imagem_licenca_url",
+    "imagem_fonte",
 )
 
 
-def _baixar(sessao: requests.Session, url: str) -> bytes | None:
-    for tentativa in range(1, TENTATIVAS + 1):
-        try:
-            r = sessao.get(url, timeout=settings.REFERENCIAS_TIMEOUT * 4)
-        except requests.RequestException:
+MAX_REDIRECIONAMENTOS = 3
+
+
+def _host_publico(url: str) -> bool:
+    """O endereço aponta só para a internet pública? As URLs de imagem do GBIF vêm
+    de terceiros: sem esta checagem, o servidor poderia ser levado a buscar
+    endereços internos (SSRF)."""
+    partes = urlsplit(url)
+    if partes.scheme not in ("http", "https") or not partes.hostname:
+        return False
+    try:
+        enderecos = {i[4][0] for i in socket.getaddrinfo(partes.hostname, partes.port or 443)}
+    except OSError:
+        return False
+    return bool(enderecos) and all(ipaddress.ip_address(e).is_global for e in enderecos)
+
+
+def _baixar(sessao: requests.Session, url: str, confiavel: bool = True) -> bytes | None:
+    """Baixa a imagem. Redirecionamentos são seguidos à mão (até 3) e, quando a URL
+    não é de uma fonte confiável (Wikimedia), cada endereço é validado."""
+    for _ in range(MAX_REDIRECIONAMENTOS + 1):
+        if not confiavel and not _host_publico(url):
             return None
-        if r.status_code == 429 and tentativa < TENTATIVAS:
+        r = None
+        for tentativa in range(1, TENTATIVAS + 1):
             try:
-                espera = float(r.headers.get("Retry-After", 5))
-            except ValueError:
-                espera = 5.0
-            if espera > ESPERA_MAXIMA:
-                return None  # limite longo: tenta a próxima fonte
-            _esperar(max(espera, 1.0))
+                r = sessao.get(url, timeout=settings.REFERENCIAS_TIMEOUT * 4, allow_redirects=False)
+            except requests.RequestException:
+                return None
+            if r.status_code in STATUS_COM_NOVA_TENTATIVA and tentativa < TENTATIVAS:
+                pedida = _retry_after(r)
+                if pedida is not None and pedida > ESPERA_MAXIMA:
+                    return None  # limite longo: tenta a próxima fonte
+                _esperar(_espera(tentativa, pedida))
+                continue
+            break
+        if r.status_code in (301, 302, 303, 307, 308) and r.headers.get("Location"):
+            url = urljoin(url, r.headers["Location"])
             continue
         if r.status_code != 200 or len(r.content) > TAMANHO_MAXIMO_ORIGINAL:
             return None
@@ -376,15 +611,17 @@ def _baixar(sessao: requests.Session, url: str) -> bytes | None:
     return None
 
 
-def _copiar_imagem(sessao: requests.Session, especie: Especie, fontes: list[str]) -> str:
+def _copiar_imagem(
+    sessao: requests.Session, especie: Especie, fontes: list[str], confiavel: bool = True
+) -> str:
     """Baixa a imagem (miniatura padrão, senão o original), reduz para no
     máximo 960 px e guarda um JPEG no armazenamento da plataforma. Devolve a
     chave, ou "" se não for possível (o painel então exibe a miniatura da
-    Wikimedia)."""
+    origem)."""
     if not fontes or not armazenamento.s3_configurado():
         return ""
     for url in fontes:
-        conteudo = _baixar(sessao, url)
+        conteudo = _baixar(sessao, url, confiavel)
         if conteudo is None:
             continue
         try:
@@ -402,38 +639,79 @@ def _copiar_imagem(sessao: requests.Session, especie: Especie, fontes: list[str]
     return ""
 
 
+CAMPOS_IMAGEM = (
+    "imagem_url",
+    "imagem_pagina_url",
+    "imagem_autor",
+    "imagem_licenca",
+    "imagem_licenca_url",
+    "imagem_fonte",
+)
+
+
+def _registrar_erro(especie: Especie, exc: ErroConsulta) -> Especie:
+    """Wikidata (ou Commons) fora do ar: registra o erro, mantém o que já havia e,
+    se a espécie ainda não tem imagem, tenta o GBIF. O beat retoma depois e, havendo
+    imagem no Commons, ela passa a valer (prioridade)."""
+    mensagem = str(exc)
+    campos_gravados = []
+    if not especie.imagem_url:
+        try:
+            imagem = _imagem_gbif(_sessao(), especie.nome_cientifico, especie.gbif_id)
+        except ErroConsulta:
+            imagem = {}
+        if imagem:
+            for campo in CAMPOS_IMAGEM:
+                setattr(especie, campo, imagem.get(campo, ""))
+            especie.imagem_chave = _copiar_imagem(
+                _sessao(),
+                especie,
+                imagem.get("_imagem_fontes", []),
+                imagem.get("_imagem_confiavel", False),
+            )
+            campos_gravados = [*CAMPOS_IMAGEM, "imagem_chave"]
+            mensagem = f"{mensagem} Imagem obtida do GBIF."
+    especie.referencias_situacao = SituacaoReferencias.ERRO
+    especie.referencias_mensagem = mensagem[:300]
+    especie.referencias_consultadas_em = timezone.now()
+    especie.save(
+        update_fields=[
+            *campos_gravados,
+            "referencias_situacao",
+            "referencias_mensagem",
+            "referencias_consultadas_em",
+            "atualizado_em",
+        ]
+    )
+    return especie
+
+
 def atualizar(especie: Especie) -> Especie:
-    """Consulta e grava as referências. Em erro de rede, mantém as anteriores."""
+    """Consulta e grava as referências. Em erro de rede, mantém as anteriores
+    (e tenta a imagem do GBIF se não houver nenhuma)."""
     try:
         resultado = consultar(especie.nome_cientifico)
     except ErroConsulta as exc:
-        especie.referencias_situacao = SituacaoReferencias.ERRO
-        especie.referencias_mensagem = str(exc)[:300]
-        especie.referencias_consultadas_em = timezone.now()
-        especie.save(
-            update_fields=[
-                "referencias_situacao",
-                "referencias_mensagem",
-                "referencias_consultadas_em",
-                "atualizado_em",
-            ]
-        )
-        return especie
+        return _registrar_erro(especie, exc)
 
     for campo in CAMPOS_REFERENCIA:
         padrao = None if campo == "gbif_id" else ""
         setattr(especie, campo, resultado.campos.get(campo, padrao) or padrao)
-    especie.referencias_situacao = (
-        SituacaoReferencias.ENCONTRADAS
-        if resultado.encontrada
-        else SituacaoReferencias.NAO_ENCONTRADAS
-    )
+    if resultado.parcial:
+        especie.referencias_situacao = SituacaoReferencias.ERRO
+    elif resultado.encontrada:
+        especie.referencias_situacao = SituacaoReferencias.ENCONTRADAS
+    else:
+        especie.referencias_situacao = SituacaoReferencias.NAO_ENCONTRADAS
     especie.imagem_chave = _copiar_imagem(
-        _sessao(), especie, resultado.campos.get("_imagem_fontes", [])
+        _sessao(),
+        especie,
+        resultado.campos.get("_imagem_fontes", []),
+        resultado.campos.get("_imagem_confiavel", True),
     )
     if especie.imagem_url and not especie.imagem_chave and armazenamento.s3_configurado():
         resultado.mensagem = " ".join(
-            filter(None, [resultado.mensagem, "Imagem não copiada; exibida da Wikimedia."])
+            filter(None, [resultado.mensagem, "Imagem não copiada; exibida da origem."])
         )
     especie.referencias_mensagem = resultado.mensagem[:300]
     especie.referencias_consultadas_em = timezone.now()

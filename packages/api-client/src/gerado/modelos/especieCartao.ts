@@ -23,11 +23,14 @@ export interface EspecieCartao {
   readonly flora_brasil_url: string;
   /** @maxLength 300 */
   wikipedia_descricao?: string;
-  /** Cópia local (URL temporária) quando houver; senão, a miniatura da Wikimedia. */
+  /** Cópia local (URL temporária) quando houver; senão, a miniatura da origem. */
   readonly imagem_url: string;
   /** @maxLength 300 */
   imagem_autor?: string;
   /** @maxLength 100 */
   imagem_licenca?: string;
+  imagem_licenca_url?: string;
   imagem_pagina_url?: string;
+  /** @maxLength 200 */
+  imagem_fonte?: string;
 }

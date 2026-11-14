@@ -88,6 +88,8 @@ class Especie(ModeloBase):
     imagem_autor = models.CharField(max_length=300, blank=True)
     imagem_licenca = models.CharField(max_length=100, blank=True)
     imagem_licenca_url = models.URLField(max_length=500, blank=True)
+    # Origem da imagem: "Wikimedia Commons" ou "GBIF — <publicador>".
+    imagem_fonte = models.CharField(max_length=200, blank=True)
     # Cópia local da miniatura (armazenamento S3): o painel não depende da
     # disponibilidade da Wikimedia nem expõe o navegador do usuário a terceiros.
     imagem_chave = models.CharField(max_length=300, blank=True)

@@ -5303,7 +5303,7 @@ components:
           type: string
           readOnly: true
           description: Cópia local (URL temporária) quando houver; senão, a miniatura
-            da Wikimedia.
+            da origem.
         imagem_pagina_url:
           type: string
           format: uri
@@ -5318,6 +5318,9 @@ components:
           type: string
           format: uri
           readOnly: true
+        imagem_fonte:
+          type: string
+          readOnly: true
       required:
       - arvores_no_escopo
       - flora_brasil_id
@@ -5326,6 +5329,7 @@ components:
       - gbif_url
       - id
       - imagem_autor
+      - imagem_fonte
       - imagem_licenca
       - imagem_licenca_url
       - imagem_pagina_url
@@ -5380,13 +5384,20 @@ components:
           type: string
           readOnly: true
           description: Cópia local (URL temporária) quando houver; senão, a miniatura
-            da Wikimedia.
+            da origem.
         imagem_autor:
           type: string
           maxLength: 300
         imagem_licenca:
           type: string
           maxLength: 100
+        imagem_licenca_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
         imagem_pagina_url:
           oneOf:
           - type: string
@@ -5394,6 +5405,9 @@ components:
             maxLength: 1000
           - type: string
             maxLength: 0
+        imagem_fonte:
+          type: string
+          maxLength: 200
       required:
       - flora_brasil_url
       - id
@@ -5435,6 +5449,13 @@ components:
         imagem_licenca:
           type: string
           maxLength: 100
+        imagem_licenca_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 500
+          - type: string
+            maxLength: 0
         imagem_pagina_url:
           oneOf:
           - type: string
@@ -5442,6 +5463,9 @@ components:
             maxLength: 1000
           - type: string
             maxLength: 0
+        imagem_fonte:
+          type: string
+          maxLength: 200
       required:
       - nome_cientifico
     EspecieRequest:
