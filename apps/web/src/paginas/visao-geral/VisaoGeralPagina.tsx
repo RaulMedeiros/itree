@@ -29,7 +29,8 @@ import { ROTULOS_CONDICAO, ROTULOS_PRIORIDADE } from "@itree/domain";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { LinhaDoTempo } from "../../componentes/Historico";
-import { EntradaData, Selecao } from "../../ui/campos";
+import { SeletorPeriodo } from "../../componentes/SeletorPeriodo";
+import { Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { CORES_CONDICAO, CORES_PRIORIDADE } from "../../mapa/simbologia";
 import { Botao } from "../../ui/botao";
@@ -655,24 +656,6 @@ function Painel({
   );
 }
 
-const iso = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const diasAtras = (hoje: Date, dias: number) =>
-  new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - dias);
-
-/** Atalhos de período; o fim é sempre hoje. */
-const ATALHOS_PERIODO: {
-  rotulo: string;
-  periodo: (hoje: Date) => Pick<BuscaVisaoGeral, "inicio" | "fim">;
-}[] = [
-  { rotulo: "30 dias", periodo: (h) => ({ inicio: iso(diasAtras(h, 30)), fim: iso(h) }) },
-  { rotulo: "12 meses", periodo: (h) => ({ inicio: iso(diasAtras(h, 365)), fim: iso(h) }) },
-  {
-    rotulo: "Ano",
-    periodo: (h) => ({ inicio: iso(new Date(h.getFullYear(), 0, 1)), fim: iso(h) }),
-  },
-];
-
 export function VisaoGeralPagina() {
   const filtros = useSearch({ from: "/autenticado/visao-geral" });
   const navegar = useNavigate({ from: "/visao-geral" });
@@ -700,34 +683,11 @@ export function VisaoGeralPagina() {
       />
       <PrimeirosPassos />
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
-          De
-          <EntradaData
-            value={filtros.inicio ?? String(dados?.periodo.inicio ?? "")}
-            onChange={(v) => filtrar({ inicio: v || undefined })}
-            className="w-40"
-          />
-        </label>
-        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
-          até
-          <EntradaData
-            value={filtros.fim ?? String(dados?.periodo.fim ?? "")}
-            onChange={(v) => filtrar({ fim: v || undefined })}
-            className="w-40"
-          />
-        </label>
-        <div className="flex items-center gap-1" role="group" aria-label="Atalhos de período">
-          {ATALHOS_PERIODO.map((a) => (
-            <button
-              key={a.rotulo}
-              type="button"
-              onClick={() => filtrar(a.periodo(new Date()))}
-              className="rounded-md border border-borda px-2 py-1 text-xs text-texto-suave hover:border-marca hover:text-marca-escura"
-            >
-              {a.rotulo}
-            </button>
-          ))}
-        </div>
+        <SeletorPeriodo
+          inicio={filtros.inicio ?? String(dados?.periodo.inicio ?? "")}
+          fim={filtros.fim ?? String(dados?.periodo.fim ?? "")}
+          aoMudar={filtrar}
+        />
         <Selecao
           aria-label="Bairro"
           value={bairro ?? ""}

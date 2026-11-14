@@ -874,10 +874,14 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
 describe("importações (C-19)", () => {
   it("explica por que o lote não pode ser desfeito", async () => {
     await abrir("/inventario/importacoes");
-    expect(await screen.findByRole("button", { name: /Desfazer/ })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: "Desfazer" })).toBeDisabled();
+    // O motivo mora numa dica (i) ao lado do botão, não em três linhas de letra miúda (R3-32).
     expect(
-      screen.getByText(/Desfazer indisponível: há inspeção registrada em árvores do lote\./),
+      screen.getByRole("button", {
+        name: /Desfazer indisponível: há inspeção registrada em árvores do lote\./,
+      }),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/Desfazer indisponível/, { selector: "p" })).toBeNull();
   });
 
   it("diz o que falta no assistente", async () => {
