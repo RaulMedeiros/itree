@@ -44,6 +44,7 @@ import {
 } from "../../componentes/selos";
 import { config } from "../../config";
 import { useTerritorioAtivo } from "../../layout/territorio";
+import { CamadasReferencia } from "../../mapa/CamadasReferencia";
 import { Mapa } from "../../mapa/Mapa";
 import { AreaRolavel } from "../../ui/rolagem";
 import { maplibregl } from "../../mapa/maplibre";
@@ -1244,6 +1245,12 @@ export function MapaPagina() {
                     )}
                   </Grupo>
                 )}
+
+                <CamadasReferencia
+                  mapaRef={mapa}
+                  pronto={pronto}
+                  camadasPrioritarias={CAMADAS_COM_CLIQUE}
+                />
 
                 {mostrarArvores && (
                   <Grupo titulo="Árvores" aberto>
