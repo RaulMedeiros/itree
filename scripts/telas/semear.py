@@ -108,7 +108,8 @@ lote = LoteImportacao.objects.create(
     linhas=[linha.como_dict() for linha in linhas],
 )
 with pghistory.context(evento="importacao_inventario", lote=lote.numero):
-    importacao.confirmar(lote, gestor)
+    importacao.preparar_confirmacao(lote, gestor)
+    importacao.executar_confirmacao(lote.pk)
 
 arvores = list(Arvore.objects.filter(lote=lote).order_by("numero"))
 for a in random.sample(arvores, 90):

@@ -26,6 +26,9 @@ Instruções permanentes para sessões do Claude Code neste repositório.
 - **Isolamento.** Cada lote tem worktree e branch próprios. O subagente faz
   commit, mas não faz push nem PR, e usa banco de teste próprio
   (`DATABASE_URL=postgis://itree:itree@localhost:5432/itree_<lote>`).
+- **Nunca `git stash` em worktree.** A stash é compartilhada entre worktrees:
+  um subagente já aplicou a stash de outro. Para guardar trabalho, faça commit.
+  Ponha essa regra no pedido de cada subagente.
 - **Lotes em áreas de arquivo separadas.** O subagente não edita
   `docs/melhoria/backlog.md`. Arquivos gerados (`openapi.yaml` e o cliente
   Orval) são regenerados depois do rebase, nunca mesclados à mão.
@@ -37,6 +40,10 @@ Instruções permanentes para sessões do Claude Code neste repositório.
   4. só então o próximo lote.
 - **Capturas** (`scripts/telas/gerar.sh`) disputam a porta 5432 com o banco de
   testes local. Gere-as só quando nenhum subagente estiver testando.
+- **As capturas são o teste de ponta a ponta.** Elas sobem a pilha real com dados
+  antigos e novos. Já pegaram uma semeadura quebrada e um erro 500 com lotes
+  anteriores a uma migração, que a CI não viu. Gere-as ao fim de todo plano que
+  mude modelo, migração ou importação.
 
 ## Regras do produto
 

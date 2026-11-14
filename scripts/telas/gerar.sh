@@ -68,6 +68,18 @@ fi
 if curl -sf -m 15 "https://mapas.fortaleza.ce.gov.br/api/v1/maps" >/dev/null; then
   (cd "$RAIZ/backend" && DATABASE_URL=postgis://itree:itree@localhost:5432/itree \
     uv run python manage.py importar_areas_verdes) || echo "Áreas verdes não importadas."
+  # Conector de exemplo (Atendimentos do Plano de Arborização, id 534) como camada de
+  # referência, sincronizado uma vez no host. Não é inventário e não cria árvores.
+  (cd "$RAIZ/backend" && DATABASE_URL=postgis://itree:itree@localhost:5432/itree \
+    uv run python manage.py criar_conectores_exemplo && \
+    DATABASE_URL=postgis://itree:itree@localhost:5432/itree uv run python manage.py shell -c "
+from itree.conectores import servico
+from itree.conectores.models import Conector
+for c in Conector.objects.all():
+    c.ativo = True
+    c.save(update_fields=['ativo'])
+    print(c.nome, servico.executar(servico.iniciar_execucao(c)).sucesso)
+") || echo "Conector de exemplo não sincronizado."
 else
   echo "Sem acesso ao Fortaleza em Mapas: a camada de áreas verdes fica vazia nas capturas."
 fi

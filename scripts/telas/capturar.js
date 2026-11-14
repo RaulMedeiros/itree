@@ -125,6 +125,16 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
       espera: 5000,
     },
   );
+  await tela(p, "38-mapa-camada-conectada", `/mapa?lon=${-38.54}&lat=${-3.77}&zoom=11.8`, {
+    esperar: "Camadas conectadas",
+    espera: 5000,
+    acao: async (p) => {
+      await p
+        .getByLabel(/Plano de Arborização/)
+        .first()
+        .check();
+    },
+  });
   await tela(p, "36-notificacoes", "/visao-geral", {
     esperar: "Como é calculado",
     espera: 1500,
@@ -166,7 +176,7 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
         .click();
       await q
         .getByRole("dialog")
-        .getByLabel(/Arquivo/)
+        .locator('input[type="file"]')
         .setInputFiles(path.join(__dirname, "inventario-exemplo.csv"));
     },
     espera: 2500,

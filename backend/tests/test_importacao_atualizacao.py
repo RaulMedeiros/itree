@@ -429,3 +429,19 @@ def test_classificar_linhas():
         importacao.classificar({"erros": [ja, "outro"], "existente": existente}, "atualizar", False)
         == "invalida"
     )
+
+
+def test_lote_anterior_ao_resumo_continua_listavel(cliente, revisor):
+    """Lotes gravados antes da migração 0009 têm ``resumo`` vazio: a lista não pode quebrar."""
+    LoteImportacao.objects.create(
+        arquivo_nome="antigo.csv", formato="csv", fonte="Base antiga", usuario=revisor, resumo={}
+    )
+    r = cliente.como(revisor).get(URL)
+    assert r.status_code == 200
+    assert r.json()["results"][0]["resumo"] == {
+        "a_criar": 0,
+        "a_atualizar": 0,
+        "sem_mudanca": 0,
+        "duplicatas": 0,
+        "ambiguas": 0,
+    }

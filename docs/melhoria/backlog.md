@@ -19,6 +19,11 @@ quando houver espaço ou decisão.
 | M-30 | P3 | Resultado e foto quando a tarefa fecha pela ocorrência ou pela inspeção | Esses caminhos não passam pela regra de resultado e foto. Os tipos poda, remoção e plantio dependem da DP-17. | Regra decidida e aplicada nos três caminhos. |
 | M-32 | P3 | Grupos de bairro: nome no mapa e clique que enquadra o bairro | O grupo mostra contagem e anel, mas o nome só aparece na dica; o clique aproxima sem enquadrar o bairro. | Rótulo do bairro no grupo e clique que ajusta o mapa ao polígono. |
 | M-31 | P1 | Bairros reais na demonstração e nas capturas | Pedido da pessoa usuária: a demonstração mostrava três quadrados sintéticos como bairros. A fonte oficial (Fortaleza em Mapas, Ipplan) já é importada por `importar_limites_fortaleza`. | Demonstração e capturas com os 121 bairros e 12 regionais oficiais e o Censo por bairro; quadrados só como recurso sem rede. Em produção, a confirmação da fonte oficial e do responsável segue na DP-10. |
+| M-34 | P3 | Importação: escolher a camada em GeoPackage e KML com várias camadas | Hoje o arquivo com mais de uma camada com feições é recusado. | O assistente lista as camadas e importa a escolhida. |
+| M-35 | P3 | Importação: duplicatas dentro do mesmo arquivo e desfazer lote que atualizou | Só se compara com árvores já cadastradas; um lote que atualizou árvores não pode ser desfeito. | Linhas repetidas no arquivo apontadas na prévia; desfazer restaura os valores anteriores pela auditoria. |
+| M-36 | P3 | Tela própria de gestão dos modelos de importação | Os modelos só são vistos e editados no passo de colunas do assistente. | Lista em Inventário › Importações com renomear, editar e apagar. |
+| M-37 | P3 | Conectores: credenciais por conector e camada em MVT | Só fontes públicas sem token; a camada de referência vai em GeoJSON e fica pesada acima de 20 mil feições. | Credencial por conector via segredo do ambiente (RF-ADM-005) e camada servida em MVT. |
+| M-38 | P3 | Interface: período e dica nos demais filtros e cartões | Inspeções e Alertas ainda têm De/até em "Mais filtros"; o (i) das variações da visão geral fica abaixo do rótulo; alerta em polígono não mostra o raio. | Seletor de período compartilhado em todas as listas; dica ao lado do rótulo; raio de polígono com buffer no servidor. |
 
 ## Áreas verdes
 

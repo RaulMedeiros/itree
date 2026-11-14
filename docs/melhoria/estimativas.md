@@ -15,7 +15,9 @@ Consumo medido dos subagentes (campo `subagent_tokens` de cada entrega):
 | Lote com 5 a 7 itens ou com dado real (rede, validação) | 4C, 4D, 5B, 5D, 6B, 6C | 280–370 mil |
 | Integração de fonte pública (verificação real e testes) | limites, Censo, áreas verdes | 160–250 mil |
 | Revisor da revisão de prontidão (Opus, só leitura) | 7 fatias | 100–190 mil |
-| Crítica de 38 a 39 capturas | rodadas 1 e 2 | ~190 mil |
+| Crítica de 38 a 39 capturas | rodadas 1 a 3 | 190–210 mil |
+| Lote de UI com 6 itens de crítica (componentes ou telas) | UI-1, UI-2 | 240–385 mil |
+| Funcionalidade de integração (formatos, conectores, segurança de rede) | I-A, I-B | 270–310 mil |
 | Pesquisa e verificação de fontes | 1ª e 2ª rodadas | 115 mil a mais |
 
 Custo da integração (meu, fora dos subagentes): de 30 a 60 mil por PR (rebase,
@@ -45,7 +47,11 @@ Regra prática (revista em 2026-11-13):
   ficam comigo.
 - **Isolamento.** Cada lote tem um worktree e uma branch próprios. O subagente
   faz commit, mas não faz push nem PR. Cada um usa um banco de teste próprio
-  (`itree_<lote>`).
+  (`itree_<lote>`). **Nunca `git stash`**: a stash é compartilhada entre
+  worktrees, e um subagente já aplicou a de outro.
+- **Capturas como teste de ponta a ponta.** Reserve de 60 a 100 mil por plano
+  para gerar e conferir as capturas. Elas já pegaram defeitos que a CI não vê,
+  como dados antigos depois de uma migração.
 - **Lotes disjuntos.** Agrupe por área de arquivo para reduzir conflitos. Os
   arquivos que mais conflitam são `util/formatos.ts`, `docs/melhoria/backlog.md`,
   `openapi.yaml` e o cliente gerado, e os testes de página. O subagente não edita
@@ -69,3 +75,4 @@ passar de 25%, anote a causa e ajuste a regra prática acima.
 | Data | Plano | Estimado | Real | Erro | Causa e ajuste |
 | --- | --- | --- | --- | --- | --- |
 | 2026-11-13 | Correções da 2ª revisão de prontidão (R1–R4, refazer o appsec) | 0,9–1,2 mi (centro 1,05 mi) | ≈ 0,8 mi: subagentes 593 mil (R1 119, R2 127, R3 172, appsec 175) + R4 feito por mim ≈ 50 mil + integração de 4 PRs ≈ 160 mil | −24% | Os itens pequenos (configuração e testes) custaram cerca de metade dos 50 mil da regra, e a reserva para corrigir achados do appsec quase não foi usada (1 achado informativo). A regra passou a separar item pequeno, de funcionalidade e estrutural. |
+| 2026-11-14 | Integração com bases existentes e interface (I-A, I-B, C3, UI-1, UI-2) | 1,4–1,7 mi (centro 1,55 mi) | ≈ 1,66 mi: subagentes 1,41 mi (C3 207, I-A 273, UI-1 237, I-B 309, UI-2 384) + integração de 5 PRs e capturas ≈ 250 mil | +7% | Dentro da faixa. Por lote: I-A −17%, I-B +24% (retomada depois do limite de uso), UI-1 −42% e UI-2 −6% contra os 410 mil da regra. Um lote de UI de componentes custa menos que um de telas, que adota tudo em muitas páginas. As capturas pegaram dois defeitos fora da CI (semeadura quebrada e erro 500 com lote antigo), e isso entrou na reserva do plano. |
