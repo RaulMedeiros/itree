@@ -33,3 +33,19 @@ export function limitesDosPontos(
   }
   return [oeste, sul, leste, norte];
 }
+
+/** Largura que o painel de camadas ocupa sobre o mapa: `left-3` (12 px) mais `w-80` (320 px). */
+export const LARGURA_PAINEL_CAMADAS_PX = 332;
+
+/**
+ * Folga para o `fitBounds` e o `setPadding`: o painel de camadas cobre cerca de 25% do mapa, e o
+ * enquadramento que o ignora deixa o oeste do município escondido atrás dele (R3-21).
+ */
+export function paddingDoMapa(painelAberto: boolean, folga = 40) {
+  return {
+    top: folga,
+    right: folga,
+    bottom: folga,
+    left: painelAberto ? LARGURA_PAINEL_CAMADAS_PX + folga : folga,
+  };
+}

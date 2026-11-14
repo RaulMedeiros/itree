@@ -440,6 +440,9 @@ def test_arvores_proximas_com_distancia_ordenada(cliente, analista, alerta_a):
     assert [i["id"] for i in itens] == [str(perto.id), str(longe.id)]
     assert itens[0]["distancia_m"] == pytest.approx(40, abs=1)
     assert itens[1]["distancia_m"] == pytest.approx(90, abs=1)
+    # Posição para desenhar no mini-mapa do alerta (R3-24).
+    assert itens[0]["latitude"] == pytest.approx(perto.geom.y)
+    assert itens[0]["longitude"] == pytest.approx(perto.geom.x)
     assert len(cliente.get(f"/api/v1/alertas/{alerta_a.id}/arvores-proximas?raio=200").json()) == 3
 
 

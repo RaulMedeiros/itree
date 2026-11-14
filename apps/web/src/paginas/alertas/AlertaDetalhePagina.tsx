@@ -7,6 +7,7 @@ import {
   useAlertasTriagem,
   useTiposOcorrenciaListar,
   type Alerta as AlertaAmbiental,
+  type ArvoreProxima,
   type StatusAlertaEnum,
 } from "@itree/api-client";
 import { ACOES_STATUS_ALERTA, ROTULOS_FONTE_ALERTA, ROTULOS_TIPO_ALERTA } from "@itree/domain";
@@ -14,14 +15,20 @@ import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import type { GeoJSONSource, LngLatBoundsLike, Map as MapaMapLibre } from "maplibre-gl";
 import { ArrowLeft } from "lucide-react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { CondicaoAparente } from "../../componentes/CondicaoAparente";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { Mapa } from "../../mapa/Mapa";
-import { camadasDoAlerta, registrarIcones } from "../../mapa/simbologia";
+import {
+  COR_ALERTA,
+  camadasDoAlerta,
+  pinturaArvores,
+  registrarIcones,
+} from "../../mapa/simbologia";
+import { dadosDoMapaDoAlerta } from "./mapaAlerta";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -81,8 +88,51 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
   const [convertendo, setConvertendo] = useState(false);
   const historico = useAlertasHistorico(a.id);
   const geometria = a.geometria as { type: string; coordinates: unknown };
+  // As árvores a até `raio` m vão para a tabela e para o mapa (R3-24): uma consulta só.
+  const proximas = useAlertasArvoresProximas(
+    a.id,
+    { raio },
+    { query: { placeholderData: keepPreviousData } },
+  );
+  const mapa = useRef<MapaMapLibre | null>(null);
+  const [mapaPronto, setMapaPronto] = useState(false);
+
+  // Raio e árvores próximas acompanham a consulta e o seletor de raio.
+  useEffect(() => {
+    const m = mapa.current;
+    if (!mapaPronto || !m) return;
+    const dados = dadosDoMapaDoAlerta(geometria, proximas.data?.data ?? [], raio);
+    (m.getSource("raio") as GeoJSONSource | undefined)?.setData(
+      (dados.raio ?? { type: "FeatureCollection", features: [] }) as Parameters<
+        GeoJSONSource["setData"]
+      >[0],
+    );
+    (m.getSource("arvores-proximas") as GeoJSONSource | undefined)?.setData(
+      dados.arvores as Parameters<GeoJSONSource["setData"]>[0],
+    );
+    if (a.tipo_geometria === "Point" && dados.caixa)
+      m.fitBounds(dados.caixa, { padding: 32, duration: 0, maxZoom: 17 });
+    // A geometria só muda com o alerta; o efeito refaz com a consulta e o raio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapaPronto, proximas.data, raio]);
 
   const aoCarregar = (m: MapaMapLibre) => {
+    mapa.current = m;
+    const vazio = { type: "FeatureCollection", features: [] } as const;
+    m.addSource("raio", { type: "geojson", data: vazio });
+    m.addLayer({
+      id: "raio-preenchimento",
+      type: "fill",
+      source: "raio",
+      paint: { "fill-color": COR_ALERTA, "fill-opacity": 0.06 },
+    });
+    m.addLayer({
+      id: "raio-contorno",
+      type: "line",
+      source: "raio",
+      paint: { "line-color": COR_ALERTA, "line-width": 1.5, "line-dasharray": [2, 2] },
+    });
+    m.addSource("arvores-proximas", { type: "geojson", data: vazio });
     m.addSource("alerta", {
       type: "geojson",
       data: { type: "Feature", properties: {}, geometry: geometria } as Parameters<
@@ -92,6 +142,14 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
     registrarIcones(m);
     for (const camada of camadasDoAlerta("alerta", a.tipo_geometria === "Point"))
       m.addLayer(camada as Parameters<MapaMapLibre["addLayer"]>[0]);
+    // As árvores ficam por cima do alerta: é a relação espacial que a tela quer mostrar.
+    m.addLayer({
+      id: "arvores-proximas",
+      type: "circle",
+      source: "arvores-proximas",
+      paint: { ...pinturaArvores("condicao"), "circle-radius": 6 } as never,
+    });
+    setMapaPronto(true);
     if (a.tipo_geometria === "Point") {
       const [x1, y1] = (limites(geometria) as number[]).slice(0, 2);
       m.jumpTo({ center: [x1!, y1!], zoom: 14 });
@@ -139,12 +197,18 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
         </div>
       )}
       <div className="mb-6 grid gap-4 lg:grid-cols-5">
-        <Mapa
-          base="ruas"
-          rotulo="Geometria do alerta"
-          className="h-80 overflow-hidden rounded-lg border border-borda lg:col-span-3"
-          aoCarregar={aoCarregar}
-        />
+        <div className="lg:col-span-3">
+          <Mapa
+            base="ruas"
+            rotulo="Geometria do alerta"
+            className="h-80 overflow-hidden rounded-lg border border-borda"
+            aoCarregar={aoCarregar}
+          />
+          <p className="mt-1.5 text-xs text-texto-suave">
+            {a.tipo_geometria === "Point" ? `Círculo tracejado: raio de ${raio} m. ` : ""}
+            Pontos coloridos: as árvores listadas abaixo, pela condição aparente.
+          </p>
+        </div>
         <section className="rounded-lg border border-borda bg-superficie p-4 text-sm lg:col-span-2">
           <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2">
             <dt className="text-texto-suave">Detectado em (fonte)</dt>
@@ -211,7 +275,7 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
           </p>
         </section>
       </div>
-      <ArvoresProximas alerta={a} raio={raio} />
+      <ArvoresProximas alerta={a} raio={raio} consulta={proximas} />
       <details className="mb-6 rounded-lg border border-borda bg-superficie p-4">
         <summary className="cursor-pointer font-semibold">Atributos originais da fonte</summary>
         <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-sm">
@@ -235,13 +299,25 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
   );
 }
 
-function ArvoresProximas({ alerta, raio }: { alerta: AlertaAmbiental; raio: RaioM }) {
+/** O que a tabela usa da consulta das árvores próximas, feita em `Detalhe` e dividida com o mapa. */
+interface ConsultaProximas {
+  data?: { data: ArvoreProxima[] };
+  isPending: boolean;
+  isError: boolean;
+  error: unknown;
+  refetch: () => Promise<unknown>;
+}
+
+function ArvoresProximas({
+  alerta,
+  raio,
+  consulta,
+}: {
+  alerta: AlertaAmbiental;
+  raio: RaioM;
+  consulta: ConsultaProximas;
+}) {
   const navegar = useNavigate({ from: "/alertas/$id" });
-  const consulta = useAlertasArvoresProximas(
-    alerta.id,
-    { raio },
-    { query: { placeholderData: keepPreviousData } },
-  );
   const arvores = consulta.data?.data ?? [];
   return (
     <section className="mb-6" aria-labelledby="arvores-proximas">

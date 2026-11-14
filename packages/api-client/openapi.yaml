@@ -4362,12 +4362,22 @@ components:
           type: number
           format: double
           description: Distância geodésica em metros.
+        latitude:
+          type: number
+          format: double
+          description: Latitude (WGS 84), para desenhar no mapa.
+        longitude:
+          type: number
+          format: double
+          description: Longitude (WGS 84), para desenhar no mapa.
       required:
       - codigo
       - condicao_aparente
       - distancia_m
       - especie
       - id
+      - latitude
+      - longitude
     ArvoreRequest:
       type: object
       description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).

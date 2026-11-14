@@ -102,6 +102,9 @@ describe("alerta ambiental e ícones (C-12, C-28)", () => {
     } as never);
     expect(TAM_ICONE).toBe(Math.round(22 * 1.2));
     expect(tamanhos.has("tarefa-atrasada")).toBe(true);
+    // Hachura das áreas verdes, uma por tipo (R3-23).
+    for (const tipo of ["praca", "parque", "unidade_conservacao"])
+      expect(tamanhos.has(`hachura-area-verde-${tipo}`)).toBe(true);
     expect(preenchimentos).toContain("#ffffff");
   });
 });

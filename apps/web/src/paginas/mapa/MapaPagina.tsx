@@ -46,6 +46,8 @@ import { config } from "../../config";
 import { useTerritorioAtivo } from "../../layout/territorio";
 import { CamadasReferencia } from "../../mapa/CamadasReferencia";
 import { Mapa } from "../../mapa/Mapa";
+import { paddingDoMapa } from "../../mapa/enquadramento";
+import { cn } from "../../util/cn";
 import { AreaRolavel } from "../../ui/rolagem";
 import { maplibregl } from "../../mapa/maplibre";
 import {
@@ -54,7 +56,7 @@ import {
   limitesDaGeometria,
   type FeicaoTerritorio,
 } from "../../mapa/realce";
-import { rotulosVisiveis } from "../../mapa/rotulos";
+import { rotuloDoBairroVisivel, rotulosVisiveis } from "../../mapa/rotulos";
 import {
   adicionarCamadasArea,
   definirArea,
@@ -96,6 +98,8 @@ import {
   CORES_PRIORIDADE,
   OPACIDADE_AREA_VERDE,
   OPACIDADE_AREA_VERDE_UC,
+  OPACIDADE_HACHURA_AREA_VERDE,
+  HACHURA_AREA_VERDE,
   OPACIDADE_SUPRESSAO_ANUAL,
   ZOOM_AGRUPA_BAIRRO,
   filtroArvoreIndividual,
@@ -191,7 +195,6 @@ function urlTiles(
   return urlApi(`/api/v1/mapa/tiles/${camada}/{z}/{x}/{y}${qs ? `?${qs}` : ""}`);
 }
 
-const ZOOM_ROTULOS = 12.5;
 const FONTE_SUPRESSAO = "supressao-anual";
 
 /** Camadas operacionais com clique próprio: o clique nelas não abre a área verde por baixo. */
@@ -269,6 +272,11 @@ export function MapaPagina() {
     if (!alternouPainel.current) return;
     alternouPainel.current = false;
     (painel ? botaoOcultar : botaoMostrar).current?.focus();
+  }, [painel]);
+  // O enquadramento (`fitBounds`) lê o estado atual do painel sem refazer-se a cada abrir/fechar.
+  const painelAbertoRef = useRef(painel);
+  useEffect(() => {
+    painelAbertoRef.current = painel;
   }, [painel]);
   const alternarPainel = (aberto: boolean) => {
     alternouPainel.current = true;
@@ -359,7 +367,7 @@ export function MapaPagina() {
 
   // Nomes dos bairros: só os que cabem no polígono e não colidem (C-08).
   const atualizarRotulos = (m: MapaMapLibre) => {
-    if (m.getZoom() < ZOOM_ROTULOS) {
+    if (!rotuloDoBairroVisivel(m.getZoom())) {
       for (const r of rotulos.current) r.getElement().hidden = true;
       return;
     }
@@ -489,6 +497,16 @@ export function MapaPagina() {
           OPACIDADE_AREA_VERDE_UC,
           OPACIDADE_AREA_VERDE,
         ],
+      },
+    });
+    m.addLayer({
+      id: "areas-verdes-hachura",
+      type: "fill",
+      source: "areas-verdes",
+      layout: { visibility: "none" },
+      paint: {
+        "fill-pattern": HACHURA_AREA_VERDE as never,
+        "fill-opacity": OPACIDADE_HACHURA_AREA_VERDE,
       },
     });
     m.addLayer({
@@ -857,7 +875,7 @@ export function MapaPagina() {
         el.className = "rotulo-bairro";
         el.textContent = f.properties.nome;
         el.setAttribute("aria-hidden", "true");
-        el.hidden = m.getZoom() < ZOOM_ROTULOS;
+        el.hidden = !rotuloDoBairroVisivel(m.getZoom());
         return new maplibregl.Marker({ element: el, anchor: "center" })
           .setLngLat(f.properties.rotulo as [number, number])
           .addTo(m);
@@ -876,7 +894,8 @@ export function MapaPagina() {
     if (!pronto || !m) return;
     definirRealce(m, feicaoDestaque);
     const limites = feicaoDestaque && limitesDaGeometria(feicaoDestaque.geometry);
-    if (limites) m.fitBounds(limites, { padding: 60, maxZoom: 16 });
+    if (limites)
+      m.fitBounds(limites, { padding: paddingDoMapa(painelAbertoRef.current, 60), maxZoom: 16 });
   }, [pronto, feicaoDestaque]);
 
   const definirAreaNaUrl = (nova: PoligonoGeoJson | null) =>
@@ -916,6 +935,8 @@ export function MapaPagina() {
   }, [formaArea, area]);
 
   const iniciarSelecaoPorArea = (forma: FormaArea) => {
+    // Com os dois painéis abertos sobravam cerca de 470 px de mapa: o de camadas recolhe (R3-21).
+    setPainel(false);
     setAvisoSimplificacao(null);
     definirAreaNaUrl(null);
     setFormaArea(forma);
@@ -945,7 +966,7 @@ export function MapaPagina() {
   useEffect(() => {
     if (!pronto || busca.lon !== undefined || !limites) return;
     mapa.current?.fitBounds(limites as [number, number, number, number], {
-      padding: 40,
+      padding: paddingDoMapa(painelAbertoRef.current),
       duration: 0,
     });
     // Só na abertura.
@@ -960,7 +981,9 @@ export function MapaPagina() {
     territorioAnterior.current = territorioAtivo.id;
     atualizarBusca({ destaque: territorioAtivo.id });
     if (!territorioAtivo.id && limites)
-      mapa.current?.fitBounds(limites as [number, number, number, number], { padding: 40 });
+      mapa.current?.fitBounds(limites as [number, number, number, number], {
+        padding: paddingDoMapa(painelAbertoRef.current),
+      });
     // `atualizarBusca` e `limites` mudam a cada render; só a escolha do território dispara.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [territorioAtivo.id]);
@@ -1013,7 +1036,12 @@ export function MapaPagina() {
     definir(CAMADAS_ARBORIZACAO, mostrarArborizacao);
     definir(["bairros-preenchimento", "bairros-contorno"], mostrarBairros);
     definir(
-      ["areas-verdes-preenchimento", "areas-verdes-contorno", "areas-verdes-contorno-uc"],
+      [
+        "areas-verdes-preenchimento",
+        "areas-verdes-hachura",
+        "areas-verdes-contorno",
+        "areas-verdes-contorno-uc",
+      ],
       mostrarAreasVerdes,
     );
     for (const r of rotulos.current) r.getElement().style.display = mostrarBairros ? "" : "none";
@@ -1039,6 +1067,7 @@ export function MapaPagina() {
       : null;
     const semUc = ["!=", ["get", "tipo"], "unidade_conservacao"];
     m.setFilter("areas-verdes-preenchimento", filtro as never);
+    m.setFilter("areas-verdes-hachura", filtro as never);
     m.setFilter("areas-verdes-contorno", (filtro ? ["all", semUc, filtro] : semUc) as never);
   }, [pronto, busca.subtipo_praca]);
 
@@ -1188,7 +1217,7 @@ export function MapaPagina() {
                 </Grupo>
 
                 {podeMapa && (
-                  <Grupo titulo="Contexto (fontes externas)" aberto>
+                  <Grupo titulo="Contexto (fontes externas)" aberto={mostrarArborizacao}>
                     <Camada
                       rotulo="Arborização do entorno (Censo 2022)"
                       marcador={<AmostraArborizacao />}
@@ -1213,7 +1242,10 @@ export function MapaPagina() {
                 )}
 
                 {podeAlertas && (
-                  <Grupo titulo="Ambientais — sinais externos" aberto>
+                  <Grupo
+                    titulo="Ambientais — sinais externos"
+                    aberto={mostrarAlertas || mostrarSupressao}
+                  >
                     <Camada
                       rotulo="Alertas ambientais"
                       marcador={<Losango cor={COR_ALERTA} />}
@@ -1510,7 +1542,14 @@ export function MapaPagina() {
         </div>
 
         {/* Ferramentas do mapa, ao lado do painel de camadas. */}
-        <div className="pointer-events-none absolute top-3 left-[21.75rem] z-10 flex max-w-[calc(100%-44rem)] min-w-64 flex-col items-start gap-2">
+        <div
+          className={cn(
+            "pointer-events-none absolute top-3 z-10 flex min-w-64 flex-col items-start gap-2",
+            painel
+              ? "left-[21.75rem] max-w-[calc(100%-44rem)]"
+              : "left-52 max-w-[calc(100%-14rem)]",
+          )}
+        >
           <BarraSelecaoArea
             forma={formaArea}
             ativoPainel={area !== null}
@@ -1838,6 +1877,27 @@ function Legenda({
   definicaoArborizacao: string;
 }) {
   const [aberta, setAberta] = useState(!recolhidaPorPadrao);
+  // Ao ligar uma camada de contexto a legenda abre: sem ela a coropleta e a rampa não se leem
+  // (R3-22). Estado derivado na renderização, sem efeito.
+  const [contextoAnterior, setContextoAnterior] = useState({
+    areasVerdes,
+    arborizacao,
+    supressao: !!supressao,
+  });
+  const contextoAtual = { areasVerdes, arborizacao, supressao: !!supressao };
+  if (
+    contextoAtual.areasVerdes !== contextoAnterior.areasVerdes ||
+    contextoAtual.arborizacao !== contextoAnterior.arborizacao ||
+    contextoAtual.supressao !== contextoAnterior.supressao
+  ) {
+    setContextoAnterior(contextoAtual);
+    if (
+      (contextoAtual.areasVerdes && !contextoAnterior.areasVerdes) ||
+      (contextoAtual.arborizacao && !contextoAnterior.arborizacao) ||
+      (contextoAtual.supressao && !contextoAnterior.supressao)
+    )
+      setAberta(true);
+  }
   if (
     !arvores &&
     !ocorrencias &&
