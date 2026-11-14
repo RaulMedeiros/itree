@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "itree.relatorios",
     "itree.qualidade",
     "itree.notificacoes",
+    "itree.conectores",
 ]
 
 MIDDLEWARE = [
@@ -190,6 +191,10 @@ SPECTACULAR_SETTINGS = {
         "TipoMedidaEnum": "itree.inventario.models.TipoMedida",
         "MetodoMedidaEnum": "itree.inventario.models.MetodoMedida",
         "EstadoLoteEnum": "itree.inventario.models.EstadoLote",
+        "TipoConectorEnum": "itree.conectores.models.TipoConector",
+        "DestinoConectorEnum": "itree.conectores.models.DestinoConector",
+        "PeriodicidadeEnum": "itree.conectores.models.Periodicidade",
+        "OrigemExecucaoEnum": "itree.conectores.models.OrigemExecucao",
         "EstadoOcorrenciaEnum": "itree.ocorrencias.models.EstadoOcorrencia",
         "PrioridadeEnum": "itree.ocorrencias.models.Prioridade",
         "OrigemOcorrenciaEnum": "itree.ocorrencias.models.OrigemOcorrencia",
@@ -294,6 +299,15 @@ WEB_URL_PUBLICA = env.str("WEB_URL_PUBLICA", default="").rstrip("/")
 # Áreas verdes (Fortaleza em Mapas): reimportação mensal e aviso de fonte desatualizada
 # quando a última importação passa deste limite (RF-INT-005).
 AREAS_VERDES_IDADE_MAXIMA_DIAS = env.int("AREAS_VERDES_IDADE_MAXIMA_DIAS", default=60)
+# Conectores de fontes externas (RF-INT-006): o servidor só busca hosts desta lista, por HTTPS.
+ITREE_CONECTORES_HOSTS_PERMITIDOS = env.list(
+    "ITREE_CONECTORES_HOSTS_PERMITIDOS",
+    default=["mapas.fortaleza.ce.gov.br", "dados.fortaleza.ce.gov.br"],
+)
+ITREE_CONECTORES_TIMEOUT = env.int("ITREE_CONECTORES_TIMEOUT", default=30)
+ITREE_CONECTORES_MAX_BYTES = env.int("ITREE_CONECTORES_MAX_BYTES", default=50 * 1024 * 1024)
+ITREE_CONECTORES_MAX_FEICOES = env.int("ITREE_CONECTORES_MAX_FEICOES", default=20_000)
+ITREE_CONECTORES_MAX_PAGINAS = env.int("ITREE_CONECTORES_MAX_PAGINAS", default=50)
 CELERY_BEAT_SCHEDULE = {
     "limpar-notificacoes": {
         "task": "itree.notificacoes.tasks.limpar_notificacoes_antigas",
@@ -311,6 +325,11 @@ CELERY_BEAT_SCHEDULE = {
     "reimportar-areas-verdes": {
         "task": "itree.areas_verdes.tasks.reimportar_areas_verdes",
         "schedule": crontab(minute=0, hour=4, day_of_month=2),
+    },
+    # Conectores vencidos pela periodicidade (RF-INT-006): confere de hora em hora.
+    "disparar-conectores": {
+        "task": "itree.conectores.tasks.disparar_conectores_vencidos",
+        "schedule": crontab(minute=10),
     },
     **(
         {

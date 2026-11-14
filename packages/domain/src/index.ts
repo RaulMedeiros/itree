@@ -3,3 +3,4 @@ export * from "./inventario";
 export * from "./gestao";
 export * from "./alertas";
 export * from "./notificacoes";
+export * from "./conectores";

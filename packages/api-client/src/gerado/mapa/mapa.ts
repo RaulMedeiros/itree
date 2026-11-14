@@ -25,10 +25,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CamadaReferencia,
   Camadas,
   MapaAlertas200,
   MapaAlertasParams,
   MapaBuscaParams,
+  MapaCamadaReferencia200,
+  MapaCamadaReferenciaParams,
   MapaSupressaoAnual200,
   MapaSupressaoAnualParams,
   MapaTileParams,
@@ -390,6 +393,240 @@ export function useMapaCamadas<TData = Awaited<ReturnType<typeof mapaCamadas>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getMapaCamadasQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type mapaCamadasReferenciaResponse200 = {
+  data: CamadaReferencia[]
+  status: 200
+}
+
+export type mapaCamadasReferenciaResponseSuccess = (mapaCamadasReferenciaResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mapaCamadasReferenciaResponse = (mapaCamadasReferenciaResponseSuccess)
+
+export const getMapaCamadasReferenciaUrl = () => {
+
+
+
+
+  return `/api/v1/mapa/camadas-referencia`
+}
+
+/**
+ * Camadas de referência ativas, com fonte, licença e data, para o painel de camadas.
+ */
+export const mapaCamadasReferencia = async ( options?: Parameters<typeof requisicao>[1]): Promise<mapaCamadasReferenciaResponse> => {
+
+  return requisicao<mapaCamadasReferenciaResponse>(getMapaCamadasReferenciaUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getMapaCamadasReferenciaQueryKey = () => {
+    return [
+    `/api/v1/mapa/camadas-referencia`
+    ] as const;
+    }
+
+
+export const getMapaCamadasReferenciaQueryOptions = <TData = Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMapaCamadasReferenciaQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof mapaCamadasReferencia>>> = ({ signal }) => mapaCamadasReferencia({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type MapaCamadasReferenciaQueryResult = NonNullable<Awaited<ReturnType<typeof mapaCamadasReferencia>>>
+export type MapaCamadasReferenciaQueryError = unknown
+
+
+export function useMapaCamadasReferencia<TData = Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaCamadasReferencia>>,
+          TError,
+          Awaited<ReturnType<typeof mapaCamadasReferencia>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaCamadasReferencia<TData = Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaCamadasReferencia>>,
+          TError,
+          Awaited<ReturnType<typeof mapaCamadasReferencia>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaCamadasReferencia<TData = Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useMapaCamadasReferencia<TData = Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadasReferencia>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getMapaCamadasReferenciaQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type mapaCamadaReferenciaResponse200 = {
+  data: MapaCamadaReferencia200
+  status: 200
+}
+
+export type mapaCamadaReferenciaResponseSuccess = (mapaCamadaReferenciaResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mapaCamadaReferenciaResponse = (mapaCamadaReferenciaResponseSuccess)
+
+export const getMapaCamadaReferenciaUrl = (id: string,
+    params?: MapaCamadaReferenciaParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/mapa/camadas-referencia/${id}?${stringifiedParams}` : `/api/v1/mapa/camadas-referencia/${id}`
+}
+
+/**
+ * Feições de uma camada de referência ativa, como GeoJSON. São dados públicos de contexto,
+ * sem filtro territorial; só camadas ativas são servidas.
+ */
+export const mapaCamadaReferencia = async (id: string,
+    params?: MapaCamadaReferenciaParams, options?: Parameters<typeof requisicao>[1]): Promise<mapaCamadaReferenciaResponse> => {
+
+  return requisicao<mapaCamadaReferenciaResponse>(getMapaCamadaReferenciaUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getMapaCamadaReferenciaQueryKey = (id: string,
+    params?: MapaCamadaReferenciaParams,) => {
+    return [
+    `/api/v1/mapa/camadas-referencia/${id}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getMapaCamadaReferenciaQueryOptions = <TData = Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError = unknown>(id: string,
+    params?: MapaCamadaReferenciaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMapaCamadaReferenciaQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof mapaCamadaReferencia>>> = ({ signal }) => mapaCamadaReferencia(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type MapaCamadaReferenciaQueryResult = NonNullable<Awaited<ReturnType<typeof mapaCamadaReferencia>>>
+export type MapaCamadaReferenciaQueryError = unknown
+
+
+export function useMapaCamadaReferencia<TData = Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError = unknown>(
+ id: string,
+    params: undefined |  MapaCamadaReferenciaParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaCamadaReferencia>>,
+          TError,
+          Awaited<ReturnType<typeof mapaCamadaReferencia>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaCamadaReferencia<TData = Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError = unknown>(
+ id: string,
+    params?: MapaCamadaReferenciaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaCamadaReferencia>>,
+          TError,
+          Awaited<ReturnType<typeof mapaCamadaReferencia>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaCamadaReferencia<TData = Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError = unknown>(
+ id: string,
+    params?: MapaCamadaReferenciaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useMapaCamadaReferencia<TData = Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError = unknown>(
+ id: string,
+    params?: MapaCamadaReferenciaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaCamadaReferencia>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getMapaCamadaReferenciaQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

@@ -7,6 +7,7 @@ from rest_framework.routers import DefaultRouter
 from itree.alertas.views import AlertaViewSet
 from itree.areas_verdes.views import AreaVerdeViewSet
 from itree.auditoria.views import AuditoriaListView
+from itree.conectores import views as conectores
 from itree.contas.views import EquipeViewSet, UsuarioAdminViewSet, eu
 from itree.core.views import OperacaoEmLoteViewSet, saude
 from itree.evidencias.views import EvidenciaViewSet
@@ -46,6 +47,7 @@ roteador.register("tarefas", TarefaViewSet, basename="tarefa")
 roteador.register("alertas", AlertaViewSet, basename="alerta")
 roteador.register("notificacoes", NotificacaoViewSet, basename="notificacao")
 roteador.register("operacoes-em-lote", OperacaoEmLoteViewSet, basename="operacao-em-lote")
+roteador.register("conectores", conectores.ConectorViewSet, basename="conector")
 roteador.register("inferencias", InferenciaViewSet, basename="inferencia")
 
 api_v1 = [
@@ -76,6 +78,16 @@ api_v1 = [
     path("relatorios/painel.pdf", relatorios.painel_pdf, name="relatorios-painel-pdf"),
     path("qualidade/pendencias", pendencias, name="qualidade-pendencias"),
     path("mapa/camadas", mapa.camadas, name="mapa-camadas"),
+    path(
+        "mapa/camadas-referencia",
+        conectores.camadas_referencia,
+        name="mapa-camadas-referencia",
+    ),
+    path(
+        "mapa/camadas-referencia/<uuid:pk>",
+        conectores.camada_referencia,
+        name="mapa-camada-referencia",
+    ),
     path("", include(roteador.urls)),
 ]
 

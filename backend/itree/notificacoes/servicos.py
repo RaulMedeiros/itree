@@ -223,3 +223,21 @@ def alertas_novos(alertas: list) -> None:
             "",
             f"/alertas/{no_escopo[0].pk}" if n == 1 else "/alertas",
         )
+
+
+def previa_importacao(lote, origem: str) -> None:
+    """Avisa quem importa inventário que um conector deixou uma prévia aguardando confirmação.
+    A confirmação continua humana: o aviso só leva até ela."""
+    usuarios = [
+        u
+        for u in Usuario.objects.filter(is_active=True)
+        if u.tem_permissao(Permissao.INVENTARIO_IMPORTAR)
+    ]
+    n = lote.linhas_validas
+    _agendar(
+        usuarios,
+        TipoNotificacao.PREVIA_IMPORTACAO,
+        f"Prévia de importação aguardando: {origem}",
+        f"{n} de {lote.total_linhas} linhas válidas. Revise e confirme ou descarte.",
+        "/inventario/importacoes",
+    )

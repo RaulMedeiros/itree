@@ -68,6 +68,11 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
 - **RF-MAPA-030** — Filtros: espécie, condição aparente, período, estado,
   equipe, bairro, origem da localização.
 - **RF-MAPA-031** — Filtro "sem inspeção há mais de N dias" e "sem inspeção".
+- **RF-MAPA-033** — Camadas de referência dos conectores ativos (RF-INT-011) aparecem como
+  camadas opcionais em "Camadas conectadas", desligadas por padrão, abaixo das árvores e das
+  ocorrências. Cada uma mostra legenda, órgão, licença, página da fonte e data da última
+  sincronização. O popup mostra as propriedades com os rótulos cadastrados no conector (com
+  rótulos, só as listadas) e sempre como texto. A feição só é buscada ao ligar a camada.
 - **RF-MAPA-032** — Filtros e camadas são compartilhados com o Inventário
   (abrir a mesma seleção em lista).
 

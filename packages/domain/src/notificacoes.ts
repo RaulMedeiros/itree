@@ -9,4 +9,5 @@ export const ROTULOS_TIPO_NOTIFICACAO: Record<TipoNotificacaoEnum, string> = {
   inspecao_devolvida: "Inspeção devolvida",
   inspecao_para_revisao: "Inspeção para revisão",
   alerta_novo: "Alerta ambiental novo",
+  previa_importacao: "Prévia de importação aguardando",
 };

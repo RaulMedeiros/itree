@@ -18,6 +18,7 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
+import { ConectoresSecao } from "./ConectoresSecao";
 import { invalidarCaminhos } from "../../util/cache";
 import {
   descreverHa,
@@ -117,6 +118,7 @@ export function IntegracoesPagina() {
       <DetalhesTecnicos>
         Decisão pendente DP-11 (credenciais, limites e condições das APIs externas).
       </DetalhesTecnicos>
+      <ConectoresSecao />
       <EstadoDasFontes />
       <h2 className="mb-2 text-base font-semibold">Execuções recentes</h2>
       {consulta.isPending ? (

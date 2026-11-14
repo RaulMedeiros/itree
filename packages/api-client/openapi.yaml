@@ -1030,6 +1030,182 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/conectores:
+    get:
+      operationId: conectores_listar
+      description: Conectores de fontes externas (RF-INT-006). Tudo exige ``admin.configuracao``.
+      tags:
+      - conectores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conector'
+          description: ''
+    post:
+      operationId: conectores_criar
+      description: Conectores de fontes externas (RF-INT-006). Tudo exige ``admin.configuracao``.
+      tags:
+      - conectores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConectorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConectorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConectorRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conector'
+          description: ''
+  /api/v1/conectores/{id}:
+    get:
+      operationId: conectores_obter
+      description: Conectores de fontes externas (RF-INT-006). Tudo exige ``admin.configuracao``.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este conector.
+        required: true
+      tags:
+      - conectores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conector'
+          description: ''
+    patch:
+      operationId: conectores_atualizar
+      description: Conectores de fontes externas (RF-INT-006). Tudo exige ``admin.configuracao``.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este conector.
+        required: true
+      tags:
+      - conectores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedConectorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedConectorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedConectorRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conector'
+          description: ''
+  /api/v1/conectores/{id}/execucoes:
+    get:
+      operationId: conectores_execucoes
+      description: Histórico do conector, da mais recente para a mais antiga (últimas
+        100).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este conector.
+        required: true
+      tags:
+      - conectores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExecucaoConector'
+          description: ''
+  /api/v1/conectores/{id}/sincronizar:
+    post:
+      operationId: conectores_sincronizar
+      description: Abre a execução e a coloca na fila; o histórico mostra o resultado.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este conector.
+        required: true
+      tags:
+      - conectores
+      security:
+      - oidc: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecucaoConector'
+          description: ''
+  /api/v1/conectores/testar:
+    post:
+      operationId: conectores_testar
+      description: 'Busca a fonte sem gravar nada: quantas feições e as primeiras
+        colunas.'
+      tags:
+      - conectores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestarConectorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TestarConectorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TestarConectorRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultadoTeste'
+          description: ''
   /api/v1/equipes:
     get:
       operationId: equipes_listar
@@ -2109,6 +2285,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Camadas'
+          description: ''
+  /api/v1/mapa/camadas-referencia:
+    get:
+      operationId: mapa_camadas_referencia
+      description: Camadas de referência ativas, com fonte, licença e data, para o
+        painel de camadas.
+      tags:
+      - mapa
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CamadaReferencia'
+          description: ''
+  /api/v1/mapa/camadas-referencia/{id}:
+    get:
+      operationId: mapa_camada_referencia
+      description: |-
+        Feições de uma camada de referência ativa, como GeoJSON. São dados públicos de contexto,
+        sem filtro territorial; só camadas ativas são servidas.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: precisao
+        schema:
+          type: integer
+        description: Casas decimais (padrão 5).
+      tags:
+      - mapa
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
           description: ''
   /api/v1/mapa/selecao:
     post:
@@ -4300,6 +4524,56 @@ components:
     BlankEnum:
       enum:
       - ''
+    CamadaReferencia:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          readOnly: true
+        cor:
+          type: string
+          readOnly: true
+          description: Cor da camada no mapa (#rrggbb).
+        orgao:
+          type: string
+          readOnly: true
+          description: Órgão responsável pela fonte.
+        licenca:
+          type: string
+          readOnly: true
+          description: Licença ou termos de uso da fonte.
+        url_origem:
+          type: string
+          format: uri
+          readOnly: true
+          description: Página da fonte, para citação.
+        rotulos:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+        total:
+          type: integer
+          readOnly: true
+        atualizada_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - atualizada_em
+      - cor
+      - id
+      - licenca
+      - nome
+      - orgao
+      - rotulos
+      - total
+      - url_origem
     CamadaSelecaoEnum:
       enum:
       - arvores
@@ -4397,6 +4671,180 @@ components:
         * `ruim` - Ruim
         * `morta` - Aparentemente morta
         * `nao_avaliada` - Não avaliada
+    Conector:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 150
+        tipo:
+          $ref: '#/components/schemas/TipoConectorEnum'
+        url:
+          type: string
+          format: uri
+          description: Endereço HTTPS da fonte; o host precisa estar na lista de fontes
+            permitidas.
+          maxLength: 500
+        parametros:
+          type: object
+          additionalProperties:
+            type: string
+        destino:
+          $ref: '#/components/schemas/DestinoConectorEnum'
+        modelo_importacao:
+          type: string
+          format: uuid
+          nullable: true
+          description: 'Só no destino lote: o mapeamento de colunas usado na prévia.'
+        modelo_importacao_nome:
+          type: string
+          nullable: true
+          readOnly: true
+        modo:
+          $ref: '#/components/schemas/ModoEnum'
+        periodicidade:
+          $ref: '#/components/schemas/PeriodicidadeEnum'
+        ativo:
+          type: boolean
+        orgao:
+          type: string
+          description: Órgão responsável pela fonte.
+          maxLength: 200
+        licenca:
+          type: string
+          description: Licença ou termos de uso da fonte.
+          maxLength: 300
+        url_origem:
+          type: string
+          format: uri
+          description: Página da fonte, para citação.
+          maxLength: 500
+        cor:
+          type: string
+          description: Cor da camada no mapa (#rrggbb).
+          maxLength: 7
+        rotulos:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 100
+          description: Propriedade → rótulo.
+        situacao:
+          type: string
+          description: nunca | sincronizando | falha | atrasado | ok
+          readOnly: true
+        ultima_execucao:
+          allOf:
+          - $ref: '#/components/schemas/ExecucaoConector'
+          nullable: true
+          readOnly: true
+        total_feicoes:
+          type: integer
+          readOnly: true
+          default: 0
+        previa_pendente:
+          type: integer
+          nullable: true
+          description: Número do lote em prévia que este conector deixou aguardando
+            confirmação.
+          readOnly: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        atualizado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - atualizado_em
+      - criado_em
+      - destino
+      - id
+      - licenca
+      - modelo_importacao_nome
+      - nome
+      - orgao
+      - previa_pendente
+      - situacao
+      - tipo
+      - total_feicoes
+      - ultima_execucao
+      - url
+      - url_origem
+    ConectorRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 150
+        tipo:
+          $ref: '#/components/schemas/TipoConectorEnum'
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          description: Endereço HTTPS da fonte; o host precisa estar na lista de fontes
+            permitidas.
+          maxLength: 500
+        parametros:
+          type: object
+          additionalProperties:
+            type: string
+        destino:
+          $ref: '#/components/schemas/DestinoConectorEnum'
+        modelo_importacao:
+          type: string
+          format: uuid
+          nullable: true
+          description: 'Só no destino lote: o mapeamento de colunas usado na prévia.'
+        modo:
+          $ref: '#/components/schemas/ModoEnum'
+        periodicidade:
+          $ref: '#/components/schemas/PeriodicidadeEnum'
+        ativo:
+          type: boolean
+        orgao:
+          type: string
+          minLength: 1
+          description: Órgão responsável pela fonte.
+          maxLength: 200
+        licenca:
+          type: string
+          minLength: 1
+          description: Licença ou termos de uso da fonte.
+          maxLength: 300
+        url_origem:
+          type: string
+          format: uri
+          minLength: 1
+          description: Página da fonte, para citação.
+          maxLength: 500
+        cor:
+          type: string
+          minLength: 1
+          description: Cor da camada no mapa (#rrggbb).
+          maxLength: 7
+        rotulos:
+          type: object
+          additionalProperties:
+            type: string
+            minLength: 1
+            maxLength: 100
+          description: Propriedade → rótulo.
+      required:
+      - destino
+      - licenca
+      - nome
+      - orgao
+      - tipo
+      - url
+      - url_origem
     ConfirmarImportacaoRequest:
       type: object
       properties:
@@ -4501,6 +4949,14 @@ components:
           maxLength: 500
       required:
       - decisao
+    DestinoConectorEnum:
+      enum:
+      - camada_referencia
+      - lote_importacao
+      type: string
+      description: |-
+        * `camada_referencia` - Camada de referência no mapa
+        * `lote_importacao` - Lote de importação (prévia)
     DevolucaoRequest:
       type: object
       properties:
@@ -5291,6 +5747,80 @@ components:
       - tamanho
       - tipo_conteudo
       - url
+    ExecucaoConector:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        origem:
+          allOf:
+          - $ref: '#/components/schemas/OrigemExecucaoEnum'
+          readOnly: true
+        usuario_nome:
+          type: string
+          nullable: true
+          readOnly: true
+        iniciada_em:
+          type: string
+          format: date-time
+          readOnly: true
+        concluida_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        sucesso:
+          type: boolean
+          readOnly: true
+        recebidos:
+          type: integer
+          readOnly: true
+        novos:
+          type: integer
+          readOnly: true
+        atualizados:
+          type: integer
+          readOnly: true
+        removidos:
+          type: integer
+          readOnly: true
+        invalidos:
+          type: integer
+          readOnly: true
+        erro:
+          type: string
+          readOnly: true
+        detalhe:
+          type: string
+          readOnly: true
+          description: Observação que não é erro.
+        lote:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+          description: Prévia criada por esta execução (destino lote).
+        lote_numero:
+          type: integer
+          nullable: true
+          readOnly: true
+      required:
+      - atualizados
+      - concluida_em
+      - detalhe
+      - erro
+      - id
+      - iniciada_em
+      - invalidos
+      - lote
+      - lote_numero
+      - novos
+      - origem
+      - recebidos
+      - removidos
+      - sucesso
+      - usuario_nome
     ExistenteImportacao:
       type: object
       properties:
@@ -7018,6 +7548,14 @@ components:
         * `em_andamento` - Em andamento
         * `concluida` - Concluída
         * `falhou` - Interrompida por erro
+    OrigemExecucaoEnum:
+      enum:
+      - manual
+      - agendada
+      type: string
+      description: |-
+        * `manual` - Manual
+        * `agendada` - Agendada
     OrigemInspecaoEnum:
       enum:
       - app
@@ -7537,6 +8075,67 @@ components:
           type: string
           writeOnly: true
           maxLength: 500
+    PatchedConectorRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 150
+        tipo:
+          $ref: '#/components/schemas/TipoConectorEnum'
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          description: Endereço HTTPS da fonte; o host precisa estar na lista de fontes
+            permitidas.
+          maxLength: 500
+        parametros:
+          type: object
+          additionalProperties:
+            type: string
+        destino:
+          $ref: '#/components/schemas/DestinoConectorEnum'
+        modelo_importacao:
+          type: string
+          format: uuid
+          nullable: true
+          description: 'Só no destino lote: o mapeamento de colunas usado na prévia.'
+        modo:
+          $ref: '#/components/schemas/ModoEnum'
+        periodicidade:
+          $ref: '#/components/schemas/PeriodicidadeEnum'
+        ativo:
+          type: boolean
+        orgao:
+          type: string
+          minLength: 1
+          description: Órgão responsável pela fonte.
+          maxLength: 200
+        licenca:
+          type: string
+          minLength: 1
+          description: Licença ou termos de uso da fonte.
+          maxLength: 300
+        url_origem:
+          type: string
+          format: uri
+          minLength: 1
+          description: Página da fonte, para citação.
+          maxLength: 500
+        cor:
+          type: string
+          minLength: 1
+          description: Cor da camada no mapa (#rrggbb).
+          maxLength: 7
+        rotulos:
+          type: object
+          additionalProperties:
+            type: string
+            minLength: 1
+            maxLength: 100
+          description: Propriedade → rótulo.
     PatchedEquipeRequest:
       type: object
       properties:
@@ -7763,6 +8362,18 @@ components:
       required:
       - calculado_em
       - pendencias
+    PeriodicidadeEnum:
+      enum:
+      - manual
+      - diaria
+      - semanal
+      - mensal
+      type: string
+      description: |-
+        * `manual` - Manual
+        * `diaria` - Diária
+        * `semanal` - Semanal
+        * `mensal` - Mensal
     PermissaoEnum:
       enum:
       - mapa.ler
@@ -8136,6 +8747,27 @@ components:
         * `ja_recebida` - ja_recebida
         * `conflito` - conflito
         * `erro` - erro
+    ResultadoTeste:
+      type: object
+      properties:
+        total:
+          type: integer
+        paginas:
+          type: integer
+        colunas:
+          type: array
+          items:
+            type: string
+        amostra:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - amostra
+      - colunas
+      - paginas
+      - total
     ResumoImportacao:
       type: object
       properties:
@@ -8698,6 +9330,23 @@ components:
       required:
       - nome
       - tipo
+    TestarConectorRequest:
+      type: object
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoConectorEnum'
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          maxLength: 500
+        parametros:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - tipo
+      - url
     TipoAlertaEnum:
       enum:
       - foco_calor
@@ -8716,6 +9365,18 @@ components:
         * `praca` - Praça
         * `parque` - Parque urbano
         * `unidade_conservacao` - Unidade de conservação
+    TipoConectorEnum:
+      enum:
+      - geojson_url
+      - wfs
+      - arcgis_rest
+      - ckan
+      type: string
+      description: |-
+        * `geojson_url` - GeoJSON por endereço
+        * `wfs` - WFS (GetFeature em GeoJSON)
+        * `arcgis_rest` - ArcGIS REST (FeatureServer/MapServer)
+        * `ckan` - Portal CKAN (recurso GeoJSON ou CSV)
     TipoConteudoEnum:
       enum:
       - application/pdf
@@ -8753,6 +9414,7 @@ components:
       - inspecao_devolvida
       - inspecao_para_revisao
       - alerta_novo
+      - previa_importacao
       type: string
       description: |-
         * `tarefa_atribuida` - Tarefa atribuída
@@ -8762,6 +9424,7 @@ components:
         * `inspecao_devolvida` - Inspeção devolvida
         * `inspecao_para_revisao` - Inspeção para revisão
         * `alerta_novo` - Alerta ambiental novo
+        * `previa_importacao` - Prévia de importação aguardando
     TipoOcorrencia:
       type: object
       properties:
