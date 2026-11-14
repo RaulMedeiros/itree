@@ -8,7 +8,8 @@ import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { filtrosParaExportar } from "../../componentes/filtrosExportacao";
 import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { usePermissao } from "../../acesso/ContextoUsuario";
-import { EntradaData, Selecao } from "../../ui/campos";
+import { BarraFiltros, EntradaData, Selecao } from "../../ui/campos";
+import { aguardaHa, esperaEmAtencao } from "./espera";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { Botao } from "../../ui/botao";
 import { Carregando, Erro, ListaVazia } from "../../ui/estados";
@@ -28,12 +29,6 @@ const ORDENACOES = [
   { valor: "condicao", rotulo: "Pior condição primeiro" },
   { valor: "-realizada_em", rotulo: "Última realizada primeiro" },
 ] as const;
-
-/** Tempo na fila de revisão, em dias corridos. "Chegou hoje" só aparece para quem chegou hoje. */
-function aguardaHa(dias: number): string {
-  if (dias <= 0) return "chegou hoje";
-  return `aguarda há ${contar(dias, "dia", "dias")}`;
-}
 
 export interface BuscaInspecoes {
   estado?: string;
@@ -92,92 +87,101 @@ export function InspecoesPagina() {
           />
         }
       />
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Selecao
-          aria-label="Situação"
-          value={filtros.estado ?? "em_revisao"}
-          onChange={(e) => filtrar({ estado: e.target.value })}
-          className="max-w-56"
-        >
-          <option value="em_revisao">Fila de revisão</option>
-          {Object.values(EstadoInspecaoEnum)
-            .filter((e) => e !== "em_revisao")
-            .map((e) => (
-              <option key={e} value={e}>
-                {ROTULOS_ESTADO_INSPECAO[e]}
+      <BarraFiltros
+        principais={[
+          <Selecao
+            key="situacao"
+            aria-label="Situação"
+            value={filtros.estado ?? "em_revisao"}
+            onChange={(e) => filtrar({ estado: e.target.value })}
+          >
+            <option value="em_revisao">Fila de revisão</option>
+            {Object.values(EstadoInspecaoEnum)
+              .filter((e) => e !== "em_revisao")
+              .map((e) => (
+                <option key={e} value={e}>
+                  {ROTULOS_ESTADO_INSPECAO[e]}
+                </option>
+              ))}
+            <option value={Object.values(EstadoInspecaoEnum).join(",")}>Todas</option>
+          </Selecao>,
+          <Selecao
+            key="bairro"
+            aria-label="Bairro"
+            value={bairro ?? ""}
+            onChange={(e) => {
+              filtrar({ bairro: e.target.value || undefined });
+              aoEscolherBairro(e.target.value);
+            }}
+          >
+            <option value="">Todos os bairros</option>
+            {bairros.data?.data.results.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.nome}
               </option>
             ))}
-          <option value={Object.values(EstadoInspecaoEnum).join(",")}>Todas</option>
-        </Selecao>
-        <Selecao
-          aria-label="Bairro"
-          value={bairro ?? ""}
-          onChange={(e) => {
-            filtrar({ bairro: e.target.value || undefined });
-            aoEscolherBairro(e.target.value);
-          }}
-          className="max-w-52"
-        >
-          <option value="">Todos os bairros</option>
-          {bairros.data?.data.results.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.nome}
-            </option>
-          ))}
-        </Selecao>
-        <Selecao
-          aria-label="Condição aparente"
-          value={filtros.condicao ?? ""}
-          onChange={(e) => filtrar({ condicao: e.target.value || undefined })}
-          className="max-w-52"
-        >
-          <option value="">Todas as condições</option>
-          {Object.entries(ROTULOS_CONDICAO).map(([valor, rotulo]) => (
-            <option key={valor} value={valor}>
-              {rotulo}
-            </option>
-          ))}
-        </Selecao>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="size-4 accent-marca"
-            checked={filtros.requer_encaminhamento === "true"}
-            onChange={(e) =>
-              filtrar({ requer_encaminhamento: e.target.checked ? "true" : undefined })
-            }
-          />
-          Requer encaminhamento
-        </label>
-        <Selecao
-          aria-label="Ordenar por"
-          value={ordenacao}
-          onChange={(e) => filtrar({ ordenar: e.target.value })}
-          className="max-w-56"
-        >
-          {ORDENACOES.map((o) => (
-            <option key={o.valor} value={o.valor}>
-              {o.rotulo}
-            </option>
-          ))}
-        </Selecao>
-        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
-          De
-          <EntradaData
-            value={filtros.desde ?? ""}
-            onChange={(v) => filtrar({ desde: v || undefined })}
-            className="w-40"
-          />
-        </label>
-        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
-          até
-          <EntradaData
-            value={filtros.ate ?? ""}
-            onChange={(v) => filtrar({ ate: v || undefined })}
-            className="w-40"
-          />
-        </label>
-      </div>
+          </Selecao>,
+          <Selecao
+            key="condicao"
+            aria-label="Condição aparente"
+            value={filtros.condicao ?? ""}
+            onChange={(e) => filtrar({ condicao: e.target.value || undefined })}
+          >
+            <option value="">Todas as condições</option>
+            {Object.entries(ROTULOS_CONDICAO).map(([valor, rotulo]) => (
+              <option key={valor} value={valor}>
+                {rotulo}
+              </option>
+            ))}
+          </Selecao>,
+          <Selecao
+            key="ordem"
+            aria-label="Ordenar por"
+            value={ordenacao}
+            onChange={(e) => filtrar({ ordenar: e.target.value })}
+          >
+            {ORDENACOES.map((o) => (
+              <option key={o.valor} value={o.valor}>
+                {o.rotulo}
+              </option>
+            ))}
+          </Selecao>,
+        ]}
+        extras={[
+          <label key="encaminhamento" className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 accent-marca"
+              checked={filtros.requer_encaminhamento === "true"}
+              onChange={(e) =>
+                filtrar({ requer_encaminhamento: e.target.checked ? "true" : undefined })
+              }
+            />
+            Requer encaminhamento
+          </label>,
+          <label key="de" className="flex items-center gap-1.5 text-sm text-texto-suave">
+            De
+            <EntradaData
+              value={filtros.desde ?? ""}
+              onChange={(v) => filtrar({ desde: v || undefined })}
+              className="w-40"
+            />
+          </label>,
+          <label key="ate" className="flex items-center gap-1.5 text-sm text-texto-suave">
+            até
+            <EntradaData
+              value={filtros.ate ?? ""}
+              onChange={(v) => filtrar({ ate: v || undefined })}
+              className="w-40"
+            />
+          </label>,
+        ]}
+        extrasAtivos={contarFiltros({
+          requer_encaminhamento: filtros.requer_encaminhamento,
+          desde: filtros.desde,
+          ate: filtros.ate,
+        })}
+      />
       {consulta.isPending ? (
         <Carregando />
       ) : consulta.isError ? (
@@ -295,7 +299,13 @@ export function InspecoesPagina() {
                   <Td className="whitespace-nowrap">
                     {formatarDataHora(i.recebida_em)}
                     {i.estado === "em_revisao" && (
-                      <p className="text-xs font-medium text-atencao">
+                      <p
+                        className={
+                          esperaEmAtencao(diasDesde(i.recebida_em))
+                            ? "text-xs font-medium text-atencao"
+                            : "text-xs text-texto-suave"
+                        }
+                      >
                         {aguardaHa(diasDesde(i.recebida_em))}
                       </p>
                     )}

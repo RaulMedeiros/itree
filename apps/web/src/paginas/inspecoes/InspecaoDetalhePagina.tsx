@@ -32,6 +32,7 @@ import { AreaTexto, Campo, EntradaData, ListaMarcavel, Selecao } from "../../ui/
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
+import { Recolhivel } from "../../ui/recolhivel";
 import { Selo } from "../../ui/selo";
 import { cn } from "../../util/cn";
 import { invalidarCaminhos } from "../../util/cache";
@@ -369,16 +370,17 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
         <Evidencias alvo={{ inspecao: i.id }} podeEnviar={false} />
       </div>
 
-      <details className="mb-6 rounded-lg border border-borda bg-superficie p-4">
-        <summary className="cursor-pointer font-semibold">Histórico técnico</summary>
-        <div className="mt-3">
-          <LinhaDoTempo
-            eventos={historico.data?.data}
-            carregando={historico.isPending}
-            erro={historico.error}
-          />
-        </div>
-      </details>
+      <Recolhivel
+        titulo="Histórico técnico"
+        className="mt-0 mb-6 rounded-lg border border-borda bg-superficie px-4"
+        classeCorpo="pb-3"
+      >
+        <LinhaDoTempo
+          eventos={historico.data?.data}
+          carregando={historico.isPending}
+          erro={historico.error}
+        />
+      </Recolhivel>
 
       {podeValidar && (
         <>

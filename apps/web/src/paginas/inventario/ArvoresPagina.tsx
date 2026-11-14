@@ -22,7 +22,7 @@ import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { CondicaoAparente } from "../../componentes/CondicaoAparente";
 import { SeloEspecie, SeloLocalizacao, nomeEspecie } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
-import { Entrada, Selecao } from "../../ui/campos";
+import { BarraFiltros, Entrada, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { Carregando, Erro, ListaVazia } from "../../ui/estados";
 import { contarFiltros } from "../../util/filtros";
@@ -96,13 +96,13 @@ export function ArvoresPagina() {
   }, [busca, filtros.busca, navegar]);
 
   // Filtros fora da fila principal (busca, condição, espécie, bairro) ficam em "Mais filtros".
+  // Aqui só os de campo próprio; a ordenação "nunca inspecionadas" soma na hora de contar.
   const filtrosExtras = [
     filtros.especie_estado,
     filtros.localizacao_origem,
     filtros.sem_inspecao_dias,
     filtros.situacao && filtros.situacao !== "ativa" ? filtros.situacao : undefined,
   ].filter(Boolean).length;
-  const [maisAberto, setMaisAberto] = useState(filtrosExtras > 0);
 
   const { pagina, ordenar, ...semPagina } = filtros;
   const consulta = useArvoresListar({ ...filtros, bairro, tamanho: TAMANHO });
@@ -219,68 +219,135 @@ export function ArvoresPagina() {
           </>
         }
       />
-      <div className="mb-3 flex flex-wrap gap-2">
-        <Entrada
-          type="search"
-          aria-label="Buscar"
-          placeholder="Código, ID externo ou endereço"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="w-full sm:w-72"
-        />
-        <Selecao
-          aria-label="Condição aparente"
-          value={filtros.condicao_aparente ?? ""}
-          onChange={(e) => filtrar({ condicao_aparente: e.target.value || undefined })}
-          className="w-full sm:w-48"
-        >
-          <option value="">Qualquer condição</option>
-          {Object.entries(ROTULOS_CONDICAO).map(([v, r]) => (
-            // A API chama "sem avaliação" de "sem".
-            <option key={v} value={v === "nao_avaliada" ? "sem" : v}>
-              {r}
-            </option>
-          ))}
-        </Selecao>
-        <Selecao
-          aria-label="Espécie"
-          value={filtros.especie ?? ""}
-          onChange={(e) => filtrar({ especie: e.target.value || undefined })}
-          className="w-full sm:w-48"
-        >
-          <option value="">Todas as espécies</option>
-          {especies.data?.data.results.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nome_cientifico}
-            </option>
-          ))}
-        </Selecao>
-        <Selecao
-          aria-label="Bairro"
-          value={bairro ?? ""}
-          onChange={(e) => {
-            filtrar({ bairro: e.target.value || undefined });
-            aoEscolherBairro(e.target.value);
-          }}
-          className="w-full sm:w-48"
-        >
-          <option value="">Todos os bairros</option>
-          {bairros.data?.data.results.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.nome}
-            </option>
-          ))}
-        </Selecao>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="size-4 accent-marca"
-            checked={ordenacao === ORDENACAO_ATRASO}
-            onChange={(e) => filtrar({ ordenar: e.target.checked ? ORDENACAO_ATRASO : undefined })}
-          />
-          Nunca inspecionadas primeiro
-        </label>
-      </div>
+      <BarraFiltros
+        principais={[
+          <Entrada
+            key="busca"
+            type="search"
+            aria-label="Buscar"
+            placeholder="Código, ID externo ou endereço"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />,
+          <Selecao
+            key="condicao"
+            aria-label="Condição aparente"
+            value={filtros.condicao_aparente ?? ""}
+            onChange={(e) => filtrar({ condicao_aparente: e.target.value || undefined })}
+          >
+            <option value="">Qualquer condição</option>
+            {Object.entries(ROTULOS_CONDICAO).map(([v, r]) => (
+              // A API chama "sem avaliação" de "sem".
+              <option key={v} value={v === "nao_avaliada" ? "sem" : v}>
+                {r}
+              </option>
+            ))}
+          </Selecao>,
+          <Selecao
+            key="especie"
+            aria-label="Espécie"
+            value={filtros.especie ?? ""}
+            onChange={(e) => filtrar({ especie: e.target.value || undefined })}
+          >
+            <option value="">Todas as espécies</option>
+            {especies.data?.data.results.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.nome_cientifico}
+              </option>
+            ))}
+          </Selecao>,
+          <Selecao
+            key="bairro"
+            aria-label="Bairro"
+            value={bairro ?? ""}
+            onChange={(e) => {
+              filtrar({ bairro: e.target.value || undefined });
+              aoEscolherBairro(e.target.value);
+            }}
+          >
+            <option value="">Todos os bairros</option>
+            {bairros.data?.data.results.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.nome}
+              </option>
+            ))}
+          </Selecao>,
+        ]}
+        extras={[
+          <Selecao
+            key="ident"
+            aria-label="Situação da identificação"
+            value={filtros.especie_estado ?? ""}
+            onChange={(e) =>
+              filtrar({
+                especie_estado: (e.target.value || undefined) as BuscaArvores["especie_estado"],
+              })
+            }
+          >
+            <option value="">Toda identificação</option>
+            <option value="nao_confirmada">Não confirmada</option>
+            {Object.entries(ROTULOS_ESTADO_ESPECIE).map(([v, r]) => (
+              <option key={v} value={v}>
+                {r}
+              </option>
+            ))}
+          </Selecao>,
+          <Selecao
+            key="origem"
+            aria-label="Origem da localização"
+            value={filtros.localizacao_origem ?? ""}
+            onChange={(e) =>
+              filtrar({
+                localizacao_origem: (e.target.value || undefined) as
+                  OrigemLocalizacaoEnum | undefined,
+              })
+            }
+          >
+            <option value="">Toda localização</option>
+            {Object.entries(ROTULOS_ORIGEM_LOCALIZACAO).map(([v, r]) => (
+              <option key={v} value={v}>
+                {r}
+              </option>
+            ))}
+          </Selecao>,
+          <Selecao
+            key="inspecao"
+            aria-label="Última inspeção"
+            value={filtros.sem_inspecao_dias ? String(filtros.sem_inspecao_dias) : ""}
+            onChange={(e) =>
+              filtrar({ sem_inspecao_dias: e.target.value ? Number(e.target.value) : undefined })
+            }
+          >
+            <option value="">Toda última inspeção</option>
+            <option value="180">Sem inspeção há 6 meses</option>
+            <option value="365">Sem inspeção há 1 ano</option>
+            <option value="730">Sem inspeção há 2 anos</option>
+          </Selecao>,
+          <Selecao
+            key="situacao"
+            aria-label="Situação do registro"
+            value={filtros.situacao ?? "ativa"}
+            onChange={(e) => filtrar({ situacao: e.target.value as BuscaArvores["situacao"] })}
+          >
+            <option value="ativa">Ativas</option>
+            <option value="excluida">Excluídas</option>
+            <option value="fundida">Fundidas</option>
+            <option value="todas">Todas</option>
+          </Selecao>,
+          <label key="atraso" className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 accent-marca"
+              checked={ordenacao === ORDENACAO_ATRASO}
+              onChange={(e) =>
+                filtrar({ ordenar: e.target.checked ? ORDENACAO_ATRASO : undefined })
+              }
+            />
+            Nunca inspecionadas primeiro
+          </label>,
+        ]}
+        extrasAtivos={filtrosExtras + (ordenacao === ORDENACAO_ATRASO ? 1 : 0)}
+      />
       {filtros.area && (
         <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-texto-suave">
           Só as árvores dentro da área desenhada no mapa.
@@ -294,82 +361,6 @@ export function ArvoresPagina() {
           </Botao>
         </p>
       )}
-      <details
-        className="mb-3 rounded-lg border border-borda bg-superficie"
-        open={maisAberto}
-        onToggle={(e) => setMaisAberto(e.currentTarget.open)}
-      >
-        <summary className="cursor-pointer px-3 py-2 text-sm font-medium select-none">
-          Mais filtros
-          {filtrosExtras > 0 && (
-            <Selo tom="marca" className="ml-2">
-              {plural(filtrosExtras, "ativo", "ativos")}
-            </Selo>
-          )}
-        </summary>
-        <div className="flex flex-wrap gap-2 border-t border-borda p-3">
-          <Selecao
-            aria-label="Situação da identificação"
-            value={filtros.especie_estado ?? ""}
-            onChange={(e) =>
-              filtrar({
-                especie_estado: (e.target.value || undefined) as BuscaArvores["especie_estado"],
-              })
-            }
-            className="w-full sm:w-48"
-          >
-            <option value="">Toda identificação</option>
-            <option value="nao_confirmada">Não confirmada</option>
-            {Object.entries(ROTULOS_ESTADO_ESPECIE).map(([v, r]) => (
-              <option key={v} value={v}>
-                {r}
-              </option>
-            ))}
-          </Selecao>
-          <Selecao
-            aria-label="Origem da localização"
-            value={filtros.localizacao_origem ?? ""}
-            onChange={(e) =>
-              filtrar({
-                localizacao_origem: (e.target.value || undefined) as
-                  OrigemLocalizacaoEnum | undefined,
-              })
-            }
-            className="w-full sm:w-48"
-          >
-            <option value="">Toda localização</option>
-            {Object.entries(ROTULOS_ORIGEM_LOCALIZACAO).map(([v, r]) => (
-              <option key={v} value={v}>
-                {r}
-              </option>
-            ))}
-          </Selecao>
-          <Selecao
-            aria-label="Última inspeção"
-            value={filtros.sem_inspecao_dias ? String(filtros.sem_inspecao_dias) : ""}
-            onChange={(e) =>
-              filtrar({ sem_inspecao_dias: e.target.value ? Number(e.target.value) : undefined })
-            }
-            className="w-full sm:w-48"
-          >
-            <option value="">Toda última inspeção</option>
-            <option value="180">Sem inspeção há 6 meses</option>
-            <option value="365">Sem inspeção há 1 ano</option>
-            <option value="730">Sem inspeção há 2 anos</option>
-          </Selecao>
-          <Selecao
-            aria-label="Situação do registro"
-            value={filtros.situacao ?? "ativa"}
-            onChange={(e) => filtrar({ situacao: e.target.value as BuscaArvores["situacao"] })}
-            className="w-full sm:w-48"
-          >
-            <option value="ativa">Ativas</option>
-            <option value="excluida">Excluídas</option>
-            <option value="fundida">Fundidas</option>
-            <option value="todas">Todas</option>
-          </Selecao>
-        </div>
-      </details>
       {filtros.valida && (
         <p className="mb-3 flex flex-wrap items-center gap-2 text-sm text-texto-suave">
           Só registros válidos: ativos, com localização e origem registradas (critério provisório),

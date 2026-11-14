@@ -936,3 +936,25 @@ describe("tipos de ocorrência (administração)", () => {
     expect(await screen.findByRole("dialog", { name: /Editar Poda/ })).toBeInTheDocument();
   });
 });
+
+describe("R3-31: espera na fila de revisão", () => {
+  it("chegar hoje ou ontem é texto suave; só a espera de 3 dias ou mais ganha a cor de atenção", async () => {
+    const haDias = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+    servidor.use(
+      http.get(`${API}/api/v1/inspecoes`, () =>
+        HttpResponse.json(
+          pagina([
+            { ...inspecao("i-1", "INS-000001", []), recebida_em: haDias(0) },
+            { ...inspecao("i-2", "INS-000002", []), recebida_em: haDias(1) },
+            { ...inspecao("i-3", "INS-000003", []), recebida_em: haDias(5) },
+          ]),
+        ),
+      ),
+    );
+    await abrir("/inspecoes");
+    await screen.findByText("INS-000001");
+    expect(screen.getByText("chegou hoje")).toHaveClass("text-texto-suave");
+    expect(screen.getByText("aguarda há 1 dia")).toHaveClass("text-texto-suave");
+    expect(screen.getByText("aguarda há 5 dias")).toHaveClass("text-atencao");
+  });
+});

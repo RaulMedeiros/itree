@@ -11,6 +11,7 @@ import {
   diasDesde,
   formatarPontoGeografico,
   prazoRestante,
+  rotuloAtraso,
 } from "./formatos";
 
 const agora = new Date("2026-11-10T15:00:00Z"); // 10/11 12h em Fortaleza
@@ -118,5 +119,18 @@ describe("descreverVariacaoMedia (R3-15)", () => {
   it("usa o percentual a partir de 30 e não calcula sobre zero", () => {
     expect(descreverVariacaoMedia(45, 30, "dias").texto).toBe("+50%");
     expect(descreverVariacaoMedia(3, 0, "dias").texto).toBeNull();
+  });
+});
+
+describe("rotuloAtraso (R3-30)", () => {
+  it("junta o aviso e os dias num só texto, no feminino", () => {
+    expect(rotuloAtraso("2026-11-08", agora)).toBe("Atrasada há 2 dias");
+    expect(rotuloAtraso("2026-11-09", agora)).toBe("Atrasada há 1 dia");
+  });
+
+  it("não há rótulo em dia nem sem prazo", () => {
+    expect(rotuloAtraso("2026-11-10", agora)).toBeNull();
+    expect(rotuloAtraso("2026-11-20", agora)).toBeNull();
+    expect(rotuloAtraso(null, agora)).toBeNull();
   });
 });

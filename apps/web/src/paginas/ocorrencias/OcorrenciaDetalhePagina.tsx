@@ -38,6 +38,7 @@ import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
+import { Recolhivel } from "../../ui/recolhivel";
 import { Selo } from "../../ui/selo";
 import { descreverPrazo, formatarData, formatarDataHora } from "../../util/formatos";
 import { invalidarCaminhos } from "../../util/cache";
@@ -440,16 +441,17 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
         <Evidencias alvo={{ ocorrencia: o.id }} podeEnviar={podeEditar} />
       </div>
 
-      <details className="mb-6 rounded-lg border border-borda bg-superficie p-4">
-        <summary className="cursor-pointer font-semibold">Histórico de encaminhamentos</summary>
-        <div className="mt-3">
-          <LinhaDoTempo
-            eventos={historico.data?.data}
-            carregando={historico.isPending}
-            erro={historico.error}
-          />
-        </div>
-      </details>
+      <Recolhivel
+        titulo="Histórico de encaminhamentos"
+        className="mt-0 mb-6 rounded-lg border border-borda bg-superficie px-4"
+        classeCorpo="pb-3"
+      >
+        <LinhaDoTempo
+          eventos={historico.data?.data}
+          carregando={historico.isPending}
+          erro={historico.error}
+        />
+      </Recolhivel>
 
       {criandoTarefa && (
         <CriarTarefasDialogo

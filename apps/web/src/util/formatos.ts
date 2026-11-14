@@ -167,6 +167,16 @@ export function prazoRestante(
   return { texto: `vence em ${dias} dias`, atrasado: false };
 }
 
+/** "Atrasada há 2 dias" para o selo de uma ocorrência ou tarefa vencida; null sem prazo ou em dia. */
+export function rotuloAtraso(
+  prazo: string | null | undefined,
+  agora: Date = new Date(),
+): string | null {
+  const restante = prazoRestante(prazo, agora);
+  if (!restante?.atrasado) return null;
+  return restante.texto.replace(/^atrasado/, "Atrasada");
+}
+
 /** Parque ou unidade de conservação perto de um foco, como a API grava (distância em metros). */
 export interface AreaVerdeProxima {
   nome: string;

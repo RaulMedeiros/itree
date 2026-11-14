@@ -17,11 +17,11 @@ import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { filtrosParaExportar } from "../../componentes/filtrosExportacao";
 import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { SeloStatusAlerta } from "../../componentes/selos";
-import { EntradaData, Selecao } from "../../ui/campos";
+import { BarraFiltros, EntradaData, Selecao } from "../../ui/campos";
 import { Botao } from "../../ui/botao";
 import { Carregando, Erro, ListaVazia } from "../../ui/estados";
 import { contarFiltros } from "../../util/filtros";
-import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
+import { AbasSecao, CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th, ThOrdenavel } from "../../ui/tabela";
 import { descreverAreaVerdeProxima, formatarDataHora, plural } from "../../util/formatos";
 import { excedeLimiteDoLote, useSelecaoEmLote } from "../../util/lote";
@@ -51,32 +51,17 @@ export interface BuscaAlertas {
 }
 
 /** Abas que separam ocorrências confirmadas de alertas externos (RN-OCO-002). */
-export function AbasOcorrencias({ ativa }: { ativa: "ocorrencias" | "alertas" }) {
+export function AbasOcorrencias() {
   const veOcorrencias = usePermissao("ocorrencias.ler");
   const veAlertas = usePermissao("alertas.ler");
-  const classe = (aba: string) =>
-    `-mb-px border-b-2 px-3 py-2 text-sm ${ativa === aba ? "border-marca font-medium" : "border-transparent text-texto-suave hover:text-texto"}`;
   return (
-    <nav aria-label="Ocorrências e alertas" className="mb-4 flex gap-1 border-b border-borda">
-      {veOcorrencias && (
-        <Link
-          to="/ocorrencias"
-          className={classe("ocorrencias")}
-          aria-current={ativa === "ocorrencias" ? "page" : undefined}
-        >
-          Ocorrências
-        </Link>
-      )}
-      {veAlertas && (
-        <Link
-          to="/alertas"
-          className={classe("alertas")}
-          aria-current={ativa === "alertas" ? "page" : undefined}
-        >
-          Alertas ambientais
-        </Link>
-      )}
-    </nav>
+    <AbasSecao
+      rotulo="Ocorrências e alertas"
+      abas={[
+        ...(veOcorrencias ? [{ para: "/ocorrencias", rotulo: "Ocorrências" }] : []),
+        ...(veAlertas ? [{ para: "/alertas", rotulo: "Alertas ambientais" }] : []),
+      ]}
+    />
   );
 }
 
@@ -121,6 +106,7 @@ export function AlertasPagina() {
     <div className="mx-auto max-w-7xl">
       <CabecalhoPagina
         titulo="Alertas ambientais"
+        abas={<AbasOcorrencias />}
         descricao="Sinais de fontes externas para triagem humana. Um alerta não é confirmação de infração."
         acoes={
           <BotaoExportarCsv
@@ -130,79 +116,87 @@ export function AlertasPagina() {
           />
         }
       />
-      <AbasOcorrencias ativa="alertas" />
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Selecao
-          aria-label="Status"
-          value={filtros.status ?? "abertos"}
-          onChange={(e) => filtrar({ status: e.target.value })}
-          className="max-w-64"
-        >
-          <option value="abertos">Em aberto</option>
-          {Object.values(StatusAlertaEnum).map((s) => (
-            <option key={s} value={s}>
-              {ROTULOS_STATUS_ALERTA[s]}
-            </option>
-          ))}
-          <option value="todos">Todos</option>
-        </Selecao>
-        <Selecao
-          aria-label="Fonte"
-          value={filtros.fonte ?? ""}
-          onChange={(e) =>
-            filtrar({ fonte: (e.target.value || undefined) as FonteAlertaEnum | undefined })
-          }
-          className="max-w-72"
-        >
-          <option value="">Todas as fontes</option>
-          {Object.values(FonteAlertaEnum).map((f) => (
-            <option key={f} value={f}>
-              {ROTULOS_FONTE_ALERTA[f]}
-            </option>
-          ))}
-        </Selecao>
-        <Selecao
-          aria-label="Bairro"
-          value={bairro ?? ""}
-          onChange={(e) => {
-            filtrar({ bairro: e.target.value || undefined });
-            aoEscolherBairro(e.target.value);
-          }}
-          className="max-w-48"
-        >
-          <option value="">Todos os bairros</option>
-          {bairros.data?.data.results.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.nome}
-            </option>
-          ))}
-        </Selecao>
-        <SeletorRaio valor={raio} aoMudar={(r) => filtrar({ raio: r })} />
-        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
-          <input
-            type="checkbox"
-            checked={filtros.junto_area_verde === "1"}
-            onChange={(e) => filtrar({ junto_area_verde: e.target.checked ? "1" : undefined })}
-          />
-          Junto de área verde
-        </label>
-        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
-          Detectados de
-          <EntradaData
-            value={filtros.deteccao_desde ?? ""}
-            onChange={(v) => filtrar({ deteccao_desde: v || undefined })}
-            className="w-40"
-          />
-        </label>
-        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
-          até
-          <EntradaData
-            value={filtros.deteccao_ate ?? ""}
-            onChange={(v) => filtrar({ deteccao_ate: v || undefined })}
-            className="w-40"
-          />
-        </label>
-      </div>
+      <BarraFiltros
+        principais={[
+          <Selecao
+            key="status"
+            aria-label="Status"
+            value={filtros.status ?? "abertos"}
+            onChange={(e) => filtrar({ status: e.target.value })}
+          >
+            <option value="abertos">Em aberto</option>
+            {Object.values(StatusAlertaEnum).map((s) => (
+              <option key={s} value={s}>
+                {ROTULOS_STATUS_ALERTA[s]}
+              </option>
+            ))}
+            <option value="todos">Todos</option>
+          </Selecao>,
+          <Selecao
+            key="fonte"
+            aria-label="Fonte"
+            value={filtros.fonte ?? ""}
+            onChange={(e) =>
+              filtrar({ fonte: (e.target.value || undefined) as FonteAlertaEnum | undefined })
+            }
+          >
+            <option value="">Todas as fontes</option>
+            {Object.values(FonteAlertaEnum).map((f) => (
+              <option key={f} value={f}>
+                {ROTULOS_FONTE_ALERTA[f]}
+              </option>
+            ))}
+          </Selecao>,
+          <Selecao
+            key="bairro"
+            aria-label="Bairro"
+            value={bairro ?? ""}
+            onChange={(e) => {
+              filtrar({ bairro: e.target.value || undefined });
+              aoEscolherBairro(e.target.value);
+            }}
+          >
+            <option value="">Todos os bairros</option>
+            {bairros.data?.data.results.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.nome}
+              </option>
+            ))}
+          </Selecao>,
+          <SeletorRaio key="raio" valor={raio} aoMudar={(r) => filtrar({ raio: r })} />,
+        ]}
+        extras={[
+          <label key="verde" className="flex items-center gap-1.5 text-sm text-texto-suave">
+            <input
+              type="checkbox"
+              checked={filtros.junto_area_verde === "1"}
+              onChange={(e) => filtrar({ junto_area_verde: e.target.checked ? "1" : undefined })}
+            />
+            Junto de área verde
+          </label>,
+          <label key="desde" className="flex items-center gap-1.5 text-sm text-texto-suave">
+            Detectados de
+            <EntradaData
+              value={filtros.deteccao_desde ?? ""}
+              onChange={(v) => filtrar({ deteccao_desde: v || undefined })}
+              className="w-40"
+            />
+          </label>,
+          <label key="ate" className="flex items-center gap-1.5 text-sm text-texto-suave">
+            até
+            <EntradaData
+              value={filtros.deteccao_ate ?? ""}
+              onChange={(v) => filtrar({ deteccao_ate: v || undefined })}
+              className="w-40"
+            />
+          </label>,
+        ]}
+        extrasAtivos={contarFiltros({
+          junto_area_verde: filtros.junto_area_verde,
+          deteccao_desde: filtros.deteccao_desde,
+          deteccao_ate: filtros.deteccao_ate,
+        })}
+      />
       {consulta.isPending ? (
         <Carregando />
       ) : consulta.isError ? (

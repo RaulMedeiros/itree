@@ -33,6 +33,7 @@ import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
+import { Recolhivel } from "../../ui/recolhivel";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { RAIO_PADRAO_M, type RaioM } from "./opcoesRaio";
 import { SeletorRaio } from "./raio";
@@ -276,9 +277,12 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
         </section>
       </div>
       <ArvoresProximas alerta={a} raio={raio} consulta={proximas} />
-      <details className="mb-6 rounded-lg border border-borda bg-superficie p-4">
-        <summary className="cursor-pointer font-semibold">Atributos originais da fonte</summary>
-        <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-sm">
+      <Recolhivel
+        titulo="Atributos originais da fonte"
+        className="mt-0 mb-6 rounded-lg border border-borda bg-superficie px-4"
+        classeCorpo="pb-3"
+      >
+        <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1 text-sm">
           {Object.entries(a.propriedades as Record<string, unknown>).map(([k, v]) => (
             <Fragment key={k}>
               <dt className="font-mono text-xs text-texto-suave">{k}</dt>
@@ -286,7 +290,7 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
             </Fragment>
           ))}
         </dl>
-      </details>
+      </Recolhivel>
       <h2 className="mb-3 font-semibold">Histórico da análise</h2>
       <LinhaDoTempo
         eventos={historico.data?.data}

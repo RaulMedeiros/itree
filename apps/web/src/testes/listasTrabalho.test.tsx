@@ -330,3 +330,59 @@ describe("R2-15: códigos sem quebra de linha", () => {
     );
   });
 });
+
+describe("R3-30 e R3-09: ocorrências, uma linha de filtros e um só aviso de atraso", () => {
+  it("a ocorrência atrasada traz um único selo com os dias, sem repetir em texto vermelho", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/ocorrencias`, () =>
+        HttpResponse.json(
+          pagina([ocorrencia(1, { atrasada: true, prazo: "2020-01-01", prioridade: "alta" })]),
+        ),
+      ),
+    );
+    await abrir("/ocorrencias");
+    await screen.findByText("OCO-000001");
+    expect(screen.getByText(/^Atrasada há \d+ dias$/)).toBeInTheDocument();
+    expect(screen.queryByText(/^atrasado há/)).toBeNull();
+  });
+
+  it('"Sem prioridade" é texto suave, não selo', async () => {
+    await abrir("/ocorrencias");
+    await screen.findByText("OCO-000001");
+    const texto = screen.getAllByText("Sem prioridade")[0]!;
+    expect(texto).toHaveClass("text-texto-suave");
+    expect(texto.className).not.toMatch(/\bbg-/);
+    expect(screen.queryByText("Sem prioridade definida", { selector: "span" })).toBeNull();
+  });
+
+  it("o estado se chama 'Em aberto' e os filtros secundários ficam em Mais filtros", async () => {
+    await abrir("/ocorrencias");
+    await screen.findByText("OCO-000001");
+    expect(within(screen.getByLabelText("Estado")).getByRole("option", { name: "Em aberto" }));
+    const extras = screen.getByText("Mais filtros").closest("details")!;
+    for (const rotulo of ["Bairro", "Equipe", "Só atrasadas"])
+      expect(extras).toContainElement(screen.getByLabelText(rotulo));
+    for (const rotulo of ["Buscar", "Estado", "Tipo", "Prioridade"])
+      expect(extras).not.toContainElement(screen.getByLabelText(rotulo));
+  });
+
+  it("as abas de seção ficam acima do título, como no Inventário", async () => {
+    await abrir("/ocorrencias");
+    const titulo = await screen.findByRole("heading", { name: "Ocorrências", level: 1 });
+    const abas = screen.getByRole("navigation", { name: "Ocorrências e alertas" });
+    expect(abas.compareDocumentPosition(titulo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(abas).getByRole("link", { name: "Alertas ambientais" })).toBeInTheDocument();
+  });
+});
+
+describe("R3-11: ação da linha nas tarefas", () => {
+  it("é secundária e de largura fixa, para o verde ficar com a ação da página", async () => {
+    await abrir("/equipes-tarefas");
+    const botoes = await screen.findAllByRole("button", { name: "Iniciar" });
+    for (const b of botoes) {
+      expect(b).toHaveClass("w-28");
+      expect(b.className).not.toMatch(/\bbg-marca\b/);
+      expect(b).toHaveClass("border");
+    }
+  });
+});

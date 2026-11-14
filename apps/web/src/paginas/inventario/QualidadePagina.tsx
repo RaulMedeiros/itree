@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
+import { Recolhivel } from "../../ui/recolhivel";
 import { Selo } from "../../ui/selo";
 import { formatarDataHora } from "../../util/formatos";
 import { ordenarPendencias, type Pendencia } from "./qualidade";
@@ -87,18 +88,19 @@ export function QualidadePagina() {
             <p className="text-sm text-texto-suave">Nenhuma pendência de qualidade encontrada.</p>
           )}
           {semProblema.length > 0 && (
-            <details className="mt-4 rounded-lg border border-borda bg-superficie p-4">
-              <summary className="cursor-pointer text-sm font-medium">
-                Sem problemas ({semProblema.length})
-              </summary>
-              <ul className="mt-2 flex flex-col gap-1 text-sm">
+            <Recolhivel
+              titulo={`Sem problemas (${semProblema.length})`}
+              className="mt-4 rounded-lg border border-borda bg-superficie px-4"
+              classeCorpo="pb-3"
+            >
+              <ul className="flex flex-col gap-1 text-sm">
                 {semProblema.map((p) => (
                   <li key={p.id}>
                     {p.titulo} <span className="text-xs text-texto-suave">· {p.criterio}</span>
                   </li>
                 ))}
               </ul>
-            </details>
+            </Recolhivel>
           )}
         </>
       )}
