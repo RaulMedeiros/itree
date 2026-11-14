@@ -1,4 +1,4 @@
-import { type Ingestao } from "@itree/api-client";
+import { type Conector, type Ingestao } from "@itree/api-client";
 import { ROTULOS_FONTE_ALERTA } from "@itree/domain";
 
 /** Sem ingestão bem-sucedida há mais que isso, a fonte é tratada como desatualizada. */
@@ -29,4 +29,17 @@ export function fontesComProblema(ingestoes: Ingestao[], agora = new Date()): Pr
       problemas.push({ fonte: rotulo, motivo: "desatualizada" });
   }
   return problemas;
+}
+
+/**
+ * Conectores ativos com problema (RF-INT-006): a última sincronização falhou (indisponível) ou
+ * passou de duas periodicidades sem rodar (desatualizada). Conector desativado não alerta.
+ */
+export function conectoresComProblema(conectores: Conector[]): ProblemaFonte[] {
+  return conectores
+    .filter((c) => c.ativo && (c.situacao === "falha" || c.situacao === "atrasado"))
+    .map((c) => ({
+      fonte: c.nome,
+      motivo: c.situacao === "falha" ? ("indisponivel" as const) : ("desatualizada" as const),
+    }));
 }
