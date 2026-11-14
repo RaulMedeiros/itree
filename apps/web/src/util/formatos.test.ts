@@ -7,6 +7,7 @@ import {
   descreverProxima,
   descreverPrazo,
   descreverVariacao,
+  descreverVariacaoMedia,
   diasDesde,
   formatarPontoGeografico,
   prazoRestante,
@@ -71,7 +72,7 @@ describe("descreverPrazo", () => {
 });
 
 describe("descreverVariacao (R2-22)", () => {
-  it("mostra a diferença absoluta quando a base anterior é menor que 20", () => {
+  it("mostra a diferença absoluta quando a base anterior é menor que 30", () => {
     expect(descreverVariacao(7, 2)).toEqual({ texto: "+5", diferenca: 5 }); // não "+250%"
     expect(descreverVariacao(12, 9).texto).toBe("+3");
     expect(descreverVariacao(3, 11).texto).toBe("−8");
@@ -79,8 +80,8 @@ describe("descreverVariacao (R2-22)", () => {
     expect(descreverVariacao(19, 19).texto).toBe("0");
   });
 
-  it("usa o percentual a partir de 20", () => {
-    expect(descreverVariacao(30, 20).texto).toBe("+50%");
+  it("usa o percentual a partir de 30", () => {
+    expect(descreverVariacao(60, 40).texto).toBe("+50%");
     expect(descreverVariacao(90, 120).texto).toBe("−25%");
   });
 });
@@ -105,5 +106,17 @@ describe("coleta de fontes", () => {
   it("descreve a próxima coleta e a que passou do horário", () => {
     expect(descreverProxima("2026-11-10T19:00:30Z", agora)).toBe("em 4 horas");
     expect(descreverProxima("2026-11-10T14:00:00Z", agora)).toBe("prevista e ainda não executada");
+  });
+});
+
+describe("descreverVariacaoMedia (R3-15)", () => {
+  it("usa a diferença com a unidade quando a média anterior é menor que 30", () => {
+    expect(descreverVariacaoMedia(7, 5, "dias")).toEqual({ texto: "+2 dias", diferenca: 2 });
+    expect(descreverVariacaoMedia(4.5, 6, "dias").texto).toBe("−1,5 dias");
+  });
+
+  it("usa o percentual a partir de 30 e não calcula sobre zero", () => {
+    expect(descreverVariacaoMedia(45, 30, "dias").texto).toBe("+50%");
+    expect(descreverVariacaoMedia(3, 0, "dias").texto).toBeNull();
   });
 });

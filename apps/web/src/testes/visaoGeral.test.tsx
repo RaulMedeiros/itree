@@ -96,7 +96,7 @@ const cartaoDe = async (nome: string) =>
   (await screen.findByText(nome)).closest(".rounded-xl") as HTMLElement;
 
 describe("visão geral: comparação sobre base pequena (R2-22)", () => {
-  it("mostra a diferença absoluta, não o percentual, quando o período anterior é menor que 20", async () => {
+  it("mostra a diferença absoluta, não o percentual, quando o período anterior é menor que 30", async () => {
     await abrirComPainel(
       painel({
         indicadores: [
@@ -112,7 +112,7 @@ describe("visão geral: comparação sobre base pequena (R2-22)", () => {
       }),
     );
     const cartao = await cartaoDe("Inspeções realizadas");
-    expect(within(cartao).getByText(/^\+5 vs\. 11\/09\/26/)).toBeInTheDocument();
+    expect(within(cartao).getByText(/^\+5 desde 11\/09\/26/)).toBeInTheDocument();
     expect(within(cartao).queryByText(/250%/)).toBeNull();
   });
 
@@ -123,16 +123,16 @@ describe("visão geral: comparação sobre base pequena (R2-22)", () => {
           indicador({
             id: "inspecoes_realizadas",
             nome: "Inspeções realizadas",
-            valor: 30,
+            valor: 60,
             periodo: "selecionado",
-            anterior: 20,
+            anterior: 40,
             anterior_em: "2026-09-11",
           }),
         ],
       }),
     );
     const cartao = await cartaoDe("Inspeções realizadas");
-    expect(within(cartao).getByText(/^\+50% vs\. 11\/09\/26/)).toBeInTheDocument();
+    expect(within(cartao).getByText(/^\+50% desde 11\/09\/26/)).toBeInTheDocument();
   });
 });
 
@@ -362,7 +362,7 @@ describe("visão geral: criar tarefas para as árvores sem avaliação", () => {
     await abrirComPainel(condicao);
     await usuario.click(
       await screen.findByRole("button", {
-        name: "Criar tarefas de inspeção para as 40 sem avaliação",
+        name: "Criar 40 tarefas de inspeção",
       }),
     );
     const dialogo = await screen.findByRole("dialog", {
@@ -378,9 +378,12 @@ describe("visão geral: criar tarefas para as árvores sem avaliação", () => {
     servidor.use(comTarefas(), contadores(30));
     await abrirComPainel(condicao);
     const botao = await screen.findByRole("button", {
-      name: "Criar tarefas de inspeção para as 40 sem avaliação",
+      name: "Criar 40 tarefas de inspeção",
     });
     await vi.waitFor(() => expect(botao).toBeDisabled());
+    // Largura do cartão e texto que quebra: não estoura a borda (R3-17).
+    expect(botao.className).toMatch(/\bw-full\b/);
+    expect(botao.className).toMatch(/whitespace-normal/);
     expect(screen.getByText(/O limite é de 30 árvores por lote/)).toBeInTheDocument();
   });
 
@@ -431,5 +434,54 @@ describe("visão geral: ocorrências em aberto por prioridade", () => {
       "rgb(28, 126, 214)", // #1c7ed6
       "rgb(73, 80, 87)", // #495057
     ]);
+  });
+});
+
+describe("visão geral: comparação de média sobre base pequena (R3-15)", () => {
+  it("mostra a diferença em dias, não o percentual, quando a média anterior é menor que 30", async () => {
+    await abrirComPainel(
+      painel({
+        indicadores: [
+          indicador({
+            id: "tempo_atendimento",
+            nome: "Tempo médio de atendimento",
+            valor: 7,
+            unidade: "dias",
+            periodo: "selecionado",
+            anterior: 5,
+            anterior_em: "2026-09-01",
+          }),
+        ],
+      }),
+    );
+    const cartao = await cartaoDe("Tempo médio de atendimento");
+    expect(within(cartao).getByText("+2 dias desde 01/09/26")).toBeInTheDocument();
+    expect(within(cartao).queryByText(/40%/)).toBeNull();
+  });
+
+  it("a comparação cabe numa linha, sem repetir o rótulo da base nem o julgamento na face", async () => {
+    await abrirComPainel(
+      painel({
+        indicadores: [
+          indicador({
+            id: "inspecoes_realizadas",
+            nome: "Inspeções realizadas",
+            valor: 7,
+            periodo: "selecionado",
+            anterior: 2,
+            anterior_em: "2026-09-11",
+          }),
+        ],
+      }),
+    );
+    const cartao = await cartaoDe("Inspeções realizadas");
+    expect(within(cartao).queryByText(/período anterior/)).toBeNull();
+    expect(within(cartao).queryByText(/vs\./)).toBeNull();
+    // O sentido segue disponível para leitor de tela e na dica.
+    expect(
+      within(cartao)
+        .getByText(/desde 11\/09\/26/)
+        .closest("p"),
+    ).toHaveAttribute("title", expect.stringContaining("período anterior"));
   });
 });

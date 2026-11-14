@@ -39,6 +39,7 @@ import { Tabela, Td, Th, Linha } from "../../ui/tabela";
 import { cn } from "../../util/cn";
 import {
   descreverVariacao,
+  descreverVariacaoMedia,
   formatarData,
   formatarDataCurta,
   formatarDataHora,
@@ -53,6 +54,7 @@ import {
   type Serie,
 } from "./graficos";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
+import { mesEmAndamento } from "./mes";
 import { MapaResumo } from "./MapaResumo";
 import { PrimeirosPassos } from "./PrimeirosPassos";
 
@@ -170,8 +172,9 @@ function valorFormatado(i: Indicador) {
   return i.unidade === "%" ? `${numero}%` : i.unidade ? `${numero} ${i.unidade}` : numero;
 }
 
-/** Linha única de comparação, igual em todos os cartões: sinal e texto ("melhorou",
- * "piorou") acompanham a cor, e a data-base é sempre explícita. */
+/** Chip de comparação de uma linha só (R3-15): "↗ +12 desde 30/09/26". O sentido (melhorou ou
+ * piorou) acompanha a cor e vai também em texto para leitor de tela e na dica; a base da
+ * comparação ("período anterior" ou "registro anterior") fica na dica, fora da face do cartão. */
 function LinhaComparacao({
   texto,
   data,
@@ -186,19 +189,27 @@ function LinhaComparacao({
   bom: boolean | null;
 }) {
   const Icone = diferenca === 0 ? Minus : diferenca > 0 ? ArrowUpRight : ArrowDownRight;
-  const avaliacao = diferenca === 0 || bom === null ? "" : bom ? " · melhorou" : " · piorou";
+  const avaliacao = diferenca === 0 || bom === null ? null : bom ? "melhorou" : "piorou";
+  const dataCurta = data ? formatarDataCurta(data) : null;
+  const dica = `Comparado com o ${rotuloBase}${dataCurta ? ` (${dataCurta})` : ""}${avaliacao ? `: ${avaliacao}` : ""}`;
   return (
     <p
+      title={dica}
       className={cn(
-        "flex items-start gap-1 text-xs font-medium",
-        diferenca === 0 || bom === null ? "text-texto-suave" : bom ? "text-sucesso" : "text-perigo",
+        "inline-flex w-fit items-center gap-1 rounded-sm px-1.5 py-0.5 text-xs font-medium",
+        diferenca === 0 || bom === null
+          ? "bg-neutro-clara text-neutro"
+          : bom
+            ? "bg-sucesso-clara text-sucesso"
+            : "bg-perigo-clara text-perigo",
       )}
     >
-      <Icone className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+      <Icone className="size-3.5 shrink-0" aria-hidden />
       <span>
-        {diferenca === 0 ? "Igual" : texto} vs. {data ? `${formatarDataCurta(data)} ` : ""}(
-        {rotuloBase}){avaliacao}
+        {diferenca === 0 ? "Igual" : texto}
+        {dataCurta ? ` desde ${dataCurta}` : ""}
       </span>
+      {avaliacao && <span className="sr-only">, {avaliacao}</span>}
     </p>
   );
 }
@@ -208,7 +219,9 @@ function Variacao({ i }: { i: Indicador }) {
   if (i.valor === null) return null;
   // Contagens com base pequena mostram a diferença absoluta; médias (dias) seguem em %.
   const { texto, diferenca } =
-    i.unidade === "" ? descreverVariacao(i.valor, i.anterior) : porcentagem(i.valor, i.anterior);
+    i.unidade === ""
+      ? descreverVariacao(i.valor, i.anterior)
+      : descreverVariacaoMedia(i.valor, i.anterior, i.unidade);
   if (texto === null) {
     return <p className="text-xs text-texto-suave">Período anterior: 0</p>;
   }
@@ -223,13 +236,6 @@ function Variacao({ i }: { i: Indicador }) {
       bom={bom}
     />
   );
-}
-
-function porcentagem(valor: number, anterior: number) {
-  const diferenca = valor - anterior;
-  if (anterior === 0) return { texto: null, diferenca };
-  const pct = Math.round((100 * diferenca) / anterior);
-  return { texto: `${pct > 0 ? "+" : ""}${pct}%`, diferenca };
 }
 
 /** Variação de um instantâneo desde o registro anterior ao período (ou, sem ele,
@@ -321,10 +327,11 @@ function CartaoDestaque({ i, notas }: { i: Indicador; notas?: string[] }) {
           {valorFormatado(i)}
         </p>
         <p className="text-sm text-texto-suave">{i.nome}</p>
+        <Definicao i={i} compacta notas={notas} />
       </div>
     </div>
   );
-  // Altura igual na linha: o cartão estica e o "Como é calculado" fica no pé.
+  // Altura igual na linha: o cartão estica.
   return (
     <div className="flex h-full flex-col rounded-xl border border-borda bg-superficie p-4 shadow-sm has-[a:hover]:border-marca">
       {i.link ? (
@@ -334,12 +341,9 @@ function CartaoDestaque({ i, notas }: { i: Indicador; notas?: string[] }) {
       ) : (
         conteudo
       )}
-      <div className="mt-2 flex flex-col gap-0.5 pl-[3.25rem]">
+      <div className="mt-2 flex flex-col items-start gap-1 pl-[3.25rem]">
         <Variacao i={i} />
         <Tendencia i={i} />
-      </div>
-      <div className="mt-auto">
-        <Definicao i={i} compacta notas={notas} />
       </div>
     </div>
   );
@@ -573,10 +577,13 @@ function AcaoSemAvaliacao({ quantidade, bairro }: { quantidade: number; bairro?:
         tamanho="pequeno"
         disabled={acima}
         onClick={() => setAberto(true)}
+        // Largura do cartão e texto que quebra: nunca estoura a borda (R3-17).
+        className="h-auto min-h-8 w-full py-1 whitespace-normal"
+        title="Cria uma tarefa de inspeção para cada árvore válida sem avaliação registrada"
       >
         {quantidade === 1
-          ? "Criar tarefa de inspeção para a árvore sem avaliação"
-          : `Criar tarefas de inspeção para as ${quantidade.toLocaleString("pt-BR")} sem avaliação`}
+          ? "Criar tarefa de inspeção"
+          : `Criar ${quantidade.toLocaleString("pt-BR")} tarefas de inspeção`}
       </Botao>
       {acima && (
         <p className="mt-1 text-xs text-texto-suave">
@@ -812,7 +819,11 @@ function ConteudoPainel({ dados, bairro }: { dados: PainelIndicadores; bairro?: 
           definicao={series.definicao}
           className="lg:col-span-2"
         >
-          <GraficoMensal meses={series.meses} series={series.series} />
+          <GraficoMensal
+            meses={series.meses}
+            series={series.series}
+            parcial={mesEmAndamento(series.meses, dados.calculado_em)}
+          />
         </Painel>
         <div className="flex flex-col gap-4">
           {distribuicoes.condicao_aparente && (

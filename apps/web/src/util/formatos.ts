@@ -52,7 +52,7 @@ export function plural(n: number, singular: string, pluralForma = `${singular}s`
 }
 
 /** Abaixo desta base anterior, o percentual exagera diferenças pequenas (2 → 7 vira "+250%"). */
-export const BASE_MINIMA_PERCENTUAL = 20;
+export const BASE_MINIMA_PERCENTUAL = 30;
 
 /** Texto da variação de uma contagem contra a base anterior: a diferença absoluta ("+5") quando
  * a base é pequena e o percentual ("+12%") quando é grande. */
@@ -67,6 +67,24 @@ export function descreverVariacao(
   }
   const pct = Math.round((100 * Math.abs(diferenca)) / anterior);
   return { texto: `${sinal}${pct}%`, diferenca };
+}
+
+/** Variação de uma média ("dias") contra o valor anterior: percentual só quando o anterior chega a
+ * `BASE_MINIMA_PERCENTUAL`; abaixo disso a diferença absoluta com a unidade, que não exagera
+ * ("5 → 7 dias" é "+2 dias", não "+40%"). `texto` é null quando o anterior é zero. */
+export function descreverVariacaoMedia(
+  valor: number,
+  anterior: number,
+  unidade = "",
+): { texto: string | null; diferenca: number } {
+  const diferenca = valor - anterior;
+  if (anterior === 0) return { texto: null, diferenca };
+  const sinal = diferenca > 0 ? "+" : diferenca < 0 ? "−" : "";
+  if (anterior < BASE_MINIMA_PERCENTUAL) {
+    const numero = Math.abs(Math.round(diferenca * 10) / 10).toLocaleString("pt-BR");
+    return { texto: `${sinal}${numero}${unidade ? ` ${unidade}` : ""}`, diferenca };
+  }
+  return { texto: `${sinal}${Math.round((100 * Math.abs(diferenca)) / anterior)}%`, diferenca };
 }
 
 /** dd/mm/aaaa → AAAA-MM-DD; vazio se a data estiver incompleta ou não existir no calendário. */

@@ -6,6 +6,7 @@ import { Maximize2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Mapa } from "../../mapa/Mapa";
+import { limitesDosPontos } from "../../mapa/enquadramento";
 import {
   CORES_CONDICAO,
   aoFaltarImagem,
@@ -67,9 +68,19 @@ export function MapaResumo() {
 
   useEffect(() => {
     if (!pronto || !limites) return;
-    mapa.current?.fitBounds(limites as [number, number, number, number], {
-      padding: 24,
-      duration: 0,
+    const m = mapa.current;
+    if (!m) return;
+    m.fitBounds(limites as [number, number, number, number], { padding: 24, duration: 0 });
+    // O município inteiro quase não mostra árvores: depois de carregar os tiles, reenquadra pela
+    // extensão do que há de dado (R3-16).
+    m.once("idle", () => {
+      const pontos = m
+        .queryRenderedFeatures({ layers: ["arvores", "grupos"] })
+        .flatMap((f) =>
+          f.geometry.type === "Point" ? [f.geometry.coordinates as [number, number]] : [],
+        );
+      const caixa = limitesDosPontos(pontos);
+      if (caixa) m.fitBounds(caixa, { padding: 40, maxZoom: 15, duration: 0 });
     });
   }, [pronto, limites]);
 

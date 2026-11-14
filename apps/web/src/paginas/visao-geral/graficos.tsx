@@ -38,11 +38,14 @@ export function GraficoMensal({
   meses,
   series,
   semDado = [],
+  parcial = null,
 }: {
   meses: string[];
   series: Serie[];
   /** Meses (AAAA-MM) que a fonte não publicou: a linha se interrompe e a faixa é marcada. */
   semDado?: string[];
+  /** Mês (AAAA-MM) em andamento: o último ponto é vazado e o rótulo diz "(parcial)". */
+  parcial?: string | null;
 }) {
   const [ativo, setAtivo] = useState<number | null>(null);
   const [tabela, setTabela] = useState(false);
@@ -127,6 +130,7 @@ export function GraficoMensal({
                 className="fill-texto-suave text-[10px]"
               >
                 {rotuloMes(mes)}
+                {mes === parcial ? " (parcial)" : ""}
               </text>
             ),
           )}
@@ -211,14 +215,26 @@ export function GraficoMensal({
                 )}
                 {ultimo >= 0 && (
                   <>
-                    <circle
-                      cx={x(ultimo)}
-                      cy={y(s.valores[ultimo] ?? 0)}
-                      r={4}
-                      fill={cor}
-                      stroke="#fff"
-                      strokeWidth={2}
-                    />
+                    {meses[ultimo] === parcial ? (
+                      <circle
+                        data-testid="ponto-parcial"
+                        cx={x(ultimo)}
+                        cy={y(s.valores[ultimo] ?? 0)}
+                        r={4}
+                        fill="#fff"
+                        stroke={cor}
+                        strokeWidth={2}
+                      />
+                    ) : (
+                      <circle
+                        cx={x(ultimo)}
+                        cy={y(s.valores[ultimo] ?? 0)}
+                        r={4}
+                        fill={cor}
+                        stroke="#fff"
+                        strokeWidth={2}
+                      />
+                    )}
                     {/* Rótulo só no fim da linha; texto em cor de texto, identidade pela marca. */}
                     <text
                       x={x(ultimo) + 8}
@@ -242,7 +258,7 @@ export function GraficoMensal({
               height={altura}
               fill="transparent"
               tabIndex={0}
-              aria-label={`${rotuloMes(mes)}: ${faltam.has(mes) ? ROTULO_SEM_DADO : series.map((s) => `${s.rotulo} ${s.valores[i]}`).join(", ")}`}
+              aria-label={`${rotuloMes(mes)}${mes === parcial ? " (parcial)" : ""}: ${faltam.has(mes) ? ROTULO_SEM_DADO : series.map((s) => `${s.rotulo} ${s.valores[i]}`).join(", ")}`}
               onMouseEnter={() => setAtivo(i)}
               onFocus={() => setAtivo(i)}
               onBlur={() => setAtivo(null)}
@@ -259,7 +275,10 @@ export function GraficoMensal({
             }}
             role="status"
           >
-            <p className="mb-0.5 font-semibold">{rotuloMes(meses[ativo] ?? "")}</p>
+            <p className="mb-0.5 font-semibold">
+              {rotuloMes(meses[ativo] ?? "")}
+              {meses[ativo] === parcial ? " (parcial)" : ""}
+            </p>
             {faltam.has(meses[ativo] ?? "") ? (
               <p className="whitespace-nowrap text-texto-suave">{ROTULO_SEM_DADO}</p>
             ) : (
@@ -299,7 +318,10 @@ export function GraficoMensal({
           <tbody>
             {meses.map((mes, i) => (
               <tr key={mes} className="border-t border-borda">
-                <td className="py-1">{rotuloMes(mes)}</td>
+                <td className="py-1">
+                  {rotuloMes(mes)}
+                  {mes === parcial ? " (parcial)" : ""}
+                </td>
                 {faltam.has(mes) ? (
                   <td colSpan={series.length} className="py-1 text-right text-texto-suave">
                     {ROTULO_SEM_DADO}
