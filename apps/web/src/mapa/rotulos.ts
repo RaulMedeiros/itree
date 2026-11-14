@@ -32,3 +32,12 @@ export function rotulosVisiveis(itens: RotuloMedido[]): Set<string> {
   }
   return new Set(exibidos.map((r) => r.id));
 }
+
+/** Abaixo deste zoom o nome do bairro é pequeno demais para valer a pena (C-08). */
+export const ZOOM_MINIMO_ROTULO_BAIRRO = 12.5;
+/** Acima deste o mapa base já rotula o bairro, e o nome da aplicação ficava duplicado (R3-20). */
+export const ZOOM_MAXIMO_ROTULO_BAIRRO = 14;
+
+export function rotuloDoBairroVisivel(zoom: number): boolean {
+  return zoom >= ZOOM_MINIMO_ROTULO_BAIRRO && zoom <= ZOOM_MAXIMO_ROTULO_BAIRRO;
+}

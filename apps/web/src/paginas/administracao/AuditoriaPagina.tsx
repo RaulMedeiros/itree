@@ -18,7 +18,8 @@ import {
   autorDoEvento,
   type ContextoEvento,
 } from "../../componentes/Historico";
-import { usuarioAfetado } from "./auditoria";
+import { classeCodigo } from "../../ui/codigo";
+import { nomeDoModelo, usuarioAfetado } from "./auditoria";
 import { useOpcoesUsuario } from "./dados";
 
 const TAMANHO = 50;
@@ -64,11 +65,7 @@ function alvoDoRegistro(ev: EventoAuditoria) {
   const pai = ev.pai as PaiEvento | null;
   if (pai) return { codigo: pai.codigo, tipo: pai.tipo as string, id: pai.id, ehPai: true };
   if (!ev.registro) return null;
-  const tipo =
-    ev.entidade_modelo
-      .replace(/Event$/, "")
-      .split(".")[1]
-      ?.toLowerCase() ?? "";
+  const tipo = nomeDoModelo(ev.entidade_modelo).toLowerCase();
   return { codigo: ev.registro, tipo, id: ev.objeto_id ?? "", ehPai: false };
 }
 
@@ -78,7 +75,7 @@ function Registro({ ev, nomes }: { ev: EventoAuditoria; nomes?: Map<string, stri
   if (!alvo) {
     const usuario = usuarioAfetado(ev, nomes);
     if (!usuario) return <span className="text-texto-suave">—</span>;
-    const ehUsuario = ev.entidade_modelo === "contas.UsuarioEvent" && ev.objeto_id;
+    const ehUsuario = nomeDoModelo(ev.entidade_modelo) === "Usuario" && ev.objeto_id;
     return ehUsuario ? (
       <Link
         to="/administracao/usuarios/$id"
@@ -91,7 +88,7 @@ function Registro({ ev, nomes }: { ev: EventoAuditoria; nomes?: Map<string, stri
       <span className="text-xs">{usuario}</span>
     );
   }
-  const classe = "font-mono text-xs text-marca-escura hover:underline";
+  const classe = `${classeCodigo} text-xs hover:underline`;
   const { codigo, id } = alvo;
   const rotulo = alvo.ehPai ? (
     <>

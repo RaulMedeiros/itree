@@ -27,11 +27,14 @@ import { usePermissao, useUsuario } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloEstadoInspecao, SeloLocalizacao, SeloOrigemValor } from "../../componentes/selos";
+import { Medida as ValorMedido, classeCodigo } from "../../ui/codigo";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, ListaMarcavel, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
+import { Recolhivel } from "../../ui/recolhivel";
+import { plataformaDoDispositivo } from "./dispositivo";
 import { Selo } from "../../ui/selo";
 import { cn } from "../../util/cn";
 import { invalidarCaminhos } from "../../util/cache";
@@ -129,15 +132,17 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
             <span>
               Realizada em {formatarDataHora(i.realizada_em)} por{" "}
               {i.tecnico.nome || i.tecnico.email} · {ROTULOS_ORIGEM_INSPECAO[i.origem ?? "app"]}
-              {i.dispositivo ? ` (${i.dispositivo})` : ""} · recebida em{" "}
-              {formatarDataHora(i.recebida_em)}
+              {plataformaDoDispositivo(i.dispositivo)
+                ? ` · ${plataformaDoDispositivo(i.dispositivo)}`
+                : ""}{" "}
+              · recebida em {formatarDataHora(i.recebida_em)}
               {i.tarefa && (
                 <>
                   {" · tarefa "}
                   <Link
                     to="/equipes-tarefas/$id"
                     params={{ id: String(i.tarefa.id) }}
-                    className="font-mono text-marca-escura hover:underline"
+                    className={`${classeCodigo} hover:underline`}
                   >
                     {String(i.tarefa.codigo)}
                   </Link>
@@ -180,7 +185,7 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                   <Link
                     to="/ocorrencias/$id"
                     params={{ id: o.id }}
-                    className="font-mono font-medium underline"
+                    className={`${classeCodigo} underline`}
                   >
                     {o.codigo}
                   </Link>
@@ -255,9 +260,9 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
               inspecao={
                 i.localizacao ? (
                   <>
-                    <span className="font-mono text-xs">
+                    <ValorMedido className="text-xs">
                       {formatarPontoGeografico(i.localizacao.latitude, i.localizacao.longitude)}
-                    </span>
+                    </ValorMedido>
                     <br />
                     <SeloLocalizacao origem="gps_campo" precisao={i.precisao_m} />
                   </>
@@ -268,9 +273,9 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
               cadastro={
                 a.localizacao ? (
                   <>
-                    <span className="font-mono text-xs">
+                    <ValorMedido className="text-xs">
                       {formatarPontoGeografico(a.localizacao.latitude, a.localizacao.longitude)}
-                    </span>
+                    </ValorMedido>
                     <br />
                     <SeloLocalizacao origem={a.localizacao_origem ?? ""} precisao={a.precisao_m} />
                   </>
@@ -294,10 +299,10 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                   campo={ROTULOS_TIPO_MEDIDA[c.proposta.tipo]}
                   inspecao={
                     <>
-                      <span className="font-mono">
+                      <ValorMedido>
                         {c.proposta.origem === "estimado" ? "≈ " : ""}
                         {Number(c.proposta.valor).toLocaleString("pt-BR")} {c.proposta.unidade}
-                      </span>{" "}
+                      </ValorMedido>{" "}
                       <SeloOrigemValor origem={c.proposta.origem} />
                       <p className="text-xs font-normal text-texto-suave">
                         {ROTULOS_METODO_MEDIDA[c.proposta.metodo]}
@@ -308,10 +313,10 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
                   cadastro={
                     c.cadastro ? (
                       <>
-                        <span className="font-mono">
+                        <ValorMedido>
                           {c.cadastro.origem === "estimado" ? "≈ " : ""}
                           {Number(c.cadastro.valor).toLocaleString("pt-BR")} {c.cadastro.unidade}
-                        </span>
+                        </ValorMedido>
                         {c.cadastro.data_medicao && (
                           <p className="text-xs text-texto-suave">
                             em {formatarData(c.cadastro.data_medicao)}
@@ -369,16 +374,17 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
         <Evidencias alvo={{ inspecao: i.id }} podeEnviar={false} />
       </div>
 
-      <details className="mb-6 rounded-lg border border-borda bg-superficie p-4">
-        <summary className="cursor-pointer font-semibold">Histórico técnico</summary>
-        <div className="mt-3">
-          <LinhaDoTempo
-            eventos={historico.data?.data}
-            carregando={historico.isPending}
-            erro={historico.error}
-          />
-        </div>
-      </details>
+      <Recolhivel
+        titulo="Histórico técnico"
+        className="mt-0 mb-6 rounded-lg border border-borda bg-superficie px-4"
+        classeCorpo="pb-3"
+      >
+        <LinhaDoTempo
+          eventos={historico.data?.data}
+          carregando={historico.isPending}
+          erro={historico.error}
+        />
+      </Recolhivel>
 
       {podeValidar && (
         <>

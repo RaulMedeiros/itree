@@ -126,6 +126,8 @@ class ArvoreProximaSerializer(serializers.Serializer):
     especie = serializers.CharField(allow_null=True)
     condicao_aparente = serializers.CharField(allow_blank=True)
     distancia_m = serializers.FloatField(help_text="Distância geodésica em metros.")
+    latitude = serializers.FloatField(help_text="Latitude (WGS 84), para desenhar no mapa.")
+    longitude = serializers.FloatField(help_text="Longitude (WGS 84), para desenhar no mapa.")
 
 
 class TriagemSerializer(serializers.Serializer):
@@ -376,6 +378,8 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
                         else None,
                         "condicao_aparente": a.condicao_aparente,
                         "distancia_m": round(a.distancia_m, 1),
+                        "latitude": a.geom.y,
+                        "longitude": a.geom.x,
                     }
                     for a in arvores
                 ],

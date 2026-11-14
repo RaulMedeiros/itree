@@ -212,6 +212,14 @@ describe("revisão de inspeção", () => {
   });
 });
 
+describe("revisão de inspeção: origem legível (R3-25)", () => {
+  it("diz a plataforma do aplicativo, sem mostrar o identificador cru do dispositivo", async () => {
+    await abrir("/inspecoes/i-1");
+    expect(await screen.findByText(/Aplicativo de campo · Android/)).toBeInTheDocument();
+    expect(screen.queryByText(/android-1/)).toBeNull();
+  });
+});
+
 describe("revisão de inspeção: medidas contra o cadastro (C-25)", () => {
   const medida = (id: string, tipo: string, valor: string, unidade: string) => ({
     id,
@@ -241,6 +249,9 @@ describe("revisão de inspeção: medidas contra o cadastro (C-25)", () => {
     // A diferença, destacada, no mesmo lugar do valor novo.
     expect(within(linhaDap).getByText("DAP 32 → 38 cm, +6")).toBeInTheDocument();
     expect(within(linhaDap).getByText("32 cm")).toBeInTheDocument();
+    // Medida na fonte do texto, com algarismos de largura fixa; nunca em monoespaçada (R3-06).
+    expect(within(linhaDap).getByText("32 cm")).toHaveClass("tabular-nums");
+    expect(within(linhaDap).getByText("32 cm")).not.toHaveClass("font-mono");
     expect(screen.getAllByText(/38 cm/)).toHaveLength(2); // valor novo + frase da diferença, na mesma linha
     expect(screen.getAllByRole("row", { name: /DAP/ })).toHaveLength(1);
     expect(screen.queryByText("Medidas registradas")).toBeNull();
@@ -381,9 +392,9 @@ describe("visão geral: período e comparação (C-06, C-07)", () => {
       ),
     );
     await abrir("/visao-geral");
-    expect(
-      await screen.findByText(/vs\. 01\/09\/26 \(período anterior\) · piorou/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/^\+2 dias desde 01\/09\/26/)).toBeInTheDocument();
+    // O julgamento continua em texto (leitor de tela), fora da face visual.
+    expect(screen.getByText(", piorou")).toBeInTheDocument();
     // Janela fixa declarada em "Como é calculado" (R2-02), não na face do cartão.
     expect(screen.getByText("Janela: fixa de 12 meses (ignora o período)")).toBeInTheDocument();
   });
@@ -509,11 +520,7 @@ describe("tendência dos instantâneos", () => {
     );
     await abrir("/visao-geral");
     const cartao = (await screen.findByText("Espécie confirmada")).closest(".rounded-xl")!;
-    expect(
-      within(cartao as HTMLElement).getByText(
-        "+7,5 p.p. vs. 30/09/26 (registro anterior) · melhorou",
-      ),
-    ).toBeInTheDocument();
+    expect(within(cartao as HTMLElement).getByText("+7,5 p.p. desde 30/09/26")).toBeInTheDocument();
     expect(
       within(cartao as HTMLElement).getByRole("img", {
         name: "Tendência: 30% em 31/08/26 a 40% em 30/10/26",
@@ -522,7 +529,7 @@ describe("tendência dos instantâneos", () => {
     // Sem série, nada muda: sem variação nem sparkline.
     const outro = screen.getByText("Árvores com registro válido").closest(".rounded-xl")!;
     expect(within(outro as HTMLElement).queryByRole("img")).toBeNull();
-    expect(within(outro as HTMLElement).queryByText(/vs. \d/)).toBeNull();
+    expect(within(outro as HTMLElement).queryByText(/desde \d/)).toBeNull();
   });
 });
 

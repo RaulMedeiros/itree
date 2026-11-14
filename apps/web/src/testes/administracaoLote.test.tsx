@@ -174,15 +174,26 @@ describe("detalhe do usuário", () => {
     expect(screen.queryByText("Sem alterações")).toBeNull();
   });
 
-  it("mostra bairros sob o município e avisa quando o município está marcado", async () => {
+  it("mostra bairros sob o município e, com o município marcado, recolhe os bairros com uma nota só (R3-28)", async () => {
     const usuario = userEvent.setup();
     await abrir("/administracao/usuarios/u-tec");
     const marcas = await screen.findAllByRole("checkbox", { name: /Município de teste|Bairro/ });
     const nomes = marcas.map((m) => m.closest("label")?.querySelector("span span")?.textContent);
     expect(nomes).toEqual(["Município de teste", "Bairro A", "Bairro B"]);
-    expect(screen.queryByText(/Já coberto pelo território superior/)).toBeNull();
+    expect(screen.queryByText(/Cobre também/)).toBeNull();
     await usuario.click(marcas[0]!);
-    expect(screen.getAllByText(/Já coberto pelo território superior/)).toHaveLength(2);
+    // Os bairros somem da lista e a nota aparece uma vez, no município.
+    expect(screen.queryByRole("checkbox", { name: /Bairro/ })).toBeNull();
+    expect(screen.getAllByText(/Cobre também os 2 territórios abaixo dele/)).toHaveLength(1);
+    await usuario.click(screen.getByRole("checkbox", { name: /Município de teste/ }));
+    expect(screen.getAllByRole("checkbox", { name: /Bairro/ })).toHaveLength(2);
+  });
+
+  it("a barra de salvar fica fixa na base, depois da lista longa (R3-28)", async () => {
+    await abrir("/administracao/usuarios/u-tec");
+    const barra = await screen.findByRole("region", { name: "Salvar alterações" });
+    expect(barra).toHaveClass("sticky", "bottom-0");
+    expect(within(barra).getByRole("button", { name: "Salvar alterações" })).toBeInTheDocument();
   });
 });
 
@@ -221,12 +232,37 @@ describe("integrações", () => {
 });
 
 describe("territórios", () => {
-  it("avisa que os limites não são oficiais e que a tela é somente leitura", async () => {
+  it("diz de onde vêm os limites sem chamá-los de fonte aberta nem de oficiais (R3-27)", async () => {
     await abrir("/administracao/territorios");
-    expect(await screen.findByText(/não são oficiais/)).toBeInTheDocument();
-    expect(screen.getByText(/depende de a prefeitura definir as fontes/)).toBeInTheDocument();
+    expect(await screen.findByText(/base municipal publicada pela prefeitura/)).toBeInTheDocument();
+    expect(screen.getByText(/ainda não confirmou quem responde por essa base/)).toBeInTheDocument();
+    expect(screen.queryByText(/fonte aberta/)).toBeNull();
     expect(screen.getByText("Detalhes técnicos").closest("details")).toHaveTextContent("DP-10");
     expect(screen.queryByText("DP-10")).toBeNull();
+  });
+
+  it("mostra a fonte uma vez, acima da tabela, e só repete na linha que difere (R3-27)", async () => {
+    const ipplan = { fonte: "Fortaleza em Mapas (Ipplan)", fonte_url: "http://x/ipplan" };
+    servidor.use(
+      http.get(`${API}/api/v1/territorios`, () =>
+        HttpResponse.json(
+          pagina([
+            { ...BAIRRO_B, ...ipplan },
+            { ...BAIRRO_A, ...ipplan },
+            { ...MUNICIPIO, fonte: "Base do estado", fonte_url: null },
+            { ...BAIRRO_B, id: "t-c", nome: "Bairro C", ...ipplan },
+          ]),
+        ),
+      ),
+    );
+    await abrir("/administracao/territorios");
+    const aviso = (await screen.findByText(/Fonte dos limites:/)).closest("p")!;
+    expect(aviso).toHaveTextContent("Fortaleza em Mapas (Ipplan)");
+    const linhas = screen.getAllByRole("row").slice(1);
+    const comIpplan = linhas.filter((l) => l.textContent?.includes("Fortaleza em Mapas (Ipplan)"));
+    expect(comIpplan).toHaveLength(0);
+    const municipio = screen.getByRole("cell", { name: "Município de teste" }).closest("tr")!;
+    expect(municipio).toHaveTextContent("Base do estado");
   });
 
   it("mostra a coluna Árvores com a contagem de cada território", async () => {

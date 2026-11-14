@@ -199,12 +199,18 @@ describe("ocorrência", () => {
     const destaque = (titulo: string) =>
       screen.getByRole("heading", { name: titulo }).closest("section")!;
     await screen.findByRole("heading", { name: "Situação" });
-    for (const titulo of ["Prioridade operacional", "Situação"]) {
-      expect(destaque(titulo).className).toMatch(/border-l-4/);
-    }
-    for (const titulo of ["Condição aparente", "Risco confirmado"]) {
+    // Nenhum cartão leva a borda verde de acento (R3-29): o destaque vem do tamanho e da posição.
+    for (const titulo of [
+      "Prioridade operacional",
+      "Situação",
+      "Condição aparente",
+      "Risco confirmado",
+    ]) {
       expect(destaque(titulo).className).not.toMatch(/border-l-4/);
     }
+    // Cada cartão tem a altura do conteúdo, sem o vazio embaixo.
+    expect(destaque("Situação").parentElement).toHaveClass("items-start");
+    expect(destaque("Prioridade operacional").className).toMatch(/\bp-4\b/);
     // A situação sai do cabeçalho e fica no cartão em destaque.
     expect(within(destaque("Situação")).getByText("Aberta")).toBeInTheDocument();
     const historico = screen.getByText("Histórico de encaminhamentos").closest("details")!;
@@ -328,6 +334,14 @@ describe("ocorrência", () => {
     expect(within(tarefas).getByText("TAR-000004")).toBeInTheDocument();
     expect(within(tarefas).getByText("Bloqueada")).toBeInTheDocument();
     expect(within(tarefas).getByText(/Tiago Técnico/)).toBeInTheDocument();
+  });
+
+  it("as evidências ficam num cartão, como as tarefas vinculadas (R3-29)", async () => {
+    await abrir("/ocorrencias/o-1");
+    const titulo = await screen.findByRole("heading", { name: "Evidências" });
+    expect(titulo.closest("section")).toHaveClass("rounded-lg", "border", "bg-superficie", "p-4");
+    const tarefas = screen.getByRole("heading", { name: "Tarefas vinculadas" }).closest("section")!;
+    expect(titulo.closest("section")!.className).toBe(tarefas.className);
   });
 
   it("sem tarefas vinculadas, diz que não há", async () => {

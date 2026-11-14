@@ -87,6 +87,22 @@ export const CORES_AREA_VERDE: Record<string, string> = {
 export const OPACIDADE_AREA_VERDE = 0.3;
 export const OPACIDADE_AREA_VERDE_UC = 0.2;
 
+/**
+ * Hachura leve por cima do preenchimento (R3-23): o verde da área deixa de disputar com o verde de
+ * "Boa" só pela cor. O sentido do traço também diferencia o tipo (praça "/", parque "\",
+ * unidade de conservação cruzada), para não depender só da cor.
+ */
+export const OPACIDADE_HACHURA_AREA_VERDE = 0.6;
+export const HACHURA_AREA_VERDE: ExpressionSpecification = [
+  "match",
+  ["get", "tipo"],
+  "parque",
+  "hachura-area-verde-parque",
+  "unidade_conservacao",
+  "hachura-area-verde-unidade_conservacao",
+  "hachura-area-verde-praca",
+];
+
 export type ModoCor = "condicao" | "origem";
 
 const match = (
@@ -234,6 +250,20 @@ export function registrarIcones(m: MapaMapLibre) {
     c.strokeStyle = "#ffffff";
     c.stroke();
   });
+  for (const [tipo, cor] of Object.entries(CORES_AREA_VERDE)) {
+    desenhar(m, `hachura-area-verde-${tipo}`, 10, (c, t) => {
+      c.strokeStyle = cor;
+      c.lineWidth = ESCALA * 1.1;
+      const traco = (invertido: boolean) => {
+        c.beginPath();
+        c.moveTo(invertido ? t : 0, t);
+        c.lineTo(invertido ? 0 : t, 0);
+        c.stroke();
+      };
+      if (tipo !== "parque") traco(false);
+      if (tipo !== "praca") traco(true);
+    });
+  }
   desenhar(m, "hachura-alerta", 12, (c, t) => {
     c.strokeStyle = COR_ALERTA;
     c.lineWidth = ESCALA * 1.2;

@@ -792,6 +792,17 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
     expect(within(cartao).getByText("Ilustração")).toBeInTheDocument();
   });
 
+  it("sem foto, a ficha mostra uma linha com o botão Adicionar foto, que leva às Evidências (R3-12)", async () => {
+    const usuario = userEvent.setup();
+    servidor.use(http.get(`${API}/api/v1/evidencias`, () => HttpResponse.json([])));
+    await abrir("/inventario/arvores/a-1");
+    const aviso = await screen.findByRole("img", { name: "Árvore sem foto" });
+    // Uma linha na largura toda, não um bloco de meia tela.
+    expect(aviso.parentElement).toHaveClass("md:col-span-2");
+    await usuario.click(screen.getByRole("button", { name: "Adicionar foto" }));
+    expect(await screen.findByRole("tab", { name: "Evidências", selected: true })).toBeVisible();
+  });
+
   it("clicar na foto da ficha a amplia num diálogo com a legenda completa (R2-17)", async () => {
     const usuario = userEvent.setup();
     await abrir("/inventario/arvores/a-1");
@@ -874,10 +885,14 @@ describe("ficha da árvore (C-15, C-17, C-18)", () => {
 describe("importações (C-19)", () => {
   it("explica por que o lote não pode ser desfeito", async () => {
     await abrir("/inventario/importacoes");
-    expect(await screen.findByRole("button", { name: /Desfazer/ })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: "Desfazer" })).toBeDisabled();
+    // O motivo mora numa dica (i) ao lado do botão, não em três linhas de letra miúda (R3-32).
     expect(
-      screen.getByText(/Desfazer indisponível: há inspeção registrada em árvores do lote\./),
+      screen.getByRole("button", {
+        name: /Desfazer indisponível: há inspeção registrada em árvores do lote\./,
+      }),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/Desfazer indisponível/, { selector: "p" })).toBeNull();
   });
 
   it("diz o que falta no assistente", async () => {

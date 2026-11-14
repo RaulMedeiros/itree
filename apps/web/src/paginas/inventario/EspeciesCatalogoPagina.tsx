@@ -8,7 +8,7 @@ import {
 } from "@itree/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { RefreshCw, Search, TreeDeciduous } from "lucide-react";
+import { CloudOff, RefreshCw, Search, TreeDeciduous } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
@@ -112,11 +112,10 @@ function CartaoCatalogo({ especie }: { especie: Especie }) {
       params={{ id: especie.id }}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-borda bg-superficie shadow-sm transition hover:border-marca hover:shadow-md"
     >
-      <ImagemEspecie
-        especie={especie}
-        comCredito={false}
-        className={especie.imagem_url ? "aspect-[4/3] w-full" : "h-20 w-full"}
-      />
+      {/* Sem foto não há faixa de imagem: oito folhas iguais pareciam wireframe (R3-12). */}
+      {especie.imagem_url && (
+        <ImagemEspecie especie={especie} comCredito={false} className="aspect-[4/3] w-full" />
+      )}
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <p className="font-semibold italic group-hover:text-marca-escura">
           {especie.nome_cientifico}
@@ -124,11 +123,20 @@ function CartaoCatalogo({ especie }: { especie: Especie }) {
         <p className="line-clamp-1 text-sm text-texto-suave">
           {especie.nomes_comuns?.join(", ") || "Nomes comuns não cadastrados"}
         </p>
-        {!especie.imagem_url && especie.referencias_situacao === "nao_consultada" && (
-          <p className="text-xs text-texto-suave">Referências não consultadas</p>
-        )}
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-          <SeloOrigem nativa={especie.nativa_brasil} />
+          <span className="flex items-center gap-1.5">
+            <SeloOrigem nativa={especie.nativa_brasil} />
+            {!especie.imagem_url && especie.referencias_situacao === "nao_consultada" && (
+              <span
+                role="img"
+                aria-label="Referências não consultadas"
+                title="Referências não consultadas"
+                className="text-texto-suave"
+              >
+                <CloudOff className="size-3.5" aria-hidden />
+              </span>
+            )}
+          </span>
           <span className="flex items-center gap-1 text-xs font-medium tabular-nums">
             <TreeDeciduous className="size-3.5 text-marca" aria-hidden />
             {arvores.toLocaleString("pt-BR")} {arvores === 1 ? "árvore" : "árvores"}
@@ -193,16 +201,14 @@ export function EspecieDetalhePagina() {
       />
 
       <div className="grid gap-4 lg:grid-cols-5">
-        <ImagemEspecie
-          especie={e}
-          className={
-            e.imagem_url
-              ? "aspect-[4/3] rounded-xl lg:col-span-2"
-              : "h-32 rounded-xl lg:col-span-2 lg:h-full lg:min-h-32"
-          }
-        />
+        {e.imagem_url && (
+          <ImagemEspecie especie={e} className="aspect-[4/3] rounded-xl lg:col-span-2" />
+        )}
 
-        <section className="flex flex-col gap-3 rounded-xl border border-borda bg-superficie p-5 text-sm lg:col-span-3">
+        {/* Sem imagem, o texto toma a largura toda: o bloco vazio de meia tela saiu (R3-12). */}
+        <section
+          className={`flex flex-col gap-3 rounded-xl border border-borda bg-superficie p-5 text-sm ${e.imagem_url ? "lg:col-span-3" : "lg:col-span-5"}`}
+        >
           <div className="flex flex-wrap items-center gap-2">
             <SeloOrigem nativa={e.nativa_brasil} />
             {e.wikipedia_descricao && (

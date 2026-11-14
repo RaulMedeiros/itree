@@ -59,21 +59,29 @@ export function organizarTerritorios(
     nivel: number;
     nota?: string;
   }[] = [];
-  const visitar = (pai: string | null, nivel: number, paiMarcado: boolean) => {
+  const descendentes = (pai: string): number =>
+    (filhosDe.get(pai) ?? []).reduce((soma, f) => soma + 1 + descendentes(f.id), 0);
+  // Com o território superior marcado, os de baixo já estão cobertos: somem da lista e o
+  // superior leva uma nota única, em vez de repetir o aviso em cada filho (R3-28).
+  const visitar = (pai: string | null, nivel: number) => {
     const filhos = [...(filhosDe.get(pai) ?? [])].sort((a, b) =>
       a.nome.localeCompare(b.nome, "pt-BR"),
     );
     for (const t of filhos) {
+      const cobertos = selecionados.includes(t.id) ? descendentes(t.id) : 0;
       resultado.push({
         valor: t.id,
         rotulo: t.nome,
         descricao: ROTULOS_TIPO_TERRITORIO[t.tipo],
         nivel,
-        nota: paiMarcado ? "Já coberto pelo território superior marcado" : undefined,
+        nota:
+          cobertos > 0
+            ? `Cobre também ${cobertos === 1 ? "o território" : `os ${cobertos} territórios`} abaixo dele`
+            : undefined,
       });
-      visitar(t.id, nivel + 1, paiMarcado || selecionados.includes(t.id));
+      if (cobertos === 0) visitar(t.id, nivel + 1);
     }
   };
-  visitar(null, 0, false);
+  visitar(null, 0);
   return resultado;
 }

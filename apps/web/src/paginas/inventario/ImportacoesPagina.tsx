@@ -26,6 +26,7 @@ import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, EntradaArquivo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
+import { Dica } from "../../ui/dica";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
@@ -230,10 +231,9 @@ export function ImportacoesPagina() {
                         <Undo2 /> Desfazer
                       </Botao>
                       {!l.pode_desfazer && (
-                        <p className="mt-1 ml-auto max-w-56 text-xs text-texto-suave">
-                          Desfazer indisponível:{" "}
-                          {l.motivo_nao_desfazer ?? "o lote não pode ser desfeito."}
-                        </p>
+                        <Dica
+                          texto={`Desfazer indisponível: ${l.motivo_nao_desfazer ?? "o lote não pode ser desfeito."}`}
+                        />
                       )}
                     </>
                   )}

@@ -238,6 +238,15 @@ describe("seleção por área no mapa (RF-MAPA-022)", () => {
     });
   });
 
+  it("ao iniciar a seleção, o painel de camadas recolhe para sobrar área de mapa (R3-21)", async () => {
+    const usuario = userEvent.setup();
+    await abrirMapa();
+    expect(screen.getByRole("complementary", { name: "Camadas e filtros" })).toBeInTheDocument();
+    await usuario.click(await screen.findByRole("button", { name: "Selecionar área" }));
+    expect(screen.queryByRole("complementary", { name: "Camadas e filtros" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Camadas e filtros" })).toBeInTheDocument();
+  });
+
   it("Esc sai do modo de desenho e fechar o painel limpa a área", async () => {
     const usuario = userEvent.setup();
     const mapa = await abrirMapa();

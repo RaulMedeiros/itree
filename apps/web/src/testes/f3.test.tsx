@@ -106,8 +106,18 @@ const servidor = criarServidor(
         especie: "Oiti",
         condicao_aparente: "boa",
         distancia_m: 42.4,
+        latitude: -3.7,
+        longitude: -38.5,
       },
-      { id: "a-2", codigo: "ARV-000002", especie: null, condicao_aparente: "", distancia_m: 87.6 },
+      {
+        id: "a-2",
+        codigo: "ARV-000002",
+        especie: null,
+        condicao_aparente: "",
+        distancia_m: 87.6,
+        latitude: -3.701,
+        longitude: -38.501,
+      },
     ]);
   }),
   http.get(`${API}/api/v1/alertas`, ({ request }) => {

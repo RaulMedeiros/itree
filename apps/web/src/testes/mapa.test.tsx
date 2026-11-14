@@ -243,6 +243,18 @@ describe("realce do bairro buscado (RF-MAPA-011)", () => {
     expect(mapa.camadas.find((c) => c.id === "destaque-contorno")?.antesDe).toBe("selecao");
   });
 
+  it("enquadra deixando de fora a largura do painel de camadas (R3-21)", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await buscarBairro(usuario);
+    await vi.waitFor(() =>
+      expect(mapa.fitBounds).toHaveBeenCalledWith(
+        [-38.56, -3.76, -38.55, -3.75],
+        expect.objectContaining({ padding: expect.objectContaining({ left: 60 + 332 }) }),
+      ),
+    );
+  });
+
   it("remove o realce no próximo clique no mapa", async () => {
     const usuario = userEvent.setup();
     const mapa = await abrirMapa();
@@ -396,6 +408,33 @@ describe("arborização do entorno (Censo 2022)", () => {
     );
   });
 
+  it("ao ligar a camada, a legenda abre sozinha, mesmo com o painel de camadas aberto (R3-22)", async () => {
+    const usuario = userEvent.setup();
+    await abrirMapa();
+    await usuario.click(
+      await screen.findByRole("checkbox", { name: /Arborização do entorno \(Censo 2022\)/ }),
+    );
+    const legenda = await screen.findByRole("region", { name: "Legenda" });
+    expect(within(legenda).getByRole("button", { name: /Legenda/ })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  it("os grupos de contexto e ambientais começam recolhidos, e abrem quando a camada vem ligada (R3-21)", async () => {
+    await abrirMapa();
+    const contexto = (await screen.findByText("Contexto (fontes externas)")).closest("details")!;
+    expect(contexto).not.toHaveAttribute("open");
+    // Territoriais segue aberto: é onde ficam as camadas de uso diário.
+    expect(screen.getByText("Territoriais").closest("details")).toHaveAttribute("open");
+  });
+
+  it("o grupo de contexto abre quando a camada já vem ligada pelo endereço", async () => {
+    await abrirMapa("/mapa?arborizacao_entorno=1");
+    const contexto = (await screen.findByText("Contexto (fontes externas)")).closest("details")!;
+    expect(contexto).toHaveAttribute("open");
+  });
+
   it("ao ligar, carrega uma vez, mostra a camada e a legenda com fonte e definição", async () => {
     const usuario = userEvent.setup();
     const mapa = await abrirMapa();
@@ -413,7 +452,11 @@ describe("arborização do entorno (Censo 2022)", () => {
       expect(mapa.setLayoutProperty).toHaveBeenCalledWith(id, "visibility", "visible");
 
     const legenda = await screen.findByRole("region", { name: "Legenda" });
-    await usuario.click(within(legenda).getByRole("button", { name: "Legenda" }));
+    // A legenda abriu sozinha ao ligar a camada (R3-22): não há o que clicar.
+    expect(within(legenda).getByRole("button", { name: "Legenda" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     for (const rotulo of ROTULOS_CLASSES_ARBORIZACAO)
       expect(within(legenda).getByText(rotulo)).toBeInTheDocument();
     expect(within(legenda).getByText("Sem dado")).toBeInTheDocument();
@@ -542,6 +585,7 @@ describe("arborização do entorno (Censo 2022)", () => {
 describe("áreas verdes (praças, parques e unidades de conservação)", () => {
   const camadasAreas = [
     "areas-verdes-preenchimento",
+    "areas-verdes-hachura",
     "areas-verdes-contorno",
     "areas-verdes-contorno-uc",
   ];
@@ -567,6 +611,17 @@ describe("áreas verdes (praças, parques e unidades de conservação)", () => {
     await vi.waitFor(() => expect(visibilidades(mapa, false)).toBe(true));
     expect(consultasAreasVerdes).toHaveLength(0);
     expect(screen.queryByText("Áreas verdes — tipo")).not.toBeInTheDocument();
+  });
+
+  it("tem hachura própria por tipo sobre o preenchimento, com o mesmo filtro (R3-23)", async () => {
+    const mapa = await abrirMapa();
+    const hachura = mapa.camadaDe("areas-verdes-hachura")!;
+    expect(hachura.type).toBe("fill");
+    expect(JSON.stringify(hachura.paint!["fill-pattern"])).toContain("hachura-area-verde-parque");
+    const ordem = mapa.camadas.map((c) => c.id);
+    expect(ordem.indexOf("areas-verdes-hachura")).toBeGreaterThan(
+      ordem.indexOf("areas-verdes-preenchimento"),
+    );
   });
 
   it("ao ligar, carrega a camada uma vez e mostra a legenda com um item por tipo", async () => {
@@ -963,7 +1018,11 @@ describe("Supressão anual (PRODES Caatinga) (F-02)", () => {
       "visible",
     );
     const legenda = await screen.findByRole("region", { name: "Legenda" });
-    await usuario.click(within(legenda).getByRole("button", { name: "Legenda" }));
+    // A legenda abriu sozinha ao ligar a camada (R3-22): não há o que clicar.
+    expect(within(legenda).getByRole("button", { name: "Legenda" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     const bloco = within(legenda).getByTestId("legenda-supressao");
     expect(await within(bloco).findByText("2004")).toBeInTheDocument();
     expect(within(bloco).getByText("2025")).toBeInTheDocument();

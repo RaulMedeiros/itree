@@ -1,7 +1,7 @@
 import { configurarCliente, type Especie, type Eu } from "@itree/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { criarServidor } from "./servidorPadrao";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -125,6 +125,35 @@ describe("catálogo de espécies", () => {
     expect(screen.getByText("Origem não informada")).toBeInTheDocument();
     expect(consultas[0]?.get("com_arvores")).toBe("true");
     expect(consultas[0]?.get("ordem")).toBe("arvores");
+  });
+
+  it("o cartão sem imagem não tem faixa de folha, e o que falta vira um ícone discreto (R3-12)", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/especies`, () =>
+        HttpResponse.json({
+          count: 1,
+          next: null,
+          previous: null,
+          results: [{ ...SEM_REFERENCIA, referencias_situacao: "nao_consultada" }],
+        }),
+      ),
+    );
+    await abrir("/inventario/especies");
+    const cartao = (await screen.findByText("Cassia fistula")).closest("a")!;
+    expect(cartao.querySelector("svg.lucide-leaf")).toBeNull();
+    expect(within(cartao).queryByText("Referências não consultadas")).toBeNull();
+    expect(
+      within(cartao).getByRole("img", { name: "Referências não consultadas" }),
+    ).toBeInTheDocument();
+  });
+
+  it("o detalhe sem imagem usa a largura toda, sem bloco vazio (R3-12)", async () => {
+    await abrir("/inventario/especies/e-2");
+    const texto = (await screen.findByText(/Nenhuma referência externa corresponde/)).closest(
+      "section",
+    )!;
+    expect(texto.className).toMatch(/lg:col-span-5/);
+    expect(document.querySelector("svg.lucide-leaf")).toBeNull();
   });
 
   it("detalhe mostra resumo com licença, crédito da imagem e links externos", async () => {

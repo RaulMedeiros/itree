@@ -487,6 +487,50 @@ describe("análises", () => {
     expect(screen.getAllByRole("menuitem")).toHaveLength(9);
   });
 
+  it("os campos De e até mostram o período aplicado e há atalhos (R3-13)", async () => {
+    await abrir("/analises");
+    await screen.findByText("Total");
+    // O texto diz "Período: 10/11/2025 a 10/11/2026"; os campos dizem a mesma coisa.
+    expect(screen.getAllByDisplayValue(/^\d{2}\/\d{2}\/\d{4}$/)).toHaveLength(2);
+    expect(screen.getByDisplayValue("10/11/2025")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("10/11/2026")).toBeInTheDocument();
+    const atalhos = screen.getByRole("group", { name: "Atalhos de período" });
+    for (const rotulo of ["30 dias", "12 meses", "Ano"])
+      expect(within(atalhos).getByRole("button", { name: rotulo })).toBeInTheDocument();
+  });
+
+  it("por bairro, os cabeçalhos dizem Bairro e Árvores, e os bairros sem árvores ficam recolhidos (R3-14)", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/relatorios/analise`, () =>
+        HttpResponse.json({
+          id: "arvores_por_bairro",
+          titulo: "Árvores com registro válido por bairro",
+          definicao: "d",
+          fonte: "Registros da plataforma",
+          periodo: { inicio: "2025-11-10", fim: "2026-11-10" },
+          calculado_em: "2026-11-10T12:00:00Z",
+          por_bairro: true,
+          unidade: "",
+          base_rotulo: "",
+          linhas: [
+            { rotulo: "Meireles", valor: 88 },
+            { rotulo: "Aldeota", valor: 0 },
+            { rotulo: "Cocó", valor: 0 },
+          ],
+          total: 88,
+        }),
+      ),
+    );
+    await abrir("/analises");
+    expect(await screen.findByRole("columnheader", { name: "Bairro" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Árvores" })).toBeInTheDocument();
+    const grupo = screen.getByText("Sem árvores no escopo (2)").closest("details")!;
+    expect(grupo).not.toHaveAttribute("open");
+    expect(within(grupo).getByText("Aldeota")).toBeInTheDocument();
+    // Fora do grupo, a tabela só traz o bairro com árvores.
+    expect(within(screen.getByRole("table")).queryByText("Aldeota")).toBeNull();
+  });
+
   it("mostra a evolução mensal ao lado da tabela, com legenda e tabela equivalente", async () => {
     servidor.use(
       http.get(`${API}/api/v1/relatorios/analise`, () =>
@@ -734,7 +778,7 @@ describe("auditoria: usuário afetado e contagem (R2-18)", () => {
     id,
     momento: "2026-11-10T21:17:10Z",
     entidade: "Usuário",
-    entidade_modelo: "contas.UsuarioEvent",
+    entidade_modelo: "contas.Usuario",
     objeto_id: `u-${id}`,
     registro: null,
     pai: null,
@@ -934,5 +978,27 @@ describe("tipos de ocorrência (administração)", () => {
     const linha = screen.getByText("Poda").closest("tr")!;
     await usuario.click(within(linha).getByRole("button", { name: "Editar Poda" }));
     expect(await screen.findByRole("dialog", { name: /Editar Poda/ })).toBeInTheDocument();
+  });
+});
+
+describe("R3-31: espera na fila de revisão", () => {
+  it("chegar hoje ou ontem é texto suave; só a espera de 3 dias ou mais ganha a cor de atenção", async () => {
+    const haDias = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
+    servidor.use(
+      http.get(`${API}/api/v1/inspecoes`, () =>
+        HttpResponse.json(
+          pagina([
+            { ...inspecao("i-1", "INS-000001", []), recebida_em: haDias(0) },
+            { ...inspecao("i-2", "INS-000002", []), recebida_em: haDias(1) },
+            { ...inspecao("i-3", "INS-000003", []), recebida_em: haDias(5) },
+          ]),
+        ),
+      ),
+    );
+    await abrir("/inspecoes");
+    await screen.findByText("INS-000001");
+    expect(screen.getByText("chegou hoje")).toHaveClass("text-texto-suave");
+    expect(screen.getByText("aguarda há 1 dia")).toHaveClass("text-texto-suave");
+    expect(screen.getByText("aguarda há 5 dias")).toHaveClass("text-atencao");
   });
 });

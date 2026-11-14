@@ -11,12 +11,16 @@ import { useState } from "react";
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Botao } from "../../ui/botao";
 import { MenuAgrupado } from "../../ui/menu";
-import { EntradaData, Selecao } from "../../ui/campos";
+import { SeletorPeriodo } from "../../componentes/SeletorPeriodo";
+import { Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
+import { Recolhivel } from "../../ui/recolhivel";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarData, formatarDataHora } from "../../util/formatos";
 import { GraficoMensal, type Serie } from "../visao-geral/graficos";
+import { mesEmAndamento } from "../visao-geral/mes";
+import { ROTULO_SEM_VALOR, ROTULO_VALOR, separarZeros } from "./linhas";
 
 export interface BuscaAnalises {
   analise?: string;
@@ -40,6 +44,74 @@ interface LinhaAnalise {
   numerador?: number;
   /** Composição do valor (por exemplo, poda, supressão e recolhimento), em texto. */
   detalhe?: string;
+}
+
+function TabelaDaAnalise({
+  linhas,
+  tituloItem,
+  tituloValor,
+  maximo,
+  percentual,
+  baseRotulo,
+  total,
+}: {
+  linhas: LinhaAnalise[];
+  tituloItem: string;
+  tituloValor: string;
+  maximo: number;
+  percentual: boolean;
+  baseRotulo: string;
+  total: number | null | undefined;
+}) {
+  return (
+    <Tabela>
+      <thead>
+        <tr>
+          <Th>{tituloItem}</Th>
+          <Th className="w-1/2">{tituloValor}</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {linhas.map((l) => (
+          <Linha key={l.rotulo}>
+            <Td>{l.rotulo}</Td>
+            <Td>
+              <div className="flex items-center gap-2">
+                <div className="h-2 flex-1 rounded bg-neutro-clara" aria-hidden>
+                  <div
+                    className="h-2 rounded bg-marca"
+                    style={{ width: `${(l.valor / maximo) * 100}%` }}
+                  />
+                </div>
+                <span className="w-20 text-right font-medium tabular-nums">
+                  {l.valor.toLocaleString("pt-BR")}
+                  {percentual ? "%" : ""}
+                </span>
+              </div>
+              {l.detalhe && <p className="text-xs text-texto-suave">{l.detalhe}</p>}
+              {l.base !== undefined && (
+                <p className="text-xs text-texto-suave">
+                  {l.numerador !== undefined
+                    ? `${l.numerador.toLocaleString("pt-BR")} de ${l.base.toLocaleString("pt-BR")} ${baseRotulo}`
+                    : `base: ${l.base} ${baseRotulo}`}
+                </p>
+              )}
+            </Td>
+          </Linha>
+        ))}
+      </tbody>
+      {total != null && (
+        <tfoot>
+          <tr>
+            <Td className="font-semibold">Total</Td>
+            <Td className="text-right font-semibold tabular-nums">
+              {total.toLocaleString("pt-BR")}
+            </Td>
+          </tr>
+        </tfoot>
+      )}
+    </Tabela>
+  );
 }
 
 export function AnalisesPagina() {
@@ -84,6 +156,7 @@ export function AnalisesPagina() {
   const baseRotulo = dados?.base_rotulo || "concluídas";
   const maximo = percentual ? 100 : Math.max(1, ...linhas.map((l) => l.valor));
   const evolucao = (dados?.serie_mensal ?? null) as SerieMensal | null;
+  const { principais, zeros } = separarZeros(linhas, dados?.por_bairro ?? false, percentual);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -167,22 +240,11 @@ export function AnalisesPagina() {
             </option>
           ))}
         </Selecao>
-        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
-          De{" "}
-          <EntradaData
-            value={filtros.inicio ?? ""}
-            onChange={(v) => filtrar({ inicio: v || undefined })}
-            className="w-40"
-          />
-        </label>
-        <label className="flex items-center gap-1.5 text-sm text-texto-suave">
-          até{" "}
-          <EntradaData
-            value={filtros.fim ?? ""}
-            onChange={(v) => filtrar({ fim: v || undefined })}
-            className="w-40"
-          />
-        </label>
+        <SeletorPeriodo
+          inicio={filtros.inicio ?? String(dados?.periodo.inicio ?? "")}
+          fim={filtros.fim ?? String(dados?.periodo.fim ?? "")}
+          aoMudar={filtrar}
+        />
       </div>
       {consulta.isPending ? (
         <Carregando />
@@ -201,53 +263,29 @@ export function AnalisesPagina() {
             <Vazio titulo="Sem dados para o período" />
           ) : (
             <div className={evolucao ? "grid gap-6 lg:grid-cols-2" : undefined}>
-              <Tabela>
-                <thead>
-                  <tr>
-                    <Th>Item</Th>
-                    <Th className="w-1/2">Valor</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {linhas.map((l) => (
-                    <Linha key={l.rotulo}>
-                      <Td>{l.rotulo}</Td>
-                      <Td>
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 flex-1 rounded bg-neutro-clara" aria-hidden>
-                            <div
-                              className="h-2 rounded bg-marca"
-                              style={{ width: `${(l.valor / maximo) * 100}%` }}
-                            />
-                          </div>
-                          <span className="w-20 text-right font-medium tabular-nums">
-                            {l.valor.toLocaleString("pt-BR")}
-                            {percentual ? "%" : ""}
-                          </span>
-                        </div>
-                        {l.detalhe && <p className="text-xs text-texto-suave">{l.detalhe}</p>}
-                        {l.base !== undefined && (
-                          <p className="text-xs text-texto-suave">
-                            {l.numerador !== undefined
-                              ? `${l.numerador.toLocaleString("pt-BR")} de ${l.base.toLocaleString("pt-BR")} ${baseRotulo}`
-                              : `base: ${l.base} ${baseRotulo}`}
-                          </p>
-                        )}
-                      </Td>
-                    </Linha>
-                  ))}
-                </tbody>
-                {dados!.total != null && (
-                  <tfoot>
-                    <tr>
-                      <Td className="font-semibold">Total</Td>
-                      <Td className="text-right font-semibold tabular-nums">
-                        {dados!.total.toLocaleString("pt-BR")}
-                      </Td>
-                    </tr>
-                  </tfoot>
+              <div>
+                <TabelaDaAnalise
+                  linhas={principais}
+                  tituloItem={dados!.por_bairro ? "Bairro" : "Item"}
+                  tituloValor={ROTULO_VALOR[dados!.id] ?? "Valor"}
+                  maximo={maximo}
+                  percentual={percentual}
+                  baseRotulo={baseRotulo}
+                  total={dados!.total}
+                />
+                {zeros.length > 0 && (
+                  <Recolhivel
+                    titulo={`${ROTULO_SEM_VALOR[dados!.id] ?? "Sem registros"} (${zeros.length})`}
+                    className="text-sm"
+                  >
+                    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-texto-suave">
+                      {zeros.map((l) => (
+                        <li key={l.rotulo}>{l.rotulo}</li>
+                      ))}
+                    </ul>
+                  </Recolhivel>
                 )}
-              </Tabela>
+              </div>
               {evolucao && (
                 <div>
                   {(evolucao.grupos ?? [{ titulo: "Evolução mensal", series: [] }]).map((g) => (
@@ -261,6 +299,7 @@ export function AnalisesPagina() {
                             : evolucao.series
                         }
                         semDado={evolucao.sem_dado}
+                        parcial={mesEmAndamento(evolucao.meses, dados!.calculado_em)}
                       />
                     </div>
                   ))}

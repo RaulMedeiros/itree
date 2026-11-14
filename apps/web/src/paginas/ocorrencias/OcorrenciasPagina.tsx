@@ -18,7 +18,7 @@ import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { PrazoEmLoteDialogo } from "../../componentes/PrazoEmLoteDialogo";
 import { SeloEstadoOcorrencia, SeloPrioridade } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
-import { Entrada, Selecao } from "../../ui/campos";
+import { BarraFiltros, Entrada, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { Carregando, Erro, ListaVazia } from "../../ui/estados";
@@ -26,7 +26,7 @@ import { contarFiltros } from "../../util/filtros";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
-import { formatarData, formatarDataHora, prazoRestante } from "../../util/formatos";
+import { formatarData, formatarDataHora, prazoRestante, rotuloAtraso } from "../../util/formatos";
 import { AbasOcorrencias } from "../alertas/AlertasPagina";
 import { excedeLimiteDoLote, useSelecaoEmLote } from "../../util/lote";
 import { PrioridadeEmLoteDialogo, ReatribuirEmLoteDialogo } from "./AcoesEmLote";
@@ -115,6 +115,7 @@ export function OcorrenciasPagina() {
     <>
       <CabecalhoPagina
         titulo="Ocorrências"
+        abas={<AbasOcorrencias />}
         descricao="Situações registradas que demandam avaliação ou ação municipal. Alertas ambientais ficam separados."
         acoes={
           <>
@@ -136,100 +137,114 @@ export function OcorrenciasPagina() {
           </>
         }
       />
-      <AbasOcorrencias ativa="ocorrencias" />
-      <div className="mb-3 flex flex-wrap gap-2">
-        <Entrada
-          type="search"
-          aria-label="Buscar"
-          placeholder="Código, descrição ou endereço"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="max-w-64"
-        />
-        <Selecao
-          aria-label="Estado"
-          value={estado}
-          onChange={(e) => filtrar({ estado: e.target.value })}
-          className="max-w-48"
-        >
-          <option value="abertas">Em aberto (não encerradas)</option>
-          {Object.values(EstadoOcorrenciaEnum).map((v) => (
-            <option key={v} value={v}>
-              {ROTULOS_ESTADO_OCORRENCIA[v]}
-            </option>
-          ))}
-          <option value={Object.values(EstadoOcorrenciaEnum).join(",")}>Todas</option>
-        </Selecao>
-        <Selecao
-          aria-label="Tipo"
-          value={filtros.tipo ?? ""}
-          onChange={(e) => filtrar({ tipo: e.target.value || undefined })}
-          className="max-w-52"
-        >
-          <option value="">Todos os tipos</option>
-          {tipos.data?.data.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.nome}
-            </option>
-          ))}
-        </Selecao>
-        <Selecao
-          aria-label="Prioridade"
-          value={filtros.prioridade ?? ""}
-          onChange={(e) =>
-            filtrar({ prioridade: (e.target.value || undefined) as BuscaOcorrencias["prioridade"] })
-          }
-          className="max-w-48"
-        >
-          <option value="">Qualquer prioridade</option>
-          <option value="sem">Sem prioridade definida</option>
-          {Object.values(PrioridadeEnum).map((v) => (
-            <option key={v} value={v}>
-              {ROTULOS_PRIORIDADE[v]}
-            </option>
-          ))}
-        </Selecao>
-        <Selecao
-          aria-label="Bairro"
-          value={bairro ?? ""}
-          onChange={(e) => {
-            filtrar({ bairro: e.target.value || undefined });
-            aoEscolherBairro(e.target.value);
-          }}
-          className="max-w-48"
-        >
-          <option value="">Todos os bairros</option>
-          {bairros.data?.data.results.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.nome}
-            </option>
-          ))}
-        </Selecao>
-        {equipes.data && (
+      <BarraFiltros
+        principais={[
+          <Entrada
+            key="busca"
+            type="search"
+            aria-label="Buscar"
+            placeholder="Código, descrição ou endereço"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />,
           <Selecao
-            aria-label="Equipe"
-            value={filtros.equipe ?? ""}
-            onChange={(e) => filtrar({ equipe: e.target.value || undefined })}
-            className="max-w-48"
+            key="estado"
+            aria-label="Estado"
+            value={estado}
+            onChange={(e) => filtrar({ estado: e.target.value })}
           >
-            <option value="">Todas as equipes</option>
-            {equipes.data.data.results.map((q) => (
-              <option key={q.id} value={q.id}>
-                {q.nome}
+            <option value="abertas">Em aberto</option>
+            {Object.values(EstadoOcorrenciaEnum).map((v) => (
+              <option key={v} value={v}>
+                {ROTULOS_ESTADO_OCORRENCIA[v]}
               </option>
             ))}
-          </Selecao>
-        )}
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="size-4 accent-marca"
-            checked={filtros.atrasadas === "true"}
-            onChange={(e) => filtrar({ atrasadas: e.target.checked ? "true" : undefined })}
-          />
-          Só atrasadas
-        </label>
-      </div>
+            <option value={Object.values(EstadoOcorrenciaEnum).join(",")}>Todas</option>
+          </Selecao>,
+          <Selecao
+            key="tipo"
+            aria-label="Tipo"
+            value={filtros.tipo ?? ""}
+            onChange={(e) => filtrar({ tipo: e.target.value || undefined })}
+          >
+            <option value="">Todos os tipos</option>
+            {tipos.data?.data.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nome}
+              </option>
+            ))}
+          </Selecao>,
+          <Selecao
+            key="prioridade"
+            aria-label="Prioridade"
+            value={filtros.prioridade ?? ""}
+            onChange={(e) =>
+              filtrar({
+                prioridade: (e.target.value || undefined) as BuscaOcorrencias["prioridade"],
+              })
+            }
+          >
+            <option value="">Qualquer prioridade</option>
+            <option value="sem">Sem prioridade definida</option>
+            {Object.values(PrioridadeEnum).map((v) => (
+              <option key={v} value={v}>
+                {ROTULOS_PRIORIDADE[v]}
+              </option>
+            ))}
+          </Selecao>,
+        ]}
+        extras={[
+          <Selecao
+            key="bairro"
+            aria-label="Bairro"
+            value={bairro ?? ""}
+            onChange={(e) => {
+              filtrar({ bairro: e.target.value || undefined });
+              aoEscolherBairro(e.target.value);
+            }}
+            className="max-w-48"
+          >
+            <option value="">Todos os bairros</option>
+            {bairros.data?.data.results.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.nome}
+              </option>
+            ))}
+          </Selecao>,
+          ...(equipes.data
+            ? [
+                <Selecao
+                  key="equipe"
+                  aria-label="Equipe"
+                  value={filtros.equipe ?? ""}
+                  onChange={(e) => filtrar({ equipe: e.target.value || undefined })}
+                  className="max-w-48"
+                >
+                  <option value="">Todas as equipes</option>
+                  {equipes.data.data.results.map((q) => (
+                    <option key={q.id} value={q.id}>
+                      {q.nome}
+                    </option>
+                  ))}
+                </Selecao>,
+              ]
+            : []),
+          <label key="atrasadas" className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 accent-marca"
+              checked={filtros.atrasadas === "true"}
+              onChange={(e) => filtrar({ atrasadas: e.target.checked ? "true" : undefined })}
+            />
+            Só atrasadas
+          </label>,
+        ]}
+        extrasAtivos={contarFiltros({
+          bairro,
+          equipe: filtros.equipe,
+          atrasadas: filtros.atrasadas,
+        })}
+      />
 
       {consulta.isPending ? (
         <Carregando />
@@ -362,7 +377,12 @@ export function OcorrenciasPagina() {
                     <SeloEstadoOcorrencia estado={o.estado} />
                   </Td>
                   <Td>
-                    <SeloPrioridade prioridade={o.prioridade} />
+                    {o.prioridade ? (
+                      <SeloPrioridade prioridade={o.prioridade} />
+                    ) : (
+                      // "Sem prioridade" é o estado comum: texto suave, não selo (R3-30).
+                      <span className="text-texto-suave">Sem prioridade</span>
+                    )}
                   </Td>
                   <Td>
                     {o.responsavel?.nome || o.equipe?.nome || (
@@ -371,11 +391,13 @@ export function OcorrenciasPagina() {
                   </Td>
                   <Td className="whitespace-nowrap">
                     {formatarData(o.prazo) ?? "—"}
-                    <PrazoRestante prazo={o.prazo} aberta={!ESTADOS_ENCERRADOS.has(o.estado)} />
-                    {o.atrasada && (
+                    {o.atrasada ? (
+                      // Um só aviso de atraso, com os dias; o texto vermelho repetido saiu (R3-30).
                       <div>
-                        <Selo tom="perigo">Atrasada</Selo>
+                        <Selo tom="perigo">{rotuloAtraso(o.prazo) ?? "Atrasada"}</Selo>
                       </div>
+                    ) : (
+                      <PrazoRestante prazo={o.prazo} aberta={!ESTADOS_ENCERRADOS.has(o.estado)} />
                     )}
                   </Td>
                 </Linha>

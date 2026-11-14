@@ -31,7 +31,7 @@ import { MenuAcoes, type ItemMenu } from "../../ui/menu";
 import { Selo } from "../../ui/selo";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { invalidarCaminhos } from "../../util/cache";
-import { contar, formatarData } from "../../util/formatos";
+import { contar, formatarData, rotuloAtraso } from "../../util/formatos";
 import { excedeLimiteDoLote, useSelecaoEmLote } from "../../util/lote";
 import { EquipeEmLoteDialogo } from "./EquipeEmLoteDialogo";
 import { rotuloDaAcao } from "./rotulos";
@@ -318,7 +318,7 @@ export function TarefasPagina() {
                     {formatarData(t.prazo) ?? "—"}
                     {t.atrasada && (
                       <div>
-                        <Selo tom="perigo">Atrasada</Selo>
+                        <Selo tom="perigo">{rotuloAtraso(t.prazo) ?? "Atrasada"}</Selo>
                       </div>
                     )}
                   </Td>
@@ -407,7 +407,13 @@ function AcoesTarefa({
   return (
     <div className="flex items-center justify-end gap-1">
       {principal && (
-        <Botao tamanho="pequeno" onClick={() => aoTransitar(principal)}>
+        // Secundário e de largura fixa: nove verdes sólidos tiravam o peso da ação da página (R3-11).
+        <Botao
+          variante="secundario"
+          tamanho="pequeno"
+          className="w-28"
+          onClick={() => aoTransitar(principal)}
+        >
           {rotuloDaAcao(t, principal)}
         </Botao>
       )}

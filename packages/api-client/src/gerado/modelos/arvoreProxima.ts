@@ -14,4 +14,8 @@ export interface ArvoreProxima {
   condicao_aparente: string;
   /** Distância geodésica em metros. */
   distancia_m: number;
+  /** Latitude (WGS 84), para desenhar no mapa. */
+  latitude: number;
+  /** Longitude (WGS 84), para desenhar no mapa. */
+  longitude: number;
 }

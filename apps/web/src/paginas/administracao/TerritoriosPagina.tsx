@@ -7,9 +7,11 @@ import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarData, formatarDataHora } from "../../util/formatos";
+import { divergeDaFonteComum, fonteComum } from "./fonteTerritorios";
 
 export function TerritoriosPagina() {
   const consulta = useTerritoriosListar({ tamanho: 500 });
+  const comum = fonteComum(consulta.data?.data.results ?? []);
   return (
     <>
       <CabecalhoPagina
@@ -18,11 +20,30 @@ export function TerritoriosPagina() {
       />
       <div className="mb-3 rounded-md bg-info-clara px-3 py-2 text-sm text-info">
         <p>
-          Os limites vêm de fonte aberta e não são oficiais. A importação dos limites oficiais
-          depende de a prefeitura definir as fontes municipais e os responsáveis.
+          Os limites vêm da base municipal publicada pela prefeitura (fonte indicada abaixo). A
+          prefeitura ainda não confirmou quem responde por essa base; até lá, vale como referência,
+          não como ato oficial.
         </p>
         <DetalhesTecnicos>Decisão pendente DP-10 (fontes municipais oficiais).</DetalhesTecnicos>
       </div>
+      {comum && (
+        <p className="mb-3 text-sm text-texto-suave">
+          Fonte dos limites:{" "}
+          {comum.fonte_url ? (
+            <a
+              href={comum.fonte_url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-marca-escura hover:underline"
+            >
+              {comum.fonte} <ExternalLink className="size-3" aria-label="(abre em nova aba)" />
+            </a>
+          ) : (
+            comum.fonte
+          )}
+          . Cada linha só repete a fonte quando ela é outra.
+        </p>
+      )}
       {consulta.isPending ? (
         <Carregando />
       ) : consulta.isError ? (
@@ -55,7 +76,9 @@ export function TerritoriosPagina() {
                 </Td>
                 <Td className="font-mono text-sm">{t.codigo}</Td>
                 <Td>
-                  {t.fonte_url ? (
+                  {!divergeDaFonteComum(t, comum) ? (
+                    <span className="text-texto-suave">—</span>
+                  ) : t.fonte_url ? (
                     <a
                       href={t.fonte_url}
                       target="_blank"

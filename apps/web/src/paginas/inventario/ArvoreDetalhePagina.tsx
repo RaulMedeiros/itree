@@ -62,6 +62,7 @@ import {
   SeloPrioridade,
   nomeEspecie,
 } from "../../componentes/selos";
+import { Codigo, Medida as ValorMedido, classeCodigo } from "../../ui/codigo";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -238,7 +239,9 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
       </div>
 
       <div role="tabpanel">
-        {aba === "resumo" && <Resumo arvore={arvore} />}
+        {aba === "resumo" && (
+          <Resumo arvore={arvore} aoAdicionarFoto={() => setAba("evidencias")} />
+        )}
         {aba === "medidas" && (
           <Medidas arvore={arvore} podeMedir={podeEditar} aoMedir={() => setMedindo(true)} />
         )}
@@ -290,7 +293,7 @@ function Item({
   );
 }
 
-function Resumo({ arvore }: { arvore: Arvore }) {
+function Resumo({ arvore, aoAdicionarFoto }: { arvore: Arvore; aoAdicionarFoto: () => void }) {
   const podeEditar = usePermissao("inventario.editar") && arvore.situacao === "ativa";
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -308,9 +311,9 @@ function Resumo({ arvore }: { arvore: Arvore }) {
           </Item>
           <Item rotulo="Localização" ajuda="origem_localizacao">
             {arvore.localizacao ? (
-              <span className="font-mono text-xs">
+              <ValorMedido className="text-xs">
                 {formatarPontoGeografico(arvore.localizacao.latitude, arvore.localizacao.longitude)}
-              </span>
+              </ValorMedido>
             ) : (
               "Sem localização"
             )}
@@ -341,8 +344,7 @@ function Resumo({ arvore }: { arvore: Arvore }) {
             {arvore.identificadores.length
               ? arvore.identificadores.map((i) => (
                   <div key={`${i.fonte}-${i.valor}`}>
-                    <span className="font-mono">{i.valor}</span>{" "}
-                    <span className="text-texto-suave">({i.fonte})</span>
+                    <Codigo>{i.valor}</Codigo> <span className="text-texto-suave">({i.fonte})</span>
                   </div>
                 ))
               : "—"}
@@ -351,7 +353,11 @@ function Resumo({ arvore }: { arvore: Arvore }) {
         </dl>
         <div className="mt-4 grid gap-3 border-t border-borda pt-4 md:grid-cols-2">
           <MiniMapaArvore arvore={arvore} />
-          <FotoPrincipalArvore arvoreId={arvore.id} podeEditar={podeEditar} />
+          <FotoPrincipalArvore
+            arvoreId={arvore.id}
+            podeEditar={podeEditar}
+            aoAdicionar={aoAdicionarFoto}
+          />
         </div>
       </section>
       <div className="flex flex-col gap-4">
@@ -475,10 +481,10 @@ function Medidas({
       <ul className="flex flex-col gap-0.5">
         {lista.map((p) => (
           <li key={p.medida.id} className="whitespace-nowrap">
-            <span className="font-mono">
+            <ValorMedido>
               {p.medida.origem === "estimado" ? "≈ " : ""}
               {Number(p.medida.valor).toLocaleString("pt-BR")} {p.medida.unidade}
-            </span>{" "}
+            </ValorMedido>{" "}
             pendente · <LinkDaRevisao inspecao={p.inspecao} />
           </li>
         ))}
@@ -514,7 +520,7 @@ function Medidas({
             {arvore.medidas_atuais.map((m) => (
               <Linha key={m.id}>
                 <Td className="font-medium">{ROTULOS_TIPO_MEDIDA[m.tipo]}</Td>
-                <Td className="font-mono">
+                <Td className="tabular-nums">
                   {m.origem === "estimado" ? "≈ " : ""}
                   {Number(m.valor).toLocaleString("pt-BR")} {m.unidade}
                 </Td>
@@ -577,7 +583,7 @@ function OcorrenciasDaArvore({ arvoreId }: { arvoreId: string }) {
               <Link
                 to="/ocorrencias/$id"
                 params={{ id: o.id }}
-                className="font-mono font-medium text-marca-escura hover:underline"
+                className={`${classeCodigo} hover:underline`}
               >
                 {o.codigo}
               </Link>
@@ -630,7 +636,7 @@ function InspecoesDaArvore({ arvoreId }: { arvoreId: string }) {
               <Link
                 to="/inspecoes/$id"
                 params={{ id: i.id }}
-                className="font-mono font-medium text-marca-escura hover:underline"
+                className={`${classeCodigo} hover:underline`}
               >
                 {i.codigo}
               </Link>

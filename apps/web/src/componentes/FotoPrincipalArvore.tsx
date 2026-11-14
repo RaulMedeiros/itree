@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Leaf } from "lucide-react";
 import { useState } from "react";
 
+import { Botao } from "../ui/botao";
 import { Dialogo } from "../ui/dialogo";
 import { MenuAcoes } from "../ui/menu";
 import { formatarData } from "../util/formatos";
@@ -28,9 +29,12 @@ function fotoPrincipal(evidencias: readonly Evidencia[]): Evidencia | undefined 
 export function FotoPrincipalArvore({
   arvoreId,
   podeEditar = false,
+  aoAdicionar,
 }: {
   arvoreId: string;
   podeEditar?: boolean;
+  /** Leva a quem pode editar ao envio de fotos (a aba Evidências); sem isso, só o aviso. */
+  aoAdicionar?: () => void;
 }) {
   const consulta = useEvidenciasListar({ arvore: arvoreId });
   const cliente = useQueryClient();
@@ -40,13 +44,24 @@ export function FotoPrincipalArvore({
   const foto = consulta.isSuccess ? fotoPrincipal(consulta.data.data) : undefined;
   if (!foto?.url)
     return (
-      <div
-        role="img"
-        aria-label="Árvore sem foto"
-        className="flex min-h-40 flex-col items-center justify-center gap-1 rounded-lg bg-marca-clara text-marca"
-      >
-        <Leaf className="size-8" aria-hidden />
-        <span className="text-xs">Sem foto. Fotos enviadas na aba Evidências aparecem aqui.</span>
+      // Sem foto, uma linha só, na largura toda: o vazio não ocupa meia tela (R3-12).
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-dashed border-borda bg-fundo px-3 py-2 md:col-span-2">
+        <span
+          role="img"
+          aria-label="Árvore sem foto"
+          className="flex items-center gap-2 text-sm text-texto-suave"
+        >
+          <Leaf className="size-4 text-marca" aria-hidden />
+          Sem foto
+        </span>
+        <span className="text-xs text-texto-suave">
+          Fotos enviadas na aba Evidências aparecem aqui.
+        </span>
+        {podeEditar && aoAdicionar && (
+          <Botao variante="secundario" tamanho="pequeno" className="ml-auto" onClick={aoAdicionar}>
+            Adicionar foto
+          </Botao>
+        )}
       </div>
     );
   const data = foto.capturada_em ?? foto.criado_em;
