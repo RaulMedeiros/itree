@@ -778,7 +778,7 @@ describe("auditoria: usuário afetado e contagem (R2-18)", () => {
     id,
     momento: "2026-11-10T21:17:10Z",
     entidade: "Usuário",
-    entidade_modelo: "contas.UsuarioEvent",
+    entidade_modelo: "contas.Usuario",
     objeto_id: `u-${id}`,
     registro: null,
     pai: null,
