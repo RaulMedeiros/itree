@@ -112,10 +112,9 @@ function CartaoCatalogo({ especie }: { especie: Especie }) {
       params={{ id: especie.id }}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-borda bg-superficie shadow-sm transition hover:border-marca hover:shadow-md"
     >
-      {/* Sem foto não há faixa de imagem: oito folhas iguais pareciam wireframe (R3-12). */}
-      {especie.imagem_url && (
-        <ImagemEspecie especie={especie} comCredito={false} className="aspect-[4/3] w-full" />
-      )}
+      {/* Miniatura de altura fixa em todo cartão: a grade não "pula" quando a imagem chega
+          ou falha, e o marcador neutro é o mesmo para quem não tem imagem. */}
+      <ImagemEspecie especie={especie} credito="nenhum" className="h-32 w-full shrink-0" />
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <p className="font-semibold italic group-hover:text-marca-escura">
           {especie.nome_cientifico}
@@ -202,7 +201,13 @@ export function EspecieDetalhePagina() {
 
       <div className="grid gap-4 lg:grid-cols-5">
         {e.imagem_url && (
-          <ImagemEspecie especie={e} className="aspect-[4/3] rounded-xl lg:col-span-2" />
+          <div className="lg:col-span-2">
+            <ImagemEspecie
+              especie={e}
+              credito="completo"
+              className="aspect-[4/3] w-full rounded-xl"
+            />
+          </div>
         )}
 
         {/* Sem imagem, o texto toma a largura toda: o bloco vazio de meia tela saiu (R3-12). */}
@@ -243,11 +248,6 @@ export function EspecieDetalhePagina() {
             <LinkExterno href={e.wikidata_url}>Wikidata</LinkExterno>
             <LinkExterno href={e.gbif_url}>GBIF</LinkExterno>
             <LinkExterno href={e.flora_brasil_url}>Flora e Funga do Brasil</LinkExterno>
-            {e.imagem_licenca_url && (
-              <LinkExterno
-                href={e.imagem_licenca_url}
-              >{`Licença da imagem (${e.imagem_licenca})`}</LinkExterno>
-            )}
           </div>
         </section>
       </div>
