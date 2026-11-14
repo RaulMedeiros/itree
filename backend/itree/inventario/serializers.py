@@ -425,6 +425,10 @@ class ResumoImportacaoSerializer(serializers.Serializer):
     duplicatas = serializers.IntegerField()
     ambiguas = serializers.IntegerField()
 
+    def to_representation(self, instance):
+        # Lotes anteriores ao resumo (migração 0009) guardam ``{}``: as contagens valem zero.
+        return super().to_representation({campo: 0 for campo in self.fields} | (instance or {}))
+
 
 class LoteImportacaoSerializer(serializers.ModelSerializer):
     usuario_nome = serializers.SerializerMethodField()

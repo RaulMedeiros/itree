@@ -82,6 +82,12 @@ de Fortaleza (Fortaleza em Mapas, Ipplan):
 
 ![Censo por bairro](37-mapa-censo.png)
 
+Camada conectada: atendimentos do Plano de Arborização (Fortaleza em Mapas, id 534,
+SEUMA), sincronizada por um conector como camada de referência. É contexto, não
+inventário, e não cria árvores:
+
+![Camada conectada](38-mapa-camada-conectada.png)
+
 Notificações no cabeçalho:
 
 ![Notificações](36-notificacoes.png)

@@ -105,8 +105,9 @@ export function IntegracoesPagina() {
         titulo="Integrações"
         descricao={
           <>
-            Ingestão de alertas ambientais. A coleta automática depende de configuração do servidor;
-            licenças e limites de cada fonte devem ser verificados antes do uso produtivo.
+            Conectores de fontes externas e ingestão de alertas ambientais. A coleta automática
+            depende de configuração do servidor; licenças e limites de cada fonte devem ser
+            verificados antes do uso produtivo.
           </>
         }
         acoes={
