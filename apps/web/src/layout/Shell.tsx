@@ -1,13 +1,15 @@
-import { Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { ChevronDown, CircleHelp, LogOut, UserRound } from "lucide-react";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import { ROTULOS_PAPEL } from "@itree/domain";
 import { useAuth } from "react-oidc-context";
 
 import { useUsuario } from "../acesso/ContextoUsuario";
-import { modulosVisiveis } from "../acesso/modulos";
+import { moduloAtivo, modulosVisiveis } from "../acesso/modulos";
 import { config } from "../config";
 import { Selo } from "../ui/selo";
+import { cn } from "../util/cn";
 import { BuscaGlobal } from "./BuscaGlobal";
 import { FontesIndicador } from "./FontesIndicador";
 import { SeletorTerritorio } from "./SeletorTerritorio";
@@ -16,19 +18,31 @@ import { Sino } from "./Sino";
 export function Shell() {
   const eu = useUsuario();
   const modulos = modulosVisiveis(eu.permissoes, config.mostrarModulosFuturos);
+  const caminho = useRouterState({ select: (e) => e.location.pathname });
+  const ativo = moduloAtivo(modulos, caminho);
+  const principal = useRef<HTMLElement>(null);
 
+  // Quem rola agora é o <main>, não a janela: ao trocar de página, volta ao topo
+  // como a janela voltaria.
+  useEffect(() => {
+    principal.current?.scrollTo?.({ top: 0 });
+  }, [caminho]);
+
+  // Altura limitada à janela (R3-01): a faixa de demonstração e o cabeçalho
+  // ficam com a altura própria, a área de conteúdo ocupa o restante e rola por
+  // dentro. Assim o mapa cabe na janela com ou sem a faixa, sem `calc` fixo.
   return (
-    <div className="flex min-h-screen flex-col">
+    <div data-testid="shell" className="flex h-dvh flex-col overflow-hidden">
       {eu.ambiente === "demonstracao" && (
         <div
           role="note"
-          className="bg-atencao px-4 py-1.5 text-center text-sm font-medium text-white"
+          className="shrink-0 bg-atencao px-4 py-1.5 text-center text-sm font-medium text-white"
         >
           Dados de demonstração — não representam a realidade.
         </div>
       )}
-      <div className="flex flex-1">
-        <aside className="flex w-60 shrink-0 flex-col bg-barra text-barra-texto">
+      <div className="flex min-h-0 flex-1">
+        <aside className="flex w-60 shrink-0 flex-col overflow-y-auto bg-barra text-barra-texto">
           <Link to="/" className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
             <img src="/icone.svg" alt="" className="size-8 rounded-md bg-white p-0.5" />
             <span className="text-sm leading-tight font-semibold">
@@ -42,11 +56,12 @@ export function Shell() {
               <Link
                 key={m.id}
                 to={m.caminho}
-                className="relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-barra-suave hover:bg-white/10 hover:text-barra-texto focus-visible:outline-white"
-                activeProps={{
-                  className:
+                aria-current={ativo === m.id ? "page" : undefined}
+                className={cn(
+                  "relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-barra-suave hover:bg-white/10 hover:text-barra-texto focus-visible:outline-white",
+                  ativo === m.id &&
                     "bg-barra-ativo font-medium text-barra-texto! before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r before:bg-barra-realce",
-                }}
+                )}
               >
                 <m.icone className="size-4 shrink-0" aria-hidden />
                 <span className="flex-1">{m.rotulo}</span>
@@ -65,9 +80,9 @@ export function Shell() {
             </Link>
           </nav>
         </aside>
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Cabecalho />
-          <main className="flex-1 p-6">
+          <main ref={principal} className="min-h-0 flex-1 overflow-auto p-6">
             <Outlet />
           </main>
         </div>
@@ -82,10 +97,14 @@ function Cabecalho() {
   const navegar = useNavigate();
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-borda bg-superficie px-6">
-      <SeletorTerritorio />
+    // Três colunas (R3-33): a busca fica no centro e não muda de lugar com o
+    // tamanho do nome do usuário.
+    <header className="grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-borda bg-superficie px-6">
+      <div className="min-w-0 justify-self-start">
+        <SeletorTerritorio />
+      </div>
       <BuscaGlobal />
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 justify-self-end">
         <FontesIndicador />
         <Sino />
         <Menu.Root>

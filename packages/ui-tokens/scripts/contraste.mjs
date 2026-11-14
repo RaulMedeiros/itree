@@ -158,6 +158,37 @@ export function lerSupressao(simbologiaTs) {
   return { cores, opacidade: Number(opacidade[1]) };
 }
 
+/** Lê as cores das áreas verdes (praça, parque, unidade de conservação) em `simbologia.ts`. */
+export function lerAreasVerdes(simbologiaTs) {
+  const bloco = simbologiaTs.match(/CORES_AREA_VERDE[^=]*=\s*\{([^}]+)\}/);
+  if (!bloco) throw new Error("Não achei CORES_AREA_VERDE para checar o contraste do mapa.");
+  const cores = Object.fromEntries(
+    [...bloco[1].matchAll(/(\w+):\s*"(#[0-9a-fA-F]{6})"/g)].map((m) => [m[1], m[2].toLowerCase()]),
+  );
+  if (Object.keys(cores).length === 0) throw new Error("CORES_AREA_VERDE sem cores.");
+  return { cores };
+}
+
+/** Opacidade do contorno das áreas verdes na camada (`areas-verdes-contorno`). */
+const OPACIDADE_CONTORNO_AREA_VERDE = 0.9;
+
+/** O contorno de cada tipo de área verde contrasta ≥ 3:1 com o mapa base, em cada fundo do OSM. */
+function paresDasAreasVerdes(verdes, mapa) {
+  const pares = [];
+  for (const [nome, osm] of FUNDOS_OSM) {
+    const base = pinturaRaster(osm, mapa.raster);
+    for (const [tipo, cor] of Object.entries(verdes.cores)) {
+      pares.push({
+        descricao: `área verde (${tipo}): contorno sobre ${nome}`,
+        frente: compor(cor, base, OPACIDADE_CONTORNO_AREA_VERDE),
+        fundo: base,
+        minimo: NAO_TEXTO,
+      });
+    }
+  }
+  return pares;
+}
+
 /** Separação mínima entre classes vizinhas da rampa: o suficiente para ler a ordem. */
 const ENTRE_CLASSES = 1.4;
 
@@ -262,13 +293,23 @@ function montarPares(t) {
     ["marca-escura", "marca-clara"],
     ["info", "info-clara"],
     ["atencao", "atencao-clara"],
+    ["alerta", "alerta-clara"],
     ["perigo", "perigo-clara"],
     ["sucesso", "sucesso-clara"],
   ]) {
     p(`selo ${texto} sobre ${fundo}`, texto, fundo);
   }
   // Texto semântico solto (mensagens, valores) sobre fundo e superfície.
-  for (const texto of ["marca", "marca-escura", "info", "atencao", "perigo", "sucesso", "neutro"]) {
+  for (const texto of [
+    "marca",
+    "marca-escura",
+    "info",
+    "atencao",
+    "alerta",
+    "perigo",
+    "sucesso",
+    "neutro",
+  ]) {
     for (const fundo of ["fundo", "superficie"]) p(`${texto} sobre ${fundo}`, texto, fundo);
   }
   p(
@@ -288,7 +329,7 @@ function montarPares(t) {
   return pares.map((x) => ({ ...x, frente: cor(x.frente), fundo: cor(x.fundo) }));
 }
 
-export function verificar(css, mapa, coropletica, supressao) {
+export function verificar(css, mapa, coropletica, supressao, areasVerdes) {
   const t = lerTokens(css);
   const ausentes = [];
   const exigidos = [
@@ -309,6 +350,8 @@ export function verificar(css, mapa, coropletica, supressao) {
     "info-clara",
     "atencao",
     "atencao-clara",
+    "alerta",
+    "alerta-clara",
     "perigo",
     "perigo-clara",
     "sucesso",
@@ -323,6 +366,7 @@ export function verificar(css, mapa, coropletica, supressao) {
     ...(mapa ? paresDoMapa(mapa) : []),
     ...(mapa && coropletica ? paresDaColoropletica(coropletica, mapa) : []),
     ...(mapa && supressao ? paresDaSupressao(supressao, mapa) : []),
+    ...(mapa && areasVerdes ? paresDasAreasVerdes(areasVerdes, mapa) : []),
   ];
   return pares.map((x) => ({ ...x, razao: razao(x.frente, x.fundo) }));
 }
@@ -349,8 +393,10 @@ function principal() {
     readFileSync(join(web, "estilo.ts"), "utf8"),
   );
   const coropletica = lerCoropletica(readFileSync(join(web, "coropletica.ts"), "utf8"));
-  const supressao = lerSupressao(readFileSync(join(web, "simbologia.ts"), "utf8"));
-  const resultados = verificar(css, mapa, coropletica, supressao);
+  const simbologia = readFileSync(join(web, "simbologia.ts"), "utf8");
+  const supressao = lerSupressao(simbologia);
+  const areasVerdes = lerAreasVerdes(simbologia);
+  const resultados = verificar(css, mapa, coropletica, supressao, areasVerdes);
   let falhas = 0;
   for (const r of resultados) {
     const ok = r.razao >= r.minimo;

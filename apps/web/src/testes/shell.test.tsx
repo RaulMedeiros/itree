@@ -1,7 +1,7 @@
 import { configurarCliente, type Eu, type Ingestao } from "@itree/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { criarServidor } from "./servidorPadrao";
@@ -82,6 +82,7 @@ async function abrir(caminho: string) {
       <RouterProvider router={roteador} />
     </QueryClientProvider>,
   );
+  return roteador;
 }
 
 describe("formatos em português", () => {
@@ -261,6 +262,55 @@ describe("cabeçalho", () => {
       "page",
     );
     expect(screen.queryByRole("navigation", { name: "Migalhas" })).toBeNull();
+  });
+
+  it("limita o shell à altura da janela, com a faixa de demonstração (R3-01)", async () => {
+    await abrir("/administracao/integracoes");
+    const faixa = await screen.findByRole("note");
+    const shell = screen.getByTestId("shell");
+    // O contêiner tem a altura da janela e não cresce com o conteúdo.
+    expect(shell).toHaveClass("h-dvh", "overflow-hidden", "flex-col");
+    // A faixa mantém a altura própria; a área de conteúdo ocupa o restante e rola por dentro.
+    expect(faixa).toHaveClass("shrink-0");
+    const principal = screen.getByRole("main");
+    expect(principal).toHaveClass("min-h-0", "flex-1", "overflow-auto");
+    expect(principal.parentElement).toHaveClass("min-h-0");
+  });
+
+  it("limita o shell à altura da janela também sem a faixa (R3-01)", async () => {
+    eu = { ...USUARIO, ambiente: "producao" };
+    await abrir("/administracao/integracoes");
+    await screen.findByText("Ana Admin");
+    expect(screen.queryByRole("note")).toBeNull();
+    expect(screen.getByTestId("shell")).toHaveClass("h-dvh", "overflow-hidden");
+    expect(screen.getByRole("main")).toHaveClass("min-h-0", "flex-1", "overflow-auto");
+  });
+
+  it("volta a área de conteúdo ao topo ao trocar de página (R3-01)", async () => {
+    const roteador = await abrir("/administracao/integracoes");
+    await screen.findByText("Ana Admin");
+    const principal = screen.getByRole("main");
+    const rolar = vi.fn();
+    principal.scrollTo = rolar as unknown as typeof principal.scrollTo;
+    await roteador.navigate({ to: "/alertas" });
+    await vi.waitFor(() => expect(rolar).toHaveBeenCalledWith({ top: 0 }));
+  });
+
+  it("marca Ocorrências como ativo na lista de alertas ambientais (R3-02)", async () => {
+    await abrir("/alertas");
+    const nav = await screen.findByRole("navigation", { name: "Navegação principal" });
+    expect(await within(nav).findByRole("link", { name: /Ocorrências/ })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("a busca fica numa coluna central fixa do cabeçalho (R3-33)", async () => {
+    await abrir("/administracao/integracoes");
+    const busca = await screen.findByRole("combobox", { name: "Busca global" });
+    const cabecalho = screen.getByTestId("shell").querySelector("header")!;
+    expect(cabecalho).toHaveClass("grid-cols-[1fr_auto_1fr]");
+    expect(busca.closest("header")).toBe(cabecalho);
   });
 
   it("a tecla / leva o foco para a busca global", async () => {

@@ -4,7 +4,14 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { lerCoropletica, lerMapa, lerSupressao, pinturaRaster, verificar } from "./contraste.mjs";
+import {
+  lerCoropletica,
+  lerMapa,
+  lerSupressao,
+  lerAreasVerdes,
+  pinturaRaster,
+  verificar,
+} from "./contraste.mjs";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const css = readFileSync(join(raiz, "src/tokens.css"), "utf8");
@@ -82,5 +89,26 @@ test("uma rampa de supressão com pontas iguais ou escura fraca falha na verific
   );
   assert.ok(
     daSupressao({ ...sup, cores: [sup.cores[0], "#f0c8d4"] }).some((r) => r.razao < r.minimo),
+  );
+});
+
+const daAreaVerde = (verdes) =>
+  verificar(css, lerMapa(realce, estilo), undefined, undefined, verdes).filter((r) =>
+    r.descricao.startsWith("área verde"),
+  );
+
+test("o contorno de cada tipo de área verde contrasta com o mapa base", () => {
+  const verdes = lerAreasVerdes(simbologia);
+  assert.deepEqual(Object.keys(verdes.cores).sort(), ["parque", "praca", "unidade_conservacao"]);
+  const pares = daAreaVerde(verdes);
+  assert.equal(pares.length, 15); // 3 tipos por fundo do OSM
+  for (const r of pares)
+    assert.ok(r.razao >= r.minimo, `${r.descricao}: ${r.razao.toFixed(2)}:1 (mín. ${r.minimo})`);
+});
+
+test("uma área verde de contorno claro falha na verificação", () => {
+  const verdes = lerAreasVerdes(simbologia);
+  assert.ok(
+    daAreaVerde({ cores: { ...verdes.cores, praca: "#c4d27a" } }).some((r) => r.razao < r.minimo),
   );
 });

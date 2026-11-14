@@ -23,6 +23,9 @@
   text-transform: uppercase;
   color: var(--color-marca-escura);
   white-space: nowrap;
+  /* Halo branco sólido de 1,5 px: lê-se também sobre as classes escuras da coropleta (R3-22). */
+  -webkit-text-stroke: 3px var(--color-superficie);
+  paint-order: stroke fill;
   text-shadow:
     0 0 3px var(--color-superficie),
     0 0 3px var(--color-superficie),

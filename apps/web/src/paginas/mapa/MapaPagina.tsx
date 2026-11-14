@@ -1057,7 +1057,7 @@ export function MapaPagina() {
     {}) as Record<string, number>;
 
   return (
-    <div className="-m-6 h-[calc(100vh-3.5rem)]">
+    <div className="-m-6 h-[calc(100%+3rem)]">
       <Mapa
         base={base}
         rotulo="Mapa de árvores e ocorrências"

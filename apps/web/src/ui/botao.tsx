@@ -1,8 +1,9 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ComponentPropsWithRef } from "react";
+import { useContext, type ComponentPropsWithRef } from "react";
 
 import { cn } from "../util/cn";
+import { ContextoLinhaFormulario } from "./contextoFormulario";
 
 const variantes = cva(
   "inline-flex items-center justify-center gap-2 rounded-md font-medium whitespace-nowrap transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
@@ -31,10 +32,12 @@ type Props = ComponentPropsWithRef<"button"> &
 
 export function Botao({ className, variante, tamanho, asChild, type, ...props }: Props) {
   const Componente = asChild ? Slot : "button";
+  const noFormulario = useContext(ContextoLinhaFormulario);
+  const tamanhoEfetivo = noFormulario && tamanho === "pequeno" ? "normal" : tamanho;
   return (
     <Componente
       type={asChild ? undefined : (type ?? "button")}
-      className={cn(variantes({ variante, tamanho }), className)}
+      className={cn(variantes({ variante, tamanho: tamanhoEfetivo }), className)}
       {...props}
     />
   );

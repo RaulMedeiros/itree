@@ -76,12 +76,16 @@ export const corDaSupressao = (inicio: number, fim: number): ExpressionSpecifica
  * conservação ainda têm contorno tracejado, para não depender só da cor.
  */
 export const CORES_AREA_VERDE: Record<string, string> = {
-  praca: "#8a9a2b",
-  parque: "#1f8a70",
-  unidade_conservacao: "#4b6b3a",
+  praca: "#5f6d10",
+  parque: "#13705a",
+  unidade_conservacao: "#3a5a2b",
 };
-export const OPACIDADE_AREA_VERDE = 0.22;
-export const OPACIDADE_AREA_VERDE_UC = 0.14;
+/**
+ * Preenchimento um pouco mais firme e contorno na mesma cor, mais escuro (R3-23). O contorno
+ * (a 90% de opacidade) contrasta ≥ 3:1 com o mapa base, o que `contraste.mjs` confere.
+ */
+export const OPACIDADE_AREA_VERDE = 0.3;
+export const OPACIDADE_AREA_VERDE_UC = 0.2;
 
 export type ModoCor = "condicao" | "origem";
 

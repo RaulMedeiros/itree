@@ -20,6 +20,9 @@
   --color-info-clara: #e4eefa;
   --color-atencao: #8a5a00;
   --color-atencao-clara: #fcf1d9;
+  /* Alerta ambiental: violeta, o mesmo matiz do losango no mapa (#7048e8), escurecido para texto. */
+  --color-alerta: #5a3bc2;
+  --color-alerta-clara: #efeafc;
   --color-perigo: #b3261e;
   --color-perigo-clara: #fbe7e5;
   --color-sucesso: #1f6b45;

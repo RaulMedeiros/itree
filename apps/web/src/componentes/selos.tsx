@@ -12,7 +12,52 @@ import {
 
 import { Selo } from "../ui/selo";
 
-type Tom = "neutro" | "marca" | "info" | "atencao" | "perigo" | "sucesso";
+type Tom = "neutro" | "marca" | "info" | "alerta" | "atencao" | "perigo" | "sucesso";
+type Tamanho = "sm" | "md";
+
+/**
+ * Tom de cada selo por domínio, num só lugar (R3-05): a mesma cor sempre
+ * significa a mesma coisa. Âmbar é "requer ação"; violeta é alerta ambiental,
+ * como o losango do mapa; azul é informativo.
+ */
+export const TONS = {
+  // Origem de localização e de valor: "importado" é azul nos dois.
+  origemLocalizacao: { gps_campo: "sucesso", importada: "info", estimada: "atencao" },
+  origemValor: { medido: "sucesso", estimado: "atencao", inferido: "info", importado: "info" },
+  especie: {
+    confirmada: "sucesso",
+    sugerida_ia: "info",
+    // Âmbar é só para "requer ação"; "não validada" é um estado informativo.
+    informada: "neutro",
+    nao_identificada: "neutro",
+  },
+  ocorrencia: {
+    aberta: "atencao",
+    em_triagem: "info",
+    encaminhada: "info",
+    em_atendimento: "marca",
+    concluida: "sucesso",
+    cancelada: "neutro",
+  },
+  prioridade: { urgente: "perigo", alta: "perigo", media: "atencao", baixa: "info" },
+  inspecao: { rascunho: "neutro", em_revisao: "info", devolvida: "atencao", validada: "sucesso" },
+  tarefa: {
+    nao_iniciada: "neutro",
+    em_execucao: "info",
+    concluida: "sucesso",
+    bloqueada: "atencao",
+    cancelada: "neutro",
+  },
+  alerta: {
+    detectado: "alerta",
+    em_triagem: "info",
+    requer_verificacao: "atencao",
+    compativel_autorizacao: "info",
+    encaminhado: "marca",
+    confirmado: "perigo",
+    descartado: "neutro",
+  },
+} as const satisfies Record<string, Record<string, Tom>>;
 
 /** Imagem sintética de demonstração: nunca deve ser lida como foto real da árvore. */
 export function SeloIlustracao({ className }: { className?: string }) {
@@ -27,44 +72,51 @@ export function SeloIlustracao({ className }: { className?: string }) {
   );
 }
 
-export function SeloEspecie({ estado }: { estado: keyof typeof ROTULOS_ESTADO_ESPECIE }) {
-  const tom: Record<string, Tom> = {
-    confirmada: "sucesso",
-    sugerida_ia: "info",
-    // Âmbar é só para "requer ação"; "não validada" é um estado informativo.
-    informada: "neutro",
-    nao_identificada: "neutro",
-  };
-  return <Selo tom={tom[estado]}>{ROTULOS_ESTADO_ESPECIE[estado]}</Selo>;
+export function SeloEspecie({
+  estado,
+  tamanho,
+}: {
+  estado: keyof typeof ROTULOS_ESTADO_ESPECIE;
+  tamanho?: Tamanho;
+}) {
+  return (
+    <Selo tom={TONS.especie[estado]} tamanho={tamanho}>
+      {ROTULOS_ESTADO_ESPECIE[estado]}
+    </Selo>
+  );
 }
 
 export function SeloLocalizacao({
   origem,
   precisao,
+  tamanho,
 }: {
   origem: string;
   precisao?: number | null;
+  tamanho?: Tamanho;
 }) {
-  if (!origem) return <Selo tom="atencao">Sem localização</Selo>;
+  if (!origem)
+    return (
+      <Selo tom="atencao" tamanho={tamanho}>
+        Sem localização
+      </Selo>
+    );
   const rotulo =
     ROTULOS_ORIGEM_LOCALIZACAO[origem as keyof typeof ROTULOS_ORIGEM_LOCALIZACAO] ?? origem;
   return (
-    <Selo tom={origem === "gps_campo" ? "sucesso" : origem === "importada" ? "info" : "atencao"}>
+    <Selo
+      tamanho={tamanho}
+      tom={(TONS.origemLocalizacao as Record<string, Tom>)[origem] ?? "atencao"}
+    >
       {rotulo}
       {precisao ? ` · ±${Math.round(precisao)} m` : ""}
     </Selo>
   );
 }
 
-export function SeloOrigemValor({ origem }: { origem: string }) {
-  const tom: Record<string, Tom> = {
-    medido: "sucesso",
-    estimado: "atencao",
-    inferido: "info",
-    importado: "neutro",
-  };
+export function SeloOrigemValor({ origem, tamanho }: { origem: string; tamanho?: Tamanho }) {
   return (
-    <Selo tom={tom[origem]}>
+    <Selo tom={(TONS.origemValor as Record<string, Tom>)[origem]} tamanho={tamanho}>
       {ROTULOS_ORIGEM_VALOR[origem as keyof typeof ROTULOS_ORIGEM_VALOR] ?? origem}
     </Selo>
   );
@@ -73,20 +125,14 @@ export function SeloOrigemValor({ origem }: { origem: string }) {
 export function SeloEstadoOcorrencia({
   estado,
   className,
+  tamanho,
 }: {
   estado: keyof typeof ROTULOS_ESTADO_OCORRENCIA;
   className?: string;
+  tamanho?: Tamanho;
 }) {
-  const tom: Record<string, Tom> = {
-    aberta: "atencao",
-    em_triagem: "info",
-    encaminhada: "info",
-    em_atendimento: "marca",
-    concluida: "sucesso",
-    cancelada: "neutro",
-  };
   return (
-    <Selo tom={tom[estado]} className={className}>
+    <Selo tom={TONS.ocorrencia[estado]} className={className} tamanho={tamanho}>
       {ROTULOS_ESTADO_OCORRENCIA[estado]}
     </Selo>
   );
@@ -95,19 +141,24 @@ export function SeloEstadoOcorrencia({
 export function SeloPrioridade({
   prioridade,
   className,
+  tamanho,
 }: {
   prioridade?: string | null;
   className?: string;
+  tamanho?: Tamanho;
 }) {
-  if (!prioridade) return <Selo className={className}>Sem prioridade definida</Selo>;
-  const tom: Record<string, Tom> = {
-    urgente: "perigo",
-    alta: "perigo",
-    media: "atencao",
-    baixa: "info",
-  };
+  if (!prioridade)
+    return (
+      <Selo className={className} tamanho={tamanho}>
+        Sem prioridade definida
+      </Selo>
+    );
   return (
-    <Selo tom={tom[prioridade]} className={className}>
+    <Selo
+      tom={(TONS.prioridade as Record<string, Tom>)[prioridade]}
+      className={className}
+      tamanho={tamanho}
+    >
       Prioridade {ROTULOS_PRIORIDADE[prioridade as keyof typeof ROTULOS_PRIORIDADE].toLowerCase()}
     </Selo>
   );
@@ -119,36 +170,44 @@ export function nomeEspecie(a: Pick<ArvoreResumo, "especie" | "especie_texto_ori
   return "Espécie não identificada";
 }
 
-export function SeloEstadoInspecao({ estado }: { estado: keyof typeof ROTULOS_ESTADO_INSPECAO }) {
-  const tom: Record<string, Tom> = {
-    rascunho: "neutro",
-    em_revisao: "info",
-    devolvida: "atencao",
-    validada: "sucesso",
-  };
-  return <Selo tom={tom[estado]}>{ROTULOS_ESTADO_INSPECAO[estado]}</Selo>;
+export function SeloEstadoInspecao({
+  estado,
+  tamanho,
+}: {
+  estado: keyof typeof ROTULOS_ESTADO_INSPECAO;
+  tamanho?: Tamanho;
+}) {
+  return (
+    <Selo tom={TONS.inspecao[estado]} tamanho={tamanho}>
+      {ROTULOS_ESTADO_INSPECAO[estado]}
+    </Selo>
+  );
 }
 
-export function SeloEstadoTarefa({ estado }: { estado: keyof typeof ROTULOS_ESTADO_TAREFA }) {
-  const tom: Record<string, Tom> = {
-    nao_iniciada: "neutro",
-    em_execucao: "info",
-    concluida: "sucesso",
-    bloqueada: "atencao",
-    cancelada: "neutro",
-  };
-  return <Selo tom={tom[estado]}>{ROTULOS_ESTADO_TAREFA[estado]}</Selo>;
+export function SeloEstadoTarefa({
+  estado,
+  tamanho,
+}: {
+  estado: keyof typeof ROTULOS_ESTADO_TAREFA;
+  tamanho?: Tamanho;
+}) {
+  return (
+    <Selo tom={TONS.tarefa[estado]} tamanho={tamanho}>
+      {ROTULOS_ESTADO_TAREFA[estado]}
+    </Selo>
+  );
 }
 
-export function SeloStatusAlerta({ status }: { status: keyof typeof ROTULOS_STATUS_ALERTA }) {
-  const tom: Record<string, Tom> = {
-    detectado: "atencao",
-    em_triagem: "info",
-    requer_verificacao: "atencao",
-    compativel_autorizacao: "info",
-    encaminhado: "marca",
-    confirmado: "perigo",
-    descartado: "neutro",
-  };
-  return <Selo tom={tom[status]}>{ROTULOS_STATUS_ALERTA[status]}</Selo>;
+export function SeloStatusAlerta({
+  status,
+  tamanho,
+}: {
+  status: keyof typeof ROTULOS_STATUS_ALERTA;
+  tamanho?: Tamanho;
+}) {
+  return (
+    <Selo tom={TONS.alerta[status]} tamanho={tamanho}>
+      {ROTULOS_STATUS_ALERTA[status]}
+    </Selo>
+  );
 }

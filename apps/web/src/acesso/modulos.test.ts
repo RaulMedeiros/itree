@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { modulosVisiveis } from "./modulos";
+import { moduloAtivo, modulosVisiveis } from "./modulos";
 
 describe("modulosVisiveis", () => {
   it("mostra só módulos com permissão", () => {
@@ -40,5 +40,21 @@ describe("parâmetros de URL", () => {
     await roteador.load().catch(() => undefined);
     const busca = roteador.state.matches[roteador.state.matches.length - 1]?.search;
     expect(busca).toMatchObject({ tarefas: "1", arvores: "0" });
+  });
+});
+
+describe("moduloAtivo (R3-02)", () => {
+  const modulos = modulosVisiveis(["ocorrencias.ler", "alertas.ler", "mapa.ler"], true);
+
+  it("mantém Ocorrências ativo nas rotas de alertas ambientais", () => {
+    expect(moduloAtivo(modulos, "/alertas")).toBe("ocorrencias");
+    expect(moduloAtivo(modulos, "/alertas/123")).toBe("ocorrencias");
+    expect(moduloAtivo(modulos, "/ocorrencias/OCO-1")).toBe("ocorrencias");
+  });
+
+  it("não confunde prefixos parecidos nem rotas fora dos módulos", () => {
+    expect(moduloAtivo(modulos, "/mapa")).toBe("mapa");
+    expect(moduloAtivo(modulos, "/alertasx")).toBeUndefined();
+    expect(moduloAtivo(modulos, "/ajuda")).toBeUndefined();
   });
 });
