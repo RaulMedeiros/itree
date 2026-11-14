@@ -224,7 +224,12 @@ function FormularioUsuario({ usuario }: { usuario: UsuarioAdmin }) {
           aoAlterar={setPapeis}
           erros={erros.papeis}
         />
-        <div className="flex gap-2 lg:col-span-2">
+        {/* Barra de salvar fixa na base: a lista de territórios é longa (R3-28). */}
+        <div
+          role="region"
+          aria-label="Salvar alterações"
+          className="sticky bottom-0 z-10 -mx-6 flex gap-2 border-t border-borda bg-superficie px-6 py-3 lg:col-span-2"
+        >
           <Botao type="submit" disabled={!alterado || atualizar.isPending}>
             {atualizar.isPending ? "Salvando…" : "Salvar alterações"}
           </Botao>

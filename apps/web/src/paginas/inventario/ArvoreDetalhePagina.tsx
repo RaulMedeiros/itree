@@ -238,7 +238,9 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
       </div>
 
       <div role="tabpanel">
-        {aba === "resumo" && <Resumo arvore={arvore} />}
+        {aba === "resumo" && (
+          <Resumo arvore={arvore} aoAdicionarFoto={() => setAba("evidencias")} />
+        )}
         {aba === "medidas" && (
           <Medidas arvore={arvore} podeMedir={podeEditar} aoMedir={() => setMedindo(true)} />
         )}
@@ -290,7 +292,7 @@ function Item({
   );
 }
 
-function Resumo({ arvore }: { arvore: Arvore }) {
+function Resumo({ arvore, aoAdicionarFoto }: { arvore: Arvore; aoAdicionarFoto: () => void }) {
   const podeEditar = usePermissao("inventario.editar") && arvore.situacao === "ativa";
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -351,7 +353,11 @@ function Resumo({ arvore }: { arvore: Arvore }) {
         </dl>
         <div className="mt-4 grid gap-3 border-t border-borda pt-4 md:grid-cols-2">
           <MiniMapaArvore arvore={arvore} />
-          <FotoPrincipalArvore arvoreId={arvore.id} podeEditar={podeEditar} />
+          <FotoPrincipalArvore
+            arvoreId={arvore.id}
+            podeEditar={podeEditar}
+            aoAdicionar={aoAdicionarFoto}
+          />
         </div>
       </section>
       <div className="flex flex-col gap-4">
