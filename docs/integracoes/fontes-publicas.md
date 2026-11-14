@@ -43,7 +43,7 @@ comando ou ingestão no código.
 | Censo 2022, entorno por bairro | IBGE | `ftp.ibge.gov.br/Censos/Censo_Demografico_2022/Agregados_por_Setores_Censitarios_Caracteristicas_urbanisticas_do_entorno_dos_domicilios/` | ZIP com CSV, 121 bairros de Fortaleza | Não declarada na listagem | 2025-04 | V | Implementada: importação, indicador na visão geral e camada coroplética no mapa |
 | Malha de bairros do Censo 2022, CE | IBGE | `ftp.ibge.gov.br/.../malha_com_atributos/bairros/shp/UF/CE/` | Shapefile em ZIP | Não declarada | 2024-11 | A | Não implementada |
 | IBGE API de malhas (servicodados) | IBGE | `servicodados.ibge.gov.br/api/v3/` | JSON | n/a | n/a | I (TLS não completa) | Usar o FTP |
-| GBIF | GBIF | `api.gbif.org/v1/` | JSON | Por registro (CC0, CC BY, CC BY-NC) | Contínua | V | Backlog (nomes de espécies) |
+| GBIF | GBIF | `api.gbif.org/v1/` | JSON | Por registro (CC0, CC BY, CC BY-NC) | Contínua | V | Implementada como fonte alternativa de imagem das espécies (`atualizar_referencias_especies`); nomes de espécies, backlog |
 | INMET | INMET | `apitempo.inmet.gov.br` | n/a | n/a | n/a | I (host fora da lista da sessão) | Adiada |
 | Flora e Funga do Brasil | JBRJ | `floradobrasil.jbrj.gov.br` | n/a | n/a | n/a | I (desafio anti-robô) | Adiada |
 | MapBiomas Alerta | MapBiomas | `plataforma.alerta.mapbiomas.org` | GraphQL com token | n/a | n/a | I (host fora da lista da sessão) | Adiada |
@@ -412,3 +412,25 @@ O texto de `description` traz `<br>`, tratado como quebra de linha no popup.
 - [DP-10](../decisoes/pendentes.md#dp-10): confirmar a Ipplan como responsável pelos limites oficiais.
 - [DP-11](../decisoes/pendentes.md#dp-11): ler os PDFs de governança do INPE ou perguntar ao órgão a licença
   dos focos antes do uso produtivo.
+
+### Imagens das espécies: Wikimedia Commons e GBIF
+
+Verificadas em 2026-11-14 (o host alcança `api.gbif.org`; o Wikidata respondeu 429 em
+parte das chamadas, o que motivou a nova tentativa com espera crescente).
+
+- **Prioridade:** Commons (P18 do Wikidata, miniatura de 960 px pela API) e, sem P18, sem
+  licença ou com o Wikidata indisponível, GBIF.
+- **GBIF:** `species/match?name=…&kingdom=Plantae` (aceito só se `matchType=EXACT` e
+  nome canônico igual; ou a chave P846 do Wikidata) e depois
+  `occurrence/search?taxonKey=…&mediaType=StillImage&limit=300`. O `/species/{key}/media`
+  veio vazio para a espécie testada e não é usado. A ocorrência traz `license` (URL),
+  `rightsHolder`, `creator`, `references` e, em `media`, o `identifier` da imagem.
+- **Licenças aceitas:** CC0, CC BY, CC BY-SA e CC BY-NC (esta só com a licença sempre
+  exibida; ver RN-INV-022 da [spec do inventário](../specs/web/03-inventario.md)).
+  CC BY-ND, CC BY-NC-SA, CC BY-NC-ND, "todos os direitos reservados" e licença ausente
+  descartam a imagem, assim como a falta de autor quando a licença exige atribuição.
+- **Atribuição gravada:** `imagem_autor`, `imagem_licenca`, `imagem_licenca_url`,
+  `imagem_pagina_url` e `imagem_fonte` ("Wikimedia Commons" ou "GBIF — publicador").
+- **Miniatura:** o GBIF só informa o original; para o iNaturalist usa-se o tamanho
+  `medium` (125 KB contra 1,3 MB), e a cópia local, quando o armazenamento está
+  configurado, reduz qualquer origem a 960 px.

@@ -132,12 +132,36 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
 
 ### 3.6 Catálogo de espécies (M-01)
 
-- **RF-INV-020** — Grade de espécies com imagem, nome científico, nomes
+- **RF-INV-020** — Grade de espécies com miniatura, nome científico, nomes
   comuns, origem (nativa do Brasil, exótica ou não informada) e quantidade de
   árvores no escopo do usuário. Mais frequentes primeiro, com busca.
-- **RF-INV-021** — Detalhe da espécie: resumo da Wikipedia e imagem do
-  Wikimedia Commons, ambos com autoria, licença e data da consulta. Links para
-  Wikipedia, Wikidata e GBIF. Atalho para a lista das árvores da espécie.
+- **RF-INV-021** — Detalhe da espécie: resumo da Wikipedia e imagem de
+  referência (Wikimedia Commons ou GBIF), com autoria, licença e data da
+  consulta. Links para Wikipedia, Wikidata e GBIF. Atalho para a lista das
+  árvores da espécie.
+- **RF-INV-023** — Miniatura em todo cartão do catálogo, de altura fixa e
+  carregada sob demanda (`loading="lazy"`), com `alt` formado pelo nome
+  científico e pelos nomes comuns. Para o Commons usa-se a miniatura da API
+  (960 px), nunca o original. Sem imagem, ou se ela falhar ao carregar, o
+  cartão mostra o mesmo marcador neutro (folha sobre fundo suave) com o texto
+  "Sem imagem de referência", no mesmo espaço.
+- **RF-INV-024** — No detalhe, a imagem aparece maior, com a atribuição
+  completa: autor, licença (com link) e fonte (com link para a página de
+  origem). Nada é exibido sem atribuição.
+- **RF-INV-025** — Fonte alternativa de imagem: o Commons (P18 do Wikidata)
+  tem prioridade. Sem P18, sem licença reconhecida ou com o Wikidata fora do
+  ar, a imagem vem do GBIF (`occurrence/search` com `mediaType=StillImage`;
+  o `/species/{key}/media` vem vazio para quase todas as espécies). A chave
+  do táxon é a P846 do Wikidata ou, na falta, o `species/match` do GBIF
+  aceito só se EXATO e de nome canônico igual ao do catálogo. A fonte fica
+  gravada em `imagem_fonte` ("Wikimedia Commons" ou "GBIF — publicador").
+- **RF-INV-026** — Resiliência da consulta: 429 e 5xx têm nova tentativa com
+  espera crescente (2, 4, 8, 16 s), no mínimo o `Retry-After` (número ou data
+  HTTP), até 5 tentativas. `Retry-After` acima de 60 s encerra em erro sem
+  prender o trabalhador. A situação "erro" guarda a mensagem, preserva o que já
+  havia e é retomada por tarefa diária (12 h depois do erro) e pela reconsulta
+  mensal. Se o Wikidata falha e a espécie ainda não tem imagem, tenta-se o
+  GBIF (a prioridade do Commons volta na próxima consulta bem-sucedida).
 - **RF-INV-022** — Ficha da árvore mostra o cartão da espécie, com link para o
   catálogo.
 - **RN-INV-020** — Referências externas só são aceitas quando o item do
@@ -147,9 +171,22 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
 - **RN-INV-021** — Imagem sem licença declarada não é usada. A imagem
   exibida é uma cópia reduzida (até 960 px) guardada no armazenamento da
   plataforma, com autor e licença da origem; sem cópia, exibe-se a miniatura
-  da Wikimedia. Referências
+  da origem. Referências
   externas não alteram família, nomes comuns nem origem, que são mantidos pela
   administração (DP-02).
+- **RN-INV-022** — Licenças de imagem aceitas do GBIF: CC0, CC BY, CC BY-SA e
+  CC BY-NC. Decisão: CC BY-NC só é aceita porque autor, licença (com link) e
+  fonte ficam sempre visíveis junto da imagem, e a plataforma é de uso público
+  não comercial; reavaliar se houver uso comercial (DP-11). Licenças com
+  restrição a obras derivadas (ND), "todos os direitos reservados", ausentes ou
+  desconhecidas descartam a imagem. Licença que exige atribuição (todas, menos
+  CC0) sem autor (`rightsHolder`/`creator`) também a descarta. Entre as
+  candidatas, vale a foto de campo sobre a de herbário e, depois, a licença
+  menos restritiva (CC0, CC BY, CC BY-SA, CC BY-NC).
+- **RN-INV-023** — Imagens de terceiros só são baixadas de endereços públicos
+  (cada redirecionamento é revalidado) e exibidas por https. A CSP do nginx
+  (`ITREE_CSP_ORIGENS`, padrão `https:`) já permite `img-src https:`; nada foi
+  afrouxado.
 
 ## 4. Regras
 
