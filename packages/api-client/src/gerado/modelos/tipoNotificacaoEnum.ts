@@ -14,6 +14,7 @@
  * * `inspecao_devolvida` - Inspeção devolvida
  * * `inspecao_para_revisao` - Inspeção para revisão
  * * `alerta_novo` - Alerta ambiental novo
+ * * `previa_importacao` - Prévia de importação aguardando
  */
 export type TipoNotificacaoEnum = typeof TipoNotificacaoEnum[keyof typeof TipoNotificacaoEnum];
 
@@ -26,4 +27,5 @@ export const TipoNotificacaoEnum = {
   inspecao_devolvida: 'inspecao_devolvida',
   inspecao_para_revisao: 'inspecao_para_revisao',
   alerta_novo: 'alerta_novo',
+  previa_importacao: 'previa_importacao',
 } as const;

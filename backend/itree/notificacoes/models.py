@@ -14,6 +14,7 @@ class TipoNotificacao(models.TextChoices):
     INSPECAO_DEVOLVIDA = "inspecao_devolvida", "Inspeção devolvida"
     INSPECAO_PARA_REVISAO = "inspecao_para_revisao", "Inspeção para revisão"
     ALERTA_NOVO = "alerta_novo", "Alerta ambiental novo"
+    PREVIA_IMPORTACAO = "previa_importacao", "Prévia de importação aguardando"
 
 
 class Notificacao(ModeloBase):
