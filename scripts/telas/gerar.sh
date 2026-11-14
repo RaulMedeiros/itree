@@ -57,11 +57,17 @@ u = Usuario.objects.create(email='gestor@itree.local', username='gestor@itree.lo
 EscopoUsuario.objects.create(usuario=u, territorio=Territorio.objects.get(tipo='municipio'))
 "
 $M shell -c "exec(open('/tmp/telas-dados/semear.py').read())"
-# Referências das espécies (Wikidata/Wikipedia/Commons), quando houver acesso.
-if docker compose exec -T api python -c "import urllib.request; urllib.request.urlopen('https://www.wikidata.org/w/api.php?action=query&format=json', timeout=10)" >/dev/null 2>&1; then
-  $M atualizar_referencias_especies
+# Referências das espécies (Wikidata, Wikipedia, Commons e, para imagem, GBIF). O
+# contêiner não tem rede externa: o comando roda no host, contra o banco do compose,
+# quando o host alcançar o Wikidata ou o GBIF. Wikidata com limite de taxa (429) não
+# trava: as tentativas têm espera crescente e a espécie em erro cai para o GBIF.
+if curl -sf -m 15 "https://api.gbif.org/v1/species/match?name=Licania%20tomentosa" >/dev/null \
+  || curl -sf -m 15 "https://www.wikidata.org/w/api.php?action=query&format=json" >/dev/null; then
+  (cd "$RAIZ/backend" && DATABASE_URL=postgis://itree:itree@localhost:5432/itree \
+    uv run python manage.py atualizar_referencias_especies --todas) \
+    || echo "Referências das espécies não atualizadas."
 else
-  echo "Sem acesso ao Wikidata a partir do contêiner: rode atualizar_referencias_especies onde houver acesso."
+  echo "Sem acesso ao Wikidata e ao GBIF a partir do host: as capturas do catálogo mostram o marcador \"Sem imagem de referência\"; rode atualizar_referencias_especies onde houver acesso."
 fi
 # Áreas verdes oficiais (Fortaleza em Mapas). O contêiner não tem acesso à rede
 # externa; o comando roda no host, contra o banco do compose, quando houver acesso.
