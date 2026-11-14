@@ -33,6 +33,7 @@ import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
 import { AvisoEquipeIncompleta } from "../../componentes/AvisoEquipeIncompleta";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloEstadoOcorrencia, SeloEstadoTarefa, SeloPrioridade } from "../../componentes/selos";
+import { classeCodigo } from "../../ui/codigo";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -95,7 +96,8 @@ function Cartao({
   variante?: "destaque" | "normal" | "secundario";
 }) {
   const classes = {
-    destaque: "border-borda border-l-4 border-l-marca bg-superficie p-5",
+    // Sem a borda verde de acento: o conteúdo da prioridade é azul e o verde confundia (R3-29).
+    destaque: "border-borda bg-superficie p-4",
     normal: "border-borda bg-superficie p-4",
     secundario: "border-borda bg-fundo p-3",
   }[variante];
@@ -203,7 +205,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
         </div>
       )}
 
-      <div className="mb-4 grid gap-4 md:grid-cols-2">
+      <div className="mb-4 grid items-start gap-4 md:grid-cols-2">
         <Cartao
           variante="destaque"
           titulo="Prioridade operacional"
@@ -316,7 +318,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
                   <Link
                     to="/inventario/arvores/$id"
                     params={{ id: String(o.arvore.id) }}
-                    className="font-mono text-marca-escura hover:underline"
+                    className={`${classeCodigo} hover:underline`}
                   >
                     {String(o.arvore.codigo)}
                   </Link>
@@ -339,7 +341,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
                     <Link
                       to="/inspecoes/$id"
                       params={{ id: o.origem_vinculo.id }}
-                      className="font-mono text-marca-escura hover:underline"
+                      className={`${classeCodigo} hover:underline`}
                     >
                       {o.origem_vinculo.codigo}
                     </Link>
@@ -350,7 +352,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
                     <Link
                       to="/alertas/$id"
                       params={{ id: o.origem_vinculo.id }}
-                      className="font-mono text-marca-escura hover:underline"
+                      className={`${classeCodigo} hover:underline`}
                     >
                       {o.origem_vinculo.codigo}
                     </Link>
@@ -421,7 +423,7 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
                 <Link
                   to="/equipes-tarefas/$id"
                   params={{ id: t.id }}
-                  className="font-mono font-medium text-marca-escura hover:underline"
+                  className={`${classeCodigo} hover:underline`}
                 >
                   {t.codigo}
                 </Link>
@@ -436,10 +438,10 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
         )}
       </section>
 
-      <h2 className="mb-2 font-semibold">Evidências</h2>
-      <div className="mb-6">
+      <section className="mb-6 rounded-lg border border-borda bg-superficie p-4">
+        <h2 className="mb-2 font-semibold">Evidências</h2>
         <Evidencias alvo={{ ocorrencia: o.id }} podeEnviar={podeEditar} />
-      </div>
+      </section>
 
       <Recolhivel
         titulo="Histórico de encaminhamentos"

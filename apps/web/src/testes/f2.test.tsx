@@ -212,6 +212,14 @@ describe("revisão de inspeção", () => {
   });
 });
 
+describe("revisão de inspeção: origem legível (R3-25)", () => {
+  it("diz a plataforma do aplicativo, sem mostrar o identificador cru do dispositivo", async () => {
+    await abrir("/inspecoes/i-1");
+    expect(await screen.findByText(/Aplicativo de campo · Android/)).toBeInTheDocument();
+    expect(screen.queryByText(/android-1/)).toBeNull();
+  });
+});
+
 describe("revisão de inspeção: medidas contra o cadastro (C-25)", () => {
   const medida = (id: string, tipo: string, valor: string, unidade: string) => ({
     id,
@@ -241,6 +249,9 @@ describe("revisão de inspeção: medidas contra o cadastro (C-25)", () => {
     // A diferença, destacada, no mesmo lugar do valor novo.
     expect(within(linhaDap).getByText("DAP 32 → 38 cm, +6")).toBeInTheDocument();
     expect(within(linhaDap).getByText("32 cm")).toBeInTheDocument();
+    // Medida na fonte do texto, com algarismos de largura fixa; nunca em monoespaçada (R3-06).
+    expect(within(linhaDap).getByText("32 cm")).toHaveClass("tabular-nums");
+    expect(within(linhaDap).getByText("32 cm")).not.toHaveClass("font-mono");
     expect(screen.getAllByText(/38 cm/)).toHaveLength(2); // valor novo + frase da diferença, na mesma linha
     expect(screen.getAllByRole("row", { name: /DAP/ })).toHaveLength(1);
     expect(screen.queryByText("Medidas registradas")).toBeNull();

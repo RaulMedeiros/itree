@@ -17,6 +17,7 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloEstadoTarefa } from "../../componentes/selos";
+import { classeCodigo } from "../../ui/codigo";
 import { Botao } from "../../ui/botao";
 import { Carregando, Erro } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -25,7 +26,7 @@ import { descreverPrazo, formatarData, formatarDataHora } from "../../util/forma
 import { rotuloDaAcao } from "./rotulos";
 import { ReatribuirDialogo, TransicaoDialogo } from "./TarefasPagina";
 
-const classeLink = "font-mono font-medium text-marca-escura hover:underline";
+const classeLink = `${classeCodigo} hover:underline`;
 
 /** Detalhe da tarefa (M-20): origem, responsável, prazo, ações, resultado, evidências e histórico. */
 export function TarefaDetalhePagina() {

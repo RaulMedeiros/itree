@@ -29,6 +29,7 @@ import {
   registrarIcones,
 } from "../../mapa/simbologia";
 import { dadosDoMapaDoAlerta } from "./mapaAlerta";
+import { Codigo, classeCodigo } from "../../ui/codigo";
 import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, Entrada, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
@@ -167,7 +168,7 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
         descricao={
           <span className="flex flex-wrap items-center gap-2">
             <SeloStatusAlerta status={a.status ?? "detectado"} /> {ROTULOS_FONTE_ALERTA[a.fonte]} ·
-            identificador na fonte: <span className="font-mono">{a.id_externo}</span>
+            identificador na fonte: <Codigo>{a.id_externo}</Codigo>
           </span>
         }
         acoes={
@@ -263,7 +264,7 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
                   <Link
                     to="/ocorrencias/$id"
                     params={{ id: String(a.ocorrencia.id) }}
-                    className="font-mono text-marca-escura hover:underline"
+                    className={`${classeCodigo} hover:underline`}
                   >
                     {String(a.ocorrencia.codigo)}
                   </Link>
@@ -363,7 +364,7 @@ function ArvoresProximas({
                   <Link
                     to="/inventario/arvores/$id"
                     params={{ id: v.id }}
-                    className="font-mono font-medium text-marca-escura hover:underline"
+                    className={`${classeCodigo} hover:underline`}
                   >
                     {v.codigo}
                   </Link>
