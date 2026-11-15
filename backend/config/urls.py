@@ -11,6 +11,7 @@ from itree.conectores import views as conectores
 from itree.contas.views import EquipeViewSet, UsuarioAdminViewSet, eu
 from itree.core.views import OperacaoEmLoteViewSet, saude
 from itree.evidencias.views import EvidenciaViewSet
+from itree.iluminacao import views as iluminacao
 from itree.indicadores.implantacao import primeiros_passos
 from itree.indicadores.views import arborizacao_entorno_geojson, painel
 from itree.inspecoes.views import InspecaoViewSet
@@ -65,6 +66,12 @@ api_v1 = [
         arborizacao_entorno_geojson,
         name="indicadores-arborizacao-entorno",
     ),
+    path(
+        "iluminacao/arvores-proximas",
+        iluminacao.ArvoresProximasView.as_view(),
+        name="iluminacao-arvores-proximas",
+    ),
+    path("iluminacao/resumo", iluminacao.resumo, name="iluminacao-resumo"),
     path("mapa/alertas", mapa.alertas, name="mapa-alertas"),
     path("mapa/supressao-anual", mapa.supressao_anual, name="mapa-supressao-anual"),
     path("relatorios/catalogo", relatorios.catalogo, name="relatorios-catalogo"),
