@@ -102,13 +102,19 @@ def _coluna(colunas: list[str], nomes: tuple[str, ...], escolhida: str | None) -
     return next((por_nome[n] for n in nomes if n in por_nome), None)
 
 
-def _feicoes_do_csv(conteudo: bytes, parametros: dict) -> list[dict]:
-    colunas, registros = importacao.ler_registros(conteudo, "csv")
+def _feicoes_da_tabela(conteudo: bytes, formato: str, parametros: dict) -> list[dict]:
+    """CSV ou XLSX: os pontos vêm das colunas de latitude e longitude (nomes comuns ou os dos
+    parâmetros ``coluna_latitude`` e ``coluna_longitude``)."""
+    try:
+        colunas, registros = importacao.ler_registros(conteudo, formato)
+    except importacao.ErroArquivo as exc:
+        raise ErroConector(str(exc)) from exc
+    rotulo = formato.upper()
     col_lat = _coluna(colunas, NOMES_LATITUDE, parametros.get("coluna_latitude"))
     col_lon = _coluna(colunas, NOMES_LONGITUDE, parametros.get("coluna_longitude"))
     if not col_lat or not col_lon:
         raise ErroConector(
-            "O CSV não tem colunas de latitude e longitude. Informe-as nos parâmetros."
+            f"O {rotulo} não tem colunas de latitude e longitude. Informe-as nos parâmetros."
         )
     feicoes = []
     for registro in registros:
@@ -143,8 +149,8 @@ def ler_feicoes(baixado: clientes.Baixado, parametros: dict) -> tuple[list[dict]
     """Devolve (feições válidas, recebidas, inválidas). Cada feição:
     ``{id_externo, geom, propriedades}``. Feição sem geometria aproveitável, ou com
     identificador repetido, conta como inválida."""
-    if baixado.formato == "csv":
-        brutas = _feicoes_do_csv(baixado.conteudo, parametros)
+    if baixado.formato in ("csv", "xlsx"):
+        brutas = _feicoes_da_tabela(baixado.conteudo, baixado.formato, parametros)
     else:
         brutas = json.loads(baixado.conteudo)["features"]
     if len(brutas) > settings.ITREE_CONECTORES_MAX_FEICOES:
@@ -249,7 +255,7 @@ def criar_previa(conector: Conector, baixado: clientes.Baixado, usuario) -> Lote
     except importacao.ErroArquivo as exc:
         raise ErroConector(str(exc)) from exc
     return LoteImportacao.objects.create(
-        arquivo_nome=f"{conector.nome}.{'csv' if baixado.formato == 'csv' else 'geojson'}"[:255],
+        arquivo_nome=f"{conector.nome}.{baixado.formato}"[:255],
         formato=baixado.formato,
         fonte=modelo.fonte,
         fonte_url=conector.url_origem,
