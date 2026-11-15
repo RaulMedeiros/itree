@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "itree.core",
     "itree.territorio",
     "itree.areas_verdes",
+    "itree.iluminacao",
     "itree.contas",
     "itree.auditoria",
     "itree.inventario",
@@ -302,6 +303,9 @@ WEB_URL_PUBLICA = env.str("WEB_URL_PUBLICA", default="").rstrip("/")
 # Áreas verdes (Fortaleza em Mapas): reimportação mensal e aviso de fonte desatualizada
 # quando a última importação passa deste limite (RF-INT-005).
 AREAS_VERDES_IDADE_MAXIMA_DIAS = env.int("AREAS_VERDES_IDADE_MAXIMA_DIAS", default=60)
+# Conflito de árvores com a iluminação pública (DP aberta): raio PROVISÓRIO, em metros, até a URBFOR
+# e a SEINF definirem a regra. A interface sempre o mostra como provisório.
+ILUMINACAO_RAIO_CONFLITO_M = env.float("ILUMINACAO_RAIO_CONFLITO_M", default=3.0)
 # Conectores de fontes externas (RF-INT-006): o servidor só busca hosts desta lista, por HTTPS.
 ITREE_CONECTORES_HOSTS_PERMITIDOS = env.list(
     "ITREE_CONECTORES_HOSTS_PERMITIDOS",
@@ -336,6 +340,10 @@ CELERY_BEAT_SCHEDULE = {
     "reimportar-adocao-pracas": {
         "task": "itree.areas_verdes.tasks.reimportar_adocao_pracas",
         "schedule": crontab(minute=30, hour=4, day_of_month=2),
+    },
+    "reimportar-iluminacao-publica": {
+        "task": "itree.iluminacao.tasks.reimportar_iluminacao_publica",
+        "schedule": crontab(minute=0, hour=4, day_of_month=3),
     },
     # Conectores vencidos pela periodicidade (RF-INT-006): confere de hora em hora.
     "disparar-conectores": {

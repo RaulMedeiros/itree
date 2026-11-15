@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from itree.areas_verdes.models import AreaVerde
 from itree.contas.acesso import area_do_escopo, filtrar_por_escopo
 from itree.core.parametros import uuid_do_parametro
+from itree.iluminacao.servico import resumo_da_iluminacao
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
 from itree.ocorrencias.models import ESTADOS_FINAIS, Ocorrencia
@@ -425,6 +426,7 @@ def busca(request: Request):
         {
             "territorios": serializers.ListField(child=serializers.DictField()),
             "areas_verdes": serializers.ListField(child=serializers.DictField()),
+            "iluminacao": serializers.DictField(allow_null=True),
             "arvores": serializers.DictField(allow_null=True),
             "ocorrencias": serializers.DictField(allow_null=True),
             "limites_escopo": serializers.ListField(
@@ -500,6 +502,7 @@ def camadas(request: Request):
         {
             "territorios": territorios,
             "areas_verdes": areas_verdes,
+            "iluminacao": resumo_da_iluminacao(),
             "arvores": arvores,
             "ocorrencias": ocorrencias,
             "limites_escopo": list(area.extent) if area else None,
