@@ -135,6 +135,15 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
         .check();
     },
   });
+  // Iluminação pública (SEINF): Aldeota, na Av. Heráclito Graça (ponto 904705 da fonte), zoom 16.
+  await tela(p, "39-mapa-iluminacao", `/mapa?lon=${-38.5095}&lat=${-3.7381}&zoom=16&iluminacao=1`, {
+    esperar: "Legenda",
+    espera: 6000,
+  });
+  await tela(p, "40-arvores-iluminacao", "/inventario/iluminacao", {
+    esperar: /Árvores próximas à iluminação/,
+    espera: 2500,
+  });
   await tela(p, "36-notificacoes", "/visao-geral", {
     esperar: "Como é calculado",
     espera: 1500,
