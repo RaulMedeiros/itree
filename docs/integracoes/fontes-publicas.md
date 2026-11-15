@@ -29,6 +29,7 @@ comando ou ingestão no código.
 | Praças (CKAN) | URBFOR | dataset `pracas-e-areas-verdes-pracas-de-fortaleza` | GeoJSON, 484 feições | vazia no CKAN | 2024-02 | V | Backlog |
 | Parques e UCs (CKAN; Mapas ids 737 e 86) | SEUMA, CEUC/SEMA | CKAN `parques-uc`; Mapas `?id=737`, `?id=86` | KMZ; GeoJSON | `other-open`; termos da API | 2026-01; ano_ref 2023 | V | Backlog (falta tipo "área verde") |
 | Podas, recolhimento e supressão (CKAN) | URBFOR | dataset `podas_recolhimento_supressao` | CSV mensal, sem coordenadas | vazia | 2023 (falta setembro) | V | Implementada (parte segura): `importar_manejo_urbfor`, agregado por bairro e mês |
+| Pontos de iluminação pública (CKAN) | SEINF | dataset `pontos_iluminacao_publica`, recurso `relatoriodoparquedeiluminacaopublica.xlsx` (16 MB) | XLSX, aba `CREXPORT`, 182.514 linhas (uma por lâmpada) em 149.603 pontos de serviço, 149.511 com coordenada | `cc-by-sa` | 2022-11-16 | V (verificado em 2026-11-15) | Implementada: `importar_iluminacao_publica` (mensal, MVT, conflito com árvores) |
 | Doação de mudas (CKAN) | URBFOR | dataset `doacao-mudas-pf`, recursos `matriz-doacao-pf2022.xlsx` e `matriz-doacao-pj2022.xlsx` | XLSX em fichas, sem local | `cc-by-sa` | 2022-12 | V | Implementada: `importar_doacao_mudas` (1.334 linhas de espécie, 22.687 mudas); só em Análises, sem requerente nem endereço |
 | Plantio de mudas (CKAN) | URBFOR | dataset `doacao-mudas-pf`, recurso `matriz-plantio2022.xlsx` | XLSX em fichas, sem coordenadas | `cc-by-sa` | 2022-12 | V | Implementada: `importar_plantio_urbfor` (42 plantios, 19.675 mudas, 3 com bairro); só em Análises, sem geocodificar nem criar árvore |
 | Atendimentos Plano de Arborização (Mapas, id 534) | SEUMA | `/api/v1/geojson?id=534` | GeoJSON, 577 pontos | termos da API | 2021 | V | Implementada como conector, inativo até o administrador ativar: `criar_conectores_exemplo` (camada de referência) |
@@ -81,6 +82,46 @@ uv run python manage.py importar_limites_fortaleza
 - Se já existirem bairros importados por `importar_territorios` com outro código
   (por exemplo, do CKAN), a importação oficial cria registros novos pelo código do IBGE.
   Limpe os antigos antes, ou use só uma das fontes.
+
+### Iluminação pública (SEINF)
+
+```bash
+cd backend
+uv run python manage.py importar_iluminacao_publica                    # baixa o XLSX oficial
+uv run python manage.py importar_iluminacao_publica --arquivo rel.xlsx # arquivo local
+```
+
+- Fonte: dataset `pontos_iluminacao_publica` do CKAN de Fortaleza (SEINF), licença `cc-by-sa`,
+  conjunto atualizado em 2022-11-16 (a data de referência gravada; `--data-referencia` a troca).
+  Citação: "Prefeitura de Fortaleza, SEINF, dados abertos (CC BY-SA)".
+- Colunas lidas (aba `CREXPORT`): `CÓDIGO_DE_PONTO_DE_SERVIÇO`, `PONTO_DE_SERVIÇO_X`,
+  `PONTE_DE_SERVIÇO_Y` (assim, com "PONTE"), `REGIÃO`, `DESIGNAÇÃO_LOGRADOURO`,
+  `DESIGNAÇÃO_BAIRRO`, `POSTE`, `LÂMPADA`, `POTÊNCIA_NOMINAL`, `POTÊNCIA_CONSUMIDA` e
+  `FAMILIA_LÂMPADA`. Os textos vêm com espaços à direita; são aparados.
+- **SRC:** as coordenadas estão em SIRGAS 2000 / UTM 24S (EPSG:31984) e são convertidas para
+  4326. Conferido: o ponto 904705 (554469,75; 9586805) cai na Av. Heráclito Graça, Aldeota.
+- Uma linha por lâmpada: as linhas do mesmo código viram **um ponto**, com as lâmpadas em
+  `lampadas` (tipo, potências e família). O texto do poste ("CONCRETO DUPLO T DE 5 A 10 M") dá o
+  tipo e a faixa de altura (5 e 10); "ATÉ 5 M" dá só o máximo; sem faixa (ex.: "SEM POSTE"), as
+  alturas ficam vazias.
+- **Descartes**, contados e relatados na saída e no lote: ponto sem coordenada (célula em
+  branco), com coordenada ilegível ou fora da faixa do SRC e fora do município (limite oficial
+  com 50 m de folga, porque 964 dos 1.711 pontos fora do polígono estão a até 50 m dele; sem
+  limite importado, vale uma caixa folgada de Fortaleza). O arquivo é tratado como dado não
+  confiável: tipos e faixas são validados, o download só aceita HTTPS do portal de dados abertos
+  e tem limite de 64 MB.
+- A importação **substitui** todos os pontos numa só transação, em lotes (`bulk_create`); se algo
+  falhar, os pontos anteriores ficam. Cada execução grava um `LoteIluminacao` (fonte, URL,
+  licença, data de referência, ingestão, hash do arquivo e contagens), que aparece em
+  `mapa/camadas` e em "Fontes dos dados" como as áreas verdes. A tarefa mensal
+  (`reimportar_iluminacao_publica`, dia 3) roda o mesmo comando.
+- Resultado com o arquivo oficial (2026-11-15, limites oficiais de Fortaleza no banco): 182.514
+  linhas; **148.760 pontos importados**; descartados 92 sem coordenada, 4 com coordenada ilegível e
+  747 fora do município; cerca de 70 s no total.
+- Uso: camada "Iluminação pública" do mapa (MVT, zoom 15 em diante) e a lista "Árvores próximas à
+  iluminação", com o raio **provisório** de 3 m (`ILUMINACAO_RAIO_CONFLITO_M`; decisão da URBFOR e
+  da SEINF, [DP-22](../decisoes/pendentes.md#dp-22)). Os pontos são de contexto: não alteram nem
+  substituem o inventário de árvores.
 
 ### Equivalência das regionais (CKAN e Fortaleza em Mapas)
 

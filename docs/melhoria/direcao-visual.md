@@ -35,6 +35,7 @@ A legenda usa as mesmas constantes.
 | Tarefa em aberto / atrasada | `#1c7ed6` / `#c92a2a` (quadrado) |
 | Alerta ambiental | `#7048e8` (losango, área hachurada) |
 | Seleção | `#0b7285` |
+| Iluminação pública (SEINF), camada de contexto, desligada por padrão | `#5b6770` (cruz pequena com halo branco, a 85% de opacidade, abaixo das árvores; só a partir do zoom 15) |
 | Supressão anual (PRODES Caatinga), rampa do ano mais antigo ao mais recente | `#f4c0d1` → `#8a0f3c` (rosa, a 80% de opacidade); camada de referência, desligada por padrão |
 | Arborização do entorno (Censo 2022), 5 classes de <20% a ≥80% | `#cde2fb` / `#86b6ef` / `#3987e5` / `#1c5cab` / `#0d366b` (um só matiz, claro → escuro, a 80% de opacidade); sem dado: hachura cinza `#a3ada7` |
 

@@ -77,6 +77,15 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
   "Adotada", a quantidade de termos, a categoria do adotante (sem nome) e o ano de referência do mapa
   (não é a data do termo), e a camada de áreas verdes ganha o filtro "Só praças adotadas" (parâmetro
   `adotadas` da URL, combinável com o subtipo). O nome do adotante não existe no sistema.
+- **RF-MAPA-035** — Camada de contexto "Iluminação pública" (pontos de serviço da SEINF),
+  no grupo "Contexto (fontes externas)", **desligada por padrão**. São cerca de 150 mil
+  pontos, por isso vem em vector tiles e só a partir do zoom 15; antes disso o tile é vazio e
+  a legenda diz "aproxime para ver". O símbolo é uma cruz pequena em cinza-ardósia, sem cor
+  de condição, para não competir com as árvores, e fica abaixo delas. O clique no ponto (se
+  não houver árvore ou ocorrência por cima) abre um painel em texto com logradouro, tipo e
+  faixa de altura do poste, lâmpadas, fonte, data dos dados e a atribuição "Prefeitura de
+  Fortaleza, SEINF, dados abertos (CC BY-SA)", também presente na legenda e em "Fontes dos
+  dados". A camada respeita o escopo territorial e a permissão `mapa.ler`.
 - **RF-MAPA-032** — Filtros e camadas são compartilhados com o Inventário
   (abrir a mesma seleção em lista).
 

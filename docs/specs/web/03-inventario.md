@@ -164,6 +164,19 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
   GBIF (a prioridade do Commons volta na próxima consulta bem-sucedida).
 - **RF-INV-022** — Ficha da árvore mostra o cartão da espécie, com link para o
   catálogo.
+- **RF-INV-027** — Aba "Árvores próximas à iluminação" (poste × copa): lista paginada das
+  árvores **ativas** a até *R* metros de um ponto de iluminação pública (SEINF), dentro do
+  escopo territorial de quem consulta, da mais próxima para a mais distante. Cada linha traz
+  a distância e o poste mais próximo (tipo, faixa de altura, código do ponto e logradouro).
+  Filtros por bairro, altura do poste e busca; exportação CSV (conjunto `arvores_iluminacao`,
+  com metadados e registro da exportação) e a ação em lote "Criar tarefas de inspeção" para
+  as árvores marcadas. *R* vem de `ILUMINACAO_RAIO_CONFLITO_M` (padrão 3 m) e é
+  **provisório**: a tela mostra o selo "Provisório" e o aviso "raio provisório, a definir pela
+  URBFOR e pela SEINF". Proximidade não é conflito comprovado, dano nem risco; a regra e o uso
+  para priorizar poda são a [DP-22](../../decisoes/pendentes.md#dp-22), aberta.
+- **RF-INV-028** — A ficha da árvore mostra o "Poste mais próximo" (distância, tipo e altura)
+  quando há um ponto de iluminação a até 15 m. A ocorrência cujo tipo do catálogo fala de
+  fiação, rede elétrica, poste ou iluminação mostra o mesmo dado; o sistema não cria esse tipo.
 - **RN-INV-020** — Referências externas só são aceitas quando o item do
   Wikidata tem nome do táxon (P225) idêntico ao nome científico do catálogo.
   Sem correspondência exata, a espécie fica como "não encontrada". Nada é
