@@ -991,7 +991,9 @@ export const getMapaTileUrl = (camada: string,
  *
  * Abaixo do zoom 16, os pontos são agrupados em células com a contagem
  * (``quantidade``); a partir dele, cada registro vira uma feição. Só as árvores, abaixo do zoom
- * 12, vêm agrupadas por bairro, com a contagem, a pior condição e o nome do bairro.
+ * 12, vêm agrupadas por bairro, com a contagem, a pior condição e o nome do bairro. Os pontos de
+ * iluminação pública nunca são agrupados: vêm um a um a partir do zoom 15 e, antes dele, o tile
+ * é vazio.
  */
 export const mapaTile = async (camada: string,
     z: number,

@@ -15,6 +15,7 @@ import type { IdentificadorExterno } from './identificadorExterno';
 import type { Localizacao } from './localizacao';
 import type { Medida } from './medida';
 import type { OrigemRegistroEnum } from './origemRegistroEnum';
+import type { PosteProximo } from './posteProximo';
 import type { SituacaoArvoreEnum } from './situacaoArvoreEnum';
 import type { TerritorioResumo } from './territorioResumo';
 
@@ -57,6 +58,7 @@ export interface Arvore {
   readonly atualizado_em: string;
   readonly especie_cartao: EspecieCartao | null;
   readonly em_area_verde: AreaVerdeResumo | null;
+  readonly poste_mais_proximo: PosteProximo | null;
   readonly identificadores: readonly IdentificadorExterno[];
   readonly medidas_atuais: readonly Medida[];
   /** @nullable */

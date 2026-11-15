@@ -11,6 +11,7 @@ import type { Localizacao } from './localizacao';
 import type { OcorrenciaArvore } from './ocorrenciaArvore';
 import type { OcorrenciaPrioridade } from './ocorrenciaPrioridade';
 import type { OrigemOcorrenciaEnum } from './origemOcorrenciaEnum';
+import type { PosteProximo } from './posteProximo';
 import type { RegistroVinculado } from './registroVinculado';
 import type { TarefaVinculada } from './tarefaVinculada';
 import type { TerritorioResumo } from './territorioResumo';
@@ -59,6 +60,7 @@ export interface Ocorrencia {
   readonly origem_vinculo: RegistroVinculado | null;
   /** Tarefas vinculadas, com o estado. */
   readonly tarefas: readonly TarefaVinculada[];
+  readonly poste_mais_proximo: PosteProximo | null;
   readonly registrada_por: UsuarioResumo;
   readonly criado_em: string;
   readonly atualizado_em: string;

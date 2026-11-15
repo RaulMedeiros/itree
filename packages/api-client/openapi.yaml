@@ -1609,6 +1609,71 @@ paths:
               schema:
                 $ref: '#/components/schemas/Evidencia'
           description: ''
+  /api/v1/iluminacao/arvores-proximas:
+    get:
+      operationId: iluminacao_arvores_proximas
+      description: |-
+        Árvores ativas a até R metros de um ponto de iluminação pública (R provisório).
+
+        Só proximidade: não afirma conflito, dano nem risco. A regra é decisão da URBFOR e da
+        SEINF (docs/decisoes/pendentes.md). Restrito ao escopo territorial de quem consulta.
+      parameters:
+      - in: query
+        name: altura_poste_max_m
+        schema:
+          type: number
+          format: double
+        description: Só postes cuja faixa de altura termina neste valor (5, 10, 14,
+          17 ou 25).
+      - in: query
+        name: bairro
+        schema:
+          type: string
+        description: Bairro (id) da árvore.
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Código ou endereço da árvore.
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - iluminacao
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedArvoreProximaIluminacaoList'
+          description: ''
+  /api/v1/iluminacao/resumo:
+    get:
+      operationId: iluminacao_resumo
+      description: Fonte e data dos pontos de iluminação e o raio provisório do conflito
+        com as árvores.
+      tags:
+      - iluminacao
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumoIluminacao'
+          description: ''
   /api/v1/implantacao/primeiros-passos:
     get:
       operationId: implantacao_primeiros_passos
@@ -2436,7 +2501,9 @@ paths:
 
         Abaixo do zoom 16, os pontos são agrupados em células com a contagem
         (``quantidade``); a partir dele, cada registro vira uma feição. Só as árvores, abaixo do zoom
-        12, vêm agrupadas por bairro, com a contagem, a pior condição e o nome do bairro.
+        12, vêm agrupadas por bairro, com a contagem, a pior condição e o nome do bairro. Os pontos de
+        iluminação pública nunca são agrupados: vêm um a um a partir do zoom 15 e, antes dele, o tile
+        é vazio.
       parameters:
       - in: query
         name: bairro
@@ -3356,7 +3423,8 @@ paths:
         name: conjunto
         schema:
           type: string
-        description: arvores | ocorrencias | inspecoes | tarefas | alertas
+        description: arvores | arvores_iluminacao | ocorrencias | inspecoes | tarefas
+          | alertas
         required: true
       - in: query
         name: formato
@@ -4251,6 +4319,11 @@ components:
           - $ref: '#/components/schemas/AreaVerdeResumo'
           nullable: true
           readOnly: true
+        poste_mais_proximo:
+          allOf:
+          - $ref: '#/components/schemas/PosteProximo'
+          nullable: true
+          readOnly: true
         identificadores:
           type: array
           items:
@@ -4297,6 +4370,7 @@ components:
       - motivo_situacao
       - ocorrencias_abertas
       - origem_registro
+      - poste_mais_proximo
       - situacao
       - ultima_inspecao_em
       - valida
@@ -4384,6 +4458,101 @@ components:
       - id
       - latitude
       - longitude
+    ArvoreProximaIluminacao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        especie:
+          allOf:
+          - $ref: '#/components/schemas/EspecieResumo'
+          readOnly: true
+          nullable: true
+        especie_estado:
+          $ref: '#/components/schemas/EstadoEspecieEnum'
+        especie_texto_original:
+          type: string
+          description: Nome como veio da fonte, quando não casou com o catálogo.
+          maxLength: 200
+        localizacao:
+          allOf:
+          - $ref: '#/components/schemas/Localizacao'
+          nullable: true
+          readOnly: true
+        localizacao_origem:
+          oneOf:
+          - $ref: '#/components/schemas/OrigemLocalizacaoEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        precisao_m:
+          type: number
+          format: double
+          nullable: true
+          description: Precisão horizontal informada, em metros.
+        endereco:
+          type: string
+          maxLength: 300
+        bairro:
+          allOf:
+          - $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        situacao:
+          $ref: '#/components/schemas/SituacaoArvoreEnum'
+        valida:
+          type: boolean
+          readOnly: true
+        origem_registro:
+          $ref: '#/components/schemas/OrigemRegistroEnum'
+        ocorrencias_abertas:
+          type: integer
+          readOnly: true
+          default: 0
+        condicao_aparente:
+          type: string
+          readOnly: true
+        condicao_aparente_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        ultima_inspecao_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Data da inspeção validada mais recente.
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        atualizado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        poste:
+          allOf:
+          - $ref: '#/components/schemas/PosteProximo'
+          readOnly: true
+          nullable: true
+      required:
+      - atualizado_em
+      - bairro
+      - codigo
+      - condicao_aparente
+      - condicao_aparente_em
+      - criado_em
+      - especie
+      - id
+      - localizacao
+      - ocorrencias_abertas
+      - origem_registro
+      - poste
+      - ultima_inspecao_em
+      - valida
     ArvoreRequest:
       type: object
       description: Detalhe e edição. Campos validados exigem justificativa (RF-INV-009).
@@ -4611,6 +4780,10 @@ components:
           items:
             type: object
             additionalProperties: {}
+        iluminacao:
+          type: object
+          additionalProperties: {}
+          nullable: true
         arvores:
           type: object
           additionalProperties: {}
@@ -4628,6 +4801,7 @@ components:
       required:
       - areas_verdes
       - arvores
+      - iluminacao
       - limites_escopo
       - ocorrencias
       - territorios
@@ -7402,6 +7576,11 @@ components:
             $ref: '#/components/schemas/TarefaVinculada'
           readOnly: true
           description: Tarefas vinculadas, com o estado.
+        poste_mais_proximo:
+          allOf:
+          - $ref: '#/components/schemas/PosteProximo'
+          nullable: true
+          readOnly: true
         registrada_por:
           allOf:
           - $ref: '#/components/schemas/UsuarioResumo'
@@ -7434,6 +7613,7 @@ components:
       - origem
       - origem_referencia
       - origem_vinculo
+      - poste_mais_proximo
       - prioridade
       - prioridade_definida_em
       - prioridade_definida_por
@@ -7675,6 +7855,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Alerta'
+    PaginatedArvoreProximaIluminacaoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArvoreProximaIluminacao'
     PaginatedArvoreResumoList:
       type: object
       required:
@@ -8464,6 +8667,35 @@ components:
         * `admin.auditoria` - Consultar auditoria
         * `admin.territorios` - Administrar territórios
         * `admin.configuracao` - Administrar catálogos e integrações
+    PosteProximo:
+      type: object
+      properties:
+        codigo:
+          type: string
+          description: Código do ponto de serviço na fonte (SEINF).
+        distancia_m:
+          type: number
+          format: double
+        tipo:
+          type: string
+          description: 'Ex.: "CONCRETO DUPLO T".'
+        altura_min_m:
+          type: number
+          format: double
+          nullable: true
+        altura_max_m:
+          type: number
+          format: double
+          nullable: true
+        logradouro:
+          type: string
+      required:
+      - altura_max_m
+      - altura_min_m
+      - codigo
+      - distancia_m
+      - logradouro
+      - tipo
     PrazoEmLoteRequest:
       type: object
       description: 'Quais registros a ação alcança: os marcados (``ids``) ou todos
@@ -8808,6 +9040,52 @@ components:
       - colunas
       - paginas
       - total
+    ResumoIluminacao:
+      type: object
+      properties:
+        importada:
+          type: boolean
+          description: Há pontos importados.
+        quantidade:
+          type: integer
+        fonte:
+          type: string
+        fonte_url:
+          type: string
+        licenca:
+          type: string
+        data_referencia:
+          type: string
+          format: date
+          nullable: true
+        ingerido_em:
+          type: string
+          format: date-time
+          nullable: true
+        raio_conflito_m:
+          type: number
+          format: double
+          description: Raio usado para listar árvores perto da iluminação. PROVISÓRIO.
+        raio_provisorio:
+          type: boolean
+          description: Sempre verdadeiro enquanto a URBFOR e a SEINF não definirem
+            o raio.
+        alturas_maximas_m:
+          type: array
+          items:
+            type: number
+            format: double
+      required:
+      - alturas_maximas_m
+      - data_referencia
+      - fonte
+      - fonte_url
+      - importada
+      - ingerido_em
+      - licenca
+      - quantidade
+      - raio_conflito_m
+      - raio_provisorio
     ResumoImportacao:
       type: object
       properties:
