@@ -333,6 +333,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "itree.areas_verdes.tasks.reimportar_areas_verdes",
         "schedule": crontab(minute=0, hour=4, day_of_month=2),
     },
+    "reimportar-adocao-pracas": {
+        "task": "itree.areas_verdes.tasks.reimportar_adocao_pracas",
+        "schedule": crontab(minute=30, hour=4, day_of_month=2),
+    },
     # Conectores vencidos pela periodicidade (RF-INT-006): confere de hora em hora.
     "disparar-conectores": {
         "task": "itree.conectores.tasks.disparar_conectores_vencidos",

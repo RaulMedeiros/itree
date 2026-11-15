@@ -89,3 +89,57 @@ class AreaVerde(ModeloBase):
 
     def __str__(self) -> str:
         return f"{self.get_tipo_display()} {self.nome}"
+
+
+class TipoAdotante(models.TextChoices):
+    """Categoria do adotante, sem nome: só o que a razão social da fonte permite afirmar."""
+
+    EMPRESA = "empresa", "Empresa"
+    ASSOCIACAO = "associacao", "Associação ou condomínio"
+    NAO_CLASSIFICADO = "nao_classificado", "Não classificado"
+
+
+class MotivoSemVinculo(models.TextChoices):
+    NENHUMA_PRACA_PROXIMA = "nenhuma_praca_proxima", "Nenhuma praça a até 50 m"
+
+
+class AdocaoPraca(ModeloBase):
+    """Termo de adoção de praça ou área verde, do mapa 622 do Fortaleza em Mapas (SEUMA).
+
+    **Não guarda nada de pessoa**: o nome do adotante e qualquer contato são descartados na
+    leitura (``itree.areas_verdes.adocao``); só a categoria do adotante (``tipo_adotante``) fica,
+    e só quando a razão social deixa claro (empresa, associação ou condomínio). A fonte não traz
+    data do termo: ``ano_referencia`` é o ano de referência do mapa, não o do termo.
+
+    O ponto da fonte é ligado à praça mais próxima a até 50 m (``area_verde``); sem praça nesse
+    raio, fica sem vínculo e ``motivo_sem_vinculo`` diz por quê.
+    """
+
+    codigo_externo = models.CharField(max_length=50, unique=True)
+    nome = models.CharField(max_length=250, help_text="Nome da praça ou área, como na fonte.")
+    regional = models.CharField(max_length=50, blank=True)
+    tipo_adotante = models.CharField(max_length=20, choices=TipoAdotante.choices)
+    geom = models.PointField(srid=4326)
+    ano_referencia = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    area_verde = models.ForeignKey(
+        AreaVerde, null=True, blank=True, on_delete=models.SET_NULL, related_name="adocoes"
+    )
+    distancia_m = models.FloatField(
+        null=True, blank=True, help_text="Distância geodésica até a praça ligada."
+    )
+    motivo_sem_vinculo = models.CharField(
+        max_length=30, choices=MotivoSemVinculo.choices, blank=True
+    )
+
+    fonte = models.CharField(max_length=250)
+    fonte_url = models.URLField(max_length=500, blank=True)
+    licenca = models.CharField(max_length=300, blank=True)
+    data_referencia = models.DateField(null=True, blank=True)
+    ingerido_em = models.DateTimeField()
+
+    class Meta:
+        ordering = ["nome", "codigo_externo"]
+
+    def __str__(self) -> str:
+        return f"Adoção: {self.nome}"

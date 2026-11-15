@@ -18,3 +18,14 @@ def reimportar_areas_verdes() -> None:
     except Exception:
         logger.exception("Falha ao reimportar as áreas verdes.")
         raise
+
+
+@shared_task
+def reimportar_adocao_pracas() -> None:
+    """Roda ``importar_adocao_pracas`` (mensal, depois das áreas verdes). A importação é
+    atômica: se a API falhar, nada muda e a falha sobe para o Celery."""
+    try:
+        call_command("importar_adocao_pracas")
+    except Exception:
+        logger.exception("Falha ao reimportar a adoção de praças.")
+        raise

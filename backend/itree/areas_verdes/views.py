@@ -2,6 +2,7 @@ import json
 
 from django.contrib.gis.db.models.functions import AsGeoJSON
 from django.contrib.gis.geos import Polygon
+from django.db.models import Exists, OuterRef
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets
@@ -12,7 +13,13 @@ from rest_framework.response import Response
 from itree.contas.acesso import filtrar_por_escopo, requer
 
 from .cnuc import chave_da_uc
-from .models import AreaVerde, SubtipoAreaVerde, TipoAreaVerde
+from .models import (
+    AdocaoPraca,
+    AreaVerde,
+    SubtipoAreaVerde,
+    TipoAdotante,
+    TipoAreaVerde,
+)
 from .servico import situacao_da_fonte
 
 PARAMETROS = [
@@ -21,6 +28,11 @@ PARAMETROS = [
         "subtipo",
         str,
         description="Só das praças: praca | areninha | calcadao | rotatoria | sem_denominacao.",
+    ),
+    OpenApiParameter(
+        "adotada",
+        str,
+        description="1 devolve só as praças com adoção (mapa 622 do Fortaleza em Mapas).",
     ),
     OpenApiParameter("bbox", str, description="Limites oeste,sul,leste,norte em graus (WGS 84)."),
     OpenApiParameter("precisao", int, description="Casas decimais da geometria (padrão 5)."),
@@ -61,7 +73,27 @@ def _grupos_de_unidades(usuario) -> dict[str, tuple[int, float | None]]:
     }
 
 
-def _feicao(a: AreaVerde, grupos: dict[str, tuple[int, float | None]]) -> dict:
+def _adocoes_por_area(ids=None) -> dict:
+    """Por praça: quantas adoções, categorias de adotante (sem nome) e ano de referência.
+
+    Só vêm da adoção os campos que não identificam pessoa (ver ``adocao``)."""
+    adocoes = AdocaoPraca.objects.filter(area_verde__isnull=False)
+    if ids is not None:
+        adocoes = adocoes.filter(area_verde_id__in=ids)
+    por_area: dict = {}
+    for area_id, tipo, ano in adocoes.values_list(
+        "area_verde_id", "tipo_adotante", "ano_referencia"
+    ):
+        dados = por_area.setdefault(area_id, {"n": 0, "tipos": set(), "ano": ano})
+        dados["n"] += 1
+        if tipo != TipoAdotante.NAO_CLASSIFICADO:
+            dados["tipos"].add(tipo)
+        dados["ano"] = max(filter(None, [dados["ano"], ano]), default=None)
+    return por_area
+
+
+def _feicao(a: AreaVerde, grupos: dict[str, tuple[int, float | None]], adocoes: dict) -> dict:
+    adocao = adocoes.get(a.id)
     unidade = grupos.get(a.codigo_cnuc or chave_da_uc(a.nome))
     if a.tipo != TipoAreaVerde.UNIDADE_CONSERVACAO:
         unidade = None
@@ -86,6 +118,14 @@ def _feicao(a: AreaVerde, grupos: dict[str, tuple[int, float | None]]) -> dict:
             # Só nas unidades de conservação: feições da mesma unidade e a área somada delas.
             "feicoes_da_unidade": unidade[0] if unidade else None,
             "area_total_da_unidade_m2": unidade[1] if unidade else None,
+            # Adoção de praça (mapa 622): só a existência, a quantidade, a categoria do adotante
+            # (sem nome) e o ano de referência do mapa. A fonte não traz a data do termo.
+            "adotada": adocao is not None,
+            "adocoes": adocao["n"] if adocao else 0,
+            "adocao_tipos": sorted(TipoAdotante(t).label for t in adocao["tipos"])
+            if adocao
+            else [],
+            "adocao_ano_referencia": adocao["ano"] if adocao else None,
             "fonte": a.fonte,
             "fonte_url": a.fonte_url,
             "licenca": a.licenca,
@@ -101,7 +141,7 @@ def _feicao(a: AreaVerde, grupos: dict[str, tuple[int, float | None]]) -> dict:
     ),
     retrieve=extend_schema(
         operation_id="areas_verdes_obter",
-        parameters=[PARAMETROS[3]],
+        parameters=[PARAMETROS[4]],
         responses=GEOJSON,
     ),
 )
@@ -136,6 +176,8 @@ class AreaVerdeViewSet(viewsets.ReadOnlyModelViewSet):
                     {"subtipo": f"Use um de: {', '.join(SubtipoAreaVerde.values)}."}
                 )
             qs = qs.filter(subtipo=subtipo)
+        if params.get("adotada") == "1":
+            qs = qs.filter(Exists(AdocaoPraca.objects.filter(area_verde=OuterRef("pk"))))
         if bbox := params.get("bbox"):
             qs = qs.filter(geom__intersects=_bbox(bbox))
         return qs.annotate(geometria=AsGeoJSON("geom", precision=self._precisao()))
@@ -143,7 +185,9 @@ class AreaVerdeViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request: Request, *args, **kwargs) -> Response:
         """FeatureCollection com fonte, licença e datas em cada feição (RN-PROV-003)."""
         grupos = _grupos_de_unidades(request.user)
-        feicoes = [_feicao(a, grupos) for a in self.get_queryset()]
+        areas = list(self.get_queryset())
+        adocoes = _adocoes_por_area({a.id for a in areas})
+        feicoes = [_feicao(a, grupos, adocoes) for a in areas]
         return Response(
             {
                 "type": "FeatureCollection",
@@ -154,4 +198,7 @@ class AreaVerdeViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
     def retrieve(self, request: Request, *args, **kwargs) -> Response:
-        return Response(_feicao(self.get_object(), _grupos_de_unidades(request.user)))
+        area = self.get_object()
+        return Response(
+            _feicao(area, _grupos_de_unidades(request.user), _adocoes_por_area({area.id}))
+        )

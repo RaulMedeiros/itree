@@ -796,6 +796,103 @@ describe("áreas verdes (praças, parques e unidades de conservação)", () => {
     expect(within(painel).getByText("Praça · Areninha")).toBeInTheDocument();
   });
 
+  it("o painel da praça adotada diz Adotada, com a categoria e o ano, e nunca o nome do adotante", async () => {
+    const mapa = await abrirMapa("/mapa?areas_verdes=1");
+    await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));
+    act(() =>
+      mapa.emitir(
+        "click",
+        {
+          point: { x: 1, y: 1 },
+          features: [
+            {
+              properties: {
+                ...AREAS_VERDES.features[0]!.properties,
+                adotada: true,
+                adocoes: 2,
+                // O MapLibre devolve a lista da propriedade como texto JSON.
+                adocao_tipos: JSON.stringify(["Empresa"]),
+                adocao_ano_referencia: 2023,
+              },
+            },
+          ],
+        },
+        "areas-verdes-preenchimento",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da área verde" });
+    expect(within(painel).getByText("Adotada")).toBeInTheDocument();
+    expect(within(painel).getByText(/2 termos de adoção registrados/)).toHaveTextContent(
+      /referência 2023 · empresa/,
+    );
+    expect(within(painel).getByText(/O nome do adotante não é importado/)).toBeInTheDocument();
+  });
+
+  it("o painel de uma área sem adoção não diz Adotada", async () => {
+    const mapa = await abrirMapa("/mapa?areas_verdes=1");
+    await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));
+    act(() =>
+      mapa.emitir(
+        "click",
+        {
+          point: { x: 1, y: 1 },
+          features: [{ properties: { ...AREAS_VERDES.features[0]!.properties, adotada: false } }],
+        },
+        "areas-verdes-preenchimento",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", { name: "Detalhes da área verde" });
+    expect(within(painel).queryByText("Adotada")).toBeNull();
+  });
+
+  it("o filtro Só praças adotadas esconde o resto da camada e vem da URL", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?areas_verdes=1");
+    const caixa = await screen.findByRole("checkbox", { name: "Só praças adotadas" });
+    expect(caixa).not.toBeChecked();
+    const soAdotadas = ["==", ["get", "adotada"], true];
+    const semUc = ["!=", ["get", "tipo"], "unidade_conservacao"];
+    await usuario.click(caixa);
+    await vi.waitFor(() => {
+      expect(mapa.setFilter).toHaveBeenCalledWith("areas-verdes-preenchimento", soAdotadas);
+      expect(mapa.setFilter).toHaveBeenCalledWith("areas-verdes-contorno", [
+        "all",
+        semUc,
+        soAdotadas,
+      ]);
+      expect(mapa.setFilter).toHaveBeenCalledWith("areas-verdes-contorno-uc", [
+        "all",
+        ["==", ["get", "tipo"], "unidade_conservacao"],
+        soAdotadas,
+      ]);
+    });
+    await usuario.click(caixa);
+    await vi.waitFor(() =>
+      expect(mapa.setFilter).toHaveBeenLastCalledWith("areas-verdes-contorno-uc", [
+        "==",
+        ["get", "tipo"],
+        "unidade_conservacao",
+      ]),
+    );
+  });
+
+  it("Só praças adotadas se combina com o subtipo e só aparece com a camada ligada", async () => {
+    const mapa = await abrirMapa("/mapa?areas_verdes=1&adotadas=1&subtipo_praca=calcadao");
+    expect(await screen.findByRole("checkbox", { name: "Só praças adotadas" })).toBeChecked();
+    await vi.waitFor(() =>
+      expect(mapa.setFilter).toHaveBeenCalledWith("areas-verdes-preenchimento", [
+        "all",
+        ["any", ["!=", ["get", "tipo"], "praca"], ["==", ["get", "subtipo"], "calcadao"]],
+        ["==", ["get", "adotada"], true],
+      ]),
+    );
+  });
+
+  it("não mostra Só praças adotadas com a camada de áreas verdes desligada", async () => {
+    await abrirMapa();
+    expect(screen.queryByRole("checkbox", { name: "Só praças adotadas" })).toBeNull();
+  });
+
   it("o painel da unidade de conservação mostra o código do CNUC e agrupa as feições", async () => {
     const mapa = await abrirMapa("/mapa?areas_verdes=1");
     await vi.waitFor(() => expect(mapa.dadosDe("areas-verdes").features).toHaveLength(2));

@@ -12,8 +12,8 @@ com o nome como chave só quando a fonte não traz código.
 O subtipo das praças (praça, areninha, calçadão, rotatória, sem denominação) sai do
 nome oficial; a regra está em ``itree.areas_verdes.subtipos``.
 
-Não importa nenhum campo de pessoa (o mapa 622, "Adoção de Praças", traz o
-nome do adotante, que é dado pessoal e fica de fora).
+Não importa nenhum campo de pessoa. A adoção de praças (mapa 622) tem comando próprio,
+``importar_adocao_pracas``, que descarta o nome do adotante na leitura.
 """
 
 import json
