@@ -45,7 +45,8 @@ Endereços de referência: ver §7.2 da [especificação consolidada](../../refe
 - **RF-INT-008** — Conectores de fontes externas, configuráveis em Administração >
   Integrações: GeoJSON por endereço, WFS (GetFeature com saída GeoJSON), ArcGIS REST
   (`query` com `f=geojson`, paginado por `resultOffset`) e CKAN (`package_show` e o recurso
-  GeoJSON ou CSV). Cada conector guarda destino, periodicidade (manual, diária, semanal ou
+  GeoJSON, CSV ou XLSX; no CSV e no XLSX os pontos saem das colunas de latitude e longitude
+  configuráveis, e o XLSX passa pelos limites de tamanho e de membros da importação de inventário). Cada conector guarda destino, periodicidade (manual, diária, semanal ou
   mensal), órgão, licença e página da fonte (atribuição obrigatória) e é auditado. Só quem tem
   `admin.configuracao` cria, edita, testa ou sincroniza.
 - **RF-INT-009** — A busca de um conector é tratada como SSRF em potencial: só HTTPS, só hosts
@@ -71,6 +72,21 @@ Endereços de referência: ver §7.2 da [especificação consolidada](../../refe
   do conector sem confirmar nem descartar, nenhuma nova é criada.
 - **RF-INT-013** — Conector ativo cuja última execução falhou, ou que passou de duas
   periodicidades sem rodar, entra no indicador de fontes do cabeçalho como as demais fontes.
+- **RF-INT-014** — Planilhas em ficha da URBFOR (doação de mudas a pessoa física e jurídica, e
+  plantio): comandos `importar_doacao_mudas` e `importar_plantio_urbfor`. A doação grava quantidade
+  por espécie, categoria e tipo de beneficiário, **sem requerente nem endereço**, e não vai ao mapa
+  (não tem local). O plantio grava data, endereço e local em texto, espécies e quantidades e o bairro
+  lido **só do texto do endereço** (aliases do manejo da URBFOR; sem bairro, o motivo); **não
+  geocodifica nem cria árvore** (DP-18). Fonte, licença e data de referência em cada linha (RF-INT-001);
+  idempotente por tipo e ano. O número que sai de uma planilha é o informado pela URBFOR, sem
+  conferência em campo.
+- **RF-INT-015** — Adoção de praças e áreas verdes (Fortaleza em Mapas, mapa 622): comando
+  `importar_adocao_pracas`, com reimportação mensal. **O nome do adotante e qualquer contato são
+  descartados na leitura**, sem ser gravados, mostrados nem registrados em log; só ficam o
+  identificador, o nome da praça, a regional, o ponto, o ano de referência e a categoria do adotante
+  (empresa, associação ou condomínio, quando a razão social deixa claro). Cada ponto é ligado à praça
+  mais próxima a até 50 m; sem praça nesse raio, fica sem vínculo, com o motivo. A fonte não informa a
+  data do termo.
 
 ## 3. Fluxo para alertas ambientais
 

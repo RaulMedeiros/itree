@@ -73,6 +73,10 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
   ocorrências. Cada uma mostra legenda, órgão, licença, página da fonte e data da última
   sincronização. O popup mostra as propriedades com os rótulos cadastrados no conector (com
   rótulos, só as listadas) e sempre como texto. A feição só é buscada ao ligar a camada.
+- **RF-MAPA-034** — Praça adotada (mapa 622, SEUMA; RF-INT-015): a ficha da área verde mostra
+  "Adotada", a quantidade de termos, a categoria do adotante (sem nome) e o ano de referência do mapa
+  (não é a data do termo), e a camada de áreas verdes ganha o filtro "Só praças adotadas" (parâmetro
+  `adotadas` da URL, combinável com o subtipo). O nome do adotante não existe no sistema.
 - **RF-MAPA-032** — Filtros e camadas são compartilhados com o Inventário
   (abrir a mesma seleção em lista).
 

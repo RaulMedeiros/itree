@@ -32,6 +32,15 @@ Todas seguem o contrato de indicador de [W-06 §2](06-visao-geral.md#2-contrato-
   Em GeoJSON, também o sistema de referência.
 - **RF-REL-004** — Exportações ficam registradas na auditoria.
 - **RF-REL-005** — Relatórios salvos (filtros + indicadores) reutilizáveis.
+- **RF-REL-007** — Análises de doação de mudas da URBFOR (2022): "Mudas doadas por espécie" (as 15
+  mais doadas, uma a uma, e o restante em "Outras") e "Mudas doadas por categoria" (ornamental,
+  nativa ou frutífera, palmeira, medicinal e "Categoria não informada"), com fonte, licença e ano.
+  É dado do município inteiro e sem local: exige escopo municipal, não vai ao mapa, não traz nome
+  nem endereço de quem recebeu e não depende do período escolhido (RF-INT-014).
+- **RF-REL-008** — "Plantios por bairro (URBFOR, 2022)": mudas plantadas por bairro do escopo, com o
+  bairro lido do texto do endereço; a parcela "Sem bairro identificado" (e o motivo) é declarada e só
+  aparece com escopo municipal. Bairro sem plantio identificado não é zero. Não cria árvore nem
+  localiza o plantio (RF-INT-014).
 - **RF-REL-006** — Rascunho de relatório assistido por IA (P1, posterior): texto
   marcado como gerado por IA, com referências aos dados usados, editável antes
   de exportar (T-04).
