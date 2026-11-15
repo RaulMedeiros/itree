@@ -1,4 +1,4 @@
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import ListAPIView
@@ -42,18 +42,20 @@ def arvores_do_conflito(usuario, params):
     return servico.arvores_em_conflito(arvores, altura_max_m=altura_do_parametro(params))
 
 
-@extend_schema(
-    operation_id="iluminacao_arvores_proximas",
-    parameters=[
-        OpenApiParameter("bairro", str, description="Bairro (id) da árvore."),
-        OpenApiParameter(
-            "altura_poste_max_m",
-            float,
-            description="Só postes cuja faixa de altura termina neste valor (5, 10, 14, 17 ou 25).",
-        ),
-        OpenApiParameter("busca", str, description="Código ou endereço da árvore."),
-    ],
-    responses=ArvoreProximaIluminacaoSerializer(many=True),
+@extend_schema_view(
+    get=extend_schema(
+        operation_id="iluminacao_arvores_proximas",
+        parameters=[
+            OpenApiParameter("bairro", str, description="Bairro (id) da árvore."),
+            OpenApiParameter(
+                "altura_poste_max_m",
+                float,
+                description="Só postes cuja faixa de altura termina neste valor (5, 10, 14, 17 ou 25).",
+            ),
+            OpenApiParameter("busca", str, description="Código ou endereço da árvore."),
+        ],
+        responses=ArvoreProximaIluminacaoSerializer(many=True),
+    )
 )
 class ArvoresProximasView(ListAPIView):
     """Árvores ativas a até R metros de um ponto de iluminação pública (R provisório).

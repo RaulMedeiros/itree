@@ -142,6 +142,14 @@ const servidor = criarServidor(
           subtipos: { praca: 432, areninha: 19, calcadao: 5, rotatoria: 1, sem_denominacao: 27 },
         },
       ],
+      iluminacao: {
+        quantidade: 2,
+        fonte: "Prefeitura de Fortaleza, SEINF: Pontos de iluminação pública (dados abertos)",
+        fonte_url: "https://dados.fortaleza.ce.gov.br/x.xlsx",
+        licenca: "Creative Commons Atribuição-CompartilhaIgual (CC BY-SA)",
+        data_referencia: "2022-11-16",
+        ingerido_em: "2026-11-15T12:00:00Z",
+      },
       arvores: { total: 3, sem_localizacao: 0, atualizado_em: null },
       ocorrencias: null,
       limites_escopo: null,
@@ -1206,5 +1214,100 @@ describe("árvores agrupadas por bairro no zoom afastado (M-29)", () => {
       ),
     );
     expect(mapa.easeTo).toHaveBeenCalledWith(expect.objectContaining({ zoom: 11.5 }));
+  });
+});
+
+describe("iluminação pública (SEINF)", () => {
+  const ATRIBUICAO = "Prefeitura de Fortaleza, SEINF, dados abertos (CC BY-SA)";
+  const PONTO = {
+    id: "904705",
+    logradouro: "HERACLITO GRACA, AV",
+    poste: "CONCRETO DUPLO T",
+    altura_min_m: 5,
+    altura_max_m: 10,
+    lampadas: "SODIO 400 W (2)",
+  };
+
+  it("fica no grupo Contexto, desligada por padrão, em MVT e só a partir do zoom 15", async () => {
+    const mapa = await abrirMapa();
+    const grupo = (await screen.findByText("Contexto (fontes externas)")).closest("details")!;
+    expect(within(grupo).getByRole("checkbox", { name: /Iluminação pública/ })).not.toBeChecked();
+    const camada = mapa.camadaDe("iluminacao-pontos")!;
+    expect(camada.minzoom).toBe(15);
+    expect(camada.layout!.visibility).toBe("none");
+    expect(mapa.setLayoutProperty).not.toHaveBeenCalledWith(
+      "iluminacao-pontos",
+      "visibility",
+      "visible",
+    );
+    expect(mapa.fontes.get("iluminacao")!.tiles![0]).toContain("/api/v1/mapa/tiles/iluminacao/");
+    // Abaixo das árvores: entra antes delas no desenho.
+    const ordem = mapa.camadas.map((c) => c.id);
+    expect(ordem.indexOf("iluminacao-pontos")).toBeLessThan(ordem.indexOf("arvores-pontos"));
+    expect(screen.queryByTestId("legenda-iluminacao")).not.toBeInTheDocument();
+  });
+
+  it("ao ligar, mostra a camada e a legenda explica 'aproxime para ver' abaixo do zoom 15", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await usuario.click(await screen.findByRole("checkbox", { name: /Iluminação pública/ }));
+    expect(mapa.setLayoutProperty).toHaveBeenCalledWith(
+      "iluminacao-pontos",
+      "visibility",
+      "visible",
+    );
+    const legenda = await screen.findByTestId("legenda-iluminacao");
+    expect(within(legenda).getByText(/Aproxime para ver/)).toBeInTheDocument();
+    expect(within(legenda).getByText(`Fonte: ${ATRIBUICAO}.`)).toBeInTheDocument();
+    // O painel de camadas também avisa, junto do controle.
+    expect(screen.getAllByText(/Aproxime o mapa para ver os pontos de iluminação/)).toHaveLength(1);
+  });
+
+  it("com o zoom a partir de 15 o aviso some, mas a atribuição fica", async () => {
+    const usuario = userEvent.setup();
+    await abrirMapa("/mapa?iluminacao=1&zoom=16");
+    // Com o painel de camadas aberto, a legenda começa recolhida.
+    await usuario.click(await screen.findByRole("button", { name: "Legenda" }));
+    const legenda = await screen.findByTestId("legenda-iluminacao");
+    expect(within(legenda).queryByText(/Aproxime para ver/)).not.toBeInTheDocument();
+    expect(within(legenda).getByText(`Fonte: ${ATRIBUICAO}.`)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Iluminação pública: Prefeitura de Fortaleza, SEINF/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/dados de 16\/11\/2022/)).toBeInTheDocument();
+  });
+
+  it("clicar no ponto mostra, em texto, logradouro, poste, lâmpadas e a fonte", async () => {
+    const mapa = await abrirMapa("/mapa?iluminacao=1&zoom=16");
+    mapa.renderizadas = [];
+    act(() =>
+      mapa.emitir(
+        "click",
+        { point: { x: 1, y: 1 }, features: [{ properties: PONTO }] },
+        "iluminacao-pontos",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", {
+      name: "Detalhes do ponto de iluminação",
+    });
+    expect(within(painel).getByText(/Heraclito Graca, Av/)).toBeInTheDocument();
+    expect(within(painel).getByText(/Concreto Duplo T, 5 a 10 m/)).toBeInTheDocument();
+    expect(within(painel).getByText("SODIO 400 W (2)")).toBeInTheDocument();
+    expect(within(painel).getByText(ATRIBUICAO, { exact: false })).toBeInTheDocument();
+  });
+
+  it("uma árvore por cima do ponto leva o clique, não o painel do poste", async () => {
+    const mapa = await abrirMapa("/mapa?iluminacao=1&zoom=16");
+    mapa.renderizadas = [{ properties: { id: "a-1" } }];
+    act(() =>
+      mapa.emitir(
+        "click",
+        { point: { x: 1, y: 1 }, features: [{ properties: PONTO }] },
+        "iluminacao-pontos",
+      ),
+    );
+    expect(
+      screen.queryByRole("complementary", { name: "Detalhes do ponto de iluminação" }),
+    ).not.toBeInTheDocument();
   });
 });

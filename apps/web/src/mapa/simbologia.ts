@@ -46,6 +46,19 @@ export const COR_ALERTA = "#7048e8";
 export const COR_SELECAO = "#0b7285";
 
 /**
+ * Iluminação pública (SEINF): camada de contexto, discreta para não competir com as árvores. Uma
+ * cruz pequena em cinza-ardósia com halo branco: forma própria (não é círculo, triângulo, quadrado
+ * nem losango) e sem cor de condição.
+ */
+export const COR_ILUMINACAO = "#5b6770";
+export const ID_ILUMINACAO = "poste-iluminacao";
+/**
+ * Zoom a partir do qual o servidor entrega os pontos de iluminação (~150 mil); antes dele, o tile
+ * vem vazio. O mesmo valor está em `ZOOM_ILUMINACAO`, em `backend/itree/mapa/views.py`.
+ */
+export const ZOOM_ILUMINACAO = 15;
+
+/**
  * Supressão anual (PRODES Caatinga, INPE): camada histórica de referência, não alerta. Rampa
  * rosa, do claro (mais antigo) ao escuro (mais recente), para não competir com o roxo dos alertas,
  * o laranja da condição "Ruim" nem o azul do Censo.
@@ -236,6 +249,23 @@ export function registrarIcones(m: MapaMapLibre) {
       c.fillRect(t * 0.3, t * 0.56, t * 0.4, t * 0.08);
     });
   }
+  desenhar(m, ID_ILUMINACAO, 12, (c, t) => {
+    const braco = t * 0.34;
+    c.lineCap = "round";
+    for (const [largura, cor] of [
+      [t * 0.3, "#ffffff"],
+      [t * 0.14, COR_ILUMINACAO],
+    ] as const) {
+      c.lineWidth = largura;
+      c.strokeStyle = cor;
+      c.beginPath();
+      c.moveTo(t / 2 - braco, t / 2);
+      c.lineTo(t / 2 + braco, t / 2);
+      c.moveTo(t / 2, t / 2 - braco);
+      c.lineTo(t / 2, t / 2 + braco);
+      c.stroke();
+    }
+  });
   desenhar(m, "alerta", TAM_ICONE, (c, t) => {
     const b = t * 0.1;
     c.beginPath();

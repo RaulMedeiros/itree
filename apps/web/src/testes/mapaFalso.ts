@@ -7,12 +7,13 @@ import { vi } from "vitest";
 type Manipulador = (e: unknown) => void;
 
 export class MapaFalso {
-  fontes = new Map<string, { data: unknown }>();
+  fontes = new Map<string, { data: unknown; tiles?: string[] }>();
   camadas: {
     id: string;
     type: string;
     source?: string;
     antesDe?: string;
+    minzoom?: number;
     paint?: Record<string, unknown>;
     layout?: Record<string, unknown>;
   }[] = [];
@@ -27,8 +28,8 @@ export class MapaFalso {
   easeTo = vi.fn();
   zoom = 12;
 
-  addSource(id: string, fonte: { data?: unknown }) {
-    this.fontes.set(id, { data: fonte.data });
+  addSource(id: string, fonte: { data?: unknown; tiles?: string[] }) {
+    this.fontes.set(id, { data: fonte.data, tiles: fonte.tiles });
   }
   getSource(id: string) {
     const fonte = this.fontes.get(id);
@@ -43,6 +44,7 @@ export class MapaFalso {
       id: string;
       type: string;
       source?: string;
+      minzoom?: number;
       paint?: Record<string, unknown>;
       layout?: Record<string, unknown>;
     },

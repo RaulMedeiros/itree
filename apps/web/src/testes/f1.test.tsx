@@ -80,6 +80,7 @@ const OCORRENCIA: Ocorrencia = {
   origem_referencia: "",
   origem_vinculo: null,
   tarefas: [],
+  poste_mais_proximo: null,
   registrada_por: { id: "u-gestor", nome: "Gabi Gestora", email: "gabi@itree.teste" },
   criado_em: "2026-10-31T12:00:00Z",
   atualizado_em: "2026-10-31T12:00:00Z",
