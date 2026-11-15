@@ -36,6 +36,7 @@ if curl -sf -m 90 --retry 4 --retry-all-errors "${MAPAS}17" -o "$TMP/regionais.g
   $M importar_limites_fortaleza --arquivo-regionais /tmp/telas-dados/regionais-oficiais.geojson \
     --arquivo-bairros /tmp/telas-dados/bairros-oficiais.geojson --municipio Fortaleza
   MUNICIPIO="Fortaleza"
+  LIMITES_OFICIAIS=1
   # Arborização do entorno por bairro (IBGE, Censo 2022), cruzada pelo código IBGE.
   if curl -sf -m 180 --retry 4 --retry-all-errors "$CENSO" -o "$TMP/censo.zip"; then
     docker compose cp "$TMP/censo.zip" api:/tmp/telas-dados/censo-entorno.zip
@@ -46,6 +47,27 @@ else
   $M importar_territorios /tmp/telas-dados/bairros-sinteticos.geojson --tipo bairro \
     --campo-nome NOME --campo-codigo COD --fonte "Dados sintéticos de teste" --municipio "Município de teste"
   MUNICIPIO="Município de teste"
+  LIMITES_OFICIAIS=0
+fi
+# Doação de mudas e plantio da URBFOR (CKAN de Fortaleza, cc-by-sa, 2022): três planilhas XLSX
+# baixadas no host (o contêiner não tem rede externa) e importadas no banco do compose. O plantio
+# lê o bairro do texto do endereço e por isso só entra com os limites oficiais. Sem rede, só avisa.
+CKAN_URBFOR="https://dados.fortaleza.ce.gov.br/dataset/f0f8f2e4-1880-47bb-86d1-3e469e627498/resource"
+if curl -sf -m 120 --retry 4 --retry-all-errors "$CKAN_URBFOR/7c894d24-cbe7-4683-b7a0-494d40bc642d/download/matriz-doacao-pf2022.xlsx" -o "$TMP/doacao-pf.xlsx" \
+  && curl -sf -m 120 --retry 4 --retry-all-errors "$CKAN_URBFOR/8831df9e-f2de-414e-9697-d0c036a53b47/download/matriz-doacao-pj2022.xlsx" -o "$TMP/doacao-pj.xlsx" \
+  && curl -sf -m 120 --retry 4 --retry-all-errors "$CKAN_URBFOR/7098bcbb-a6c3-4f37-bd56-1d565bacd377/download/matriz-plantio2022.xlsx" -o "$TMP/plantio.xlsx"; then
+  for f in doacao-pf doacao-pj plantio; do
+    docker compose cp "$TMP/$f.xlsx" "api:/tmp/telas-dados/$f.xlsx"
+  done
+  $M importar_doacao_mudas --arquivo-pf /tmp/telas-dados/doacao-pf.xlsx \
+    --arquivo-pj /tmp/telas-dados/doacao-pj.xlsx || echo "Doação de mudas não importada."
+  if [ "$LIMITES_OFICIAIS" = 1 ]; then
+    $M importar_plantio_urbfor --arquivo /tmp/telas-dados/plantio.xlsx || echo "Plantio não importado."
+  else
+    echo "Sem os limites oficiais: o plantio por bairro não foi importado."
+  fi
+else
+  echo "Sem acesso ao CKAN de Fortaleza: a captura de mudas doadas (41) fica sem dados."
 fi
 rm -rf "$TMP"
 $M criar_administrador --email admin@itree.local --nome "Ana Administradora" --territorio "$MUNICIPIO"
@@ -74,6 +96,16 @@ fi
 if curl -sf -m 15 "https://mapas.fortaleza.ce.gov.br/api/v1/maps" >/dev/null; then
   (cd "$RAIZ/backend" && DATABASE_URL=postgis://itree:itree@localhost:5432/itree \
     uv run python manage.py importar_areas_verdes) || echo "Áreas verdes não importadas."
+  # Adoção de praças (mapa 622): baixada no host e importada depois das praças, que ela liga ao
+  # ponto mais próximo a até 50 m. O nome do adotante é descartado na leitura.
+  ADOCAO="$(mktemp)"
+  if curl -sf -m 90 --retry 4 --retry-all-errors "${MAPAS}622" -o "$ADOCAO"; then
+    (cd "$RAIZ/backend" && DATABASE_URL=postgis://itree:itree@localhost:5432/itree \
+      uv run python manage.py importar_adocao_pracas --arquivo "$ADOCAO") || echo "Adoção de praças não importada."
+  else
+    echo "Sem acesso ao mapa 622: as praças não aparecem como adotadas nas capturas."
+  fi
+  rm -f "$ADOCAO"
   # Conector de exemplo (Atendimentos do Plano de Arborização, id 534) como camada de
   # referência, sincronizado uma vez no host. Não é inventário e não cria árvores.
   (cd "$RAIZ/backend" && DATABASE_URL=postgis://itree:itree@localhost:5432/itree \

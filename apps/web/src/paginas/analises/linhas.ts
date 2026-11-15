@@ -3,12 +3,16 @@ export const ROTULO_VALOR: Record<string, string> = {
   arvores_por_bairro: "Árvores",
   arborizacao_entorno_por_bairro: "Faces com árvore",
   manejo_urbfor_por_bairro: "Árvores com manejo",
+  mudas_doadas_por_especie: "Mudas doadas",
+  mudas_doadas_por_categoria: "Mudas doadas",
+  plantios_por_bairro: "Mudas plantadas",
 };
 
 /** O que significa um bairro com valor zero, para o grupo recolhido ("Sem árvores no escopo"). */
 export const ROTULO_SEM_VALOR: Record<string, string> = {
   arvores_por_bairro: "Sem árvores no escopo",
   manejo_urbfor_por_bairro: "Sem manejo identificado",
+  plantios_por_bairro: "Sem plantio identificado",
 };
 
 /**

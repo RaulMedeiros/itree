@@ -1,6 +1,7 @@
 """Conectores de fontes externas (RF-INT-006): segurança da busca, tipos, sincronização,
 agendamento e API. Nenhum teste usa a rede: as respostas são simuladas."""
 
+import io
 import json
 from datetime import timedelta
 
@@ -392,6 +393,82 @@ def test_ckan_csv_e_recurso_escolhido_pelo_id():
     assert baixado.formato == "csv" and b"lat,lon" in baixado.conteudo
 
 
+def xlsx_de(linhas) -> bytes:
+    from openpyxl import Workbook
+
+    pasta = Workbook()
+    for linha in linhas:
+        pasta.active.append(linha)
+    saida = io.BytesIO()
+    pasta.save(saida)
+    return saida.getvalue()
+
+
+@responses.activate
+def test_ckan_baixa_recurso_xlsx_quando_nao_ha_geojson_nem_csv():
+    base = "https://dados.fortaleza.ce.gov.br"
+    xlsx = xlsx_de([["lat", "lon", "nome"], [-3.8, -38.5, "A"]])
+    responses.get(
+        f"{base}/api/3/action/package_show",
+        json=pacote_ckan({"id": "r1", "format": "XLSX", "url": f"{base}/dl/a.xlsx"}),
+    )
+    responses.get(f"{base}/dl/a.xlsx", body=xlsx)
+    baixado = clientes.baixar("ckan", base, {"pacote": "planilhas"})
+    assert baixado.formato == "xlsx" and baixado.conteudo == xlsx
+
+
+@responses.activate
+def test_ckan_xlsx_invalido_e_recusado_com_mensagem():
+    base = "https://dados.fortaleza.ce.gov.br"
+    responses.get(
+        f"{base}/api/3/action/package_show",
+        json=pacote_ckan({"id": "r1", "format": "XLSX", "url": f"{base}/dl/a.xlsx"}),
+    )
+    responses.get(f"{base}/dl/a.xlsx", body=b"isto nao e uma planilha")
+    with pytest.raises(ErroConector, match="ZIP|planilha"):
+        clientes.baixar("ckan", base, {"pacote": "planilhas"})
+
+
+@responses.activate
+def test_ckan_xlsx_respeita_o_limite_de_tamanho(settings):
+    settings.IMPORTACAO_TAMANHO_MAXIMO_MB = 0
+    base = "https://dados.fortaleza.ce.gov.br"
+    responses.get(
+        f"{base}/api/3/action/package_show",
+        json=pacote_ckan({"id": "r1", "format": "XLSX", "url": f"{base}/dl/a.xlsx"}),
+    )
+    responses.get(f"{base}/dl/a.xlsx", body=xlsx_de([["lat", "lon"], [-3.8, -38.5]]))
+    with pytest.raises(ErroConector, match="limite"):
+        clientes.baixar("ckan", base, {"pacote": "planilhas"})
+
+
+def test_xlsx_vira_pontos_pelas_colunas_configuradas():
+    xlsx = xlsx_de(
+        [
+            ["Y", "X", "nome"],
+            [-3.8, -38.5, "Praça"],
+            ["-3,7", "-38,4", "Texto com vírgula"],
+            [None, None, "sem ponto"],
+        ]
+    )
+    parametros = {"coluna_latitude": "Y", "coluna_longitude": "X", "campo_id": "nome"}
+    feicoes, recebidas, invalidas = servico.ler_feicoes(clientes.Baixado("xlsx", xlsx), parametros)
+    assert (recebidas, invalidas) == (3, 1)
+    assert feicoes[0]["geom"].coords == (-38.5, -3.8)
+    assert feicoes[1]["geom"].coords == (-38.4, -3.7)
+    assert feicoes[0]["propriedades"] == {"nome": "Praça"}
+
+
+def test_xlsx_sem_colunas_de_coordenadas_e_erro():
+    with pytest.raises(ErroConector, match="XLSX não tem colunas"):
+        servico.ler_feicoes(clientes.Baixado("xlsx", xlsx_de([["a", "b"], [1, 2]])), {})
+
+
+def test_xlsx_corrompido_vira_erro_do_conector():
+    with pytest.raises(ErroConector):
+        servico.ler_feicoes(clientes.Baixado("xlsx", b"lixo"), {})
+
+
 @responses.activate
 def test_ckan_recurso_em_host_fora_da_lista_nao_e_baixado():
     base = "https://dados.fortaleza.ce.gov.br"
@@ -410,7 +487,7 @@ def test_ckan_sem_recurso_utilizavel_ou_pacote_inexistente():
         f"{base}/api/3/action/package_show",
         json=pacote_ckan({"id": "r1", "format": "PDF", "url": f"{base}/a.pdf"}),
     )
-    with pytest.raises(ErroConector, match="nem CSV"):
+    with pytest.raises(ErroConector, match="nem XLSX"):
         clientes.baixar("ckan", base, {"pacote": "podas"})
     responses.replace(responses.GET, f"{base}/api/3/action/package_show", json={"success": False})
     with pytest.raises(ErroConector, match="não encontrou"):

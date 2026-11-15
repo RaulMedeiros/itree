@@ -137,6 +137,8 @@ export interface BuscaMapa {
   areas_verdes?: "1";
   /** Subtipo das praças na camada de áreas verdes (areninha, calçadão...); vazio mostra todos. */
   subtipo_praca?: "praca" | "areninha" | "calcadao" | "rotatoria" | "sem_denominacao";
+  /** Na camada de áreas verdes, só as praças com termo de adoção (mapa 622 do Fortaleza em Mapas). */
+  adotadas?: "1";
   /** Camada coroplética "Arborização do entorno (Censo 2022)"; desligada por padrão. */
   arborizacao_entorno?: "1";
   tarefas?: "1";
@@ -228,6 +230,14 @@ interface AreaVerdeSelecionada {
   esfera_cnuc?: string;
   ato_legal?: string;
   area_m2?: number | null;
+  /**
+   * Adoção de praça (mapa 622): só a existência, a quantidade, a categoria do adotante (sem nome) e
+   * o ano de referência do mapa. O MapLibre devolve listas como texto JSON.
+   */
+  adotada?: boolean | string;
+  adocoes?: number;
+  adocao_tipos?: string[] | string;
+  adocao_ano_referencia?: number | null;
   /** Só nas unidades de conservação: feições da mesma unidade e a área somada delas. */
   feicoes_da_unidade?: number | null;
   area_total_da_unidade_m2?: number | null;
@@ -301,6 +311,7 @@ export function MapaPagina() {
     "inicial",
   );
   const areasVerdesIniciadas = useRef(false);
+  const filtroDasUnidadesAlterado = useRef(false);
   const [fonteAreasVerdes, setFonteAreasVerdes] = useState<SituacaoFonteAreasVerdes | null>(null);
   const [areaVerde, setAreaVerde] = useState<AreaVerdeSelecionada | null>(null);
   // Arborização do entorno (Censo 2022): carregada na primeira vez que a camada é ligada.
@@ -1062,14 +1073,30 @@ export function MapaPagina() {
   useEffect(() => {
     const m = mapa.current;
     if (!pronto || !m) return;
-    const filtro = busca.subtipo_praca
+    const porSubtipo = busca.subtipo_praca
       ? ["any", ["!=", ["get", "tipo"], "praca"], ["==", ["get", "subtipo"], busca.subtipo_praca]]
       : null;
+    // "Só adotadas" esconde tudo o que não tem termo de adoção, parques e unidades inclusive.
+    const soAdotadas = busca.adotadas === "1" ? ["==", ["get", "adotada"], true] : null;
+    const filtros = [porSubtipo, soAdotadas].filter(Boolean);
+    const filtro = filtros.length > 1 ? ["all", ...filtros] : (filtros[0] ?? null);
     const semUc = ["!=", ["get", "tipo"], "unidade_conservacao"];
     m.setFilter("areas-verdes-preenchimento", filtro as never);
     m.setFilter("areas-verdes-hachura", filtro as never);
-    m.setFilter("areas-verdes-contorno", (filtro ? ["all", semUc, filtro] : semUc) as never);
-  }, [pronto, busca.subtipo_praca]);
+    m.setFilter(
+      "areas-verdes-contorno",
+      (filtros.length ? ["all", semUc, ...filtros] : semUc) as never,
+    );
+    // O contorno das unidades só muda de filtro quando "só adotadas" liga ou desliga.
+    if (soAdotadas || filtroDasUnidadesAlterado.current) {
+      const soUc = ["==", ["get", "tipo"], "unidade_conservacao"];
+      m.setFilter(
+        "areas-verdes-contorno-uc",
+        (soAdotadas ? ["all", soUc, soAdotadas] : soUc) as never,
+      );
+      filtroDasUnidadesAlterado.current = soAdotadas !== null;
+    }
+  }, [pronto, busca.subtipo_praca, busca.adotadas]);
 
   useEffect(() => {
     if (!pronto) return;
@@ -1193,6 +1220,19 @@ export function MapaPagina() {
                               );
                             })}
                           </Selecao>
+                        </label>
+                      )}
+                      {mostrarAreasVerdes && (
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="accent-marca"
+                            checked={busca.adotadas === "1"}
+                            onChange={(e) =>
+                              atualizarBusca({ adotadas: e.target.checked ? "1" : undefined })
+                            }
+                          />
+                          Só praças adotadas
                         </label>
                       )}
                       {mostrarAreasVerdes && pronto && estadoAreasVerdes === "inicial" && (
@@ -2103,6 +2143,48 @@ function PainelContextual({
   );
 }
 
+function areaAdotada(area: AreaVerdeSelecionada): boolean {
+  return area.adotada === true || area.adotada === "true";
+}
+
+/** O MapLibre devolve lista de propriedade como texto JSON. */
+function categoriasDoAdotante(area: AreaVerdeSelecionada): string[] {
+  const bruto = area.adocao_tipos;
+  if (Array.isArray(bruto)) return bruto;
+  try {
+    const lista: unknown = JSON.parse(bruto ?? "[]");
+    return Array.isArray(lista) ? lista.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Adoção da praça (mapa 622, SEUMA). A fonte tem o nome do adotante, que o iTree não importa:
+ * aparecem só a existência, a quantidade, a categoria (empresa, associação ou condomínio, quando a
+ * razão social deixa claro) e o ano de referência do mapa, que não é a data do termo.
+ */
+function AdocaoDaArea({ area }: { area: AreaVerdeSelecionada }) {
+  const categorias = categoriasDoAdotante(area);
+  const n = area.adocoes ?? 0;
+  return (
+    <div className="flex flex-col gap-1">
+      <p>
+        <span className="rounded-full border border-marca px-2 py-0.5 text-xs font-medium text-marca">
+          Adotada
+        </span>
+      </p>
+      <p className="text-xs text-texto-suave">
+        {n > 1 ? `${n} termos de adoção` : "Termo de adoção"} registrado
+        {n > 1 ? "s" : ""} no Fortaleza em Mapas (SEUMA)
+        {area.adocao_ano_referencia ? `, referência ${area.adocao_ano_referencia}` : ""}
+        {categorias.length ? ` · ${categorias.join(" e ").toLowerCase()}` : ""}. O nome do adotante
+        não é importado.
+      </p>
+    </div>
+  );
+}
+
 /** Nome, tipo e fonte da área verde clicada, com a proveniência do dado (RN-PROV-003). */
 function PainelAreaVerde({ area, aoFechar }: { area: AreaVerdeSelecionada; aoFechar: () => void }) {
   const tipo = ROTULOS_TIPO_AREA_VERDE[area.tipo as keyof typeof ROTULOS_TIPO_AREA_VERDE];
@@ -2130,6 +2212,7 @@ function PainelAreaVerde({ area, aoFechar }: { area: AreaVerdeSelecionada; aoFec
             : ""}
         </p>
       </div>
+      {areaAdotada(area) && <AdocaoDaArea area={area} />}
       {area.ato_legal && <p>Ato legal: {area.ato_legal}</p>}
       {area.codigo_cnuc && (
         <p>

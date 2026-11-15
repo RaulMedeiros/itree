@@ -541,6 +541,11 @@ paths:
       description: FeatureCollection com fonte, licença e datas em cada feição (RN-PROV-003).
       parameters:
       - in: query
+        name: adotada
+        schema:
+          type: string
+        description: 1 devolve só as praças com adoção (mapa 622 do Fortaleza em Mapas).
+      - in: query
         name: bbox
         schema:
           type: string
@@ -3304,6 +3309,7 @@ paths:
         schema:
           type: string
         description: arvores_por_bairro, arborizacao_entorno_por_bairro, manejo_urbfor_por_bairro,
+          mudas_doadas_por_especie, mudas_doadas_por_categoria, plantios_por_bairro,
           ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo,
           inspecoes_por_mes, alertas_por_fonte
         required: true

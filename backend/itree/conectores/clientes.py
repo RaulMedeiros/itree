@@ -1,7 +1,7 @@
 """Um cliente por tipo de conector. Todos devolvem o mesmo: ``Baixado`` (conteúdo e formato).
 
 Para GeoJSON, WFS e ArcGIS o resultado é sempre uma FeatureCollection em JSON, montada
-aqui quando a fonte entrega em páginas. O CKAN pode terminar em GeoJSON ou CSV. A leitura
+aqui quando a fonte entrega em páginas. O CKAN pode terminar em GeoJSON, CSV ou XLSX. A leitura
 do conteúdo (``feicoes``) trata tudo como dado não confiável: só interpreta, nunca executa.
 """
 
@@ -11,6 +11,8 @@ from urllib.parse import urlsplit
 
 from django.conf import settings
 
+from itree.inventario import leitura_arquivos as importacao
+
 from . import seguranca
 from .models import TipoConector
 from .seguranca import ErroConector
@@ -18,7 +20,7 @@ from .seguranca import ErroConector
 
 @dataclass
 class Baixado:
-    formato: str  # "geojson" ou "csv"
+    formato: str  # "geojson", "csv" ou "xlsx"
     conteudo: bytes
     paginas: int = 1
 
@@ -134,6 +136,14 @@ def _ckan(url: str, parametros: dict) -> Baixado:
     conteudo = seguranca.buscar(endereco)
     if formato == "csv":
         return Baixado("csv", conteudo)
+    if formato == "xlsx":
+        # A leitura (limites de membros e de tamanho descompactado) é a da importação de inventário.
+        try:
+            importacao.validar_tamanho(len(conteudo))
+            importacao.ler_registros(conteudo, "xlsx")
+        except importacao.ErroArquivo as exc:
+            raise ErroConector(str(exc)) from exc
+        return Baixado("xlsx", conteudo)
     feicoes = _colecao(_json(conteudo, "GeoJSON"), "O recurso")
     _conferir_limite(len(feicoes))
     return Baixado("geojson", _serializar(feicoes))
@@ -145,11 +155,11 @@ def _escolher_recurso(recursos: list[dict], id_recurso: str) -> dict:
             if r.get("id") == id_recurso:
                 return r
         raise ErroConector("O recurso informado não existe no conjunto de dados.")
-    for formato in ("geojson", "csv"):
+    for formato in ("geojson", "csv", "xlsx"):
         for r in recursos:
             if str(r.get("format") or "").lower() == formato and r.get("url"):
                 return r
-    raise ErroConector("O conjunto de dados não tem recurso GeoJSON nem CSV.")
+    raise ErroConector("O conjunto de dados não tem recurso GeoJSON, CSV nem XLSX.")
 
 
 CLIENTES = {

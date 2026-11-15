@@ -257,6 +257,8 @@ const mapa = createRoute({
       .enum(["praca", "areninha", "calcadao", "rotatoria", "sem_denominacao"])
       .optional()
       .catch(undefined),
+    /** Na camada de áreas verdes, só as praças com termo de adoção. */
+    adotadas: bandeira("1"),
     arborizacao_entorno: bandeira("1"),
     tarefas: bandeira("1"),
     alertas: bandeira("1"),

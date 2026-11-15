@@ -24,7 +24,7 @@ from itree.alertas.models import AlertaAmbiental
 from itree.alertas.views import filtrar_alertas
 from itree.contas.acesso import filtrar_por_escopo, tem_escopo_municipal
 from itree.core.textos import sem_codigos_internos
-from itree.indicadores import externos, manejo_urbfor
+from itree.indicadores import analises_mudas, doacao_plantio, externos, manejo_urbfor
 from itree.indicadores.models import IndicadorTerritorialExterno
 from itree.inspecoes.models import EstadoInspecao, Inspecao
 from itree.inspecoes.views import filtrar_inspecoes
@@ -92,6 +92,30 @@ ANALISES = {
             f"Licença: {sem_codigos_internos(manejo_urbfor.LICENCA)}."
         ),
         "base_rotulo": "árvores",
+    },
+    "mudas_doadas_por_especie": {
+        "titulo": doacao_plantio.NOME_ANALISE_DOACAO,
+        "definicao": analises_mudas.DEFINICAO_DOACAO,
+        "permissao": "inventario.ler",
+        "escopo_municipal": True,
+        "fonte": analises_mudas.FONTE_TEXTO,
+        "base_rotulo": "mudas",
+    },
+    "mudas_doadas_por_categoria": {
+        "titulo": doacao_plantio.NOME_ANALISE_CATEGORIA,
+        "definicao": analises_mudas.DEFINICAO_CATEGORIA,
+        "permissao": "inventario.ler",
+        "escopo_municipal": True,
+        "fonte": analises_mudas.FONTE_TEXTO,
+        "base_rotulo": "mudas",
+    },
+    "plantios_por_bairro": {
+        "titulo": doacao_plantio.NOME_ANALISE_PLANTIO,
+        "definicao": analises_mudas.DEFINICAO_PLANTIO,
+        "permissao": "inventario.ler",
+        "por_bairro": True,
+        "fonte": analises_mudas.FONTE_TEXTO,
+        "base_rotulo": "mudas",
     },
     "ocorrencias_por_tipo": {
         "titulo": "Ocorrências registradas por tipo no período",
@@ -169,6 +193,12 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
         ]
     if chave == "manejo_urbfor_por_bairro":
         return _linhas_manejo(usuario)
+    if chave == "mudas_doadas_por_especie":
+        return analises_mudas.linhas_doacao_por_especie()
+    if chave == "mudas_doadas_por_categoria":
+        return analises_mudas.linhas_doacao_por_categoria()
+    if chave == "plantios_por_bairro":
+        return analises_mudas.linhas_plantio_por_bairro(usuario)
     if chave == "ocorrencias_por_tipo":
         return [
             {"rotulo": r["tipo__nome"], "valor": r["n"]}
@@ -457,6 +487,9 @@ def analise(request: Request):
         and request.user.tem_permissao(definicao["permissao"])
     ):
         raise PermissionDenied()
+    if definicao.get("escopo_municipal") and not tem_escopo_municipal(request.user):
+        # Dado do município inteiro, sem local: não há recorte por bairro que o escopo permita.
+        raise PermissionDenied("Esta análise é do município inteiro e exige escopo municipal.")
     inicio, fim = _periodo(request.query_params)
     linhas = _linhas_analise(chave, request.user, inicio, fim)
     return Response(
@@ -494,6 +527,7 @@ def catalogo(request: Request):
                 {"id": k, "titulo": v["titulo"], "definicao": v["definicao"]}
                 for k, v in ANALISES.items()
                 if request.user.tem_permissao(v["permissao"])
+                and (not v.get("escopo_municipal") or tem_escopo_municipal(request.user))
             ]
         }
     )

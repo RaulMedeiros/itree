@@ -29,9 +29,10 @@ comando ou ingestão no código.
 | Praças (CKAN) | URBFOR | dataset `pracas-e-areas-verdes-pracas-de-fortaleza` | GeoJSON, 484 feições | vazia no CKAN | 2024-02 | V | Backlog |
 | Parques e UCs (CKAN; Mapas ids 737 e 86) | SEUMA, CEUC/SEMA | CKAN `parques-uc`; Mapas `?id=737`, `?id=86` | KMZ; GeoJSON | `other-open`; termos da API | 2026-01; ano_ref 2023 | V | Backlog (falta tipo "área verde") |
 | Podas, recolhimento e supressão (CKAN) | URBFOR | dataset `podas_recolhimento_supressao` | CSV mensal, sem coordenadas | vazia | 2023 (falta setembro) | V | Implementada (parte segura): `importar_manejo_urbfor`, agregado por bairro e mês |
-| Doação de mudas e plantio (CKAN) | URBFOR | dataset `doacao-mudas-pf` | XLSX | `cc-by-sa` | 2022-12 | V | Backlog |
+| Doação de mudas (CKAN) | URBFOR | dataset `doacao-mudas-pf`, recursos `matriz-doacao-pf2022.xlsx` e `matriz-doacao-pj2022.xlsx` | XLSX em fichas, sem local | `cc-by-sa` | 2022-12 | V | Implementada: `importar_doacao_mudas` (1.334 linhas de espécie, 22.687 mudas); só em Análises, sem requerente nem endereço |
+| Plantio de mudas (CKAN) | URBFOR | dataset `doacao-mudas-pf`, recurso `matriz-plantio2022.xlsx` | XLSX em fichas, sem coordenadas | `cc-by-sa` | 2022-12 | V | Implementada: `importar_plantio_urbfor` (42 plantios, 19.675 mudas, 3 com bairro); só em Análises, sem geocodificar nem criar árvore |
 | Atendimentos Plano de Arborização (Mapas, id 534) | SEUMA | `/api/v1/geojson?id=534` | GeoJSON, 577 pontos | termos da API | 2021 | V | Implementada como conector, inativo até o administrador ativar: `criar_conectores_exemplo` (camada de referência) |
-| Adoção de Praças e Áreas Verdes (Mapas, id 622) | SEUMA | `/api/v1/geojson?id=622` | GeoJSON, 490 pontos; traz nome do adotante (dado pessoal) | termos da API | 2023 | V | Backlog |
+| Adoção de Praças e Áreas Verdes (Mapas, id 622) | SEUMA | `/api/v1/geojson?id=622` | GeoJSON, 490 pontos; traz nome do adotante (dado pessoal), descartado na leitura | termos da API | 2023 | V | Implementada: `importar_adocao_pracas` (490 adoções, 194 ligadas a praça, 154 praças adotadas); mensal |
 | Ocorrências COPDC (CKAN) | SESEC | dataset `ocorrencias-copdc` | CSV agregado | `cc-by` | 2026-06 | A | Não usar (sem queda de árvore) |
 | GeoServer, WMS e WFS de Fortaleza | Ipplan | `/geoserver/...` | n/a | n/a | n/a | A (404) | Não usar; preferir GeoJSON da API |
 | BDQueimadas, focos diários | INPE, Programa Queimadas | `https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_AAAAMMDD.csv` | CSV, 1 a 4 MB por dia | Não declarada (DP-11); citar "INPE, Programa Queimadas" | Diária; o do dia fica pronto ~21h (BRT), o fechado ~09h | V | Implementada: `FonteAlerta.INPE_FOCOS` |
@@ -214,6 +215,103 @@ inclua a linha em `APELIDOS` e um caso no teste (`tests/test_manejo_urbfor.py`, 
 O download dos CSVs repete até 4 vezes quando o portal responde 502 ou 504, o que aconteceu na
 validação.
 
+### Doação de mudas e plantio da URBFOR (planilhas de 2022)
+
+```bash
+cd backend
+uv run python manage.py importar_doacao_mudas      # baixa as planilhas PF e PJ do CKAN
+uv run python manage.py importar_doacao_mudas --arquivo-pf pf.xlsx --arquivo-pj pj.xlsx
+uv run python manage.py importar_plantio_urbfor    # baixa a planilha de plantio (exige os bairros)
+uv run python manage.py importar_plantio_urbfor --arquivo plantio.xlsx
+```
+
+- Fonte: dataset `doacao-mudas-pf` do CKAN de Fortaleza (URBFOR), licença `cc-by-sa`, recursos
+  modificados em 2022-12-21 (a data de referência gravada). As três planilhas XLSX são pilhas de
+  **fichas** de atendimento (a leitura está em `itree/indicadores/fichas_urbfor.py`): título do mês
+  ("JANEIRO - 2022", "Junho- 2022", "JUlHO- 2022"), uma ficha por atendimento
+  (`REQUERENTE:`, `DATA:`, `ENDEREÇO:`, e `LOCAL:` no plantio), a linha de cabeçalho repetida, a espécie
+  na coluna E e a quantidade na F, a categoria nas colunas A a D, a linha `TOTAL` e, ao lado,
+  tabelas soltas de resumo (colunas H a M, com `#REF!`), que são ignoradas. Em algumas fichas o
+  total vem sem o rótulo ou repetido.
+- **Doação** (`DoacaoMudas`, uma linha por espécie de cada ficha): ano, mês, data (vazia se a ficha
+  não tem), tipo de beneficiário (PF ou PJ), categoria (ornamental, nativa ou frutífera, palmeira,
+  medicinal), espécie como escrita na planilha, espécie do catálogo quando o nome casa, sem
+  ambiguidade, pelo nome científico ou popular (o mesmo resolvedor da importação de inventário),
+  quantidade, e a proveniência. A categoria vem da coluna da linha; sem ela, da lista auxiliar da
+  própria planilha (abas "Ornamentais", "Nativas e Frutíferas", "Palmeiras" e "Medicinal"); sem
+  nenhuma das duas fica vazia ("Categoria não informada"). Ficha com total e sem espécie vira a
+  linha "Espécie não informada". **Requerente e endereço nunca são gravados**: na doação a pessoa
+  física escreve o próprio nome, e o teste confere que nenhum deles chega ao banco. Idempotente por
+  tipo e ano.
+- **Plantio** (`RegistroPlantio`): data (ou o período, quando a ficha tem "02/02/2022 - 28/02/2022"), endereço
+  e local em texto, bairro, motivo de não ter bairro, espécies e quantidades em JSON, total de mudas
+  e total declarado. O bairro sai **só do texto do endereço**, pela regra do manejo da URBFOR (o
+  bairro é o fim do trecho, "Rua X - Bairro Y"; [aliases](#aliases-de-bairro-do-manejo-da-urbfor);
+  nome que serve a dois bairros fica ambíguo) e, sem separador, vale um endereço que seja inteiro o
+  nome de um bairro. Sem bairro, o motivo fica gravado: sem endereço (só o local), endereço sem
+  bairro no texto (inclui só número de imóvel), ambíguo ou não reconhecido. **Não geocodifica e não
+  cria árvore** (DP-18); a planilha não tem coordenadas e as mudas são, em grande parte, ornamentais
+  pequenas ("mini lacre", "lutiela").
+- Onde aparece: só em Análises, com fonte e ano: "Mudas doadas por espécie (URBFOR, 2022)" (as 15
+  mais doadas e o restante em "Outras"; grafias iguais sem acento, caixa ou espaço são somadas),
+  "Mudas doadas por categoria (URBFOR, 2022)" e "Plantios por bairro (URBFOR, 2022)", com a parcela
+  "Sem bairro identificado" declarada e visível só com escopo municipal. As duas de doação são do
+  município inteiro e exigem escopo municipal (a doação não tem local). Não entram no mapa nem
+  dependem do período escolhido. Não há ficha do bairro no web, então o total de mudas plantadas
+  por bairro fica só na análise.
+- Validação com o dado real (2026-11-15), contra os 121 bairros reais:
+  - **Doação PF:** 73 fichas com espécie (2 sem espécie, ignoradas), 207 linhas, **1.588 mudas**;
+    a soma bate com o total informado em cada ficha. **Doação PJ:** 196 fichas, 1.127 linhas,
+    **21.099 mudas**, também com a soma igual ao total de cada ficha. Total: 22.687 mudas;
+    12.886 ornamentais, 2.068 nativas ou frutíferas, 1.869 medicinais, 376 palmeiras e 5.488 sem
+    categoria. O catálogo de espécies do banco de teste estava vazio, então nenhuma linha casou
+    com ele nessa rodada.
+  - **Plantio:** 42 fichas com espécie (1 vazia, de setembro, ignorada), **19.675 mudas** (o total
+    informado soma 17.357, porque uma ficha de 2.318 mudas não traz total). **3 plantios com bairro
+    (7,1%, 1.705 mudas):** Floresta, Granja Portugal e Guararapes; 24 sem endereço (só o local, por
+    exemplo "Parque Guararapes") e 15 com endereço sem bairro no texto.
+  - Reimportar não duplica (a segunda execução troca as mesmas linhas).
+
+### Adoção de praças (mapa 622)
+
+```bash
+cd backend
+uv run python manage.py importar_adocao_pracas                       # pela API
+uv run python manage.py importar_adocao_pracas --arquivo adocao.geojson
+```
+
+- Fonte: Fortaleza em Mapas, mapa 622 "Adoção de Praças e Áreas Verdes" (SEUMA), 490 pontos,
+  `ano_ref` 2023, termos da API. Campos reais: `id`, `fid`, `Nome` (da praça), `Adotante`,
+  `Regional`, `x` e `y` (UTM), `Fonte`, `ano_ref` e `epsg_codif`. **Não há** situação, data do termo
+  nem contato: toda linha é uma adoção, e o ano é o de referência do mapa, não o do termo.
+- **O nome do adotante é descartado na leitura** (`itree/areas_verdes/adocao.py`): cada registro é
+  montado só com os campos permitidos (identificador, nome da praça, regional, ponto, ano de
+  referência) e a categoria do adotante, e o texto do adotante é usado apenas para decidir a
+  categoria, sem ser guardado, devolvido, mostrado pelo comando nem registrado em log. A categoria é
+  "empresa" (LTDA, S.A., ME, EPP, EIRELI, construtora, incorporadora...), "associação ou condomínio" ou
+  "não classificado" (pessoa física, nome de fantasia e tudo sem marca clara: nunca se afirma que o
+  adotante é uma pessoa). Os testes conferem, com adotantes sintéticos e um termo-sentinela, que
+  nada chega ao banco, à API, à saída do comando nem ao log, e que o modelo não tem campo para isso.
+- Cada ponto é ligado à **praça** (`AreaVerde` do tipo praça) mais próxima a até **50 m**, pela
+  distância geodésica até o contorno (`ST_Distance` sobre `geography`); sem praça nesse raio, o ponto
+  fica sem vínculo, com o motivo. Parque e unidade de conservação não recebem vínculo. A distância fica
+  gravada, e o raio é uma escolha desta implementação, não da fonte: ponto a 49 m de uma praça com
+  outro nome ainda é ligado a ela.
+- Aparece na API de áreas verdes (`adotada`, `adocoes`, `adocao_tipos`, `adocao_ano_referencia`, e o
+  filtro `?adotada=1`), na ficha da área verde no mapa ("Adotada", com a quantidade, a categoria e o ano
+  de referência) e como filtro "Só praças adotadas" na camada de áreas verdes. Os pontos sem vínculo
+  ficam registrados, mas não aparecem no mapa.
+- Reimportação mensal (tarefa `reimportar_adocao_pracas`, dia 2 às 04:30, meia hora depois das áreas
+  verdes). Idempotente pelo `id` da fonte; o que saiu da fonte é removido; fonte vazia ou falha da API
+  não altera nada.
+- Validação com o dado real (2026-11-15), com as 484 praças reais (mapa 99): 490 na fonte, 490 criadas,
+  0 ignoradas; **194 ligadas a uma praça a até 50 m (154 praças adotadas) e 296 sem vínculo**. Dos 296,
+  a praça mais próxima está a 50 a 100 m em 37, a 100 a 200 m em 74, a 200 a 500 m em 119, a 500 m a 2 km em
+  65 e a mais de 2 km em 1; boa
+  parte são canteiros centrais e calçadas ("Canteiro central na Av. ...") que a camada de praças não
+  tem. Categoria do adotante: 67 empresas, 21 associações ou condomínios e 402 não classificados. A
+  segunda execução deu 0 criadas e 490 atualizadas.
+
 ### Focos de calor diários do INPE
 
 Configure a coleta automática em `ALERTAS_FONTES` (variável de ambiente, JSON):
@@ -378,9 +476,13 @@ Capacidade genérica para buscar uma fonte por endereço, sem escolher o sistema
   conector usa a propriedade `id` (`campo_id`), que é estável.
 - Exemplo: `manage.py criar_conectores_exemplo` cadastra, **inativo**, "Atendimentos do Plano de
   Arborização" (Mapas, id 534), camada de referência, mensal.
-- Fontes ainda sem conector pronto: o dado pessoal da camada 622 (adoção de praças, com o nome
-  do adotante) não deve virar camada pública sem decisão; os demais itens da tabela seguem no
-  backlog.
+- O conector CKAN aceita também recurso XLSX (depois do GeoJSON e do CSV): os pontos saem das
+  colunas de latitude e longitude (nomes comuns, ou `coluna_latitude` e `coluna_longitude` nos
+  parâmetros), com a leitura segura da importação de inventário (limites de tamanho, de membros e
+  de tamanho descompactado). O tipo "GeoJSON por endereço" segue só GeoJSON.
+- Fontes ainda sem conector pronto: os demais itens da tabela seguem no backlog. A adoção de
+  praças (camada 622) tem comando próprio, que descarta o nome do adotante
+  ([abaixo](#adoção-de-praças-mapa-622)).
 
 #### Validação do conector contra o dado real (2026-11-14)
 

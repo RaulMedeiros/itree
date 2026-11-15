@@ -7,6 +7,8 @@
  */
 
 export type AreasVerdesListarParams = {
+  /** 1 devolve só as praças com adoção (mapa 622 do Fortaleza em Mapas). */
+  adotada?: string;
   /** Limites oeste,sul,leste,norte em graus (WGS 84). */
   bbox?: string;
   /** Casas decimais da geometria (padrão 5). */
