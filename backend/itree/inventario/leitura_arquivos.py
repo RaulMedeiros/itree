@@ -272,6 +272,42 @@ def _ler_xlsx(conteudo: bytes) -> tuple[list[str], list[dict]]:
         pasta.close()
 
 
+def ler_abas_xlsx(conteudo: bytes) -> dict[str, list[tuple]]:
+    """Linhas cruas de cada aba do XLSX, na ordem das abas, sem interpretar cabeçalho, para
+    planilhas em formato de ficha. Valem os mesmos limites de ``ler_registros``: tamanho, membros
+    e tamanho descompactado do ZIP e número de linhas com conteúdo (somado entre as abas). O
+    número de cada linha na aba é a posição na lista, mais um; linhas vazias são mantidas para
+    preservá-lo."""
+    from openpyxl import load_workbook
+
+    validar_tamanho(len(conteudo))
+    with _abrir_zip(conteudo):
+        pass
+    try:
+        pasta = load_workbook(io.BytesIO(conteudo), read_only=True, data_only=True)
+    except Exception as exc:  # noqa: BLE001 - openpyxl levanta vários tipos para arquivo ruim
+        raise ErroArquivo("Não foi possível ler a planilha XLSX.") from exc
+    try:
+        abas: dict[str, list[tuple]] = {}
+        com_conteudo = 0
+        for folha in pasta.worksheets:
+            linhas = []
+            for valores in folha.iter_rows(values_only=True):
+                if any(v is not None and str(v).strip() != "" for v in valores):
+                    com_conteudo += 1
+                    if com_conteudo > LIMITE_LINHAS:
+                        raise ErroArquivo(f"A planilha passa do limite de {LIMITE_LINHAS} linhas.")
+                linhas.append(tuple(valores))
+                if len(linhas) > 10 * LIMITE_LINHAS:
+                    raise ErroArquivo("A planilha tem linhas demais, a maioria vazia.")
+            abas[folha.title] = linhas
+        if not abas:
+            raise ErroArquivo("A planilha não tem nenhuma aba.")
+        return abas
+    finally:
+        pasta.close()
+
+
 def ler_registros(
     conteudo: bytes, formato: str, srid: int = 4326, ponto_interior: bool = False
 ) -> tuple[list[str], list[dict]]:

@@ -606,6 +606,88 @@ describe("análises", () => {
     expect(screen.getByText("418")).toBeInTheDocument();
   });
 
+  it("mostra as mudas doadas por espécie em barras, com o restante em Outras, a fonte e o ano", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/relatorios/analise`, () =>
+        HttpResponse.json({
+          id: "mudas_doadas_por_especie",
+          titulo: "Mudas doadas por espécie (URBFOR, 2022)",
+          definicao:
+            "Mudas doadas pela URBFOR em 2022. Ressalvas: (1) a planilha não tem local de plantio, então o dado não vai ao mapa.",
+          fonte:
+            "URBFOR (Autarquia de Urbanismo e Paisagismo de Fortaleza), dados abertos de Fortaleza (https://dados.fortaleza.ce.gov.br/dataset/doacao-mudas-pf); planilhas de 2022. Licença: Creative Commons Atribuição-CompartilhaIgual (cc-by-sa), declarada no CKAN.",
+          periodo: { inicio: "2025-11-10", fim: "2026-11-10" },
+          calculado_em: "2026-11-10T12:00:00Z",
+          por_bairro: false,
+          unidade: "",
+          base_rotulo: "mudas",
+          linhas: [
+            {
+              rotulo: "Mini lacre",
+              valor: 4542,
+              detalhe: "Ornamental · pessoa física 529 · pessoa jurídica 4.013",
+            },
+            { rotulo: "Vinca", valor: 2154, detalhe: "Ornamental · pessoa jurídica 2.096" },
+            { rotulo: "Outras (199 espécies)", valor: 8448, detalhe: "" },
+          ],
+          total: 15144,
+        }),
+      ),
+    );
+    await abrir("/analises");
+    expect(
+      await screen.findByRole("heading", { name: "Mudas doadas por espécie (URBFOR, 2022)" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Mudas doadas" })).toBeInTheDocument();
+    expect(screen.getByText("Mini lacre")).toBeInTheDocument();
+    expect(
+      screen.getByText("Ornamental · pessoa física 529 · pessoa jurídica 4.013"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Outras (199 espécies)")).toBeInTheDocument();
+    expect(screen.getByText(/planilhas de 2022/)).toBeInTheDocument();
+    expect(screen.getByText(/cc-by-sa/)).toBeInTheDocument();
+    expect(screen.getByText(/não vai ao mapa/)).toBeInTheDocument();
+    expect(screen.getByText("15.144")).toBeInTheDocument();
+  });
+
+  it("mostra os plantios por bairro e declara a parcela sem bairro identificado", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/relatorios/analise`, () =>
+        HttpResponse.json({
+          id: "plantios_por_bairro",
+          titulo: "Plantios por bairro (URBFOR, 2022)",
+          definicao:
+            "Mudas plantadas pela URBFOR em 2022, somadas por bairro. Ressalvas: (1) a planilha é um relatório em fichas, sem coordenadas.",
+          fonte: "URBFOR, planilhas de 2022. Licença: cc-by-sa.",
+          periodo: { inicio: "2025-11-10", fim: "2026-11-10" },
+          calculado_em: "2026-11-10T12:00:00Z",
+          por_bairro: true,
+          unidade: "",
+          base_rotulo: "mudas",
+          linhas: [
+            { rotulo: "Floresta", valor: 869, detalhe: "1 plantio(s)", territorio_id: "t1" },
+            {
+              rotulo: "Sem bairro identificado",
+              valor: 17000,
+              detalhe: "39 plantio(s) · Sem endereço (só o local) 24",
+              territorio_id: null,
+            },
+          ],
+          total: 17869,
+        }),
+      ),
+    );
+    await abrir("/analises");
+    expect(
+      await screen.findByRole("heading", { name: "Plantios por bairro (URBFOR, 2022)" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Mudas plantadas" })).toBeInTheDocument();
+    expect(screen.getByText("Floresta")).toBeInTheDocument();
+    expect(screen.getByText("Sem bairro identificado")).toBeInTheDocument();
+    expect(screen.getByText("39 plantio(s) · Sem endereço (só o local) 24")).toBeInTheDocument();
+    expect(screen.getByText("17.869")).toBeInTheDocument();
+  });
+
   it("o manejo da URBFOR tem dois gráficos e marca setembro como sem dado na fonte (F-06)", async () => {
     const meses = Array.from({ length: 12 }, (_, i) => `2023-${String(i + 1).padStart(2, "0")}`);
     const comSetembro = (valores: number[]) => valores.map((v, i) => (i === 8 ? null : v));
