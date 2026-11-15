@@ -1623,8 +1623,7 @@ paths:
         schema:
           type: number
           format: double
-        description: Só postes cuja faixa de altura termina neste valor (5, 10, 14,
-          17 ou 25).
+        description: Só postes cuja faixa de altura termina neste valor (5 a 25).
       - in: query
         name: bairro
         schema:

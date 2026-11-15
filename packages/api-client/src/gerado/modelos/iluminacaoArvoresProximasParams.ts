@@ -7,7 +7,7 @@
  */
 
 export type IluminacaoArvoresProximasParams = {
-  /** Só postes cuja faixa de altura termina neste valor (5, 10, 14, 17 ou 25). */
+  /** Só postes cuja faixa de altura termina neste valor (5 a 25). */
   altura_poste_max_m?: number;
   /** Bairro (id) da árvore. */
   bairro?: string;
