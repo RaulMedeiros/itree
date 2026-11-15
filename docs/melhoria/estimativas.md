@@ -31,7 +31,8 @@ Regra prática (revista em 2026-11-13):
 - **Item de funcionalidade** (backend, web e testes, ou dado real da rede):
   cerca de **50 mil tokens**.
 - **Item estrutural** (fluxo assíncrono, migração, retomada, mudança de
-  formato de API): **150 a 200 mil tokens**, mesmo sendo um item só.
+  formato de API, importador de dado real volumoso ou em formato irregular):
+  **150 a 200 mil tokens**, mesmo sendo um item só.
 - **Revisor Opus de uma fatia:** 100 a 200 mil tokens.
 - Mais **40 mil por PR integrado** e **20% de folga**, que só é gasta quando há
   conflito semântico entre lotes.
@@ -77,3 +78,4 @@ passar de 25%, anote a causa e ajuste a regra prática acima.
 | 2026-11-13 | Correções da 2ª revisão de prontidão (R1–R4, refazer o appsec) | 0,9–1,2 mi (centro 1,05 mi) | ≈ 0,8 mi: subagentes 593 mil (R1 119, R2 127, R3 172, appsec 175) + R4 feito por mim ≈ 50 mil + integração de 4 PRs ≈ 160 mil | −24% | Os itens pequenos (configuração e testes) custaram cerca de metade dos 50 mil da regra, e a reserva para corrigir achados do appsec quase não foi usada (1 achado informativo). A regra passou a separar item pequeno, de funcionalidade e estrutural. |
 | 2026-11-14 | Integração com bases existentes e interface (I-A, I-B, C3, UI-1, UI-2) | 1,4–1,7 mi (centro 1,55 mi) | ≈ 1,66 mi: subagentes 1,41 mi (C3 207, I-A 273, UI-1 237, I-B 309, UI-2 384) + integração de 5 PRs e capturas ≈ 250 mil | +7% | Dentro da faixa. Por lote: I-A −17%, I-B +24% (retomada depois do limite de uso), UI-1 −42% e UI-2 −6% contra os 410 mil da regra. Um lote de UI de componentes custa menos que um de telas, que adota tudo em muitas páginas. As capturas pegaram dois defeitos fora da CI (semeadura quebrada e erro 500 com lote antigo), e isso entrou na reserva do plano. |
 | 2026-11-14 | Imagens no catálogo de espécies (Commons, GBIF como alternativa) | ≈ 350 mil | ≈ 330 mil: subagente 184 mil + integração e capturas ≈ 145 mil (inclui uma largada com o pedido ainda não gravado) | −6% | Dentro da faixa. Antes de lançar o subagente, confira se a preparação (worktree e pedido) deu certo: um `&&` falhou por branch já existente e o subagente começou sem instruções. |
+| 2026-11-15 | Fontes, fase 1 e adoção (A iluminação, B URBFOR, E adoção) | ≈ 0,6–0,7 mi | ≈ 0,95 mi: subagentes 744 mil (A 373, B+E 371) + integração de 2 PRs, conflitos e capturas ≈ 200 mil | +40% | Acima da faixa. Dado real grande e irregular custa mais que "item de funcionalidade": a planilha da iluminação (150 mil pontos, UTM, MVT) e as fichas da URBFOR (formato de relatório, não de tabela) levaram cada lote a ~370 mil. Regra ajustada: importador de dado real irregular ou volumoso conta como **item estrutural** (150–200 mil). As capturas falharam por falta de disco (98%): limpe imagens e cache do Docker antes. |

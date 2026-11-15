@@ -88,6 +88,21 @@ inventário, e não cria árvores:
 
 ![Camada conectada](38-mapa-camada-conectada.png)
 
+Iluminação pública (SEINF, dados abertos, CC BY-SA): 148.760 pontos de serviço
+reais, visíveis a partir do zoom 15:
+
+![Iluminação pública](39-mapa-iluminacao.png)
+
+Árvores próximas à iluminação (raio provisório de 3 m, DP-22). Os postes são reais;
+as árvores são as sintéticas da demonstração, algumas postas de propósito perto de
+postes e marcadas no endereço:
+
+![Árvores próximas à iluminação](40-arvores-iluminacao.png)
+
+Mudas doadas por espécie (URBFOR, 2022, dados abertos):
+
+![Mudas doadas](41-analises-mudas.png)
+
 Notificações no cabeçalho:
 
 ![Notificações](36-notificacoes.png)

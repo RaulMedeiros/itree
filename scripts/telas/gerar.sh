@@ -79,6 +79,22 @@ u = Usuario.objects.create(email='gestor@itree.local', username='gestor@itree.lo
 EscopoUsuario.objects.create(usuario=u, territorio=Territorio.objects.get(tipo='municipio'))
 "
 $M shell -c "exec(open('/tmp/telas-dados/semear.py').read())"
+# Iluminação pública (SEINF, dados abertos da prefeitura, CC BY-SA). O contêiner não tem rede
+# externa: o XLSX (16 MB) é baixado no host e copiado, como os limites oficiais. Sem acesso, só
+# avisa: as capturas 39 e 40 ficam sem pontos. Depois, algumas árvores SINTÉTICAS são postas perto
+# de postes reais para a captura 40 mostrar a lista (ver semear_iluminacao.py).
+ILUMINACAO="https://dados.fortaleza.ce.gov.br/dataset/b21546fe-784c-4d9c-87cf-733f67a4056c/resource/9f933d1c-5642-4545-a247-83cdd0375715/download/relatoriodoparquedeiluminacaopublica.xlsx"
+TMP_ILUM="$(mktemp -d)"
+if curl -sf -m 300 --retry 4 --retry-all-errors "$ILUMINACAO" -o "$TMP_ILUM/iluminacao.xlsx"; then
+  docker compose cp "$TMP_ILUM/iluminacao.xlsx" api:/tmp/telas-dados/iluminacao.xlsx
+  docker compose cp "$AQUI/semear_iluminacao.py" api:/tmp/telas-dados/semear_iluminacao.py
+  ($M importar_iluminacao_publica --arquivo /tmp/telas-dados/iluminacao.xlsx \
+    && $M shell -c "exec(open('/tmp/telas-dados/semear_iluminacao.py').read())") \
+    || echo "Iluminação pública não importada: as capturas 39 e 40 ficam sem pontos."
+else
+  echo "Sem acesso ao portal de dados abertos da prefeitura: a iluminação pública não foi importada (capturas 39 e 40 sem pontos)."
+fi
+rm -rf "$TMP_ILUM"
 # Referências das espécies (Wikidata, Wikipedia, Commons e, para imagem, GBIF). O
 # contêiner não tem rede externa: o comando roda no host, contra o banco do compose,
 # quando o host alcançar o Wikidata ou o GBIF. Wikidata com limite de taxa (429) não

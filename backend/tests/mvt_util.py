@@ -6,6 +6,7 @@ do tile XYZ.
 """
 
 import math
+import struct
 
 
 def _varint(dados: bytes, i: int) -> tuple[int, int]:
@@ -51,6 +52,10 @@ def _valor(dados: bytes):
     for numero, v in _campos(dados):
         if numero == 1:
             return v.decode()
+        if numero == 2:
+            return struct.unpack("<f", v)[0]
+        if numero == 3:
+            return struct.unpack("<d", v)[0]
         if numero in (4, 5):
             return v
         if numero == 6:

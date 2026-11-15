@@ -78,6 +78,7 @@ import {
 } from "../../util/formatos";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
+import { PosteMaisProximo } from "../../componentes/PosteMaisProximo";
 import { CadeiasDaArvore } from "./CadeiasDaArvore";
 import { invalidarCaminhos } from "../../util/cache";
 
@@ -338,6 +339,11 @@ function Resumo({ arvore, aoAdicionarFoto }: { arvore: Arvore; aoAdicionarFoto: 
               <span className="text-texto-suave">
                 ({ROTULOS_TIPO_AREA_VERDE[arvore.em_area_verde.tipo]})
               </span>
+            </Item>
+          )}
+          {arvore.poste_mais_proximo && (
+            <Item rotulo="Poste mais próximo">
+              <PosteMaisProximo poste={arvore.poste_mais_proximo} />
             </Item>
           )}
           <Item rotulo="Identificadores externos">

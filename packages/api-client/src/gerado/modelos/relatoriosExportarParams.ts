@@ -7,7 +7,7 @@
  */
 
 export type RelatoriosExportarParams = {
-  /** arvores | ocorrencias | inspecoes | tarefas | alertas */
+  /** arvores | arvores_iluminacao | ocorrencias | inspecoes | tarefas | alertas */
   conjunto: string;
   /** csv | xlsx | geojson */
   formato: string;

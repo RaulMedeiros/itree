@@ -5,6 +5,8 @@ from itree.areas_verdes.serializers import AreaVerdeResumoSerializer
 from itree.areas_verdes.servico import area_verde_do_ponto
 from itree.core import armazenamento
 from itree.core.geo import ponto
+from itree.iluminacao.serializers import PosteProximoSerializer
+from itree.iluminacao.servico import poste_mais_proximo
 from itree.territorio.serializers import TerritorioResumoSerializer
 
 from .models import (
@@ -267,12 +269,14 @@ class ArvoreSerializer(ArvoreResumoSerializer):
 
     especie_cartao = EspecieCartaoSerializer(source="especie", read_only=True, allow_null=True)
     em_area_verde = serializers.SerializerMethodField()
+    poste_mais_proximo = serializers.SerializerMethodField()
 
     class Meta(ArvoreResumoSerializer.Meta):
         fields = [
             *ArvoreResumoSerializer.Meta.fields,
             "especie_cartao",
             "em_area_verde",
+            "poste_mais_proximo",
             "especie_id",
             "identificadores",
             "medidas_atuais",
@@ -302,6 +306,11 @@ class ArvoreSerializer(ArvoreResumoSerializer):
         """Praça, parque ou unidade de conservação que contém a árvore, se houver."""
         area = area_verde_do_ponto(obj.geom)
         return AreaVerdeResumoSerializer(area).data if area else None
+
+    @extend_schema_field(PosteProximoSerializer(allow_null=True))
+    def get_poste_mais_proximo(self, obj):
+        """Ponto de iluminação pública mais próximo, se houver um a até 15 m (SEINF)."""
+        return poste_mais_proximo(obj.geom)
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_fundida_em(self, obj):

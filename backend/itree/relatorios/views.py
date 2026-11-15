@@ -760,7 +760,59 @@ def _dados_alertas(usuario, params):
     return colunas, [(linha(a), a.geom) for a in qs.order_by("numero")[: LIMITE_EXPORTACAO + 1]]
 
 
+def _dados_arvores_iluminacao(usuario, params):
+    """Árvores perto da iluminação pública, com o poste mais próximo (raio provisório)."""
+    from itree.iluminacao import servico
+    from itree.iluminacao.models import PontoIluminacao
+    from itree.iluminacao.views import arvores_do_conflito
+
+    arvores = list(arvores_do_conflito(usuario, params)[: LIMITE_EXPORTACAO + 1])
+    pontos = PontoIluminacao.objects.in_bulk([a.poste_id for a in arvores if a.poste_id])
+    raio = servico.raio_de_conflito_m()
+    colunas = [
+        "codigo",
+        "especie",
+        "bairro",
+        "endereco",
+        "latitude",
+        "longitude",
+        "distancia_poste_m",
+        "poste_codigo",
+        "poste_tipo",
+        "poste_altura_min_m",
+        "poste_altura_max_m",
+        "poste_logradouro",
+        "raio_provisorio_m",
+    ]
+
+    def linha(a):
+        p = pontos.get(a.poste_id)
+        return {
+            "codigo": a.codigo,
+            "especie": a.especie.nome_cientifico if a.especie else a.especie_texto_original,
+            "bairro": a.bairro.nome if a.bairro else "",
+            "endereco": a.endereco,
+            "latitude": a.geom.y,
+            "longitude": a.geom.x,
+            "distancia_poste_m": round(a.poste_distancia_m, 1),
+            "poste_codigo": p.codigo if p else "",
+            "poste_tipo": p.poste_tipo if p else "",
+            "poste_altura_min_m": p.altura_poste_min_m if p else None,
+            "poste_altura_max_m": p.altura_poste_max_m if p else None,
+            "poste_logradouro": p.logradouro if p else "",
+            "raio_provisorio_m": raio,
+        }
+
+    return colunas, [(linha(a), a.geom) for a in arvores]
+
+
 CONJUNTOS = {
+    "arvores_iluminacao": (
+        "Árvores próximas à iluminação pública (raio provisório, a definir pela URBFOR e pela SEINF; "
+        "fonte dos postes: Prefeitura de Fortaleza, SEINF, dados abertos, CC BY-SA)",
+        "inventario.ler",
+        _dados_arvores_iluminacao,
+    ),
     "arvores": ("Inventário de árvores", "inventario.ler", _dados_arvores),
     "ocorrencias": ("Ocorrências", "ocorrencias.ler", _dados_ocorrencias),
     "inspecoes": ("Inspeções", "inspecoes.ler", _dados_inspecoes),
@@ -826,7 +878,7 @@ def _metadados(usuario, titulo: str, params: dict, linhas: int) -> dict:
             "conjunto",
             str,
             required=True,
-            description="arvores | ocorrencias | inspecoes | tarefas | alertas",
+            description="arvores | arvores_iluminacao | ocorrencias | inspecoes | tarefas | alertas",
         ),
         OpenApiParameter("formato", str, required=True, description="csv | xlsx | geojson"),
         OpenApiParameter(

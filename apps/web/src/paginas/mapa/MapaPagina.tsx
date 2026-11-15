@@ -88,6 +88,7 @@ import { urlApi } from "../../mapa/url";
 import type { TipoBase } from "../../mapa/estilo";
 import {
   COR_ALERTA,
+  COR_ILUMINACAO,
   COR_SELECAO,
   COR_TAREFA,
   COR_TAREFA_ATRASADA,
@@ -101,7 +102,9 @@ import {
   OPACIDADE_HACHURA_AREA_VERDE,
   HACHURA_AREA_VERDE,
   OPACIDADE_SUPRESSAO_ANUAL,
+  ID_ILUMINACAO,
   ZOOM_AGRUPA_BAIRRO,
+  ZOOM_ILUMINACAO,
   filtroArvoreIndividual,
   filtroGrupoDeArvores,
   aoFaltarImagem,
@@ -121,6 +124,13 @@ import {
   formatarPontoGeografico,
   plural,
 } from "../../util/formatos";
+import {
+  ATRIBUICAO_ILUMINACAO,
+  capitalizar,
+  listaDeLampadas,
+  textoDoPoste,
+  type PontoIluminacaoTile,
+} from "../../mapa/iluminacao";
 import { BarraSelecaoArea, PainelSelecaoArea } from "./SelecaoArea";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
@@ -145,6 +155,8 @@ export interface BuscaMapa {
   alertas?: "1";
   /** Camada histórica "Supressão anual (PRODES Caatinga)"; desligada por padrão. */
   supressao_anual?: "1";
+  /** Pontos de iluminação pública (SEINF); desligada por padrão, visível a partir do zoom 15. */
+  iluminacao?: "1";
   sem_inspecao_dias?: number;
   especie_estado?: EstadoEspecieEnum;
   localizacao_origem?: OrigemLocalizacaoEnum;
@@ -188,7 +200,7 @@ const DEFINICAO_ARBORIZACAO =
   "Percentual das faces de quadra do bairro em que o Censo 2022 registrou ao menos uma árvore no entorno dos domicílios. Não mede copa nem cobertura vegetal.";
 
 function urlTiles(
-  camada: "arvores" | "ocorrencias" | "tarefas",
+  camada: "arvores" | "ocorrencias" | "tarefas" | "iluminacao",
   filtros: Record<string, string | undefined>,
 ) {
   const qs = new URLSearchParams(
@@ -205,7 +217,10 @@ const CAMADAS_COM_CLIQUE = [
   "arvores-pontos",
   "ocorrencias-grupos",
   "ocorrencias-pontos",
+  "iluminacao-pontos",
 ];
+/** Camadas operacionais que ficam por cima dos pontos de iluminação e levam o clique. */
+const CAMADAS_SOBRE_ILUMINACAO = CAMADAS_COM_CLIQUE.filter((id) => id !== "iluminacao-pontos");
 
 /** Estado da última importação das áreas verdes, devolvido junto da camada (RF-INT-005). */
 interface SituacaoFonteAreasVerdes {
@@ -314,6 +329,7 @@ export function MapaPagina() {
   const filtroDasUnidadesAlterado = useRef(false);
   const [fonteAreasVerdes, setFonteAreasVerdes] = useState<SituacaoFonteAreasVerdes | null>(null);
   const [areaVerde, setAreaVerde] = useState<AreaVerdeSelecionada | null>(null);
+  const [poste, setPoste] = useState<PontoIluminacaoTile | null>(null);
   // Arborização do entorno (Censo 2022): carregada na primeira vez que a camada é ligada.
   const [estadoArborizacao, setEstadoArborizacao] = useState<"inicial" | "pronto" | "erro">(
     "inicial",
@@ -346,6 +362,8 @@ export function MapaPagina() {
   const mostrarBairros = busca.bairros !== "0";
   const mostrarAreasVerdes = podeMapa && busca.areas_verdes === "1";
   const mostrarArborizacao = podeMapa && busca.arborizacao_entorno === "1";
+  const mostrarIluminacao = podeMapa && busca.iluminacao === "1";
+  const aproximarIluminacao = (busca.zoom ?? 11) < ZOOM_ILUMINACAO;
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
   const mostrarAlertas = podeAlertas && busca.alertas === "1";
   const mostrarSupressao = podeAlertas && busca.supressao_anual === "1";
@@ -484,6 +502,7 @@ export function MapaPagina() {
         if (!p) return;
         setBairroCenso(p as DicaArborizacao);
         setAreaVerde(null);
+        setPoste(null);
         atualizarBusca({ selecao: undefined });
       });
     }
@@ -598,6 +617,31 @@ export function MapaPagina() {
         filter: ["!=", ["geometry-type"], "Point"],
         layout: { visibility: "none" },
         paint: { "line-color": COR_ALERTA, "line-width": 2, "line-dasharray": [3, 1.5] },
+      });
+    }
+
+    if (podeMapa) {
+      // Iluminação pública (contexto): abaixo das árvores, desligada por padrão e sem baixar nada
+      // antes de ligar; o servidor só entrega os pontos a partir do zoom 15.
+      m.addSource("iluminacao", {
+        type: "vector",
+        tiles: [urlTiles("iluminacao", {})],
+        minzoom: ZOOM_ILUMINACAO,
+        maxzoom: 22,
+      });
+      m.addLayer({
+        id: "iluminacao-pontos",
+        type: "symbol",
+        source: "iluminacao",
+        "source-layer": "iluminacao",
+        minzoom: ZOOM_ILUMINACAO,
+        layout: {
+          visibility: "none",
+          "icon-image": ID_ILUMINACAO,
+          "icon-allow-overlap": true,
+          "icon-size": ["interpolate", ["linear"], ["zoom"], ZOOM_ILUMINACAO, 0.7, 18, 1],
+        },
+        paint: { "icon-opacity": 0.85 },
       });
     }
 
@@ -752,6 +796,24 @@ export function MapaPagina() {
         });
       });
     }
+    // Iluminação pública: texto do ponto no painel. Árvores e ocorrências por cima têm prioridade.
+    if (podeMapa) {
+      m.on("mouseenter", "iluminacao-pontos", () => {
+        if (!desenhando.current && !areaAtiva.current) m.getCanvas().style.cursor = "pointer";
+      });
+      m.on("mouseleave", "iluminacao-pontos", () => (m.getCanvas().style.cursor = ""));
+      m.on("click", "iluminacao-pontos", (e: MapLayerMouseEvent) => {
+        if (desenhando.current || areaAtiva.current) return;
+        const sobre = CAMADAS_SOBRE_ILUMINACAO.filter((id) => m.getLayer(id));
+        if (sobre.length && m.queryRenderedFeatures(e.point, { layers: sobre }).length) return;
+        const p = e.features?.[0]?.properties;
+        if (!p) return;
+        setPoste(p as unknown as PontoIluminacaoTile);
+        setAreaVerde(null);
+        setBairroCenso(null);
+        atualizarBusca({ selecao: undefined });
+      });
+    }
     // Clique numa área verde: nome, tipo e fonte. Árvores e ocorrências têm prioridade.
     m.on("mouseenter", "areas-verdes-preenchimento", () => {
       if (!desenhando.current && !areaAtiva.current) m.getCanvas().style.cursor = "pointer";
@@ -766,6 +828,7 @@ export function MapaPagina() {
       if (!p) return;
       setAreaVerde(p as unknown as AreaVerdeSelecionada);
       setBairroCenso(null);
+      setPoste(null);
       atualizarBusca({ selecao: undefined });
     });
     // Qualquer clique no mapa encerra o realce do bairro buscado (RF-MAPA-011).
@@ -859,6 +922,8 @@ export function MapaPagina() {
       .catch(() => setEstadoArborizacao("erro"));
   }, [pronto, mostrarArborizacao]);
 
+  // Desligar a camada ou selecionar uma árvore/ocorrência fecha o painel do ponto de iluminação.
+  if (poste && (!mostrarIluminacao || tipoSelecao)) setPoste(null);
   // Desligar a camada ou selecionar uma árvore/ocorrência fecha o painel da área verde.
   if (areaVerde && (!mostrarAreasVerdes || tipoSelecao)) setAreaVerde(null);
   // O mesmo vale para o painel do bairro do Censo, que também cede a vez a uma área verde.
@@ -1044,6 +1109,7 @@ export function MapaPagina() {
     definir(["alertas-area", "alertas-borda", "alertas-pontos"], mostrarAlertas);
     definir(["supressao-anual-preenchimento", "supressao-anual-contorno"], mostrarSupressao);
     definir(["tarefas-pontos"], mostrarTarefas);
+    definir(["iluminacao-pontos"], mostrarIluminacao);
     definir(CAMADAS_ARBORIZACAO, mostrarArborizacao);
     definir(["bairros-preenchimento", "bairros-contorno"], mostrarBairros);
     definir(
@@ -1066,6 +1132,7 @@ export function MapaPagina() {
     mostrarTarefas,
     mostrarAlertas,
     mostrarSupressao,
+    mostrarIluminacao,
   ]);
 
   // Subtipo das praças: some só o que é praça e não é do subtipo escolhido; parques e unidades
@@ -1257,7 +1324,10 @@ export function MapaPagina() {
                 </Grupo>
 
                 {podeMapa && (
-                  <Grupo titulo="Contexto (fontes externas)" aberto={mostrarArborizacao}>
+                  <Grupo
+                    titulo="Contexto (fontes externas)"
+                    aberto={mostrarArborizacao || mostrarIluminacao}
+                  >
                     <Camada
                       rotulo="Arborização do entorno (Censo 2022)"
                       marcador={<AmostraArborizacao />}
@@ -1276,6 +1346,22 @@ export function MapaPagina() {
                     {mostrarArborizacao && estadoArborizacao === "erro" && (
                       <p role="alert" className="text-xs text-perigo">
                         Não foi possível carregar a arborização do entorno.
+                      </p>
+                    )}
+                    <Camada
+                      rotulo="Iluminação pública"
+                      marcador={<AmostraIluminacao />}
+                      ativa={mostrarIluminacao}
+                      aoMudar={(v) => atualizarBusca({ iluminacao: v ? "1" : undefined })}
+                    />
+                    <p className="text-xs text-texto-suave">
+                      Pontos de serviço da iluminação, com poste e lâmpadas. Aparecem a partir do
+                      zoom {ZOOM_ILUMINACAO}. Fonte: {ATRIBUICAO_ILUMINACAO}.
+                    </p>
+                    {mostrarIluminacao && aproximarIluminacao && (
+                      <p role="status" className="text-xs text-texto-suave">
+                        Aproxime o mapa para ver os pontos de iluminação (a partir do zoom{" "}
+                        {ZOOM_ILUMINACAO}).
                       </p>
                     )}
                   </Grupo>
@@ -1501,6 +1587,16 @@ export function MapaPagina() {
                             : " · data dos dados não informada"}
                         </p>
                       ))}
+                    {mostrarIluminacao && info?.iluminacao && (
+                      <p>
+                        Iluminação pública: {String(info.iluminacao.fonte)}
+                        {info.iluminacao.licenca ? ` · ${String(info.iluminacao.licenca)}` : ""} ·
+                        ingerido em {formatarDataHora(String(info.iluminacao.ingerido_em))}
+                        {info.iluminacao.data_referencia
+                          ? ` · dados de ${formatarData(String(info.iluminacao.data_referencia))}`
+                          : " · data dos dados não informada"}
+                      </p>
+                    )}
                     {mostrarArborizacao && proveniencia && (
                       <p>
                         {proveniencia.nome}: {proveniencia.fonte}
@@ -1576,6 +1672,7 @@ export function MapaPagina() {
             supressao={mostrarSupressao ? (provSupressao ?? "carregando") : null}
             recolhidaPorPadrao={painel}
             areasVerdes={mostrarAreasVerdes}
+            iluminacao={mostrarIluminacao ? { aproximar: aproximarIluminacao } : null}
             arborizacao={mostrarArborizacao}
             definicaoArborizacao={proveniencia?.definicao ?? DEFINICAO_ARBORIZACAO}
           />
@@ -1671,6 +1768,13 @@ export function MapaPagina() {
         )}
         {areaVerde && !area && !tipoSelecao && (
           <PainelAreaVerde area={areaVerde} aoFechar={() => setAreaVerde(null)} />
+        )}
+        {poste && !area && !tipoSelecao && !areaVerde && !bairroCenso && (
+          <PainelPoste
+            poste={poste}
+            fonte={info?.iluminacao as FonteIluminacao | null | undefined}
+            aoFechar={() => setPoste(null)}
+          />
         )}
         {bairroCenso && !area && !tipoSelecao && !areaVerde && (
           <PainelArborizacaoEntorno
@@ -1820,6 +1924,21 @@ function AmostraArborizacao() {
   );
 }
 
+/** Amostra do ponto de iluminação: a mesma cruz discreta do mapa. */
+function AmostraIluminacao() {
+  return (
+    <svg aria-hidden viewBox="0 0 12 12" className="size-3.5">
+      <path
+        d="M2 6h8M6 2v8"
+        stroke={COR_ILUMINACAO}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
 const ESCALA_SUPRESSAO = "≥ ~1 ha, anual, escala regional";
 
 /** Amostra da rampa da supressão anual: do mais antigo (claro) ao mais recente (escuro). */
@@ -1900,6 +2019,7 @@ function Legenda({
   supressao,
   recolhidaPorPadrao,
   areasVerdes,
+  iluminacao,
   arborizacao,
   definicaoArborizacao,
 }: {
@@ -1913,6 +2033,8 @@ function Legenda({
   /** Com o painel de camadas aberto, a legenda começa recolhida para não cobrir o mapa (C-09). */
   recolhidaPorPadrao: boolean;
   areasVerdes: boolean;
+  /** Iluminação ligada: se o zoom ainda é menor que o de exibição (`aproximar`); `null` desligada. */
+  iluminacao: { aproximar: boolean } | null;
   arborizacao: boolean;
   definicaoArborizacao: string;
 }) {
@@ -1923,18 +2045,26 @@ function Legenda({
     areasVerdes,
     arborizacao,
     supressao: !!supressao,
+    iluminacao: !!iluminacao,
   });
-  const contextoAtual = { areasVerdes, arborizacao, supressao: !!supressao };
+  const contextoAtual = {
+    areasVerdes,
+    arborizacao,
+    supressao: !!supressao,
+    iluminacao: !!iluminacao,
+  };
   if (
     contextoAtual.areasVerdes !== contextoAnterior.areasVerdes ||
     contextoAtual.arborizacao !== contextoAnterior.arborizacao ||
-    contextoAtual.supressao !== contextoAnterior.supressao
+    contextoAtual.supressao !== contextoAnterior.supressao ||
+    contextoAtual.iluminacao !== contextoAnterior.iluminacao
   ) {
     setContextoAnterior(contextoAtual);
     if (
       (contextoAtual.areasVerdes && !contextoAnterior.areasVerdes) ||
       (contextoAtual.arborizacao && !contextoAnterior.arborizacao) ||
-      (contextoAtual.supressao && !contextoAnterior.supressao)
+      (contextoAtual.supressao && !contextoAnterior.supressao) ||
+      (contextoAtual.iluminacao && !contextoAnterior.iluminacao)
     )
       setAberta(true);
   }
@@ -1945,6 +2075,7 @@ function Legenda({
     !alertas &&
     !supressao &&
     !areasVerdes &&
+    !iluminacao &&
     !arborizacao
   )
     return null;
@@ -2105,6 +2236,19 @@ function Legenda({
               </p>
             </div>
           )}
+          {iluminacao && (
+            <div data-testid="legenda-iluminacao">
+              <p className="flex items-center gap-1.5">
+                <AmostraIluminacao /> Iluminação pública — ponto de serviço
+              </p>
+              {iluminacao.aproximar && (
+                <p className="mt-0.5 max-w-64 text-texto-suave">
+                  Aproxime para ver: os pontos aparecem a partir do zoom {ZOOM_ILUMINACAO}.
+                </p>
+              )}
+              <p className="mt-0.5 max-w-64 text-texto-suave">Fonte: {ATRIBUICAO_ILUMINACAO}.</p>
+            </div>
+          )}
           {alertas && (
             <p className="flex items-center gap-1.5">
               <Losango cor={COR_ALERTA} /> Alerta ambiental — sinal externo, não é confirmação de
@@ -2182,6 +2326,82 @@ function AdocaoDaArea({ area }: { area: AreaVerdeSelecionada }) {
         não é importado.
       </p>
     </div>
+  );
+}
+
+/** Fonte da camada de iluminação, como `mapa/camadas` a devolve. */
+interface FonteIluminacao {
+  fonte?: string;
+  licenca?: string;
+  data_referencia?: string | null;
+  ingerido_em?: string | null;
+}
+
+/**
+ * Ponto de iluminação pública clicado, em texto: logradouro, poste, lâmpadas e a fonte com a
+ * atribuição exigida pela licença (RN-PROV-003). Só descreve o dado da SEINF.
+ */
+function PainelPoste({
+  poste,
+  fonte,
+  aoFechar,
+}: {
+  poste: PontoIluminacaoTile;
+  fonte?: FonteIluminacao | null;
+  aoFechar: () => void;
+}) {
+  const lampadas = listaDeLampadas(poste.lampadas);
+  return (
+    <aside
+      aria-label="Detalhes do ponto de iluminação"
+      className="absolute top-3 right-3 z-10 flex max-h-[calc(100%-1.5rem)] w-96 flex-col gap-2 overflow-y-auto rounded-xl border border-borda bg-superficie p-4 text-sm shadow-lg"
+    >
+      <button
+        className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo"
+        aria-label="Fechar detalhes"
+        onClick={aoFechar}
+      >
+        <X className="size-4" />
+      </button>
+      <div className="pr-8">
+        <p className="text-lg font-semibold">Ponto de iluminação pública</p>
+        <p className="flex items-center gap-1.5 text-texto-suave">
+          <AmostraIluminacao /> Ponto de serviço <span className="tabular-nums">{poste.id}</span>
+        </p>
+      </div>
+      <p>
+        <span className="font-medium">Logradouro:</span>{" "}
+        {poste.logradouro ? capitalizar(poste.logradouro) : "Não informado"}
+      </p>
+      <p>
+        <span className="font-medium">Poste:</span>{" "}
+        {textoDoPoste(poste.poste, poste.altura_min_m, poste.altura_max_m)}
+      </p>
+      <div>
+        <p className="font-medium">Lâmpadas:</p>
+        {lampadas.length ? (
+          <ul className="list-disc pl-5">
+            {lampadas.map((l) => (
+              <li key={l}>{l}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>Não informadas</p>
+        )}
+      </div>
+      <div className="border-t border-borda pt-2 text-xs text-texto-suave">
+        <p>
+          <span className="font-medium">Fonte:</span> {ATRIBUICAO_ILUMINACAO}
+        </p>
+        {fonte?.licenca && <p>{fonte.licenca}</p>}
+        <p>
+          {fonte?.data_referencia
+            ? `Dados de ${anoDaData(fonte.data_referencia)}`
+            : "Data dos dados não informada"}
+          {fonte?.ingerido_em ? ` · ingerido em ${formatarDataHora(fonte.ingerido_em)}` : ""}
+        </p>
+      </div>
+    </aside>
   );
 }
 

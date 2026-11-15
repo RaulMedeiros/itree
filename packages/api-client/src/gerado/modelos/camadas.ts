@@ -7,12 +7,15 @@
  */
 import type { CamadasAreasVerdesItem } from './camadasAreasVerdesItem';
 import type { CamadasArvores } from './camadasArvores';
+import type { CamadasIluminacao } from './camadasIluminacao';
 import type { CamadasOcorrencias } from './camadasOcorrencias';
 import type { CamadasTerritoriosItem } from './camadasTerritoriosItem';
 
 export interface Camadas {
   territorios: CamadasTerritoriosItem[];
   areas_verdes: CamadasAreasVerdesItem[];
+  /** @nullable */
+  iluminacao: CamadasIluminacao;
   /** @nullable */
   arvores: CamadasArvores;
   /** @nullable */

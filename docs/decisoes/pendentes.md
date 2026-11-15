@@ -30,6 +30,7 @@ responsável, a decisão e as specs atualizadas.
 | <a id="dp-19"></a>DP-19 | Provedor de autenticação (SSO institucional?) | RF-ACL-001 | F0 | Parcial: OIDC via Keycloak (ADR-0001); papéis na aplicação (ADR-0002); confirmar se a prefeitura tem SSO para federar |
 | <a id="dp-20"></a>DP-20 | Stack técnica (web, backend e app) | Todas | F0 | **Decidido** em 2026-10-31 — [ADR-0001](../adr/0001-stack-tecnica.md) |
 | <a id="dp-21"></a>DP-21 | Hospedagem: nuvem comercial ou infraestrutura da prefeitura | ADR de implantação, local de armazenamento (DP-08) | Produção | Aberta |
+| <a id="dp-22"></a>DP-22 | Conflito de árvores com a iluminação pública: raio, critérios (altura do poste, porte da espécie) e uso para priorizar poda | Lista "Árvores próximas à iluminação", ficha da árvore, tarefas de poda preventiva | F2 | Aberta. Hoje o sistema só lista as árvores ativas a até 3 m de um ponto de iluminação (SEINF), com o raio **provisório** em `ILUMINACAO_RAIO_CONFLITO_M`; não afirma dano nem risco. A URBFOR e a SEINF definem o raio, os critérios e se isso prioriza poda |
 
 ## Próximo passo recomendado
 

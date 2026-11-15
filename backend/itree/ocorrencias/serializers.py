@@ -7,6 +7,8 @@ from rest_framework import serializers
 from itree.contas.models import Equipe, Usuario
 from itree.contas.serializers import UsuarioResumoSerializer
 from itree.core.lote import IdsEmLoteSerializer
+from itree.iluminacao.serializers import PosteProximoSerializer
+from itree.iluminacao.servico import poste_mais_proximo, tipo_de_ocorrencia_relacionado
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.serializers import CampoLocalizacao
 from itree.tarefas.models import EstadoTarefa
@@ -113,6 +115,7 @@ class OcorrenciaSerializer(serializers.ModelSerializer):
     )
     tarefas = serializers.SerializerMethodField(help_text="Tarefas vinculadas, com o estado.")
     transicoes_possiveis = serializers.SerializerMethodField()
+    poste_mais_proximo = serializers.SerializerMethodField()
 
     class Meta:
         model = Ocorrencia
@@ -147,6 +150,7 @@ class OcorrenciaSerializer(serializers.ModelSerializer):
             "origem_referencia",
             "origem_vinculo",
             "tarefas",
+            "poste_mais_proximo",
             "registrada_por",
             "criado_em",
             "atualizado_em",
@@ -187,6 +191,13 @@ class OcorrenciaSerializer(serializers.ModelSerializer):
             }
             for t in sorted(obj.tarefas.all(), key=lambda t: t.numero)
         ]
+
+    @extend_schema_field(PosteProximoSerializer(allow_null=True))
+    def get_poste_mais_proximo(self, obj):
+        """Poste mais próximo (até 15 m), só em tipo do catálogo ligado a fiação ou iluminação."""
+        if not tipo_de_ocorrencia_relacionado(obj.tipo.nome):
+            return None
+        return poste_mais_proximo(obj.geom)
 
     @extend_schema_field(serializers.DictField(allow_null=True))
     def get_arvore(self, obj):

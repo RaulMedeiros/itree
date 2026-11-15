@@ -1,7 +1,7 @@
 import { configurarCliente, type Eu, type Ocorrencia } from "@itree/api-client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { criarServidor } from "./servidorPadrao";
@@ -80,6 +80,7 @@ const OCORRENCIA: Ocorrencia = {
   origem_referencia: "",
   origem_vinculo: null,
   tarefas: [],
+  poste_mais_proximo: null,
   registrada_por: { id: "u-gestor", nome: "Gabi Gestora", email: "gabi@itree.teste" },
   criado_em: "2026-10-31T12:00:00Z",
   atualizado_em: "2026-10-31T12:00:00Z",
@@ -342,6 +343,33 @@ describe("ocorrência", () => {
     expect(titulo.closest("section")).toHaveClass("rounded-lg", "border", "bg-superficie", "p-4");
     const tarefas = screen.getByRole("heading", { name: "Tarefas vinculadas" }).closest("section")!;
     expect(titulo.closest("section")!.className).toBe(tarefas.className);
+  });
+
+  it("em ocorrência de fiação, mostra o poste mais próximo; sem poste, não mostra nada", async () => {
+    await abrir("/ocorrencias/o-1");
+    await screen.findByText("Nenhuma tarefa de atendimento criada.");
+    expect(screen.queryByText("Poste mais próximo")).toBeNull();
+    cleanup();
+    servidor.use(
+      http.get(`${API}/api/v1/ocorrencias/o-1`, () =>
+        HttpResponse.json({
+          ...OCORRENCIA,
+          poste_mais_proximo: {
+            codigo: "904705",
+            distancia_m: 4.2,
+            tipo: "CONCRETO REDONDO",
+            altura_min_m: 11,
+            altura_max_m: 14,
+            logradouro: "HERACLITO GRACA, AV",
+          },
+        }),
+      ),
+    );
+    await abrir("/ocorrencias/o-1");
+    expect(await screen.findByText("Poste mais próximo")).toBeInTheDocument();
+    expect(screen.getByTestId("poste-mais-proximo")).toHaveTextContent(
+      "Concreto Redondo, 11 a 14 m · a 4,2 m",
+    );
   });
 
   it("sem tarefas vinculadas, diz que não há", async () => {

@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from itree.areas_verdes.models import AreaVerde
 from itree.contas.acesso import area_do_escopo, filtrar_por_escopo
 from itree.core.parametros import uuid_do_parametro
+from itree.iluminacao.servico import resumo_da_iluminacao
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
 from itree.ocorrencias.models import ESTADOS_FINAIS, Ocorrencia
@@ -23,6 +24,9 @@ from itree.territorio.models import Territorio
 
 TIPO_MVT = "application/vnd.mapbox-vector-tile"
 ZOOM_INDIVIDUAL = 16
+# Pontos de iluminação pública (~150 mil): sem agrupamento, só a partir deste zoom. Abaixo dele o
+# tile vem vazio. O mesmo valor está em `apps/web/src/mapa/simbologia.ts`.
+ZOOM_ILUMINACAO = 15
 CIRCUNFERENCIA_3857 = 40075016.68557849
 # Zoom até o qual as células de agrupamento são maiores (menos agrupamentos amontoados).
 ZOOM_MUNICIPIO = 11
@@ -158,6 +162,27 @@ CAMADAS = {
         """,
         "propriedades": "id, numero, tipo, estado, atrasada",
     },
+    "iluminacao": {
+        "permissao": "mapa.ler",
+        "filtros": lambda params: ("", {}),
+        "base": """
+            SELECT p.codigo AS id, p.logradouro, p.poste_tipo AS poste,
+                   COALESCE(p.altura_poste_min_m, -1) AS altura_min_m,
+                   COALESCE(p.altura_poste_max_m, -1) AS altura_max_m,
+                   COALESCE((
+                       SELECT string_agg(
+                                  x.tipo || CASE WHEN x.n > 1 THEN ' (' || x.n || ')' ELSE '' END,
+                                  '; ' ORDER BY x.tipo)
+                         FROM (SELECT l->>'tipo' AS tipo, count(*) AS n
+                                 FROM jsonb_array_elements(p.lampadas) l GROUP BY 1) x
+                   ), '') AS lampadas,
+                   ST_Transform(p.geom, 3857) AS g3857
+              FROM iluminacao_pontoiluminacao p, env
+             WHERE p.geom && ST_Transform(env.g, 4326)
+               AND ST_Intersects(p.geom, ST_GeomFromEWKB(%(area)s))
+        """,
+        "propriedades": "id, logradouro, poste, altura_min_m, altura_max_m, lampadas",
+    },
 }
 
 
@@ -235,7 +260,9 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
 
     Abaixo do zoom 16, os pontos são agrupados em células com a contagem
     (``quantidade``); a partir dele, cada registro vira uma feição. Só as árvores, abaixo do zoom
-    12, vêm agrupadas por bairro, com a contagem, a pior condição e o nome do bairro.
+    12, vêm agrupadas por bairro, com a contagem, a pior condição e o nome do bairro. Os pontos de
+    iluminação pública nunca são agrupados: vêm um a um a partir do zoom 15 e, antes dele, o tile
+    é vazio.
     """
     definicao = CAMADAS.get(camada)
     if definicao is None:
@@ -246,7 +273,7 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
         raise NotFound("Tile fora do intervalo.")
 
     area = area_do_escopo(request.user)
-    if area is None:
+    if area is None or (camada == "iluminacao" and z < ZOOM_ILUMINACAO):
         return HttpResponse(b"", content_type=TIPO_MVT)
 
     extra, valores = definicao["filtros"](request.query_params)
@@ -262,7 +289,7 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
         resposta = HttpResponse(bytes(dados or b""), content_type=TIPO_MVT)
         resposta["Cache-Control"] = "private, max-age=30"
         return resposta
-    if z >= ZOOM_INDIVIDUAL:
+    if z >= ZOOM_INDIVIDUAL or camada == "iluminacao":
         # SQL montado só a partir de constantes deste módulo; valores vão como parâmetros.
         selecao = f"""
             SELECT {definicao["propriedades"]}, 1 AS quantidade,
@@ -425,6 +452,7 @@ def busca(request: Request):
         {
             "territorios": serializers.ListField(child=serializers.DictField()),
             "areas_verdes": serializers.ListField(child=serializers.DictField()),
+            "iluminacao": serializers.DictField(allow_null=True),
             "arvores": serializers.DictField(allow_null=True),
             "ocorrencias": serializers.DictField(allow_null=True),
             "limites_escopo": serializers.ListField(
@@ -500,6 +528,7 @@ def camadas(request: Request):
         {
             "territorios": territorios,
             "areas_verdes": areas_verdes,
+            "iluminacao": resumo_da_iluminacao(),
             "arvores": arvores,
             "ocorrencias": ocorrencias,
             "limites_escopo": list(area.extent) if area else None,

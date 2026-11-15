@@ -28,6 +28,7 @@ import { EspeciesPagina, TiposOcorrenciaPagina } from "./paginas/administracao/C
 import { ArvoreDetalhePagina } from "./paginas/inventario/ArvoreDetalhePagina";
 import { ArvoresPagina } from "./paginas/inventario/ArvoresPagina";
 import { ORDENACOES_ARVORES } from "./paginas/inventario/ordenacao";
+import { ArvoresIluminacaoPagina } from "./paginas/inventario/ArvoresIluminacaoPagina";
 import { DuplicidadesPagina } from "./paginas/inventario/DuplicidadesPagina";
 import {
   EspecieDetalhePagina,
@@ -252,6 +253,7 @@ const mapa = createRoute({
     bairros: bandeira("0"),
     areas_verdes: bandeira("1"),
     supressao_anual: bandeira("1"),
+    iluminacao: bandeira("1"),
     /** Subtipo das praças mostrado na camada de áreas verdes; vazio mostra todos. */
     subtipo_praca: z
       .enum(["praca", "areninha", "calcadao", "rotatoria", "sem_denominacao"])
@@ -365,6 +367,18 @@ const especieDetalhe = createRoute({
   getParentRoute: () => inventario,
   path: "especies/$id",
   component: EspecieDetalhePagina,
+});
+
+const arvoresIluminacao = createRoute({
+  getParentRoute: () => inventario,
+  path: "iluminacao",
+  validateSearch: z.object({
+    busca: textoOpcional,
+    bairro: textoOpcional,
+    altura_poste_max_m: z.coerce.number().positive().optional().catch(undefined),
+    pagina: paginaOpcional,
+  }),
+  component: ArvoresIluminacaoPagina,
 });
 
 const duplicidades = createRoute({
@@ -630,6 +644,7 @@ const arvore = raiz.addChildren([
       especieDetalhe,
       importacoes,
       duplicidades,
+      arvoresIluminacao,
       qualidade,
     ]),
     ocorrencias.addChildren([ocorrenciasLista, ocorrenciaDetalhe]),
