@@ -28,6 +28,7 @@ import { EspeciesPagina, TiposOcorrenciaPagina } from "./paginas/administracao/C
 import { ArvoreDetalhePagina } from "./paginas/inventario/ArvoreDetalhePagina";
 import { ArvoresPagina } from "./paginas/inventario/ArvoresPagina";
 import { ORDENACOES_ARVORES } from "./paginas/inventario/ordenacao";
+import { ArvoresIluminacaoPagina } from "./paginas/inventario/ArvoresIluminacaoPagina";
 import { DuplicidadesPagina } from "./paginas/inventario/DuplicidadesPagina";
 import {
   EspecieDetalhePagina,
@@ -368,6 +369,18 @@ const especieDetalhe = createRoute({
   component: EspecieDetalhePagina,
 });
 
+const arvoresIluminacao = createRoute({
+  getParentRoute: () => inventario,
+  path: "iluminacao",
+  validateSearch: z.object({
+    busca: textoOpcional,
+    bairro: textoOpcional,
+    altura_poste_max_m: z.coerce.number().positive().optional().catch(undefined),
+    pagina: paginaOpcional,
+  }),
+  component: ArvoresIluminacaoPagina,
+});
+
 const duplicidades = createRoute({
   getParentRoute: () => inventario,
   path: "duplicidades",
@@ -631,6 +644,7 @@ const arvore = raiz.addChildren([
       especieDetalhe,
       importacoes,
       duplicidades,
+      arvoresIluminacao,
       qualidade,
     ]),
     ocorrencias.addChildren([ocorrenciasLista, ocorrenciaDetalhe]),

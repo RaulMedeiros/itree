@@ -38,6 +38,7 @@ import { Botao } from "../../ui/botao";
 import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro } from "../../ui/estados";
+import { PosteMaisProximo } from "../../componentes/PosteMaisProximo";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { Recolhivel } from "../../ui/recolhivel";
 import { Selo } from "../../ui/selo";
@@ -331,6 +332,14 @@ function Detalhe({ ocorrencia: o }: { ocorrencia: Ocorrencia }) {
               <dt className="text-xs text-texto-suave uppercase">Local</dt>
               <dd>{[o.endereco, o.bairro?.nome].filter(Boolean).join(" · ") || "—"}</dd>
             </div>
+            {o.poste_mais_proximo && (
+              <div className="col-span-2">
+                <dt className="text-xs text-texto-suave uppercase">Poste mais próximo</dt>
+                <dd>
+                  <PosteMaisProximo poste={o.poste_mais_proximo} />
+                </dd>
+              </div>
+            )}
             <div className="col-span-2">
               <dt className="text-xs text-texto-suave uppercase">Origem</dt>
               <dd>

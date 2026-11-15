@@ -12,6 +12,11 @@ const SECOES = [
     rotulo: "Possíveis duplicidades",
     permissao: "inventario.ler",
   },
+  {
+    para: "/inventario/iluminacao",
+    rotulo: "Árvores próximas à iluminação",
+    permissao: "inventario.ler",
+  },
   { para: "/inventario/qualidade", rotulo: "Qualidade de dados", permissao: "inventario.ler" },
 ] as const;
 
