@@ -212,7 +212,7 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     esperar: ids.bairro_demo,
   });
   await tela(p, "41-analises-mudas", "/analises?analise=mudas_doadas_por_especie", {
-    esperar: "Mudas doadas por espécie (URBFOR, 2022)",
+    esperar: /Ressalvas/,
     espera: 2500,
   });
   await ctx.close();
