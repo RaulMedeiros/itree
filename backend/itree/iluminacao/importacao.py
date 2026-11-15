@@ -50,6 +50,9 @@ FAIXA_Y = (9_000_000.0, 10_000_000.0)
 # Caixa folgada de Fortaleza, usada quando não há limite municipal importado.
 CAIXA_FORTALEZA = (-38.70, -4.00, -38.38, -3.65)
 ALTURA_MAXIMA_M = 60.0
+# Folga no limite do município: a coordenada da fonte e o polígono oficial não coincidem ao metro,
+# e 964 dos 1.711 pontos que caem fora (na verificação de 15/11/2026) estão a até 50 m dele.
+TOLERANCIA_LIMITE_M = 50.0
 
 _ALTURA = re.compile(
     r"\s*(?:DE\s+(\d+(?:[.,]\d+)?)\s*M?\s+A\s+(\d+(?:[.,]\d+)?)\s*M|AT[ÉE]\s+(\d+(?:[.,]\d+)?)\s*M)\s*$",
@@ -245,21 +248,34 @@ def agregar(linhas: Iterator[dict]) -> Leitura:
 
 
 class LimiteDoMunicipio:
-    """Teste "dentro do município": caixa folgada de Fortaleza e, havendo, o limite oficial."""
+    """Teste "dentro do município": caixa folgada de Fortaleza e, havendo, o limite oficial.
+
+    O limite oficial ganha ``TOLERANCIA_LIMITE_M`` metros de folga (buffer calculado em metros, no
+    SRC métrico de Fortaleza). Sem município importado, vale só a caixa.
+    """
 
     def __init__(self):
         from itree.territorio.models import Territorio, TipoTerritorio
 
-        self._municipios = [
-            m.geom.prepared
+        self._limite = None
+        geometrias = [
+            m.geom
             for m in Territorio.objects.filter(tipo=TipoTerritorio.MUNICIPIO).only("id", "geom")
         ]
+        if geometrias:
+            uniao = geometrias[0]
+            for g in geometrias[1:]:
+                uniao = uniao.union(g)
+            uniao.srid = 4326
+            folgado = uniao.transform(SRID_METRICO, clone=True).buffer(TOLERANCIA_LIMITE_M)
+            folgado.transform(4326)
+            self._limite = folgado.prepared
 
     def contem(self, geom) -> bool:
         oeste, sul, leste, norte = CAIXA_FORTALEZA
         if not (oeste <= geom.x <= leste and sul <= geom.y <= norte):
             return False
-        return not self._municipios or any(m.contains(geom) for m in self._municipios)
+        return self._limite is None or self._limite.contains(geom)
 
 
 @dataclass

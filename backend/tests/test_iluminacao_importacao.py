@@ -148,6 +148,15 @@ def test_fora_do_limite_oficial_do_municipio_e_descartado(tmp_path, territorios)
     assert LoteIluminacao.objects.get().fora_do_municipio == 1
 
 
+def test_o_limite_do_municipio_tem_folga_de_50_m(tmp_path, territorios):
+    # O município de teste vai até a longitude -38,60 (oeste). 0,0002 grau ≈ 22 m; 0,002 ≈ 220 m.
+    quase_dentro = utm(-38.6002, -3.70)
+    bem_fora = utm(-38.602, -3.70)
+    importar(planilha(tmp_path, [linha(1, *quase_dentro), linha(2, *bem_fora)]))
+    assert list(PontoIluminacao.objects.values_list("codigo", flat=True)) == ["1"]
+    assert LoteIluminacao.objects.get().fora_do_municipio == 1
+
+
 def test_resolve_o_bairro_oficial_pela_geometria(tmp_path, territorios):
     dentro_de_a = utm(PONTO_A["longitude"], PONTO_A["latitude"])
     importar(planilha(tmp_path, [linha(1, *dentro_de_a, bairro="BAIRRO ERRADO")]))
