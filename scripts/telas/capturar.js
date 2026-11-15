@@ -202,6 +202,10 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
   await tela(p, "22-analises", "/analises?analise=arvores_por_bairro", {
     esperar: ids.bairro_demo,
   });
+  await tela(p, "41-analises-mudas", "/analises?analise=mudas_doadas_por_especie", {
+    esperar: "Mudas doadas por espécie (URBFOR, 2022)",
+    espera: 2500,
+  });
   await ctx.close();
 
   ({ ctx, p } = await entrar(nav, "admin@itree.local", "admin"));
