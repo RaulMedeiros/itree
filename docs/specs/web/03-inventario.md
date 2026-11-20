@@ -164,6 +164,13 @@ Página com cabeçalho (ID, espécie, endereço, mini-mapa, selos) e abas:
   GBIF (a prioridade do Commons volta na próxima consulta bem-sucedida).
 - **RF-INV-022** — Ficha da árvore mostra o cartão da espécie, com link para o
   catálogo.
+- **RF-INV-040** — Aba "Galeria" da ficha: fotos da árvore, das inspeções, ocorrências e tarefas
+  dela em ordem cronológica (miniaturas; original só no visualizador), com origem, autor e data,
+  "Comparar" antes e depois (lado a lado ou barra deslizante) e a imagem de referência da
+  espécie rotulada "não é esta árvore". Mesmo acesso e escopo das origens.
+- **RF-INV-041** — Linha do tempo visual da árvore: cadastro, medições, inspeções (cor da
+  condição aparente validada), ocorrências, tarefas e podas, com a condição em degraus e a altura
+  e o DAP com unidade. Fonte: registros do próprio sistema.
 - **RF-INV-027** — Aba "Árvores próximas à iluminação" (poste × copa): lista paginada das
   árvores **ativas** a até *R* metros de um ponto de iluminação pública (SEINF), dentro do
   escopo territorial de quem consulta, da mais próxima para a mais distante. Cada linha traz

@@ -1,5 +1,6 @@
 # Sobreposição para o ambiente de demonstração: a API passa a declarar que os dados
-# são sintéticos e o painel mostra a faixa de aviso (RN-PROV-008). Não altera o compose
+# são sintéticos e o painel mostra a faixa de aviso (RN-PROV-008), com o mapa de satélite
+# de desenvolvimento (Sentinel-2 cloudless 2016, EOX, CC BY 4.0, 10 m; o de produção é a DP-21). Não altera o compose
 # padrão; usada pelo scripts/telas/gerar.sh:
 #
 #   docker compose -f compose.yml -f compose.demonstracao.yml --profile completo up -d
@@ -14,3 +15,11 @@ services:
   beat:
     environment:
       ITREE_AMBIENTE: demonstracao
+  web:
+    environment:
+      ITREE_MAPA_SATELITE_URL: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg"
+      ITREE_MAPA_SATELITE_NOME: "Sentinel-2 cloudless 2016 (EOX)"
+      ITREE_MAPA_SATELITE_ATRIBUICAO: "Sentinel-2 cloudless – https://s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016)"
+      ITREE_MAPA_SATELITE_ZOOM_MAXIMO: "14"
+      ITREE_MAPA_SATELITE_DATA: "2016-12-31"
+      ITREE_MAPA_SATELITE_AVISO: "imagem de 10 m: mostra manchas de vegetação, não árvores individuais"

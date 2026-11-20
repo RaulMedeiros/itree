@@ -68,5 +68,5 @@ a legenda a identificam.
 | Percentual de confiança da IA | **Rejeitada** | DP-13: só depois de calibração validada |
 | "Saudável / Atenção / Risco" atribuído por IA | **Rejeitada** | Risco só com confirmação técnica (W-04) |
 | CO₂ sequestrado, cobertura de copa, ilhas de calor, −2,1 °C | **Rejeitada por ora** | Sem fonte nem metodologia; pode voltar com fonte declarada |
-| Satélite como base padrão | Bloqueada | Provedor pendente (DP-07) |
+| Satélite como base padrão | Bloqueada | Provedor de produção pendente (DP-21). Como opção, desde que haja provedor configurado: Sentinel-2 cloudless de 10 m em desenvolvimento e demonstração, com aviso de resolução |
 | Jornada do aplicativo de campo | Referência | Para a spec do app (ainda não iniciado) |

@@ -8,7 +8,7 @@ interface ConfiguracaoExecucao {
   oidcAuthority?: string;
   oidcClientId?: string;
   mostrarModulosFuturos?: boolean;
-  /** Mapas base. O provedor oficial ainda é decisão pendente (DP-07). */
+  /** Mapas base. O provedor oficial ainda é decisão pendente (DP-07, DP-21). */
   mapaRuas?: CamadaBase | null;
   mapaSatelite?: CamadaBase | null;
 }
@@ -20,6 +20,15 @@ export interface CamadaBase {
   /** Data da imagem, quando o provedor informa (RF-MAPA-002). */
   data?: string;
   tamanho?: number;
+  /** Nome do provedor ou da imagem, para o seletor e a atribuição. */
+  nome?: string;
+  /**
+   * Maior zoom em que o provedor tem imagem de verdade. Além dele o mapa só amplia (sobreamostra)
+   * a imagem, em vez de pedir tiles que são a mesma imagem borrada.
+   */
+  zoomMaximo?: number;
+  /** Aviso de resolução, mostrado ao lado do seletor ("imagem de 10 m: ..."). */
+  aviso?: string;
 }
 
 declare global {
@@ -50,5 +59,21 @@ export const config = {
           tamanho: 256,
         }
       : execucao.mapaRuas,
-  mapaSatelite: execucao.mapaSatelite ?? null,
+  // Sem configuração não há opção "Satélite": o provedor de produção é a DP-21.
+  mapaSatelite: execucao.mapaSatelite ?? satelitePorVariaveis(),
 };
+
+/** Satélite configurado pelas variáveis VITE_MAPA_SATELITE_* (desenvolvimento, sem /config.js). */
+function satelitePorVariaveis(): CamadaBase | null {
+  const url = env.VITE_MAPA_SATELITE_URL;
+  if (!url) return null;
+  const zoom = Number(env.VITE_MAPA_SATELITE_ZOOM_MAXIMO);
+  return {
+    url,
+    atribuicao: env.VITE_MAPA_SATELITE_ATRIBUICAO ?? "",
+    nome: env.VITE_MAPA_SATELITE_NOME || undefined,
+    zoomMaximo: Number.isFinite(zoom) && zoom > 0 ? zoom : undefined,
+    aviso: env.VITE_MAPA_SATELITE_AVISO || undefined,
+    data: env.VITE_MAPA_SATELITE_DATA || undefined,
+  };
+}

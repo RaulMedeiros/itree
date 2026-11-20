@@ -22,8 +22,10 @@ import { CondicaoAparente } from "../../componentes/CondicaoAparente";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeloStatusAlerta } from "../../componentes/selos";
 import { Mapa } from "../../mapa/Mapa";
+import { useBaseLembrada } from "../../mapa/useBaseLembrada";
 import {
   COR_ALERTA,
+  COR_ALERTA_SATELITE,
   camadasDoAlerta,
   pinturaArvores,
   registrarIcones,
@@ -82,6 +84,7 @@ function limites(geometria: { type: string; coordinates: unknown }): LngLatBound
 }
 
 function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) {
+  const baseMapa = useBaseLembrada();
   const podeTriar = usePermissao("alertas.triar");
   const podeRegistrar = usePermissao("ocorrencias.editar");
   const podeConverter =
@@ -132,7 +135,11 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
       id: "raio-contorno",
       type: "line",
       source: "raio",
-      paint: { "line-color": COR_ALERTA, "line-width": 1.5, "line-dasharray": [2, 2] },
+      paint: {
+        "line-color": baseMapa === "satelite" ? COR_ALERTA_SATELITE : COR_ALERTA,
+        "line-width": 1.5,
+        "line-dasharray": [2, 2],
+      },
     });
     m.addSource("arvores-proximas", { type: "geojson", data: vazio });
     m.addSource("alerta", {
@@ -142,14 +149,14 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
       >[0],
     });
     registrarIcones(m);
-    for (const camada of camadasDoAlerta("alerta", a.tipo_geometria === "Point"))
+    for (const camada of camadasDoAlerta("alerta", a.tipo_geometria === "Point", baseMapa))
       m.addLayer(camada as Parameters<MapaMapLibre["addLayer"]>[0]);
     // As árvores ficam por cima do alerta: é a relação espacial que a tela quer mostrar.
     m.addLayer({
       id: "arvores-proximas",
       type: "circle",
       source: "arvores-proximas",
-      paint: { ...pinturaArvores("condicao"), "circle-radius": 6 } as never,
+      paint: { ...pinturaArvores("condicao", baseMapa), "circle-radius": 6 } as never,
     });
     setMapaPronto(true);
     if (a.tipo_geometria === "Point") {
@@ -201,7 +208,7 @@ function Detalhe({ alerta: a, raio }: { alerta: AlertaAmbiental; raio: RaioM }) 
       <div className="mb-6 grid gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
           <Mapa
-            base="ruas"
+            base={baseMapa}
             rotulo="Geometria do alerta"
             className="h-80 overflow-hidden rounded-lg border border-borda"
             aoCarregar={aoCarregar}

@@ -37,7 +37,7 @@ export function estiloBase(base: CamadaBase | null, tipo: TipoBase = "ruas"): St
             tiles: [base.url],
             tileSize: base.tamanho ?? 256,
             attribution: base.atribuicao,
-            maxzoom: 19,
+            maxzoom: base.zoomMaximo ?? 19,
           },
         }
       : {},
