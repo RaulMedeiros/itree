@@ -2,6 +2,7 @@ import {
   ErroApi,
   evidenciasConfirmarEnvio,
   evidenciasIniciarEnvio,
+  getArvoresFotosQueryKey,
   getEvidenciasListarQueryKey,
   useEvidenciasListar,
   useEvidenciasRemover,
@@ -62,8 +63,12 @@ export function Evidencias({ alvo, podeEnviar }: { alvo: Alvo; podeEnviar: boole
   const [removendo, setRemovendo] = useState<string | null>(null);
   const [ampliada, setAmpliada] = useState<Evidencia | null>(null);
 
-  const atualizar = () =>
-    cliente.invalidateQueries({ queryKey: getEvidenciasListarQueryKey(alvo) });
+  const atualizar = async () => {
+    // A galeria da árvore junta estas fotos às das inspeções e ocorrências.
+    if ("arvore" in alvo)
+      void cliente.invalidateQueries({ queryKey: getArvoresFotosQueryKey(alvo.arvore) });
+    await cliente.invalidateQueries({ queryKey: getEvidenciasListarQueryKey(alvo) });
+  };
 
   const enviar = async () => {
     if (!arquivo) return;

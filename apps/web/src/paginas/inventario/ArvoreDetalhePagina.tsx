@@ -45,6 +45,8 @@ import { useState, type FormEvent, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
+import { GaleriaArvore } from "../../componentes/GaleriaArvore";
+import { LinhaDoTempoVisual } from "../../componentes/LinhaDoTempoVisual";
 import { CartaoEspecie } from "../../componentes/especies";
 import { FotoPrincipalArvore } from "../../componentes/FotoPrincipalArvore";
 import type { IdTermo } from "../../ajuda/glossario";
@@ -82,7 +84,15 @@ import { PosteMaisProximo } from "../../componentes/PosteMaisProximo";
 import { CadeiasDaArvore } from "./CadeiasDaArvore";
 import { invalidarCaminhos } from "../../util/cache";
 
-type Aba = "resumo" | "medidas" | "inspecoes" | "ocorrencias" | "evidencias" | "ia" | "historico";
+type Aba =
+  | "resumo"
+  | "galeria"
+  | "medidas"
+  | "inspecoes"
+  | "ocorrencias"
+  | "evidencias"
+  | "ia"
+  | "historico";
 
 export function ArvoreDetalhePagina() {
   const { id } = useParams({ from: "/autenticado/inventario/arvores/$id" });
@@ -125,6 +135,7 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
 
   const abas: { id: Aba; rotulo: string }[] = [
     { id: "resumo", rotulo: "Resumo" },
+    { id: "galeria", rotulo: "Galeria" },
     { id: "medidas", rotulo: "Medidas" },
     { id: "inspecoes", rotulo: "Inspeções" },
     {
@@ -242,6 +253,16 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
       <div role="tabpanel">
         {aba === "resumo" && (
           <Resumo arvore={arvore} aoAdicionarFoto={() => setAba("evidencias")} />
+        )}
+        {aba === "galeria" && (
+          <div className="flex flex-col gap-6">
+            <LinhaDoTempoVisual arvoreId={arvore.id} aoIrParaAba={setAba} />
+            <GaleriaArvore
+              arvore={arvore}
+              podeEditar={podeEditar}
+              aoAdicionarFoto={() => setAba("evidencias")}
+            />
+          </div>
         )}
         {aba === "medidas" && (
           <Medidas arvore={arvore} podeMedir={podeEditar} aoMedir={() => setMedindo(true)} />
