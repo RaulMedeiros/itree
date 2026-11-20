@@ -475,7 +475,7 @@ function Pendencias({ itens }: { itens: Pendencia[] }) {
 }
 
 /** Ranking dos bairros do escopo por um índice simples: cada componente aparece separado
- * e a fórmula, em "Como é calculado". Cada bairro abre o mapa com ele em destaque. */
+ * e a fórmula, em "Como é calculado". O nome abre a ficha do bairro; "mapa" o abre em destaque. */
 function BairrosQuePedemAtencao({ dados }: { dados: BairrosAtencao }) {
   return (
     <Painel
@@ -506,12 +506,20 @@ function BairrosQuePedemAtencao({ dados }: { dados: BairrosAtencao }) {
                 <Td className="font-medium">
                   <span className="mr-2 text-texto-suave tabular-nums">{posicao + 1}.</span>
                   <Link
-                    to={b.link.pagina}
-                    search={b.link.filtros}
+                    to="/bairros/$id"
+                    params={{ id: String(b.id) }}
                     className="text-marca-escura hover:underline"
-                    aria-label={`${b.nome}: ver no mapa`}
+                    aria-label={`${b.nome}: abrir a ficha do bairro`}
                   >
                     {b.nome}
+                  </Link>
+                  <Link
+                    to={b.link.pagina}
+                    search={b.link.filtros}
+                    className="ml-2 text-xs font-normal text-texto-suave hover:underline"
+                    aria-label={`${b.nome}: ver no mapa`}
+                  >
+                    mapa
                   </Link>
                 </Td>
                 {b.componentes.map((c) => (
@@ -533,6 +541,11 @@ function BairrosQuePedemAtencao({ dados }: { dados: BairrosAtencao }) {
           </tbody>
         </Tabela>
       )}
+      <p className="mt-3 text-sm">
+        <Link to="/bairros" className="text-marca-escura hover:underline">
+          Ver todos os bairros
+        </Link>
+      </p>
       <details className="mt-3 text-xs text-texto-suave">
         <summary className="inline-flex cursor-pointer items-center gap-1">
           <Info className="size-3.5" aria-hidden /> Como é calculado

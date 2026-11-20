@@ -69,6 +69,15 @@ Indicadores oficiais e fórmulas dependem de
 - **RF-VG-009** — A comparação de contagens contra o período anterior mostra a
   diferença absoluta ("+5") quando a base anterior é menor que 20, e o
   percentual a partir daí.
+- **RF-VG-010** — Ficha do bairro (`/bairros/$id`, lista em `/bairros`): cabeçalho com regional, área e
+  selo da fonte; mapa do bairro (árvores pela condição, ocorrências abertas, áreas verdes e praças);
+  cartões de indicadores, cada um com fonte e data (árvores, espécie confirmada, condição ruim ou
+  morta, ocorrências e tarefas, arborização do entorno do Censo, ilha de calor, árvores próximas à
+  iluminação com o selo "provisório", mudas plantadas, manejo, áreas verdes e alertas); régua "bairro ×
+  média da cidade" nos percentuais; composição por espécie, condição e ocorrências por mês; posição
+  em "Bairros que pedem atenção". Sem dado, o cartão fica e diz o motivo (nunca zero). Só abre para
+  bairros do escopo (403 fora dele). Nome de bairro vira link para a ficha na visão geral, nas
+  análises por bairro, na busca global e no mapa. Dados: `GET /api/v1/bairros/{id}/ficha`.
 
 ## 5. Regras
 

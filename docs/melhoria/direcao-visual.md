@@ -37,6 +37,7 @@ A legenda usa as mesmas constantes.
 | Seleção | `#0b7285` |
 | Iluminação pública (SEINF), camada de contexto, desligada por padrão | `#5b6770` (cruz pequena com halo branco, a 85% de opacidade, abaixo das árvores; só a partir do zoom 15) |
 | Supressão anual (PRODES Caatinga), rampa do ano mais antigo ao mais recente | `#f4c0d1` → `#8a0f3c` (rosa, a 80% de opacidade); camada de referência, desligada por padrão |
+| Ilha de calor de superfície (UrbVerde), raster WMS, -5 °C a +5 °C | `#3288bd` → `#fee08b` → `#d53e4f` (rampa divergente da própria fonte, a 65% de opacidade, abaixo de todos os dados); camada de contexto, desligada por padrão, com a legenda oficial e a atribuição |
 | Arborização do entorno (Censo 2022), 5 classes de <20% a ≥80% | `#cde2fb` / `#86b6ef` / `#3987e5` / `#1c5cab` / `#0d366b` (um só matiz, claro → escuro, a 80% de opacidade); sem dado: hachura cinza `#a3ada7` |
 
 A rampa da supressão anual (PRODES) é rosa de propósito: o roxo é do alerta, o laranja e o marrom

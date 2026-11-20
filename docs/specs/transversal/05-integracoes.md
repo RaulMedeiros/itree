@@ -88,6 +88,13 @@ Endereços de referência: ver §7.2 da [especificação consolidada](../../refe
   mais próxima a até 50 m; sem praça nesse raio, fica sem vínculo, com o motivo. A fonte não informa a
   data do termo.
 
+- **RF-INT-016** — Ilha de calor de superfície (UrbVerde, IAU-USP): comando
+  `importar_ilha_calor_urbverde` calcula, por bairro, a média dos pixels de 30 m do raster ICUS 2025
+  (WCS), com cobertura, fonte, ano, método e licença, e reimporta uma vez por ano. A licença da fonte
+  não é aberta (uso público e acadêmico, sem fins comerciais): o valor só é gravado com
+  `URBVERDE_GRAVAR_VALORES`; desligado, o comando só calcula e avisa. A camada WMS do mapa não depende
+  disso (RF-MAPA-036).
+
 ## 3. Fluxo para alertas ambientais
 
 1. Ingerir evento ou polígono da fonte.

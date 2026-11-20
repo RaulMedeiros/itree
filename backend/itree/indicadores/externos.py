@@ -260,6 +260,9 @@ def arborizacao_geojson(usuario: Usuario, precisao: int = 5) -> dict:
                 "id": str(b.pk),
                 "geometry": json.loads(b.geometria),
                 "properties": {
+                    # O id do bairro como propriedade: o MapLibre só entrega ids numéricos, e o
+                    # clique abre a ficha do bairro.
+                    "id": str(b.pk),
                     "nome": b.nome,
                     "valor": float(i.valor) if i and i.valor is not None else None,
                     "faces_com_arvore": i.numerador if i else None,

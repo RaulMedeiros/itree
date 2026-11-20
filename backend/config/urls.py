@@ -28,11 +28,12 @@ from itree.ocorrencias.views import OcorrenciaViewSet, TipoOcorrenciaViewSet
 from itree.qualidade.views import InferenciaViewSet, pendencias
 from itree.relatorios import views as relatorios
 from itree.tarefas.views import TarefaViewSet
-from itree.territorio.views import TerritorioViewSet
+from itree.territorio.views import BairroViewSet, TerritorioViewSet
 
 roteador = DefaultRouter(trailing_slash=False)
 roteador.include_root_view = False
 roteador.register("territorios", TerritorioViewSet, basename="territorio")
+roteador.register("bairros", BairroViewSet, basename="bairro")
 roteador.register("areas-verdes", AreaVerdeViewSet, basename="area-verde")
 roteador.register("equipes", EquipeViewSet, basename="equipe")
 roteador.register("admin/usuarios", UsuarioAdminViewSet, basename="usuario-admin")

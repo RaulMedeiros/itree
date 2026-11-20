@@ -34,6 +34,7 @@ comando ou ingestão no código.
 | Plantio de mudas (CKAN) | URBFOR | dataset `doacao-mudas-pf`, recurso `matriz-plantio2022.xlsx` | XLSX em fichas, sem coordenadas | `cc-by-sa` | 2022-12 | V | Implementada: `importar_plantio_urbfor` (42 plantios, 19.675 mudas, 3 com bairro); só em Análises, sem geocodificar nem criar árvore |
 | Atendimentos Plano de Arborização (Mapas, id 534) | SEUMA | `/api/v1/geojson?id=534` | GeoJSON, 577 pontos | termos da API | 2021 | V | Implementada como conector, inativo até o administrador ativar: `criar_conectores_exemplo` (camada de referência) |
 | Adoção de Praças e Áreas Verdes (Mapas, id 622) | SEUMA | `/api/v1/geojson?id=622` | GeoJSON, 490 pontos; traz nome do adotante (dado pessoal), descartado na leitura | termos da API | 2023 | V | Implementada: `importar_adocao_pracas` (490 adoções, 194 ligadas a praça, 154 praças adotadas); mensal |
+| Ilhas de calor urbano de superfície (UrbVerde) | IAU-USP | `https://urbverde.iau.usp.br/geoserver/urbverde/wms` e `/ows` (WCS 2.0.1), camada `raster_temperatura_icus_nacional_2025` | Raster Float32 de 30 m (WMS PNG e WCS GeoTIFF), °C; sem medição = -9999 | Termos de Uso da UrbVerde: uso acadêmico, educacional, público e de pesquisa, **vedado o uso comercial sem autorização**, "todos os direitos reservados", citar a fonte. GeoServer: Fees e AccessConstraints "none". **Sem licença aberta** | Anual (2025; tendência 2014 a 2025) | V | Camada WMS no mapa (`ilha_calor=1`). Valor por bairro: `importar_ilha_calor_urbverde`, que só grava com `URBVERDE_GRAVAR_VALORES` |
 | Ocorrências COPDC (CKAN) | SESEC | dataset `ocorrencias-copdc` | CSV agregado | `cc-by` | 2026-06 | A | Não usar (sem queda de árvore) |
 | GeoServer, WMS e WFS de Fortaleza | Ipplan | `/geoserver/...` | n/a | n/a | n/a | A (404) | Não usar; preferir GeoJSON da API |
 | BDQueimadas, focos diários | INPE, Programa Queimadas | `https://dataserver-coids.inpe.br/queimadas/queimadas/focos/csv/diario/Brasil/focos_diario_br_AAAAMMDD.csv` | CSV, 1 a 4 MB por dia | Não declarada (DP-11); citar "INPE, Programa Queimadas" | Diária; o do dia fica pronto ~21h (BRT), o fechado ~09h | V | Implementada: `FonteAlerta.INPE_FOCOS` |
@@ -82,6 +83,34 @@ uv run python manage.py importar_limites_fortaleza
 - Se já existirem bairros importados por `importar_territorios` com outro código
   (por exemplo, do CKAN), a importação oficial cria registros novos pelo código do IBGE.
   Limpe os antigos antes, ou use só uma das fontes.
+
+### Ilha de calor (UrbVerde, IAU-USP)
+
+Verificada em 2026-11-20 (GetCapabilities, GetFeatureInfo, WCS, GetLegendGraphic e o código do site).
+
+- **O que mede.** `raster_temperatura_icus_nacional_2025` ("ICUS", ilha de calor urbano **de superfície**,
+  a camada `heat_island_national` do site) é, em cada pixel de 30 m, a **diferença em °C entre a
+  temperatura de superfície do pixel e a mediana do município**, no ano (composição anual Landsat 8 e 9,
+  Coleção 2 Nível 2), sobre a mancha urbana (setores censitários de 2022 de alta e baixa densidade de
+  edificações, mais 200 m). Legenda de -5 °C a +5 °C. Não é temperatura do ar nem absoluta: só se
+  compara dentro do mesmo município. Sem medição: -9999 (o título do estilo cita também "dado ausente
+  100"). `raster_temperatura_icu_nacional_2025` ("ICU") é a mesma grandeza em outra versão;
+  `raster_temperatura_tendencia_icus_nacional_2014_2025` é a tendência (°C por ano, de -0,3 a +0,3).
+  O site usa a ICUS, e foi essa a escolhida.
+- **WMS no MapLibre.** Serve: `GetMap` em EPSG:3857 com `{bbox-epsg-3857}`, PNG transparente, CORS
+  `Access-Control-Allow-Origin: *` (o mesmo pedido que o site faz). A legenda vem do `GetLegendGraphic`.
+- **Valor por bairro.** O WCS 2.0.1 entrega o GeoTIFF recortado (Fortaleza: 900 × 792 pixels, ~4 MB). O
+  valor do bairro é a média dos pixels medidos cujo centro cai no polígono; a cobertura (pixels medidos
+  ÷ pixels do bairro) é guardada. Conferido contra o `GetFeatureInfo` do próprio GeoServer em 12 pontos
+  de Aldeota: os 12 pixels coincidem. A API de cartões (`api.urbverde.com.br/v1/cards/pp/*?city=`)
+  respondeu "no years found" para Fortaleza e não é usada.
+- **Licença.** Termos em `https://urbverde.iau.usp.br/termos`. Não é licença aberta: "todos os direitos
+  reservados", uso público e acadêmico, sem fins comerciais, citação obrigatória ("Plataforma UrbVerde –
+  USP"), alterações com registro de autoria e metodologia. Por isso a camada do mapa (só visualização,
+  com atribuição) está liberada e o **valor por bairro só é gravado com `URBVERDE_GRAVAR_VALORES`**, depois
+  que a prefeitura confirmar o uso com a USP. Sem isso, o cartão da ficha diz "Veja a camada no mapa".
+- **Uso.** `manage.py importar_ilha_calor_urbverde [--bairros Aldeota Centro] [--arquivo x.tif]`. Reimportação
+  anual pelo beat (`reimportar-ilha-calor`, fevereiro).
 
 ### Iluminação pública (SEINF)
 

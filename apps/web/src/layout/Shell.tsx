@@ -32,7 +32,10 @@ export function Shell() {
   // ficam com a altura própria, a área de conteúdo ocupa o restante e rola por
   // dentro. Assim o mapa cabe na janela com ou sem a faixa, sem `calc` fixo.
   return (
-    <div data-testid="shell" className="flex h-dvh flex-col overflow-hidden">
+    <div
+      data-testid="shell"
+      className="flex h-dvh flex-col overflow-hidden print:block print:h-auto print:overflow-visible"
+    >
       {eu.ambiente === "demonstracao" && (
         <div
           role="note"
@@ -41,8 +44,8 @@ export function Shell() {
           Dados de demonstração — não representam a realidade.
         </div>
       )}
-      <div className="flex min-h-0 flex-1">
-        <aside className="flex w-60 shrink-0 flex-col overflow-y-auto bg-barra text-barra-texto">
+      <div className="flex min-h-0 flex-1 print:block">
+        <aside className="flex w-60 shrink-0 flex-col overflow-y-auto bg-barra text-barra-texto print:hidden">
           <Link to="/" className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
             <img src="/icone.svg" alt="" className="size-8 rounded-md bg-white p-0.5" />
             <span className="text-sm leading-tight font-semibold">
@@ -80,9 +83,12 @@ export function Shell() {
             </Link>
           </nav>
         </aside>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col print:block">
           <Cabecalho />
-          <main ref={principal} className="min-h-0 flex-1 overflow-auto p-6">
+          <main
+            ref={principal}
+            className="min-h-0 flex-1 overflow-auto p-6 print:overflow-visible print:p-0"
+          >
             <Outlet />
           </main>
         </div>
@@ -99,7 +105,7 @@ function Cabecalho() {
   return (
     // Três colunas (R3-33): a busca fica no centro e não muda de lugar com o
     // tamanho do nome do usuário.
-    <header className="grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-borda bg-superficie px-6">
+    <header className="grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-borda bg-superficie px-6 print:hidden">
       <div className="min-w-0 justify-self-start">
         <SeletorTerritorio />
       </div>

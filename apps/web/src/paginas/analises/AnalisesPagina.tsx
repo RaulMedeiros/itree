@@ -4,7 +4,7 @@ import {
   useRelatoriosAnalise,
   useRelatoriosCatalogo,
 } from "@itree/api-client";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { Download, FileText } from "lucide-react";
 import { useState } from "react";
 
@@ -40,10 +40,26 @@ interface SerieMensal {
 interface LinhaAnalise {
   rotulo: string;
   valor: number;
+  /** Só nas análises por bairro: o bairro da linha (nulo em "Sem bairro identificado"). */
+  territorio_id?: string | null;
   base?: number;
   numerador?: number;
   /** Composição do valor (por exemplo, poda, supressão e recolhimento), em texto. */
   detalhe?: string;
+}
+
+/** Nas análises por bairro, o nome do bairro abre a ficha dele. */
+function RotuloDaLinha({ linha }: { linha: LinhaAnalise }) {
+  if (!linha.territorio_id) return <>{linha.rotulo}</>;
+  return (
+    <Link
+      to="/bairros/$id"
+      params={{ id: linha.territorio_id }}
+      className="text-marca-escura hover:underline"
+    >
+      {linha.rotulo}
+    </Link>
+  );
 }
 
 function TabelaDaAnalise({
@@ -74,7 +90,9 @@ function TabelaDaAnalise({
       <tbody>
         {linhas.map((l) => (
           <Linha key={l.rotulo}>
-            <Td>{l.rotulo}</Td>
+            <Td>
+              <RotuloDaLinha linha={l} />
+            </Td>
             <Td>
               <div className="flex items-center gap-2">
                 <div className="h-2 flex-1 rounded bg-neutro-clara" aria-hidden>
@@ -280,7 +298,9 @@ export function AnalisesPagina() {
                   >
                     <ul className="flex flex-wrap gap-x-4 gap-y-1 text-texto-suave">
                       {zeros.map((l) => (
-                        <li key={l.rotulo}>{l.rotulo}</li>
+                        <li key={l.rotulo}>
+                          <RotuloDaLinha linha={l} />
+                        </li>
                       ))}
                     </ul>
                   </Recolhivel>

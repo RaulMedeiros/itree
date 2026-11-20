@@ -37,6 +37,9 @@ DEFINICAO = (
 )
 
 
+FORMULA = " + ".join(f"{PESOS[c]} × {ROTULOS[c].lower()}" for c in PESOS)
+
+
 def bairros_do_escopo(usuario: Usuario) -> QuerySet[Territorio]:
     """Bairros que são (ou estão dentro de) um território do escopo do usuário."""
     bairros = Territorio.objects.filter(tipo=TipoTerritorio.BAIRRO)
@@ -74,15 +77,16 @@ def indice(componentes: dict[str, int]) -> int:
     return sum(PESOS[c] * n for c, n in componentes.items())
 
 
-def ranking(
+def itens_do_ranking(
     usuario: Usuario,
     arvores: QuerySet,
     ocorrencias: QuerySet,
     *,
     hoje: date,
     agora: datetime,
-) -> dict:
-    """``arvores`` e ``ocorrencias`` já vêm restritas ao escopo do usuário."""
+) -> list[dict]:
+    """Todos os bairros do escopo com índice maior que zero, do maior para o menor.
+    ``arvores`` e ``ocorrencias`` já vêm restritas ao escopo do usuário."""
     validas = instantaneos.arvores_validas(arvores)
     abertas = ocorrencias.exclude(estado__in=ESTADOS_FINAIS)
     sem_inspecao = validas.filter(
@@ -115,9 +119,22 @@ def ranking(
                 }
             )
     itens.sort(key=lambda i: (-i["indice"], i["nome"]))
+    return itens
+
+
+def ranking(
+    usuario: Usuario,
+    arvores: QuerySet,
+    ocorrencias: QuerySet,
+    *,
+    hoje: date,
+    agora: datetime,
+) -> dict:
+    """``arvores`` e ``ocorrencias`` já vêm restritas ao escopo do usuário."""
+    itens = itens_do_ranking(usuario, arvores, ocorrencias, hoje=hoje, agora=agora)
     return {
         "titulo": "Bairros que pedem atenção",
         "definicao": DEFINICAO,
-        "formula": " + ".join(f"{PESOS[c]} × {ROTULOS[c].lower()}" for c in PESOS),
+        "formula": FORMULA,
         "itens": itens[:LIMITE],
     }

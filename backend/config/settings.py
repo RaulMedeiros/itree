@@ -306,6 +306,12 @@ AREAS_VERDES_IDADE_MAXIMA_DIAS = env.int("AREAS_VERDES_IDADE_MAXIMA_DIAS", defau
 # Conflito de árvores com a iluminação pública (DP aberta): raio PROVISÓRIO, em metros, até a URBFOR
 # e a SEINF definirem a regra. A interface sempre o mostra como provisório.
 ILUMINACAO_RAIO_CONFLITO_M = env.float("ILUMINACAO_RAIO_CONFLITO_M", default=3.0)
+# Ilha de calor por bairro (UrbVerde, IAU-USP). Os Termos de Uso da UrbVerde não são licença
+# aberta (uso público e acadêmico, sem fins comerciais, todos os direitos reservados): o valor por
+# bairro só é gravado depois que a prefeitura confirmar o uso com a USP. A camada do mapa (WMS)
+# não grava nada e não depende disso.
+URBVERDE_GRAVAR_VALORES = env.bool("URBVERDE_GRAVAR_VALORES", default=False)
+URBVERDE_TIMEOUT = env.int("URBVERDE_TIMEOUT", default=180)
 # Conectores de fontes externas (RF-INT-006): o servidor só busca hosts desta lista, por HTTPS.
 ITREE_CONECTORES_HOSTS_PERMITIDOS = env.list(
     "ITREE_CONECTORES_HOSTS_PERMITIDOS",
@@ -344,6 +350,11 @@ CELERY_BEAT_SCHEDULE = {
     "reimportar-iluminacao-publica": {
         "task": "itree.iluminacao.tasks.reimportar_iluminacao_publica",
         "schedule": crontab(minute=0, hour=4, day_of_month=3),
+    },
+    # Ilha de calor por bairro (UrbVerde): anual, e só grava com URBVERDE_GRAVAR_VALORES.
+    "reimportar-ilha-calor": {
+        "task": "itree.indicadores.tasks.reimportar_ilha_calor",
+        "schedule": crontab(minute=0, hour=5, day_of_month=5, month_of_year=2),
     },
     # Conectores vencidos pela periodicidade (RF-INT-006): confere de hora em hora.
     "disparar-conectores": {

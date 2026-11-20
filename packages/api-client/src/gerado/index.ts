@@ -2,6 +2,7 @@ export * from './alertas/alertas';
 export * from './areas-verdes/areas-verdes';
 export * from './arvores/arvores';
 export * from './auditoria/auditoria';
+export * from './bairros/bairros';
 export * from './conectores/conectores';
 export * from './equipes/equipes';
 export * from './especies/especies';

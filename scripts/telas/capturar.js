@@ -250,6 +250,18 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
   await tela(p, "22-analises", "/analises?analise=arvores_por_bairro", {
     esperar: ids.bairro_demo,
   });
+  // Ficha do bairro com mais árvores: mapa, cartões com fonte e data, gráficos e ranking.
+  await tela(p, "42-ficha-bairro", `/bairros/${ids.bairro_demo_id}`, {
+    esperar: "Indicadores do bairro",
+    espera: 6000,
+    inteira: true,
+  });
+  // Camada "Ilha de calor (UrbVerde)" ligada, em Fortaleza no zoom 12 (WMS buscado pelo navegador).
+  await tela(p, "43-mapa-ilha-calor", `/mapa?lon=${-38.5267}&lat=${-3.7319}&zoom=12&ilha_calor=1`, {
+    esperar: "Ilha de calor (UrbVerde), 2025",
+    espera: 8000,
+  });
+  await tela(p, "44-bairros", "/bairros", { esperar: ids.bairro_demo, espera: 4000 });
   await tela(p, "41-analises-mudas", "/analises?analise=mudas_doadas_por_especie", {
     esperar: /Ressalvas/,
     espera: 2500,

@@ -1,5 +1,5 @@
 import { mapaBusca, type ResultadoBusca } from "@itree/api-client";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -7,6 +7,7 @@ const TIPOS: Record<string, string> = {
   arvore: "Árvore",
   ocorrencia: "Ocorrência",
   territorio: "Território",
+  bairro: "Bairro",
   coordenada: "Coordenada",
 };
 
@@ -17,6 +18,7 @@ export function BuscaGlobal() {
   const [aberto, setAberto] = useState(false);
   const [ativo, setAtivo] = useState(0);
   const navegar = useNavigate();
+  const noMapa = useRouterState({ select: (e) => e.location.pathname.startsWith("/mapa") });
   const id = useId();
   const raiz = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLInputElement>(null);
@@ -66,6 +68,10 @@ export function BuscaGlobal() {
       void navegar({ to: "/inventario/arvores/$id", params: { id: r.id } });
     else if (r.tipo === "ocorrencia" && r.id)
       void navegar({ to: "/ocorrencias/$id", params: { id: r.id } });
+    else if (r.tipo === "territorio" && r.subtipo === "bairro" && r.id && !noMapa)
+      // Fora do mapa, o bairro abre a ficha própria ("Ver no mapa" fica nela). No mapa, a busca
+      // continua destacando e enquadrando o bairro (M-05).
+      void navegar({ to: "/bairros/$id", params: { id: r.id } });
     else if (r.limites) {
       const [x1, y1, x2, y2] = r.limites;
       void navegar({
@@ -141,7 +147,9 @@ export function BuscaGlobal() {
               onMouseEnter={() => setAtivo(i)}
               onMouseDown={(e) => (e.preventDefault(), escolher(r))}
             >
-              <span className="mr-2 text-xs text-texto-suave">{TIPOS[r.tipo]}</span>
+              <span className="mr-2 text-xs text-texto-suave">
+                {r.tipo === "territorio" && r.subtipo === "bairro" ? TIPOS.bairro : TIPOS[r.tipo]}
+              </span>
               <span className="font-medium">{r.rotulo}</span>
               {r.descricao && <p className="truncate text-xs text-texto-suave">{r.descricao}</p>}
             </li>

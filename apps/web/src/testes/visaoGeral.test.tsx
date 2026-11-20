@@ -302,13 +302,19 @@ describe("visão geral: bairros que pedem atenção (G-02)", () => {
         .getAllByRole("cell")
         .map((c) => c.textContent),
     );
-    expect(meireles).toEqual(["1.Meireles", "1", "1", "2", "0", "19"]);
-    expect(aldeota?.[0]).toBe("2.Aldeota");
+    expect(meireles).toEqual(["1.Meirelesmapa", "1", "1", "2", "0", "19"]);
+    expect(aldeota?.[0]).toBe("2.Aldeotamapa");
     expect(within(tabela).getByRole("columnheader", { name: "Risco confirmado" })).toBeVisible();
   });
 
-  it("cada bairro abre o mapa com o bairro em destaque e a fórmula fica em “Como é calculado”", async () => {
+  it("o nome do bairro abre a ficha; “mapa” abre o mapa em destaque; a fórmula fica em “Como é calculado”", async () => {
     await abrirComPainel(painel({ bairros_atencao: ranking }));
+    const ficha = await screen.findByRole("link", { name: "Meireles: abrir a ficha do bairro" });
+    expect(new URL(ficha.getAttribute("href")!, "http://x").pathname).toBe("/bairros/b-1");
+    expect(screen.getByRole("link", { name: "Ver todos os bairros" })).toHaveAttribute(
+      "href",
+      "/bairros",
+    );
     const link = await screen.findByRole("link", { name: "Meireles: ver no mapa" });
     const destino = new URL(link.getAttribute("href")!, "http://x");
     expect(destino.pathname).toBe("/mapa");

@@ -208,6 +208,9 @@ def test_busca_global(cliente, revisor):
     assert ("arvore", arvore["codigo"]) in tipos(arvore["codigo"])
     assert ("arvore", arvore["codigo"]) in tipos("beira mar")
     assert ("territorio", "Bairro A") in tipos("bairro a")
+    # O bairro diz que é bairro: a busca global abre a ficha dele, e não só o mapa.
+    achados = cliente.get("/api/v1/mapa/busca", {"q": "bairro a"}).json()
+    assert [r["subtipo"] for r in achados if r["rotulo"] == "Bairro A"] == ["bairro"]
     assert tipos("-3.755, -38.555")[0] == (
         "coordenada",
         "lat \u22123,755000 \u00b7 lon \u221238,555000",
