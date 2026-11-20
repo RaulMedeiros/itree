@@ -109,6 +109,16 @@ Mudas doadas por espécie (URBFOR, 2022, dados abertos):
 
 ![Mudas doadas](41-analises-mudas.png)
 
+Ficha do bairro com mais árvores: mapa do bairro, cartões de indicadores com fonte e data (os
+sem dado dizem o motivo), gráficos e posição entre os bairros que pedem atenção. A lista de bairros
+traz busca, mini-indicadores e o mapa do Censo. A camada "Ilha de calor (UrbVerde)" é um WMS e só
+aparece ligada (zoom 12). As capturas 42 a 44 existem no roteiro; as imagens saem na próxima
+execução de `scripts/telas/gerar.sh`.
+
+![Ficha do bairro](42-ficha-bairro.png)
+![Mapa com a ilha de calor](43-mapa-ilha-calor.png)
+![Lista de bairros](44-bairros.png)
+
 Notificações no cabeçalho:
 
 ![Notificações](36-notificacoes.png)
