@@ -1,5 +1,5 @@
 import { mapaBusca, type ResultadoBusca } from "@itree/api-client";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -18,6 +18,7 @@ export function BuscaGlobal() {
   const [aberto, setAberto] = useState(false);
   const [ativo, setAtivo] = useState(0);
   const navegar = useNavigate();
+  const noMapa = useRouterState({ select: (e) => e.location.pathname.startsWith("/mapa") });
   const id = useId();
   const raiz = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLInputElement>(null);
@@ -67,8 +68,9 @@ export function BuscaGlobal() {
       void navegar({ to: "/inventario/arvores/$id", params: { id: r.id } });
     else if (r.tipo === "ocorrencia" && r.id)
       void navegar({ to: "/ocorrencias/$id", params: { id: r.id } });
-    else if (r.tipo === "territorio" && r.subtipo === "bairro" && r.id)
-      // O bairro tem ficha própria; "Ver no mapa" fica nela.
+    else if (r.tipo === "territorio" && r.subtipo === "bairro" && r.id && !noMapa)
+      // Fora do mapa, o bairro abre a ficha própria ("Ver no mapa" fica nela). No mapa, a busca
+      // continua destacando e enquadrando o bairro (M-05).
       void navegar({ to: "/bairros/$id", params: { id: r.id } });
     else if (r.limites) {
       const [x1, y1, x2, y2] = r.limites;

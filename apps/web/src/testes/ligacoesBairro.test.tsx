@@ -167,6 +167,14 @@ describe("o nome do bairro leva à ficha", () => {
     await vi.waitFor(() => expect(roteador.state.location.pathname).toBe(`/bairros/${ID}`));
   });
 
+  it("no mapa, a busca pelo bairro continua no mapa (destaque, M-05)", async () => {
+    const usuario = userEvent.setup();
+    const roteador = await abrir("/mapa");
+    await usuario.type(await screen.findByRole("combobox", { name: "Busca global" }), "mei");
+    await usuario.click(within(await screen.findByRole("listbox")).getAllByRole("option")[0]!);
+    await vi.waitFor(() => expect(roteador.state.location.pathname).toBe("/mapa"));
+  });
+
   it("na busca global, uma regional continua abrindo o mapa enquadrado", async () => {
     const usuario = userEvent.setup();
     const roteador = await abrir("/analises");
