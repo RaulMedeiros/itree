@@ -70,7 +70,7 @@ services:
 
   # Armazenamento S3-compatível para fotos e documentos (SeaweedFS, Apache 2.0).
   armazenamento:
-    image: chrislusf/seaweedfs:4.50@sha256:c2658820e763294a9e9de7b36c81e59b879e3459148351aee4e31a126ca64860
+    image: chrislusf/seaweedfs:4.53@sha256:ccad23e18639c8b98cee17e7100b95830a06077b56d8e5b006d6dcf8ec5e94a0
     command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json"]
     ports: ["8333:8333"]
     volumes:
