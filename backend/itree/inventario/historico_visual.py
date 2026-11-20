@@ -205,7 +205,7 @@ def linha_do_tempo(arvore, usuario) -> dict:
             if validada:
                 condicao.append(
                     {
-                        "data": i.validada_em or i.realizada_em,
+                        "data": i.realizada_em,
                         "condicao": i.condicao_aparente,
                         "inspecao_codigo": i.codigo,
                     }

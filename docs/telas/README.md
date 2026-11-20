@@ -99,6 +99,12 @@ postes e marcadas no endereço:
 
 ![Árvores próximas à iluminação](40-arvores-iluminacao.png)
 
+Mapa base de satélite (opção do seletor, só com provedor configurado): na demonstração, o
+Sentinel-2 cloudless 2016 da EOX, de 10 m, que mostra manchas de vegetação e não árvores
+individuais. As camadas do iTree ganham contornos brancos para ler sobre a imagem.
+
+![Mapa com base de satélite](47-mapa-satelite.png)
+
 Mudas doadas por espécie (URBFOR, 2022, dados abertos):
 
 ![Mudas doadas](41-analises-mudas.png)
@@ -124,6 +130,14 @@ sugestões de IA, que só alteram o cadastro com decisão de um revisor:
 
 ![Ficha — evidências](09-arvore-evidencias.png)
 ![Ficha — sugestões de IA](10-arvore-sugestao-ia.png)
+
+Galeria da árvore: linha do tempo com a condição em degraus e as medidas, mosaico de miniaturas
+(fotos da árvore, das inspeções e das ocorrências) e a imagem de referência da espécie. As fotos
+da semeadura são **ilustrações sintéticas** geradas com o Pillow, com o selo "Ilustração". A
+comparação mostra duas fotos com a barra deslizante.
+
+![Ficha — galeria](45-arvore-galeria.png)
+![Ficha — comparar antes e depois](46-arvore-comparar.png)
 
 Catálogo de espécies: as espécies do escopo, mais frequentes primeiro, e o
 detalhe com referências externas reais (Wikipedia, Wikimedia Commons, GBIF),
