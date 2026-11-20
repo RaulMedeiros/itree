@@ -102,6 +102,19 @@ export const CORES_AREA_VERDE: Record<string, string> = {
  * (a 90% de opacidade) contrasta ≥ 3:1 com o mapa base, o que `contraste.mjs` confere.
  */
 export const OPACIDADE_AREA_VERDE = 0.3;
+
+/** Cor do preenchimento e do contorno pelo tipo da área verde (padrão: musgo). */
+export const COR_AREA_VERDE_POR_TIPO = ["match", ["get", "tipo"]] as unknown[];
+for (const [tipo, cor] of Object.entries(CORES_AREA_VERDE)) COR_AREA_VERDE_POR_TIPO.push(tipo, cor);
+COR_AREA_VERDE_POR_TIPO.push("#4b6b3a");
+
+/** Ícone da ocorrência: a prioridade dá a cor e o risco confirmado, o aro. */
+export const ID_OCORRENCIA: unknown = [
+  "case",
+  ["==", ["get", "risco_confirmado"], true],
+  ["concat", "oco-", ["get", "prioridade"], "-risco"],
+  ["concat", "oco-", ["get", "prioridade"]],
+];
 export const OPACIDADE_AREA_VERDE_UC = 0.2;
 
 /**

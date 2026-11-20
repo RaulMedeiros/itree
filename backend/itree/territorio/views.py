@@ -1,25 +1,47 @@
 import json
 
 from django.contrib.gis.db.models.functions import AsGeoJSON, PointOnSurface
+from django.core.exceptions import ValidationError
 from django.db.models import Count, IntegerField, OuterRef, Subquery
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.permissions import BasePermission
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from itree.contas.acesso import filtrar_por_escopo
 from itree.inventario.models import Arvore, SituacaoArvore
 
-from .models import Territorio
-from .serializers import TerritorioSerializer
+from . import ficha
+from .models import Territorio, TipoTerritorio
+from .serializers import FichaSerializer, TerritorioSerializer
 
 PARAMETROS = [
     OpenApiParameter("tipo", str, description="municipio | regional | bairro"),
     OpenApiParameter("busca", str, description="Parte do nome."),
 ]
+
+
+def com_arvores_no_escopo(qs, usuario):
+    """Árvores ativas dentro do território e do escopo de quem consulta."""
+    arvores = (
+        filtrar_por_escopo(
+            Arvore.objects.filter(situacao=SituacaoArvore.ATIVA, geom__intersects=OuterRef("geom")),
+            usuario,
+        )
+        .order_by()
+        .values("situacao")
+        .annotate(n=Count("pk"))
+        .values("n")
+    )
+    return qs.annotate(
+        arvores_no_escopo=Coalesce(Subquery(arvores, output_field=IntegerField()), 0)
+    )
 
 
 @extend_schema_view(
@@ -35,22 +57,7 @@ class TerritorioViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         qs = Territorio.objects.select_related("pai")
         if self.action == "list":
-            # Árvores ativas dentro do território e do escopo de quem consulta.
-            arvores = (
-                filtrar_por_escopo(
-                    Arvore.objects.filter(
-                        situacao=SituacaoArvore.ATIVA, geom__intersects=OuterRef("geom")
-                    ),
-                    self.request.user,
-                )
-                .order_by()
-                .values("situacao")
-                .annotate(n=Count("pk"))
-                .values("n")
-            )
-            qs = qs.annotate(
-                arvores_no_escopo=Coalesce(Subquery(arvores, output_field=IntegerField()), 0)
-            )
+            qs = com_arvores_no_escopo(qs, self.request.user)
         if tipo := self.request.query_params.get("tipo"):
             qs = qs.filter(tipo=tipo)
         if busca := self.request.query_params.get("busca"):
@@ -95,3 +102,59 @@ class TerritorioViewSet(viewsets.ReadOnlyModelViewSet):
             for t in qs
         ]
         return Response({"type": "FeatureCollection", "features": feicoes})
+
+
+class PodeVerBairros(BasePermission):
+    """Mesma regra do painel da visão geral: análises ou inventário."""
+
+    message = "Você não tem permissão para esta ação."
+
+    def has_permission(self, request, view) -> bool:
+        u = request.user
+        return bool(
+            u
+            and u.is_authenticated
+            and (u.tem_permissao("relatorios.ler") or u.tem_permissao("inventario.ler"))
+        )
+
+
+@extend_schema_view(list=extend_schema(operation_id="bairros_listar", parameters=[PARAMETROS[1]]))
+class BairroViewSet(viewsets.GenericViewSet):
+    """Bairros do escopo de quem consulta e a ficha de cada um."""
+
+    queryset = Territorio.objects.filter(tipo=TipoTerritorio.BAIRRO)  # tipo do id no contrato
+    serializer_class = TerritorioSerializer
+    pagination_class = None
+    permission_classes = [PodeVerBairros]
+
+    def _do_escopo(self):
+        from itree.indicadores.atencao import bairros_do_escopo
+
+        return bairros_do_escopo(self.request.user)
+
+    def list(self, request: Request) -> Response:
+        """Os bairros do escopo, com a regional e as árvores ativas de cada um."""
+        qs = com_arvores_no_escopo(self._do_escopo().select_related("pai"), request.user)
+        if busca := request.query_params.get("busca"):
+            qs = qs.filter(nome__icontains=busca)
+        return Response(TerritorioSerializer(qs.order_by("nome"), many=True).data)
+
+    @extend_schema(operation_id="bairros_ficha", responses=FichaSerializer)
+    @action(detail=True, methods=["get"])
+    def ficha(self, request: Request, pk: str) -> Response:
+        """Tudo o que a plataforma sabe do bairro, com fonte e data de cada bloco. Quem não
+        tem o bairro no escopo recebe 403."""
+        bairros = Territorio.objects.filter(tipo=TipoTerritorio.BAIRRO)
+        try:
+            existe = bairros.filter(pk=pk).exists()
+        except (ValueError, ValidationError):
+            existe = False
+        if not existe:
+            raise NotFound("Bairro não encontrado.")
+        bairro = ficha.bairros_para_ficha(self._do_escopo().filter(pk=pk)).first()
+        if bairro is None:
+            raise PermissionDenied("Este bairro está fora do seu escopo.")
+        agora = timezone.now()
+        return Response(
+            ficha.montar(bairro, request.user, hoje=timezone.localdate(agora), agora=agora)
+        )

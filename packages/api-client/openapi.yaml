@@ -1086,6 +1086,55 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/bairros:
+    get:
+      operationId: bairros_listar
+      description: Os bairros do escopo, com a regional e as árvores ativas de cada
+        um.
+      parameters:
+      - in: query
+        name: busca
+        schema:
+          type: string
+        description: Parte do nome.
+      tags:
+      - bairros
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Territorio'
+          description: ''
+  /api/v1/bairros/{id}/ficha:
+    get:
+      operationId: bairros_ficha
+      description: |-
+        Tudo o que a plataforma sabe do bairro, com fonte e data de cada bloco. Quem não
+        tem o bairro no escopo recebe 403.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este territorio.
+        required: true
+      tags:
+      - bairros
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ficha'
+          description: ''
   /api/v1/conectores:
     get:
       operationId: conectores_listar
@@ -6192,6 +6241,317 @@ components:
       required:
       - indice
       - motivo
+    Ficha:
+      type: object
+      properties:
+        gerado_em:
+          type: string
+          format: date-time
+        bairro:
+          $ref: '#/components/schemas/FichaBairro'
+        cartoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FichaCartao'
+        graficos:
+          $ref: '#/components/schemas/FichaGraficos'
+        ranking:
+          $ref: '#/components/schemas/FichaRanking'
+      required:
+      - bairro
+      - cartoes
+      - gerado_em
+      - graficos
+      - ranking
+    FichaBairro:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+        codigo:
+          type: string
+        regional:
+          allOf:
+          - $ref: '#/components/schemas/FichaRegional'
+          nullable: true
+        area_km2:
+          type: number
+          format: double
+          nullable: true
+        oficial:
+          type: boolean
+        selo:
+          type: string
+        fonte:
+          type: string
+        fonte_url:
+          type: string
+        data_referencia:
+          type: string
+          format: date
+          nullable: true
+        limites:
+          type: array
+          items:
+            type: number
+            format: double
+          description: '[O, S, L, N].'
+        geometria:
+          type: object
+          additionalProperties: {}
+          description: GeoJSON do polígono do bairro.
+      required:
+      - area_km2
+      - codigo
+      - data_referencia
+      - fonte
+      - fonte_url
+      - geometria
+      - id
+      - limites
+      - nome
+      - oficial
+      - regional
+      - selo
+    FichaCartao:
+      type: object
+      properties:
+        id:
+          type: string
+        titulo:
+          type: string
+        valor:
+          type: number
+          format: double
+          nullable: true
+          description: Nulo quando ``sem_dado``.
+        unidade:
+          type: string
+          description: '"%", "°C" ou vazio (contagem).'
+        detalhe:
+          type: string
+        nota:
+          type: string
+          description: Ressalva, ou o motivo de não haver dado.
+        sem_dado:
+          type: boolean
+        provisorio:
+          type: boolean
+        base:
+          type: integer
+          nullable: true
+        cidade:
+          allOf:
+          - $ref: '#/components/schemas/FichaReferencia'
+          nullable: true
+        extras:
+          type: array
+          items:
+            $ref: '#/components/schemas/FichaExtra'
+        fonte:
+          type: string
+        fonte_url:
+          type: string
+        licenca:
+          type: string
+        data_referencia:
+          type: string
+          format: date
+          nullable: true
+        definicao:
+          type: string
+        metodo:
+          type: string
+        link:
+          allOf:
+          - $ref: '#/components/schemas/FichaLink'
+          nullable: true
+      required:
+      - base
+      - cidade
+      - data_referencia
+      - definicao
+      - detalhe
+      - extras
+      - fonte
+      - fonte_url
+      - id
+      - licenca
+      - link
+      - metodo
+      - nota
+      - provisorio
+      - sem_dado
+      - titulo
+      - unidade
+      - valor
+    FichaComponente:
+      type: object
+      properties:
+        id:
+          type: string
+        rotulo:
+          type: string
+        quantidade:
+          type: integer
+        peso:
+          type: integer
+      required:
+      - id
+      - peso
+      - quantidade
+      - rotulo
+    FichaExtra:
+      type: object
+      properties:
+        rotulo:
+          type: string
+        valor:
+          type: string
+      required:
+      - rotulo
+      - valor
+    FichaGrafico:
+      type: object
+      properties:
+        titulo:
+          type: string
+        definicao:
+          type: string
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/FichaItemGrafico'
+        fonte:
+          type: string
+        total_confirmadas:
+          type: integer
+      required:
+      - definicao
+      - fonte
+      - itens
+      - titulo
+    FichaGraficos:
+      type: object
+      properties:
+        especies:
+          $ref: '#/components/schemas/FichaGrafico'
+        condicao:
+          $ref: '#/components/schemas/FichaGrafico'
+        ocorrencias_mensais:
+          $ref: '#/components/schemas/FichaSerieMensal'
+      required:
+      - condicao
+      - especies
+      - ocorrencias_mensais
+    FichaItemGrafico:
+      type: object
+      properties:
+        id:
+          type: string
+        rotulo:
+          type: string
+        valor:
+          type: integer
+      required:
+      - id
+      - rotulo
+      - valor
+    FichaLink:
+      type: object
+      properties:
+        pagina:
+          type: string
+        filtros:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+      - filtros
+      - pagina
+    FichaRanking:
+      type: object
+      properties:
+        titulo:
+          type: string
+        definicao:
+          type: string
+        formula:
+          type: string
+        posicao:
+          type: integer
+          nullable: true
+          description: Nulo com índice zero.
+        total:
+          type: integer
+          description: Bairros do escopo com índice maior que zero.
+        indice:
+          type: integer
+        componentes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FichaComponente'
+        fonte:
+          type: string
+      required:
+      - componentes
+      - definicao
+      - fonte
+      - formula
+      - indice
+      - posicao
+      - titulo
+      - total
+    FichaReferencia:
+      type: object
+      properties:
+        valor:
+          type: number
+          format: double
+        rotulo:
+          type: string
+          description: 'Ex.: "Média de Fortaleza".'
+      required:
+      - rotulo
+      - valor
+    FichaRegional:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nome:
+          type: string
+      required:
+      - id
+      - nome
+    FichaSerieMensal:
+      type: object
+      properties:
+        titulo:
+          type: string
+        definicao:
+          type: string
+        meses:
+          type: array
+          items:
+            type: string
+          description: AAAA-MM.
+        valores:
+          type: array
+          items:
+            type: integer
+        fonte:
+          type: string
+      required:
+      - definicao
+      - fonte
+      - meses
+      - titulo
+      - valores
     FonteAlertaEnum:
       enum:
       - inpe_focos
@@ -9159,6 +9519,9 @@ components:
             type: number
             format: double
           nullable: true
+        subtipo:
+          type: string
+          description: 'Só nos territórios: municipio, regional ou bairro.'
       required:
       - descricao
       - id

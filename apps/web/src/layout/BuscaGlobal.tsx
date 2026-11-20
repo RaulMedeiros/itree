@@ -7,6 +7,7 @@ const TIPOS: Record<string, string> = {
   arvore: "Árvore",
   ocorrencia: "Ocorrência",
   territorio: "Território",
+  bairro: "Bairro",
   coordenada: "Coordenada",
 };
 
@@ -66,6 +67,9 @@ export function BuscaGlobal() {
       void navegar({ to: "/inventario/arvores/$id", params: { id: r.id } });
     else if (r.tipo === "ocorrencia" && r.id)
       void navegar({ to: "/ocorrencias/$id", params: { id: r.id } });
+    else if (r.tipo === "territorio" && r.subtipo === "bairro" && r.id)
+      // O bairro tem ficha própria; "Ver no mapa" fica nela.
+      void navegar({ to: "/bairros/$id", params: { id: r.id } });
     else if (r.limites) {
       const [x1, y1, x2, y2] = r.limites;
       void navegar({
@@ -141,7 +145,9 @@ export function BuscaGlobal() {
               onMouseEnter={() => setAtivo(i)}
               onMouseDown={(e) => (e.preventDefault(), escolher(r))}
             >
-              <span className="mr-2 text-xs text-texto-suave">{TIPOS[r.tipo]}</span>
+              <span className="mr-2 text-xs text-texto-suave">
+                {r.tipo === "territorio" && r.subtipo === "bairro" ? TIPOS.bairro : TIPOS[r.tipo]}
+              </span>
               <span className="font-medium">{r.rotulo}</span>
               {r.descricao && <p className="truncate text-xs text-texto-suave">{r.descricao}</p>}
             </li>

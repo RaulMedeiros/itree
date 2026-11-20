@@ -39,3 +39,19 @@
   background-repeat: no-repeat;
   background-position: right 0.6rem center;
 }
+
+/* Impressão da ficha do bairro: cartões e gráficos não se partem entre páginas, e as cores dos
+   mapas e das barras saem como na tela. */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+  body {
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .evitar-quebra {
+    break-inside: avoid;
+  }
+}

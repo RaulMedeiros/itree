@@ -48,11 +48,19 @@ import { AlertaDetalhePagina } from "./paginas/alertas/AlertaDetalhePagina";
 import { AlertasPagina } from "./paginas/alertas/AlertasPagina";
 import { AnalisesPagina } from "./paginas/analises/AnalisesPagina";
 import { AjudaPagina } from "./paginas/ajuda/AjudaPagina";
+import { BairroFichaPagina } from "./paginas/bairros/BairroFichaPagina";
+import { BairrosPagina } from "./paginas/bairros/BairrosPagina";
 import { MinhaContaPagina } from "./paginas/conta/MinhaContaPagina";
 import { NotificacoesPagina } from "./paginas/notificacoes/NotificacoesPagina";
 import { IntegracoesPagina } from "./paginas/administracao/IntegracoesPagina";
 import { QualidadePagina } from "./paginas/inventario/QualidadePagina";
 import { SemPermissao } from "./ui/estados";
+
+/** Basta uma das permissões (a mesma regra do painel da visão geral). */
+function ExigeUma({ permissoes, children }: { permissoes: PermissaoEnum[]; children: ReactNode }) {
+  const eu = useUsuario();
+  return permissoes.some((p) => eu.permissoes.includes(p)) ? children : <SemPermissao />;
+}
 
 function Exige({ permissao, children }: { permissao: PermissaoEnum; children: ReactNode }) {
   return usePermissao(permissao) ? children : <SemPermissao />;
@@ -439,6 +447,31 @@ const visaoGeral = createRoute({
   component: VisaoGeralPagina,
 });
 
+const PERMISSOES_BAIRROS: PermissaoEnum[] = ["relatorios.ler", "inventario.ler"];
+
+const bairros = createRoute({
+  getParentRoute: () => autenticado,
+  path: "bairros",
+  component: () => (
+    <ExigeUma permissoes={PERMISSOES_BAIRROS}>
+      <Outlet />
+    </ExigeUma>
+  ),
+});
+
+const bairrosLista = createRoute({
+  getParentRoute: () => bairros,
+  path: "/",
+  validateSearch: z.object({ busca: textoOpcional }),
+  component: BairrosPagina,
+});
+
+const bairroFicha = createRoute({
+  getParentRoute: () => bairros,
+  path: "$id",
+  component: BairroFichaPagina,
+});
+
 const inspecoes = createRoute({
   getParentRoute: () => autenticado,
   path: "inspecoes",
@@ -649,6 +682,7 @@ const arvore = raiz.addChildren([
     ]),
     ocorrencias.addChildren([ocorrenciasLista, ocorrenciaDetalhe]),
     visaoGeral,
+    bairros.addChildren([bairrosLista, bairroFicha]),
     inspecoes.addChildren([inspecoesLista, inspecaoDetalhe]),
     tarefas.addChildren([tarefasLista, tarefaDetalhe]),
     alertas.addChildren([alertasLista, alertaDetalhe]),

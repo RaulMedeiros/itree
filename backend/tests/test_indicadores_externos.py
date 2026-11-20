@@ -190,6 +190,7 @@ def test_camada_geojson_pinta_bairros_com_dado_e_marca_os_sem_dado(cliente, bair
     assert aldeota["id"] == str(bairros_ibge["aldeota"].pk)
     assert aldeota["geometry"]["type"] == "MultiPolygon"
     assert aldeota["properties"] == {
+        "id": str(bairros_ibge["aldeota"].pk),
         "nome": "Aldeota",
         "valor": 64.73,
         "faces_com_arvore": 938,

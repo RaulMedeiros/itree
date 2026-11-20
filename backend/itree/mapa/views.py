@@ -341,6 +341,9 @@ ResultadoBusca = inline_serializer(
         "descricao": serializers.CharField(),
         "localizacao": serializers.DictField(allow_null=True),
         "limites": serializers.ListField(child=serializers.FloatField(), allow_null=True),
+        "subtipo": serializers.CharField(
+            required=False, help_text="Só nos territórios: municipio, regional ou bairro."
+        ),
     },
 )
 
@@ -440,6 +443,7 @@ def busca(request: Request):
                 "descricao": t.get_tipo_display(),
                 "localizacao": None,
                 "limites": list(t.geom.extent),
+                "subtipo": t.tipo,
             }
         )
     return Response(resultados)

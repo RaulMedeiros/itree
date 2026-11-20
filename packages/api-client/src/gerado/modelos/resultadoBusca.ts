@@ -18,4 +18,6 @@ export interface ResultadoBusca {
   localizacao: ResultadoBuscaLocalizacao;
   /** @nullable */
   limites: number[] | null;
+  /** Só nos territórios: municipio, regional ou bairro. */
+  subtipo?: string;
 }

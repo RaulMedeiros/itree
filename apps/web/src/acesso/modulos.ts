@@ -36,6 +36,8 @@ export const MODULOS: Modulo[] = [
     fase: "F2",
     permissoes: ["relatorios.ler", "inventario.ler"],
     spec: "W-06",
+    // A lista e a ficha dos bairros ficam dentro da visão geral.
+    prefixos: ["/bairros"],
   },
   {
     id: "mapa",
