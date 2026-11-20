@@ -64,3 +64,13 @@ def metadados(chave: str) -> dict | None:
 
 def apagar(chave: str) -> None:
     cliente_interno().delete_object(Bucket=settings.S3_BUCKET, Key=chave)
+
+
+def ler(chave: str) -> bytes:
+    return cliente_interno().get_object(Bucket=settings.S3_BUCKET, Key=chave)["Body"].read()
+
+
+def gravar(chave: str, conteudo: bytes, tipo_conteudo: str) -> None:
+    cliente_interno().put_object(
+        Bucket=settings.S3_BUCKET, Key=chave, Body=conteudo, ContentType=tipo_conteudo
+    )
