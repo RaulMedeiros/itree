@@ -262,6 +262,7 @@ const mapa = createRoute({
     areas_verdes: bandeira("1"),
     supressao_anual: bandeira("1"),
     iluminacao: bandeira("1"),
+    ilha_calor: bandeira("1"),
     /** Subtipo das praças mostrado na camada de áreas verdes; vazio mostra todos. */
     subtipo_praca: z
       .enum(["praca", "areninha", "calcadao", "rotatoria", "sem_denominacao"])

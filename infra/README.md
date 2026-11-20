@@ -95,6 +95,8 @@ Em produção, inclua o host dos tiles em `ITREE_CSP_ORIGENS`
 Content-Security-Policy do painel. Em produção, prefira listar as origens
 exatas do provedor OIDC, do armazenamento S3 e dos mapas base, por exemplo
 `https://sso.prefeitura.gov.br https://arquivos.prefeitura.gov.br https://tile.openstreetmap.org`.
+A camada "Ilha de calor (UrbVerde)" do mapa busca tiles em `https://urbverde.iau.usp.br`: com a lista de
+origens exatas, inclua esse host.
 O nginx envia CSP, `X-Frame-Options`, `nosniff` e `Referrer-Policy` só nas
 respostas do painel; as rotas da API recebem os cabeçalhos do próprio Django.
 

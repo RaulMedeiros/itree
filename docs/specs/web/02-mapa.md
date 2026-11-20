@@ -91,6 +91,11 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
   faixa de altura do poste, lâmpadas, fonte, data dos dados e a atribuição "Prefeitura de
   Fortaleza, SEINF, dados abertos (CC BY-SA)", também presente na legenda e em "Fontes dos
   dados". A camada respeita o escopo territorial e a permissão `mapa.ler`.
+- **RF-MAPA-036** — Camada de contexto "Ilha de calor (UrbVerde)" no grupo "Contexto (fontes externas)",
+  **desligada por padrão** (parâmetro `ilha_calor` da URL): raster WMS da UrbVerde (IAU-USP), diferença
+  da temperatura de superfície para a mediana de Fortaleza em 2025, abaixo de todos os dados. Tem
+  opacidade ajustável, a legenda oficial da fonte e a atribuição "Plataforma UrbVerde – USP", e diz que
+  não é temperatura do ar. O navegador só pede tiles depois que a camada é ligada.
 - **RF-MAPA-032** — Filtros e camadas são compartilhados com o Inventário
   (abrir a mesma seleção em lista).
 

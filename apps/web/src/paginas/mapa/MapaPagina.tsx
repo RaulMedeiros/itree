@@ -98,6 +98,8 @@ import {
   CORES_CONDICAO,
   CORES_ORIGEM,
   CORES_PRIORIDADE,
+  COR_AREA_VERDE_POR_TIPO,
+  ID_OCORRENCIA,
   OPACIDADE_AREA_VERDE,
   OPACIDADE_AREA_VERDE_UC,
   OPACIDADE_HACHURA_AREA_VERDE,
@@ -115,6 +117,8 @@ import {
   registrarIcones,
   type ModoCor,
 } from "../../mapa/simbologia";
+import { ControleIlhaCalor, LegendaIlhaCalor } from "../../mapa/ControleIlhaCalor";
+import { CAMADA_ILHA_CALOR, OPACIDADE_ILHA_CALOR, adicionarIlhaCalor } from "../../mapa/ilhaCalor";
 import { Botao } from "../../ui/botao";
 import { Selecao } from "../../ui/campos";
 import { useTituloDocumento } from "../../util/titulo";
@@ -158,6 +162,8 @@ export interface BuscaMapa {
   supressao_anual?: "1";
   /** Pontos de iluminação pública (SEINF); desligada por padrão, visível a partir do zoom 15. */
   iluminacao?: "1";
+  /** Raster "Ilha de calor (UrbVerde)", por WMS; desligada por padrão. */
+  ilha_calor?: "1";
   sem_inspecao_dias?: number;
   especie_estado?: EstadoEspecieEnum;
   localizacao_origem?: OrigemLocalizacaoEnum;
@@ -263,17 +269,6 @@ interface AreaVerdeSelecionada {
   ingerido_em?: string;
 }
 
-const COR_AREA_VERDE_POR_TIPO = ["match", ["get", "tipo"]] as unknown[];
-for (const [tipo, cor] of Object.entries(CORES_AREA_VERDE)) COR_AREA_VERDE_POR_TIPO.push(tipo, cor);
-COR_AREA_VERDE_POR_TIPO.push("#4b6b3a");
-
-const ID_OCORRENCIA: unknown = [
-  "case",
-  ["==", ["get", "risco_confirmado"], true],
-  ["concat", "oco-", ["get", "prioridade"], "-risco"],
-  ["concat", "oco-", ["get", "prioridade"]],
-];
-
 export function MapaPagina() {
   const busca = useSearch({ from: "/autenticado/mapa" });
   const navegar = useNavigate({ from: "/mapa" });
@@ -367,6 +362,8 @@ export function MapaPagina() {
   const mostrarAreasVerdes = podeMapa && busca.areas_verdes === "1";
   const mostrarArborizacao = podeMapa && busca.arborizacao_entorno === "1";
   const mostrarIluminacao = podeMapa && busca.iluminacao === "1";
+  const mostrarIlhaCalor = podeMapa && busca.ilha_calor === "1";
+  const [opacidadeIlhaCalor, setOpacidadeIlhaCalor] = useState(OPACIDADE_ILHA_CALOR);
   const aproximarIluminacao = (busca.zoom ?? 11) < ZOOM_ILUMINACAO;
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
   const mostrarAlertas = podeAlertas && busca.alertas === "1";
@@ -446,6 +443,8 @@ export function MapaPagina() {
     registrarIcones(m);
     m.on("styleimagemissing", (e) => aoFaltarImagem(m, e.id));
 
+    // Ilha de calor (UrbVerde, WMS): raster de contexto sob todos os dados, desligado por padrão.
+    if (podeMapa) adicionarIlhaCalor(m);
     m.addSource("bairros", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     m.addLayer({
       id: "bairros-preenchimento",
@@ -1144,6 +1143,7 @@ export function MapaPagina() {
     definir(["supressao-anual-preenchimento", "supressao-anual-contorno"], mostrarSupressao);
     definir(["tarefas-pontos"], mostrarTarefas);
     definir(["iluminacao-pontos"], mostrarIluminacao);
+    definir([CAMADA_ILHA_CALOR], mostrarIlhaCalor);
     definir(CAMADAS_ARBORIZACAO, mostrarArborizacao);
     definir(["bairros-preenchimento", "bairros-contorno"], mostrarBairros);
     definir(
@@ -1167,7 +1167,15 @@ export function MapaPagina() {
     mostrarAlertas,
     mostrarSupressao,
     mostrarIluminacao,
+    mostrarIlhaCalor,
   ]);
+
+  // Opacidade do raster da ilha de calor (controle deslizante do painel de camadas).
+  useEffect(() => {
+    const m = mapa.current;
+    if (pronto && m?.getLayer(CAMADA_ILHA_CALOR))
+      m.setPaintProperty(CAMADA_ILHA_CALOR, "raster-opacity", opacidadeIlhaCalor);
+  }, [pronto, opacidadeIlhaCalor]);
 
   // Subtipo das praças: some só o que é praça e não é do subtipo escolhido; parques e unidades
   // de conservação seguem à vista.
@@ -1400,7 +1408,7 @@ export function MapaPagina() {
                 {podeMapa && (
                   <Grupo
                     titulo="Contexto (fontes externas)"
-                    aberto={mostrarArborizacao || mostrarIluminacao}
+                    aberto={mostrarArborizacao || mostrarIluminacao || mostrarIlhaCalor}
                   >
                     <Camada
                       rotulo="Arborização do entorno (Censo 2022)"
@@ -1438,6 +1446,12 @@ export function MapaPagina() {
                         {ZOOM_ILUMINACAO}).
                       </p>
                     )}
+                    <ControleIlhaCalor
+                      ativa={mostrarIlhaCalor}
+                      aoMudar={(v) => atualizarBusca({ ilha_calor: v ? "1" : undefined })}
+                      opacidade={opacidadeIlhaCalor}
+                      aoMudarOpacidade={setOpacidadeIlhaCalor}
+                    />
                   </Grupo>
                 )}
 
@@ -1729,6 +1743,14 @@ export function MapaPagina() {
             arborizacao={mostrarArborizacao}
             definicaoArborizacao={proveniencia?.definicao ?? DEFINICAO_ARBORIZACAO}
           />
+          {mostrarIlhaCalor && (
+            <section
+              aria-label="Legenda da ilha de calor"
+              className="pointer-events-auto shrink-0 rounded-xl border border-borda bg-superficie/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
+            >
+              <LegendaIlhaCalor />
+            </section>
+          )}
         </div>
 
         {/* Ferramentas do mapa, ao lado do painel de camadas. */}
@@ -1775,7 +1797,15 @@ export function MapaPagina() {
               role="status"
               className="pointer-events-auto flex items-center gap-2 rounded-full border border-marca bg-superficie px-3 py-1 text-sm shadow"
             >
-              Bairro em destaque: <strong>{feicaoDestaque.properties.nome}</strong>
+              Bairro em destaque:{" "}
+              <Link
+                to="/bairros/$id"
+                params={{ id: String(feicaoDestaque.id) }}
+                className="font-semibold text-marca-escura hover:underline"
+                aria-label={`${feicaoDestaque.properties.nome}: abrir a ficha do bairro`}
+              >
+                {feicaoDestaque.properties.nome}
+              </Link>
               <button
                 className="rounded-full p-0.5 hover:bg-fundo"
                 aria-label="Limpar destaque do bairro"
@@ -2024,6 +2054,8 @@ function textoDicaSupressao(p: DicaSupressao): string {
 }
 
 interface DicaArborizacao {
+  /** Id do bairro (propriedade da feição): leva à ficha dele. */
+  id?: string;
   nome?: string;
   valor?: number | null;
   faces_com_arvore?: number | null;
@@ -2557,7 +2589,19 @@ function PainelArborizacaoEntorno({
         <X className="size-4" />
       </button>
       <div className="pr-8">
-        <p className="text-lg font-semibold">{bairro.nome ?? "Bairro"}</p>
+        <p className="text-lg font-semibold">
+          {bairro.id ? (
+            <Link
+              to="/bairros/$id"
+              params={{ id: bairro.id }}
+              className="text-marca-escura hover:underline"
+            >
+              {bairro.nome ?? "Bairro"}
+            </Link>
+          ) : (
+            (bairro.nome ?? "Bairro")
+          )}
+        </p>
         <p className="text-xs text-texto-suave">
           {proveniencia?.nome ?? "Arborização do entorno (Censo 2022)"}
         </p>
