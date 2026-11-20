@@ -20,6 +20,7 @@ from itree.core.parametros import uuid_do_parametro
 from itree.inventario.models import Arvore
 from itree.ocorrencias.models import Ocorrencia
 
+from .miniaturas import gerar_miniatura
 from .models import TAMANHO_MAXIMO, TIPOS_PERMITIDOS, EstadoEvidencia, Evidencia
 
 PARAMETRO_ID = OpenApiParameter("id", OpenApiTypes.UUID, OpenApiParameter.PATH)
@@ -34,6 +35,9 @@ class EvidenciaSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField(help_text="URL temporária (5 min) para visualizar.")
     enviada_por_nome = serializers.SerializerMethodField()
     eh_imagem = serializers.BooleanField(read_only=True)
+    url_miniatura = serializers.SerializerMethodField(
+        help_text="URL temporária da miniatura; nula se a imagem ainda não tem uma."
+    )
 
     class Meta:
         model = Evidencia
@@ -48,6 +52,7 @@ class EvidenciaSerializer(serializers.ModelSerializer):
             "ilustrativa",
             "eh_imagem",
             "url",
+            "url_miniatura",
             "enviada_por_nome",
             "arvore",
             "ocorrencia",
@@ -59,6 +64,13 @@ class EvidenciaSerializer(serializers.ModelSerializer):
         if obj.estado != EstadoEvidencia.DISPONIVEL or not armazenamento.s3_configurado():
             return None
         return armazenamento.url_download(obj.chave)
+
+    def get_url_miniatura(self, obj) -> str | None:
+        if not obj.chave_miniatura or obj.estado != EstadoEvidencia.DISPONIVEL:
+            return None
+        if not armazenamento.s3_configurado():
+            return None
+        return armazenamento.url_download(obj.chave_miniatura)
 
     def get_enviada_por_nome(self, obj) -> str:
         return obj.enviada_por.nome or obj.enviada_por.email
@@ -263,6 +275,7 @@ class EvidenciaViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             )
         evidencia.estado = EstadoEvidencia.DISPONIVEL
         evidencia.save(update_fields=["estado", "atualizado_em"])
+        gerar_miniatura(evidencia)
         return Response(EvidenciaSerializer(evidencia).data)
 
     @extend_schema(

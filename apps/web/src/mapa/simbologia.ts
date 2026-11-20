@@ -14,6 +14,8 @@
 import type { CondicaoAparenteEnum } from "@itree/api-client";
 import type { ExpressionSpecification, Map as MapaMapLibre } from "maplibre-gl";
 
+import type { TipoBase } from "./estilo";
+
 export const COR_ARVORE = "#1f6b45";
 export const COR_SEM_AVALIACAO = "#a3ada7";
 
@@ -43,6 +45,8 @@ export const CORES_PRIORIDADE: Record<string, string> = {
 export const COR_TAREFA = "#1c7ed6";
 export const COR_TAREFA_ATRASADA = "#c92a2a";
 export const COR_ALERTA = "#7048e8";
+/** Roxo mais claro para o contorno do alerta sobre o satélite, escuro e texturizado. */
+export const COR_ALERTA_SATELITE = "#b197fc";
 export const COR_SELECAO = "#0b7285";
 
 /**
@@ -149,7 +153,7 @@ const ehGps: ExpressionSpecification = ["==", ["get", "localizacao_origem"], "gp
  * Contorno: GPS de campo (verificada) = anel verde-escuro; importada = borda
  * branca; estimada = símbolo vazado.
  */
-export const pinturaArvores = (modo: ModoCor) => ({
+export const pinturaArvores = (modo: ModoCor, base: TipoBase = "ruas") => ({
   "circle-radius": [
     "interpolate",
     ["linear"],
@@ -168,9 +172,17 @@ export const pinturaArvores = (modo: ModoCor) => ({
     12,
   ],
   "circle-color": corDaArvore(modo),
-  "circle-opacity": ["case", ehEstimada, 0.2, 0.95],
-  "circle-stroke-color": ["case", ehEstimada, corDaArvore(modo), ehGps, "#0b3d2a", "#ffffff"],
-  "circle-stroke-width": ["case", ehEstimada, 2, ehGps, 2.2, 1.2],
+  // Sobre o satélite, escuro e texturizado, o anel verde-escuro do GPS some: todos os contornos
+  // ficam brancos, o do GPS mais grosso, e a estimada continua vazada (preenchimento a 25%).
+  "circle-opacity": ["case", ehEstimada, base === "satelite" ? 0.25 : 0.2, 0.95],
+  "circle-stroke-color":
+    base === "satelite"
+      ? "#ffffff"
+      : ["case", ehEstimada, corDaArvore(modo), ehGps, "#0b3d2a", "#ffffff"],
+  "circle-stroke-width":
+    base === "satelite"
+      ? ["case", ehEstimada, 2.2, ehGps, 3, 1.6]
+      : ["case", ehEstimada, 2, ehGps, 2.2, 1.2],
 });
 
 // ---------------------------------------------------------------------------
@@ -309,7 +321,7 @@ export function registrarIcones(m: MapaMapLibre) {
  * mesma hachura do mapa principal, nunca a cor laranja da condição "Ruim" (C-28).
  * Exige `registrarIcones` antes.
  */
-export function camadasDoAlerta(fonte: string, pontual: boolean) {
+export function camadasDoAlerta(fonte: string, pontual: boolean, base: TipoBase = "ruas") {
   return pontual
     ? [
         {
@@ -330,7 +342,11 @@ export function camadasDoAlerta(fonte: string, pontual: boolean) {
           id: "alerta-borda",
           type: "line",
           source: fonte,
-          paint: { "line-color": COR_ALERTA, "line-width": 2, "line-dasharray": [3, 1.5] },
+          paint: {
+            "line-color": base === "satelite" ? COR_ALERTA_SATELITE : COR_ALERTA,
+            "line-width": 2,
+            "line-dasharray": [3, 1.5],
+          },
         },
       ];
 }

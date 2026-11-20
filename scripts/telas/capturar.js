@@ -67,6 +67,16 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     esperar: "Legenda",
     espera: 5000,
   });
+  // Satélite de desenvolvimento (Sentinel-2 de 10 m, EOX), zoom 15 numa área com árvores.
+  await tela(
+    p,
+    "47-mapa-satelite",
+    `/mapa?lon=${ids.foto_lon}&lat=${ids.foto_lat}&zoom=15&base=satelite`,
+    {
+      esperar: "Legenda",
+      espera: 7000,
+    },
+  );
   await tela(
     p,
     "03-mapa-selecao",
@@ -164,6 +174,35 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     esperar: "Resumo",
     acao: (q) => q.getByRole("tab", { name: /Evidências/ }).click(),
     espera: 2500,
+  });
+  // Galeria: a árvore da semeadura com fotos sintéticas de inspeção, ocorrência e evidência,
+  // linha do tempo, condição em degraus e referência da espécie.
+  const abrirGaleria = (q) => q.getByRole("tab", { name: "Galeria" }).click();
+  await tela(p, "45-arvore-galeria", `/inventario/arvores/${ids.arvore_foto}`, {
+    esperar: "Resumo",
+    acao: async (q) => {
+      await abrirGaleria(q);
+      await q
+        .getByRole("button", { name: /^Abrir foto/ })
+        .first()
+        .waitFor({ timeout: 15000 });
+    },
+    espera: 3000,
+    inteira: true,
+  });
+  // Comparar: o "antes da poda" (ocorrência) contra o "depois da poda", na barra deslizante.
+  await tela(p, "46-arvore-comparar", `/inventario/arvores/${ids.arvore_foto}`, {
+    esperar: "Resumo",
+    acao: async (q) => {
+      await abrirGaleria(q);
+      await q.getByRole("button", { name: "Comparar" }).click();
+      const dialogo = q.getByRole("dialog", { name: "Comparar fotos" });
+      await dialogo.getByLabel("Foto de antes").selectOption({ index: 3 });
+      await dialogo.getByLabel("Foto de depois").selectOption({ index: 5 });
+      await dialogo.getByRole("button", { name: "Barra deslizante" }).click();
+      await dialogo.getByRole("slider").fill("55");
+    },
+    espera: 3000,
   });
   await tela(p, "10-arvore-sugestao-ia", `/inventario/arvores/${ids.arvore_ia}`, {
     esperar: "Resumo",

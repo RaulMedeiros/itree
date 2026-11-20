@@ -8,6 +8,7 @@ export function MapaFalsoComponente({
   centro,
   zoom,
   somenteLeitura,
+  base,
   children,
 }: {
   aoCarregar?: (m: never) => void;
@@ -15,6 +16,7 @@ export function MapaFalsoComponente({
   centro?: [number, number];
   zoom?: number;
   somenteLeitura?: boolean;
+  base?: string;
   children?: React.ReactNode;
 }) {
   useEffect(() => {
@@ -26,7 +28,7 @@ export function MapaFalsoComponente({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div role="region" aria-label={rotulo}>
+    <div role="region" aria-label={rotulo} data-base={base}>
       {children}
     </div>
   );

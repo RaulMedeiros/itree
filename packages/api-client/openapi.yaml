@@ -815,6 +815,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/Arvore'
           description: ''
+  /api/v1/arvores/{id}/fotos:
+    get:
+      operationId: arvores_fotos
+      description: |-
+        Galeria: imagens da árvore, das inspeções, ocorrências e tarefas dela, da mais
+        antiga à mais recente, com a origem. Cada origem segue a própria permissão e o escopo.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FotoArvore'
+          description: ''
   /api/v1/arvores/{id}/fundir:
     post:
       operationId: arvores_fundir
@@ -874,6 +901,30 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/EventoAuditoria'
+          description: ''
+  /api/v1/arvores/{id}/linha-do-tempo:
+    get:
+      operationId: arvores_linha_do_tempo
+      description: Eventos da árvore, a condição aparente validada e as medidas ao
+        longo do tempo.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinhaDoTempo'
           description: ''
   /api/v1/arvores/{id}/medidas:
     post:
@@ -5891,6 +5942,52 @@ components:
       - objeto_id
       - pai
       - registro
+    EventoLinhaDoTempo:
+      type: object
+      properties:
+        id:
+          type: string
+        tipo:
+          $ref: '#/components/schemas/EventoLinhaDoTempoTipoEnum'
+        data:
+          type: string
+          format: date-time
+        titulo:
+          type: string
+        resumo:
+          type: string
+        condicao:
+          type: string
+          description: Condição aparente da inspeção validada; vazia nos demais.
+        origem_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Registro a abrir ao clicar.
+      required:
+      - condicao
+      - data
+      - id
+      - origem_id
+      - resumo
+      - tipo
+      - titulo
+    EventoLinhaDoTempoTipoEnum:
+      enum:
+      - cadastro
+      - medicao
+      - inspecao
+      - ocorrencia
+      - tarefa
+      - poda
+      type: string
+      description: |-
+        * `cadastro` - cadastro
+        * `medicao` - medicao
+        * `inspecao` - inspecao
+        * `ocorrencia` - ocorrencia
+        * `tarefa` - tarefa
+        * `poda` - poda
     Evidencia:
       type: object
       properties:
@@ -5930,6 +6027,12 @@ components:
           nullable: true
           readOnly: true
           description: URL temporária (5 min) para visualizar.
+        url_miniatura:
+          type: string
+          nullable: true
+          readOnly: true
+          description: URL temporária da miniatura; nula se a imagem ainda não tem
+            uma.
         enviada_por_nome:
           type: string
           readOnly: true
@@ -5960,6 +6063,7 @@ components:
       - tamanho
       - tipo_conteudo
       - url
+      - url_miniatura
     ExecucaoConector:
       type: object
       properties:
@@ -6145,6 +6249,64 @@ components:
         * `csv` - csv
         * `xlsx` - xlsx
         * `geojson` - geojson
+    FotoArvore:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          nullable: true
+          description: URL temporária (5 min) do original.
+        url_miniatura:
+          type: string
+          nullable: true
+          description: URL temporária da miniatura; nula se não houver.
+        descricao:
+          type: string
+        nome_original:
+          type: string
+        data:
+          type: string
+          format: date-time
+          description: Captura, ou envio se a captura não é conhecida.
+        origem:
+          $ref: '#/components/schemas/FotoArvoreOrigemEnum'
+        origem_id:
+          type: string
+          format: uuid
+          nullable: true
+        origem_codigo:
+          type: string
+        autor:
+          type: string
+        ilustrativa:
+          type: boolean
+      required:
+      - autor
+      - data
+      - descricao
+      - id
+      - ilustrativa
+      - nome_original
+      - origem
+      - origem_codigo
+      - origem_id
+      - url
+      - url_miniatura
+    FotoArvoreOrigemEnum:
+      enum:
+      - evidencia
+      - inspecao
+      - ocorrencia
+      - tarefa
+      type: string
+      description: |-
+        * `evidencia` - evidencia
+        * `inspecao` - inspecao
+        * `ocorrencia` - ocorrencia
+        * `tarefa` - tarefa
     FusaoRequest:
       type: object
       properties:
@@ -6776,6 +6938,25 @@ components:
       required:
       - dia
       - tipo
+    LinhaDoTempo:
+      type: object
+      properties:
+        eventos:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventoLinhaDoTempo'
+        condicao:
+          type: array
+          items:
+            $ref: '#/components/schemas/PontoCondicao'
+        medidas:
+          type: array
+          items:
+            $ref: '#/components/schemas/SerieMedida'
+      required:
+      - condicao
+      - eventos
+      - medidas
     LinhaImportacao:
       type: object
       properties:
@@ -8666,6 +8847,38 @@ components:
         * `admin.auditoria` - Consultar auditoria
         * `admin.territorios` - Administrar territórios
         * `admin.configuracao` - Administrar catálogos e integrações
+    PontoCondicao:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date-time
+        condicao:
+          type: string
+        inspecao_codigo:
+          type: string
+      required:
+      - condicao
+      - data
+      - inspecao_codigo
+    PontoMedida:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+        valor:
+          type: number
+          format: double
+        unidade:
+          type: string
+        origem:
+          type: string
+      required:
+      - data
+      - origem
+      - unidade
+      - valor
     PosteProximo:
       type: object
       properties:
@@ -9229,6 +9442,29 @@ components:
       - limite_itens
       - limite_tarefas_em_lote
       - ocorrencias
+    SerieMedida:
+      type: object
+      properties:
+        tipo:
+          $ref: '#/components/schemas/SerieMedidaTipoEnum'
+        unidade:
+          type: string
+        pontos:
+          type: array
+          items:
+            $ref: '#/components/schemas/PontoMedida'
+      required:
+      - pontos
+      - tipo
+      - unidade
+    SerieMedidaTipoEnum:
+      enum:
+      - altura
+      - dap
+      type: string
+      description: |-
+        * `altura` - altura
+        * `dap` - dap
     SinalObservadoEnum:
       enum:
       - folhagem_escassa

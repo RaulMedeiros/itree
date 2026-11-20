@@ -23,6 +23,11 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
 - **RF-MAPA-001** — Alternar mapa de ruas e imagem de satélite.
 - **RF-MAPA-002** — Exibir data da imagem de satélite quando o provedor
   informar; caso contrário, "data da imagem não informada pelo provedor".
+- **RF-MAPA-040** — A opção "Satélite" só existe com provedor configurado em tempo de execução
+  (URL, atribuição, zoom nativo, nome e aviso de resolução). A escolha fica na URL
+  (`base=satelite`) e é lembrada por pessoa; o aviso de resolução aparece ao lado do seletor e
+  as camadas do iTree ganham contornos brancos para ler sobre a imagem. Fonte: DP-21 (provedor
+  de produção em aberto); desenvolvimento: Sentinel-2 cloudless 2016, EOX, CC BY 4.0.
 - **RF-MAPA-003** — Camadas operacionais: árvores, ocorrências, inspeções,
   tarefas (cada uma liga/desliga; tarefas em F2).
 - **RF-MAPA-004** — Camadas territoriais: limite municipal, bairros e demais

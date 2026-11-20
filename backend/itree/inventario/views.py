@@ -33,7 +33,7 @@ from itree.core.geo import decodificar_area
 from itree.core.parametros import LIMITE_LOTE, uuid_do_parametro
 from itree.ocorrencias.models import ESTADOS_FINAIS
 
-from . import duplicidades, importacao, leitura_arquivos, referencias, tasks
+from . import duplicidades, historico_visual, importacao, leitura_arquivos, referencias, tasks
 from .models import (
     Arvore,
     Especie,
@@ -306,7 +306,15 @@ class ArvoreViewSet(
     lookup_value_converter = "uuid"
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve", "historico", "contadores", "duplicidades"):
+        if self.action in (
+            "list",
+            "retrieve",
+            "historico",
+            "contadores",
+            "duplicidades",
+            "fotos",
+            "linha_do_tempo",
+        ):
             return [requer(P.INVENTARIO_LER)()]
         if self.action in ("excluir", "fundir", "nao_duplicadas"):
             return [requer(P.INVENTARIO_FUNDIR_EXCLUIR)()]
@@ -376,6 +384,29 @@ class ArvoreViewSet(
         arvore = self.get_object()
         eventos = Events.objects.references(arvore).order_by("-pgh_created_at", "-pgh_id")[:500]
         return Response(EventoAuditoriaSerializer(eventos, many=True).data)
+
+    @extend_schema(
+        operation_id="arvores_fotos",
+        responses=historico_visual.FotoArvoreSerializer(many=True),
+    )
+    @action(detail=True, pagination_class=None)
+    def fotos(self, request, pk=None):
+        """Galeria: imagens da árvore, das inspeções, ocorrências e tarefas dela, da mais
+        antiga à mais recente, com a origem. Cada origem segue a própria permissão e o escopo."""
+        arvore = self.get_object()
+        dados = historico_visual.fotos_da_arvore(arvore, request.user)
+        return Response(historico_visual.FotoArvoreSerializer(dados, many=True).data)
+
+    @extend_schema(
+        operation_id="arvores_linha_do_tempo",
+        responses=historico_visual.LinhaDoTempoSerializer,
+    )
+    @action(detail=True, url_path="linha-do-tempo", pagination_class=None)
+    def linha_do_tempo(self, request, pk=None):
+        """Eventos da árvore, a condição aparente validada e as medidas ao longo do tempo."""
+        arvore = self.get_object()
+        dados = historico_visual.linha_do_tempo(arvore, request.user)
+        return Response(historico_visual.LinhaDoTempoSerializer(dados).data)
 
     @extend_schema(
         operation_id="arvores_medidas_criar",

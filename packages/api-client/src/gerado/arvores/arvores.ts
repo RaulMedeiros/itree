@@ -33,7 +33,9 @@ import type {
   ArvoresListarParams,
   Contadores,
   EventoAuditoria,
+  FotoArvore,
   FusaoRequest,
+  LinhaDoTempo,
   Medida,
   MedidaRequest,
   PaginatedArvoreResumoList,
@@ -579,7 +581,117 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getArvoresExcluirMutationOptions(options), queryClient);
     }
-    export type arvoresFundirResponse200 = {
+    export type arvoresFotosResponse200 = {
+  data: FotoArvore[]
+  status: 200
+}
+
+export type arvoresFotosResponseSuccess = (arvoresFotosResponse200) & {
+  headers: Headers;
+};
+;
+
+export type arvoresFotosResponse = (arvoresFotosResponseSuccess)
+
+export const getArvoresFotosUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/arvores/${id}/fotos`
+}
+
+/**
+ * Galeria: imagens da árvore, das inspeções, ocorrências e tarefas dela, da mais
+ * antiga à mais recente, com a origem. Cada origem segue a própria permissão e o escopo.
+ */
+export const arvoresFotos = async (id: string, options?: Parameters<typeof requisicao>[1]): Promise<arvoresFotosResponse> => {
+
+  return requisicao<arvoresFotosResponse>(getArvoresFotosUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getArvoresFotosQueryKey = (id: string,) => {
+    return [
+    `/api/v1/arvores/${id}/fotos`
+    ] as const;
+    }
+
+
+export const getArvoresFotosQueryOptions = <TData = Awaited<ReturnType<typeof arvoresFotos>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresFotos>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getArvoresFotosQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof arvoresFotos>>> = ({ signal }) => arvoresFotos(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof arvoresFotos>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ArvoresFotosQueryResult = NonNullable<Awaited<ReturnType<typeof arvoresFotos>>>
+export type ArvoresFotosQueryError = unknown
+
+
+export function useArvoresFotos<TData = Awaited<ReturnType<typeof arvoresFotos>>, TError = unknown>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresFotos>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof arvoresFotos>>,
+          TError,
+          Awaited<ReturnType<typeof arvoresFotos>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useArvoresFotos<TData = Awaited<ReturnType<typeof arvoresFotos>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresFotos>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof arvoresFotos>>,
+          TError,
+          Awaited<ReturnType<typeof arvoresFotos>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useArvoresFotos<TData = Awaited<ReturnType<typeof arvoresFotos>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresFotos>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useArvoresFotos<TData = Awaited<ReturnType<typeof arvoresFotos>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresFotos>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getArvoresFotosQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type arvoresFundirResponse200 = {
   data: Arvore
   status: 200
 }
@@ -774,6 +886,115 @@ export function useArvoresHistorico<TData = Awaited<ReturnType<typeof arvoresHis
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getArvoresHistoricoQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type arvoresLinhaDoTempoResponse200 = {
+  data: LinhaDoTempo
+  status: 200
+}
+
+export type arvoresLinhaDoTempoResponseSuccess = (arvoresLinhaDoTempoResponse200) & {
+  headers: Headers;
+};
+;
+
+export type arvoresLinhaDoTempoResponse = (arvoresLinhaDoTempoResponseSuccess)
+
+export const getArvoresLinhaDoTempoUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/arvores/${id}/linha-do-tempo`
+}
+
+/**
+ * Eventos da árvore, a condição aparente validada e as medidas ao longo do tempo.
+ */
+export const arvoresLinhaDoTempo = async (id: string, options?: Parameters<typeof requisicao>[1]): Promise<arvoresLinhaDoTempoResponse> => {
+
+  return requisicao<arvoresLinhaDoTempoResponse>(getArvoresLinhaDoTempoUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getArvoresLinhaDoTempoQueryKey = (id: string,) => {
+    return [
+    `/api/v1/arvores/${id}/linha-do-tempo`
+    ] as const;
+    }
+
+
+export const getArvoresLinhaDoTempoQueryOptions = <TData = Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getArvoresLinhaDoTempoQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof arvoresLinhaDoTempo>>> = ({ signal }) => arvoresLinhaDoTempo(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ArvoresLinhaDoTempoQueryResult = NonNullable<Awaited<ReturnType<typeof arvoresLinhaDoTempo>>>
+export type ArvoresLinhaDoTempoQueryError = unknown
+
+
+export function useArvoresLinhaDoTempo<TData = Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError = unknown>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof arvoresLinhaDoTempo>>,
+          TError,
+          Awaited<ReturnType<typeof arvoresLinhaDoTempo>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useArvoresLinhaDoTempo<TData = Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof arvoresLinhaDoTempo>>,
+          TError,
+          Awaited<ReturnType<typeof arvoresLinhaDoTempo>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useArvoresLinhaDoTempo<TData = Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useArvoresLinhaDoTempo<TData = Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresLinhaDoTempo>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getArvoresLinhaDoTempoQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

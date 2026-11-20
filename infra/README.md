@@ -61,14 +61,35 @@ Keycloak, armazenamento) para desenvolver backend e web fora de contêiner.
 
 ### Painel web
 
-| Variável                        | Obrigatória | Descrição                                 |
-| ------------------------------- | ----------- | ----------------------------------------- |
-| `ITREE_API_UPSTREAM`            | sim         | `host:porta` da API para o proxy do nginx |
-| `ITREE_OIDC_AUTHORITY`          | sim         | URL do realm OIDC                         |
-| `ITREE_OIDC_CLIENT_ID`          | não         | Padrão `itree-web`                        |
-| `ITREE_URL_API`                 | não         | Vazio = mesma origem (recomendado)        |
-| `ITREE_MOSTRAR_MODULOS_FUTUROS` | não         | `true` só fora de produção                |
-| `ITREE_CSP_ORIGENS`             | não         | Origens extras na CSP (padrão `https:`)   |
+| Variável                                      | Obrigatória | Descrição                                                                           |
+| --------------------------------------------- | ----------- | ----------------------------------------------------------------------------------- |
+| `ITREE_API_UPSTREAM`                          | sim         | `host:porta` da API para o proxy do nginx                                           |
+| `ITREE_OIDC_AUTHORITY`                        | sim         | URL do realm OIDC                                                                   |
+| `ITREE_OIDC_CLIENT_ID`                        | não         | Padrão `itree-web`                                                                  |
+| `ITREE_URL_API`                               | não         | Vazio = mesma origem (recomendado)                                                  |
+| `ITREE_MOSTRAR_MODULOS_FUTUROS`               | não         | `true` só fora de produção                                                          |
+| `ITREE_CSP_ORIGENS`                           | não         | Origens extras na CSP (padrão `https:`)                                             |
+| `ITREE_MAPA_SATELITE_URL`                     | não         | Tiles raster do satélite, com `{z}/{y}/{x}`. Vazio = a opção "Satélite" não aparece |
+| `ITREE_MAPA_SATELITE_ATRIBUICAO`              | não         | Atribuição exigida pelo provedor; aparece no mapa e em "Fontes dos dados"           |
+| `ITREE_MAPA_SATELITE_ZOOM_MAXIMO`             | não         | Maior zoom com imagem real (padrão 19); acima dele o mapa sobreamostra              |
+| `ITREE_MAPA_SATELITE_NOME`, `_DATA`, `_AVISO` | não         | Nome, data (`AAAA-MM-DD`) e aviso de resolução mostrados ao lado do seletor         |
+
+### Mapa base de satélite
+
+O padrão de desenvolvimento e de demonstração (`apps/web/.env.example` e
+`infra/docker/compose.demonstracao.yml`) é o **Sentinel-2 cloudless 2016**, da
+EOX (camada `s2cloudless_3857`, a de 2016 sem ano no nome; licença CC BY 4.0).
+O WMTS da EOX usa a ordem `{z}/{y}/{x}`. A resolução é de 10 m: a imagem mostra
+manchas de vegetação, não árvores individuais, e o painel avisa isso ao lado do
+seletor. O zoom nativo é 14; além dele o mapa só amplia a imagem. A atribuição
+obrigatória é "Sentinel-2 cloudless – https://s2maps.eu by EOX IT Services GmbH
+(Contains modified Copernicus Sentinel data 2016)". Os anos de 2019 em diante
+têm licença CC BY-NC-SA, que não serve para o uso da prefeitura.
+
+Não há provedor de satélite de produção: a escolha (ortofoto da prefeitura ou
+imagem comercial de alta resolução, com licença e custo) entra só com a DP-21.
+Em produção, inclua o host dos tiles em `ITREE_CSP_ORIGENS`
+(`https://tiles.maps.eox.at`, no caso da EOX).
 
 `ITREE_CSP_ORIGENS` entra em `img-src`, `connect-src` e `frame-src` da
 Content-Security-Policy do painel. Em produção, prefira listar as origens

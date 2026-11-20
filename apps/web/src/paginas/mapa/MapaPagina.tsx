@@ -32,8 +32,7 @@ import type {
 import { ChevronDown, ClipboardList, Layers, Leaf, List, TriangleAlert, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { usePermissao } from "../../acesso/ContextoUsuario";
-import { DetalhesTecnicos } from "../../componentes/DetalhesTecnicos";
+import { usePermissao, useUsuario } from "../../acesso/ContextoUsuario";
 import {
   SeloEspecie,
   SeloIlustracao,
@@ -86,6 +85,8 @@ import {
 } from "../../mapa/coropletica";
 import { urlApi } from "../../mapa/url";
 import type { TipoBase } from "../../mapa/estilo";
+import { baseEfetiva, lembrarBase, lerBaseLembrada } from "../../mapa/baseLembrada";
+import { HALO_BAIRRO, aplicarLegibilidade } from "../../mapa/legibilidade";
 import {
   COR_ALERTA,
   COR_ILUMINACAO,
@@ -345,7 +346,10 @@ export function MapaPagina() {
   const [dica, setDica] = useState<{ x: number; y: number; texto: string } | null>(null);
   const [cursor, setCursor] = useState<{ lon: number; lat: number } | null>(null);
 
-  const base: TipoBase = busca.base ?? "ruas";
+  const usuario = useUsuario();
+  const [baseLembrada, setBaseLembrada] = useState(() => lerBaseLembrada(usuario.id));
+  // A URL vale mais que a preferência lembrada; sem satélite configurado, sempre ruas.
+  const base: TipoBase = baseEfetiva(busca.base, baseLembrada, !!config.mapaSatelite);
   const modoCor: ModoCor = busca.cor === "origem" ? "origem" : "condicao";
   const mostrarArvores = busca.arvores !== "0";
   const mostrarOcorrencias = podeOcorrencias && busca.ocorrencias !== "0";
@@ -394,6 +398,18 @@ export function MapaPagina() {
   const atualizarBusca = (parcial: Partial<BuscaMapa>) =>
     void navegar({ search: (s: BuscaMapa) => ({ ...s, ...parcial }), replace: true });
 
+  const escolherBase = (b: TipoBase) => {
+    lembrarBase(usuario.id, b);
+    setBaseLembrada(b);
+    atualizarBusca({ base: b });
+  };
+  // Base lembrada sem `base` na URL: a URL passa a refletir o que está na tela (link compartilhável).
+  useEffect(() => {
+    if (busca.base === undefined && base === "satelite") {
+      void navegar({ search: (s: BuscaMapa) => ({ ...s, base: "satelite" }), replace: true });
+    }
+  }, [busca.base, base, navegar]);
+
   // Nomes dos bairros: só os que cabem no polígono e não colidem (C-08).
   const atualizarRotulos = (m: MapaMapLibre) => {
     if (!rotuloDoBairroVisivel(m.getZoom())) {
@@ -436,6 +452,26 @@ export function MapaPagina() {
       type: "fill",
       source: "bairros",
       paint: { "fill-color": "#2b8a3e", "fill-opacity": 0.05 },
+    });
+    // Halo escuro sob o contorno branco do bairro; só aparece sobre o satélite.
+    m.addLayer({
+      id: "bairros-halo",
+      type: "line",
+      source: "bairros",
+      layout: { visibility: "none" },
+      paint: {
+        "line-color": HALO_BAIRRO.cor,
+        "line-opacity": HALO_BAIRRO.opacidade,
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          10,
+          HALO_BAIRRO.larguras[0],
+          15,
+          HALO_BAIRRO.larguras[1],
+        ],
+      },
     });
     m.addLayer({
       id: "bairros-contorno",
@@ -1087,14 +1123,12 @@ export function MapaPagina() {
     ]);
   }, [pronto, chaveTarefas]);
 
-  // Modo de cor das árvores.
+  // Modo de cor das árvores e legibilidade das camadas sobre o mapa base (ruas ou satélite).
   useEffect(() => {
     const m = mapa.current;
     if (!pronto || !m) return;
-    const pintura = pinturaArvores(modoCor);
-    for (const [k, v] of Object.entries(pintura))
-      m.setPaintProperty("arvores-pontos", k as never, v as never);
-  }, [pronto, modoCor]);
+    aplicarLegibilidade(m, base, COR_AREA_VERDE_POR_TIPO, pinturaArvores(modoCor, base));
+  }, [pronto, modoCor, base]);
 
   // Visibilidade das camadas.
   useEffect(() => {
@@ -1192,6 +1226,46 @@ export function MapaPagina() {
         zoom={busca.zoom}
         aoCarregar={aoCarregar}
       >
+        {satelite && (
+          <div
+            role="group"
+            aria-label="Mapa base"
+            className="absolute right-2.5 bottom-[7.75rem] z-10 flex w-44 flex-col gap-1.5 rounded-lg border border-borda bg-superficie/95 p-1.5 text-xs shadow-md backdrop-blur"
+          >
+            <div className="grid grid-cols-2 gap-1.5">
+              {(["ruas", "satelite"] as const).map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  aria-pressed={base === b}
+                  onClick={() => escolherBase(b)}
+                  className={cn(
+                    "flex flex-col items-stretch gap-1 rounded-md border p-1 focus-visible:outline-2 focus-visible:outline-marca",
+                    base === b
+                      ? "border-marca bg-marca-clara font-medium"
+                      : "border-borda hover:bg-neutro-clara",
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "h-8 rounded-sm",
+                      b === "ruas"
+                        ? "bg-[linear-gradient(135deg,#eceee9_0_45%,#fff_45%_55%,#dfe3dc_55%)]"
+                        : "bg-[linear-gradient(135deg,#2c4a2e,#4a6b3a_40%,#6b7f52_60%,#2f3b2a)]",
+                    )}
+                  />
+                  {b === "ruas" ? "Mapa" : "Satélite"}
+                </button>
+              ))}
+            </div>
+            {satelite.aviso && (
+              <p className="px-0.5 text-[11px] leading-tight text-texto-suave">
+                <span className="font-medium">Satélite:</span> {satelite.aviso}.
+              </p>
+            )}
+          </div>
+        )}
         {/* Coluna esquerda: painel (encolhe e rola) e legenda, sem se sobrepor. */}
         <div className="pointer-events-none absolute top-3 bottom-9 left-3 z-10 flex w-80 flex-col gap-2">
           {painel ? (
@@ -1519,40 +1593,6 @@ export function MapaPagina() {
                   </Grupo>
                 )}
 
-                <Grupo titulo="Mapa base">
-                  <div className="flex gap-1">
-                    {(["ruas", "satelite"] as const).map((b) => (
-                      <Botao
-                        key={b}
-                        tamanho="pequeno"
-                        variante={base === b ? "primario" : "secundario"}
-                        aria-pressed={base === b}
-                        disabled={b === "satelite" && !satelite}
-                        onClick={() => atualizarBusca({ base: b })}
-                      >
-                        {b === "ruas" ? "Ruas" : "Satélite"}
-                      </Botao>
-                    ))}
-                  </div>
-                  {!satelite && (
-                    <div>
-                      <p className="text-xs text-texto-suave">
-                        Imagem de satélite não configurada: o provedor ainda está em definição pela
-                        prefeitura.
-                      </p>
-                      <DetalhesTecnicos>
-                        Decisão pendente DP-07 (provedor de mapas).
-                      </DetalhesTecnicos>
-                    </div>
-                  )}
-                  {base === "satelite" && satelite && (
-                    <p className="text-xs text-texto-suave">
-                      Data da imagem:{" "}
-                      {satelite.data ? formatarData(satelite.data) : "não informada pelo provedor"}.
-                    </p>
-                  )}
-                </Grupo>
-
                 <Grupo titulo="Fontes dos dados">
                   <div className="text-xs text-texto-suave">
                     {info?.territorios.length ? (
@@ -1608,6 +1648,19 @@ export function MapaPagina() {
                       </p>
                     )}
                     {base === "ruas" && config.mapaRuas && <p>{config.mapaRuas.atribuicao}</p>}
+                    {base === "satelite" && satelite && (
+                      <p>
+                        {[
+                          satelite.nome,
+                          satelite.data
+                            ? `imagem de ${formatarData(satelite.data)}`
+                            : "data da imagem não informada pelo provedor",
+                          satelite.atribuicao,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
                     {info?.arvores && Number(info.arvores.sem_localizacao) > 0 && (
                       <p className="mt-1 text-atencao">
                         {Number(info.arvores.sem_localizacao)} árvores sem localização não aparecem

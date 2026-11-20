@@ -99,7 +99,8 @@ export function Mapa({
         tiles: [camadaBase.url],
         tileSize: camadaBase.tamanho ?? 256,
         attribution: camadaBase.atribuicao,
-        maxzoom: 19,
+        // Além do zoom nativo do provedor o mapa amplia a imagem em vez de pedir tiles.
+        maxzoom: camadaBase.zoomMaximo ?? 19,
       });
       const primeira = m.getStyle().layers.find((l) => l.id !== "fundo")?.id;
       m.addLayer(

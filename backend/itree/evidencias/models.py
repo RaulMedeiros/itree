@@ -41,6 +41,12 @@ class Evidencia(ModeloBase):
         default=False,
         help_text="Imagem sintética de demonstração, não uma fotografia real da árvore.",
     )
+    chave_miniatura = models.CharField(
+        max_length=300,
+        blank=True,
+        editable=False,
+        help_text="Miniatura JPEG da imagem no armazenamento; vazia se ainda não foi gerada.",
+    )
     estado = models.CharField(
         max_length=20, choices=EstadoEvidencia.choices, default=EstadoEvidencia.AGUARDANDO_ENVIO
     )

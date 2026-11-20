@@ -4,6 +4,7 @@ import type { GeoJSONSource, Map as MapaMapLibre } from "maplibre-gl";
 import { useEffect, useRef } from "react";
 
 import { Mapa } from "../mapa/Mapa";
+import { useBaseLembrada } from "../mapa/useBaseLembrada";
 import { CORES_CONDICAO, pinturaArvores } from "../mapa/simbologia";
 import { SeloLocalizacao } from "./selos";
 
@@ -44,6 +45,7 @@ function pontoDaArvore(a: ArvoreNoMapa) {
  */
 export function MiniMapaArvore({ arvore }: { arvore: ArvoreNoMapa }) {
   const mapa = useRef<MapaMapLibre | null>(null);
+  const base = useBaseLembrada();
   const localizacao = arvore.localizacao;
 
   const aoCarregar = (m: MapaMapLibre) => {
@@ -54,7 +56,7 @@ export function MiniMapaArvore({ arvore }: { arvore: ArvoreNoMapa }) {
       type: "circle",
       source: "arvore",
       // Maior que no mapa geral: aqui é a única árvore na tela.
-      paint: { ...pinturaArvores("condicao"), "circle-radius": 9 } as never,
+      paint: { ...pinturaArvores("condicao", base), "circle-radius": 9 } as never,
     });
   };
 
@@ -79,7 +81,7 @@ export function MiniMapaArvore({ arvore }: { arvore: ArvoreNoMapa }) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-borda">
       <Mapa
-        base="ruas"
+        base={base}
         rotulo={`Localização de ${arvore.codigo} no mapa (somente leitura)`}
         className="h-56"
         centro={[localizacao.longitude, localizacao.latitude]}

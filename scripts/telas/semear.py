@@ -139,7 +139,8 @@ from itree.core.ids import uuid7
 from itree.evidencias.models import Evidencia
 
 
-def ilustracao(semente):
+def ilustracao(semente, copa=1.0):
+    """Ilustração sintética de uma árvore na calçada; `copa` escala o tamanho da copa."""
     rnd = random.Random(semente)
     largura, altura = 1200, 900
     img = Image.new("RGB", (largura, altura))
@@ -151,7 +152,8 @@ def ilustracao(semente):
     d.rectangle([0, 600, largura, 640], fill=(120, 116, 110))
     d.polygon([(560, 640), (640, 640), (625, 330), (575, 330)], fill=(105, 78, 52))
     for _ in range(260):
-        cx, cy, r = rnd.gauss(600, 170), rnd.gauss(240, 90), rnd.randint(30, 70)
+        cx, cy = rnd.gauss(600, 170 * copa), rnd.gauss(300 - 60 * copa, 90 * copa)
+        r = rnd.randint(30, 70) * copa
         g = rnd.randint(95, 150)
         d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(rnd.randint(30, 60), g, rnd.randint(40, 70)))
     buf = io.BytesIO()
@@ -159,20 +161,31 @@ def ilustracao(semente):
     return buf.getvalue()
 
 
-arvores_com_foto = [a for a in arvores if a.especie_estado == "confirmada"][:3]
-for i, a in enumerate(arvores_com_foto):
-    conteudo = ilustracao(i)
+from itree.evidencias.miniaturas import gerar_miniatura
+
+
+def gravar_foto(semente, quando, descricao, autor, copa=1.0, **vinculo):
+    """Foto SINTÉTICA (gerada aqui, declarada na legenda) com a miniatura da galeria."""
+    conteudo = ilustracao(semente, copa)
     ident = uuid7()
     chave = f"evidencias/{agora:%Y/%m}/{ident}.png"
     armazenamento.cliente_interno().put_object(
         Bucket=armazenamento.settings.S3_BUCKET, Key=chave, Body=conteudo, ContentType="image/png"
     )
-    Evidencia.objects.create(
-        id=ident, chave=chave, nome_original=f"arvore-{a.codigo}.png", tipo_conteudo="image/png",
-        tamanho=len(conteudo), descricao="Copa e tronco vistos da calçada (ilustração sintética)",
-        capturada_em=agora - timedelta(days=3), estado="disponivel", enviada_por=tecnicos[0], arvore=a,
+    ev = Evidencia.objects.create(
+        id=ident, chave=chave, nome_original=f"ilustracao-{semente}.png", tipo_conteudo="image/png",
+        tamanho=len(conteudo), descricao=f"{descricao} (ilustração sintética)",
+        capturada_em=quando, estado="disponivel", enviada_por=autor,
         ilustrativa=True,  # imagem gerada aqui: a interface mostra o selo "Ilustração"
+        **vinculo,
     )
+    gerar_miniatura(ev)
+    return ev
+
+
+arvores_com_foto = [a for a in arvores if a.especie_estado == "confirmada"][:3]
+for i, a in enumerate(arvores_com_foto):
+    gravar_foto(i, agora - timedelta(days=3), "Copa e tronco vistos da calçada", tecnicos[0], arvore=a)
 
 # --- Ocorrências ---------------------------------------------------------------
 tipos = {}
@@ -260,6 +273,56 @@ for i, a in enumerate(random.sample(arvores, 30)):
     if i >= 8:  # histórico: validada pela revisora, aplicando condição e medidas
         with transaction.atomic(), pghistory.context(usuario=str(revisora.id), origem="web"):
             validar(Inspecao.objects.get(pk=resultado.id), revisora, ["condicao_aparente", "medidas"])
+
+# --- Histórico visual SINTÉTICO de uma árvore (galeria, linha do tempo e comparação) ---------
+# A primeira árvore com foto ganha 3 inspeções validadas (condição boa → regular → ruim, com
+# altura e DAP), uma ocorrência de poda atendida e fotos ilustrativas ao longo de quase um ano.
+# Tudo inventado para as capturas: as fotos são geradas com o Pillow e a legenda diz isso.
+a0 = arvores_com_foto[0]
+revisao = [(330, "boa", "6.5", "22", 0.7, "Copa jovem, ainda rala"),
+           (170, "regular", "7.8", "27", 0.85, "Copa mais cheia, galhos baixos"),
+           (60, "ruim", "8.4", "31", 1.15, "Galho encostando na fiação")]
+fotos_inspecao = []
+for k, (dias, condicao, altura, dap, copa, legenda) in enumerate(revisao):
+    quando = agora - timedelta(days=dias)
+    dados = {
+        "id": str(uuid.uuid4()), "arvore": str(a0.id), "realizada_em": quando.isoformat(),
+        "localizacao": {"longitude": a0.geom.x + 0.00002, "latitude": a0.geom.y - 0.00001},
+        "precisao_m": 3.5, "especie": str(a0.especie_id), "condicao_aparente": condicao,
+        "sinais": ["conflito_rede"] if condicao == "ruim" else [], "observacoes": legenda,
+        "requer_encaminhamento": condicao == "ruim",
+        "medidas": [
+            {"tipo": "altura", "valor": altura, "metodo": "hipsometro", "origem": "medido"},
+            {"tipo": "dap", "valor": dap, "metodo": "fita_diametrica", "origem": "medido"},
+        ],
+        "enviar_para_revisao": True,
+    }
+    s = InspecaoDeCampoSerializer(data=dados)
+    s.is_valid(raise_exception=True)
+    with pghistory.context(usuario=str(tecnicos[0].id), origem="app"):
+        resultado = sincronizar_item(s.validated_data, tecnicos[0], "android-sintetico")
+    with transaction.atomic(), pghistory.context(usuario=str(revisora.id), origem="web"):
+        validar(Inspecao.objects.get(pk=resultado.id), revisora, ["condicao_aparente", "medidas"])
+    gravar_foto(100 + k, quando, legenda, tecnicos[0], copa, inspecao_id=resultado.id)
+
+poda = tipos["Poda solicitada"]
+oco_poda = Ocorrencia.objects.create(
+    tipo=poda, arvore=a0, geom=a0.geom, endereco=a0.endereco, estado="concluida", origem="web",
+    descricao="Copa encostando na fiação de baixa tensão.", registrada_por=gestor,
+    prioridade="alta", concluida_em=agora - timedelta(days=45),
+)
+Ocorrencia.objects.filter(pk=oco_poda.pk).update(criado_em=agora - timedelta(days=65))
+gravar_foto(110, agora - timedelta(days=65), "Copa sobre a fiação, antes da poda", gestor, 1.15,
+            ocorrencia=oco_poda)
+Tarefa.objects.create(
+    tipo="atendimento_ocorrencia", arvore=a0, ocorrencia=oco_poda, geom=a0.geom,
+    responsavel=tecnicos[0], estado="concluida", criada_por=gestor, concluida_em=agora - timedelta(days=45),
+    resultado="Poda de levantamento e de afastamento da fiação realizada.",
+)
+gravar_foto(111, agora - timedelta(days=40), "Copa depois da poda de afastamento", tecnicos[0], 0.8,
+            arvore=a0)
+gravar_foto(112, agora - timedelta(days=200), "Árvore em 2026, antes da primeira inspeção do ano",
+            tecnicos[1], 0.8, arvore=a0)
 
 # --- Alertas ambientais -----------------------------------------------------------
 for fonte, arquivo in [("inpe_focos", f"{DADOS}/focos-sinteticos.csv"), ("inpe_deter", f"{DADOS}/deter-sintetico.geojson")]:

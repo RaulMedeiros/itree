@@ -34,6 +34,11 @@ export interface Evidencia {
      * @nullable
      */
   readonly url: string | null;
+  /**
+     * URL temporária da miniatura; nula se a imagem ainda não tem uma.
+     * @nullable
+     */
+  readonly url_miniatura: string | null;
   readonly enviada_por_nome: string;
   /** @nullable */
   arvore?: string | null;
