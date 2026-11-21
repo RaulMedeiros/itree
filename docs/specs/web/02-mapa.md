@@ -96,6 +96,16 @@ Fortaleza, com indicação explícita de origem e precisão de cada geometria.
   da temperatura de superfície para a mediana de Fortaleza em 2025, abaixo de todos os dados. Tem
   opacidade ajustável, a legenda oficial da fonte e a atribuição "Plataforma UrbVerde – USP", e diz que
   não é temperatura do ar. O navegador só pede tiles depois que a camada é ligada.
+- **RF-MAPA-037** — Linha do tempo (desligada por padrão; botão "Linha do tempo"). Um controle por mês,
+  do primeiro dado até hoje, com reproduzir/pausar (1 mês a cada 0,8 s) e passos; o período mora na URL
+  (`ate=AAAA-MM`; `desde=AAAA-MM` no modo intervalo). Árvores: as cadastradas até o mês e ainda não
+  removidas nele, pela **data de cadastro no iTree** (não a do plantio), com a condição da última
+  inspeção validada até então. Ocorrências: as abertas na data. Alertas e focos: os detectados no mês
+  ou no intervalo. Camadas externas (Censo, população, iluminação, áreas verdes, ilha de calor, PRODES)
+  e tarefas não mudam, e a legenda avisa "camada sem linha do tempo". Histograma mensal e contagens
+  ("Árvores na data") vêm do servidor, com o escopo do usuário.
+- **RF-MAPA-038** — "Comparar com hoje": cortina com a data escolhida à esquerda e o presente à direita;
+  vale também no celular.
 - **RF-MAPA-032** — Filtros e camadas são compartilhados com o Inventário
   (abrir a mesma seleção em lista).
 

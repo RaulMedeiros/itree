@@ -180,7 +180,12 @@ class Arvore(ModeloBase):
 
     class Meta:
         ordering = ["-numero"]
-        indexes = [models.Index(fields=["situacao"]), models.Index(fields=["especie_estado"])]
+        indexes = [
+            models.Index(fields=["situacao"]),
+            models.Index(fields=["especie_estado"]),
+            # Linha do tempo do mapa: árvores cadastradas até uma data.
+            models.Index(fields=["criado_em"], name="arvore_criado_em_idx"),
+        ]
 
     def __str__(self) -> str:
         return self.codigo

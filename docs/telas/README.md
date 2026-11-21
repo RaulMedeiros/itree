@@ -259,3 +259,18 @@ Revisão de inspeção com a barra de decisão fixa no rodapé:
 
 Também: [visão geral](m01-visao-geral.png), [ficha da árvore](m05-arvore-ficha.png) e
 [ficha do bairro](m08-bairro.png), em página inteira.
+
+## Linha do tempo no mapa
+
+Situação numa data passada (árvores pela data de cadastro no iTree e condição da
+última inspeção validada até a data; dados sintéticos):
+
+![Linha do tempo](53-mapa-linha-tempo.png)
+
+Comparar a data escolhida com hoje (cortina):
+
+![Comparar com hoje](54-mapa-comparar.png)
+
+Celular, seleção em lote com a barra de ações no rodapé:
+
+![Seleção no celular](m11-arvores-selecao.png)

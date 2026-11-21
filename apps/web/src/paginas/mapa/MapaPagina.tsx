@@ -8,6 +8,8 @@ import {
   useArvoresObter,
   useEvidenciasListar,
   useMapaCamadas,
+  useMapaSerieTemporal,
+  useMapaSituacaoNaData,
   useOcorrenciasObter,
   EstadoOcorrenciaEnum,
   type CondicaoAparenteEnum,
@@ -22,6 +24,7 @@ import {
   ROTULOS_TIPO_AREA_VERDE,
   ROTULOS_TIPO_TERRITORIO,
 } from "@itree/domain";
+import { keepPreviousData } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type {
   GeoJSONSource,
@@ -46,6 +49,9 @@ import { config } from "../../config";
 import { useTerritorioAtivo } from "../../layout/territorio";
 import { CamadasReferencia } from "../../mapa/CamadasReferencia";
 import { Mapa } from "../../mapa/Mapa";
+import { BotaoLinhaDoTempo, ControleTempo } from "../../mapa/ControleTempo";
+import { CortinaComparacao } from "../../mapa/CortinaComparacao";
+import { mesAtual, textoDoPeriodo, type SerieTemporal } from "../../mapa/tempo";
 import { paddingDoMapa } from "../../mapa/enquadramento";
 import { cn } from "../../util/cn";
 import { AreaRolavel } from "../../ui/rolagem";
@@ -199,6 +205,12 @@ export interface BuscaMapa {
   destaque?: string;
   /** Área da seleção por área, codificada por `codificarArea`. */
   area?: string;
+  /** Linha do tempo (AAAA-MM): situação ao fim do mês; ausente = o mapa mostra o presente. */
+  ate?: string;
+  /** Linha do tempo no modo intervalo: do começo deste mês ao fim de `ate`. */
+  desde?: string;
+  /** Cortina "antes e depois": a data escolhida de um lado e hoje do outro. */
+  comparar?: "1";
 }
 
 /** Proveniência da camada "Arborização do entorno", como a API a devolve. */
@@ -306,6 +318,8 @@ export function MapaPagina() {
   const rotulos = useRef<Marker[]>([]);
   const limitesRotulos = useRef<([number, number, number, number] | null)[]>([]);
   const [pronto, setPronto] = useState(false);
+  // Mapa principal como estado: a cortina de comparação acompanha a câmera dele.
+  const [mapaPrincipal, setMapaPrincipal] = useState<MapaMapLibre | null>(null);
   useTituloDocumento("Mapa");
   // No celular o painel é uma folha inferior e começa recolhida: o mapa ocupa a tela.
   const celular = useCelular();
@@ -402,14 +416,20 @@ export function MapaPagina() {
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
   const mostrarAlertas = podeAlertas && busca.alertas === "1";
   const mostrarSupressao = podeAlertas && busca.supressao_anual === "1";
-  const filtrosArvores = {
+  // Linha do tempo: com `ate`, árvores, ocorrências e alertas mostram a situação nesse mês.
+  const tempoLigado = podeMapa && busca.ate !== undefined;
+  const periodoTempo = tempoLigado ? { ate: busca.ate, desde: busca.desde } : {};
+  const comparando = tempoLigado && busca.comparar === "1";
+  const filtrosArvoresHoje = {
     bairro: territorioAtivo.id,
     especie_estado: busca.especie_estado,
     localizacao_origem: busca.localizacao_origem,
     condicao_aparente: busca.condicao_aparente,
     sem_inspecao_dias: busca.sem_inspecao_dias ? String(busca.sem_inspecao_dias) : undefined,
   };
-  const filtrosOcorrencias = { estado: busca.estado ?? "abertas", bairro: territorioAtivo.id };
+  const filtrosOcorrenciasHoje = { estado: busca.estado ?? "abertas", bairro: territorioAtivo.id };
+  const filtrosArvores = { ...periodoTempo, ...filtrosArvoresHoje };
+  const filtrosOcorrencias = { ...periodoTempo, ...filtrosOcorrenciasHoje };
   const filtrosTarefas = { bairro: territorioAtivo.id };
   const [tipoSelecao, idSelecao] = (busca.selecao ?? "").split(":") as [
     "arvore" | "ocorrencia" | "",
@@ -474,6 +494,7 @@ export function MapaPagina() {
 
   const aoCarregar = (m: MapaMapLibre) => {
     mapa.current = m;
+    setMapaPrincipal(m);
     registrarIcones(m);
     m.on("styleimagemissing", (e) => aoFaltarImagem(m, e.id));
 
@@ -981,12 +1002,14 @@ export function MapaPagina() {
   // Alertas ambientais em aberto (geometria como recebida da fonte).
   useEffect(() => {
     if (!pronto || !mostrarAlertas) return;
-    void mapaAlertas({ bairro: territorioAtivo.id }).then(({ data }) => {
+    void mapaAlertas({ bairro: territorioAtivo.id, ...periodoTempo }).then(({ data }) => {
       (mapa.current?.getSource("alertas") as GeoJSONSource | undefined)?.setData(
         data as Parameters<GeoJSONSource["setData"]>[0],
       );
     });
-  }, [pronto, mostrarAlertas, territorioAtivo.id]);
+    // `periodoTempo` é recriado a cada render; só o mês escolhido dispara.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pronto, mostrarAlertas, territorioAtivo.id, tempoLigado, busca.ate, busca.desde]);
 
   // Supressão anual (PRODES): busca única, na primeira vez que a camada é ligada.
   useEffect(() => {
@@ -1352,6 +1375,109 @@ export function MapaPagina() {
 
   const satelite = config.mapaSatelite;
   const info = camadas.data?.data;
+
+  // Linha do tempo: histograma mensal e contagens do período, com o escopo do usuário.
+  const serieTempo = useMapaSerieTemporal(
+    { bairro: territorioAtivo.id },
+    { query: { enabled: tempoLigado, staleTime: 60_000 } },
+  );
+  const contagensTempo = useMapaSituacaoNaData(
+    { ate: busca.ate ?? mesAtual(), desde: busca.desde, bairro: territorioAtivo.id },
+    { query: { enabled: tempoLigado, placeholderData: keepPreviousData } },
+  );
+  const alterarPeriodo = (periodo: { ate: string; desde?: string }) =>
+    atualizarBusca({ ate: periodo.ate, desde: periodo.desde });
+  const ligarTempo = () => atualizarBusca({ ate: mesAtual() });
+  const desligarTempo = () =>
+    atualizarBusca({ ate: undefined, desde: undefined, comparar: undefined });
+  const controleTempo = tempoLigado && busca.ate && (
+    <ControleTempo
+      serie={serieTempo.data?.data as SerieTemporal | undefined}
+      ate={busca.ate}
+      desde={busca.desde}
+      aoMudar={alterarPeriodo}
+      aoDesligar={desligarTempo}
+      contagens={contagensTempo.data?.data}
+      comparando={comparando}
+      aoComparar={(c) => atualizarBusca({ comparar: c ? "1" : undefined })}
+      compacto={celular}
+    />
+  );
+
+  // Mapa de hoje da cortina: árvores e ocorrências sem período, com os mesmos filtros e cores.
+  const mapaHoje = useRef<MapaMapLibre | null>(null);
+  const carregarMapaHoje = (m: MapaMapLibre) => {
+    mapaHoje.current = m;
+    registrarIcones(m);
+    m.on("styleimagemissing", (e) => aoFaltarImagem(m, e.id));
+    m.addSource("arvores", {
+      type: "vector",
+      tiles: [urlTiles("arvores", filtrosArvoresHoje)],
+      minzoom: 0,
+      maxzoom: 22,
+    });
+    m.addLayer({
+      id: "arvores-pontos",
+      type: "circle",
+      source: "arvores",
+      "source-layer": "arvores",
+      filter: filtroArvoreIndividual,
+      paint: pinturaArvores(modoCor, base) as never,
+    });
+    m.addLayer({
+      id: "arvores-grupos",
+      type: "symbol",
+      source: "arvores",
+      "source-layer": "arvores",
+      filter: filtroGrupoDeArvores,
+      layout: layoutGrupo("arvores") as never,
+    });
+    if (podeOcorrencias) {
+      m.addSource("ocorrencias", {
+        type: "vector",
+        tiles: [urlTiles("ocorrencias", filtrosOcorrenciasHoje)],
+        minzoom: 0,
+        maxzoom: 22,
+      });
+      m.addLayer({
+        id: "ocorrencias-grupos",
+        type: "symbol",
+        source: "ocorrencias",
+        "source-layer": "ocorrencias",
+        filter: [">", ["get", "quantidade"], 1],
+        layout: layoutGrupo("ocorrencias") as never,
+      });
+      m.addLayer({
+        id: "ocorrencias-pontos",
+        type: "symbol",
+        source: "ocorrencias",
+        "source-layer": "ocorrencias",
+        filter: ["==", ["get", "quantidade"], 1],
+        layout: {
+          "icon-image": ID_OCORRENCIA as never,
+          "icon-allow-overlap": true,
+          "icon-anchor": "bottom",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.75, 16, 1, 18, 1.2],
+        },
+      });
+    }
+  };
+  // Os filtros seguem valendo no mapa de hoje; o mês escolhido não.
+  const chaveArvoresHoje = JSON.stringify(filtrosArvoresHoje);
+  const chaveOcorrenciasHoje = JSON.stringify(filtrosOcorrenciasHoje);
+  useEffect(() => {
+    const m = mapaHoje.current;
+    if (!comparando || !m) return;
+    (m.getSource("arvores") as VectorTileSource | undefined)?.setTiles([
+      urlTiles("arvores", JSON.parse(chaveArvoresHoje)),
+    ]);
+    (m.getSource("ocorrencias") as VectorTileSource | undefined)?.setTiles([
+      urlTiles("ocorrencias", JSON.parse(chaveOcorrenciasHoje)),
+    ]);
+  }, [comparando, chaveArvoresHoje, chaveOcorrenciasHoje]);
+  useEffect(() => {
+    if (!comparando) mapaHoje.current = null;
+  }, [comparando]);
   // Quantas praças há em cada subtipo, informado pela API de camadas.
   const subtiposPracas = ((info?.areas_verdes ?? []).find((a) => a.tipo === "praca")?.subtipos ??
     {}) as Record<string, number>;
@@ -1368,6 +1494,15 @@ export function MapaPagina() {
         zoom={busca.zoom}
         aoCarregar={aoCarregar}
       >
+        {comparando && busca.ate && (
+          <CortinaComparacao
+            key={`${base}-${modoCor}`}
+            base={base}
+            mapaPrincipal={mapaPrincipal}
+            aoCarregarHoje={carregarMapaHoje}
+            rotuloAntes={textoDoPeriodo(busca.ate, busca.desde)}
+          />
+        )}
         {satelite && (
           <div
             role="group"
@@ -1935,9 +2070,14 @@ export function MapaPagina() {
               <Layers /> Camadas e filtros
             </Botao>
           )}
+          {celular &&
+            !painel &&
+            podeMapa &&
+            (controleTempo || <BotaoLinhaDoTempo aoLigar={ligarTempo} />)}
           <div className="flex-1" />
           <div className={cn("contents", painel && "max-md:hidden")}>
             <Legenda
+              tempo={tempoLigado}
               modoCor={modoCor}
               arvores={mostrarArvores}
               ocorrencias={mostrarOcorrencias}
@@ -1951,6 +2091,17 @@ export function MapaPagina() {
               definicaoArborizacao={proveniencia?.definicao ?? DEFINICAO_ARBORIZACAO}
             />
           </div>
+          {tempoLigado && (mostrarPopulacao || mostrarIlhaCalor) && (
+            <p
+              data-testid="legenda-sem-tempo"
+              className="pointer-events-auto rounded-lg bg-superficie/95 px-3 py-1.5 text-xs text-texto-suave shadow"
+            >
+              {[mostrarPopulacao && "População e renda", mostrarIlhaCalor && "Ilha de calor"]
+                .filter(Boolean)
+                .join(" e ")}
+              : camada sem linha do tempo.
+            </p>
+          )}
           {mostrarPopulacao && busca.populacao && (
             <LegendaPopulacao
               indicador={dadosPopulacao?.indicadores.find((i) => i.id === busca.populacao) ?? null}
@@ -1966,6 +2117,16 @@ export function MapaPagina() {
             </section>
           )}
         </div>
+
+        {/* Linha do tempo, no rodapé, ao lado da coluna de camadas e acima da escala. No celular ela
+            fica na coluna da base, fora das folhas. */}
+        {!celular && podeMapa && (
+          <div className="pointer-events-none absolute right-16 bottom-9 left-[21.75rem] z-10 flex">
+            <div className="flex w-full max-w-2xl flex-col">
+              {controleTempo || <BotaoLinhaDoTempo aoLigar={ligarTempo} />}
+            </div>
+          </div>
+        )}
 
         {/* Ferramentas do mapa, ao lado do painel de camadas. */}
         <div
@@ -2336,7 +2497,10 @@ function Legenda({
   iluminacao,
   arborizacao,
   definicaoArborizacao,
+  tempo,
 }: {
+  /** Linha do tempo ligada: as camadas de contexto avisam que não acompanham o tempo. */
+  tempo: boolean;
   modoCor: ModoCor;
   arvores: boolean;
   ocorrencias: boolean;
@@ -2471,6 +2635,11 @@ function Legenda({
           )}
           {tarefas && (
             <ul className="flex flex-wrap gap-x-3 gap-y-1">
+              {tempo && (
+                <li>
+                  <SemTempo rotulo="Tarefas" />
+                </li>
+              )}
               <li className="flex items-center gap-1.5">
                 <Quadrado cor={COR_TAREFA} /> Tarefa em aberto
               </li>
@@ -2481,7 +2650,7 @@ function Legenda({
           )}
           {areasVerdes && (
             <div>
-              <p className="mb-1 text-texto-suave">Áreas verdes — tipo</p>
+              <p className="mb-1 text-texto-suave">Áreas verdes — tipo {tempo && <SemTempo />}</p>
               <ul className="flex flex-wrap gap-x-3 gap-y-1">
                 {Object.keys(CORES_AREA_VERDE).map((t) => (
                   <li key={t} className="flex items-center gap-1.5">
@@ -2495,7 +2664,7 @@ function Legenda({
           {arborizacao && (
             <div>
               <p className="mb-1 text-texto-suave">
-                Arborização do entorno — faces de quadra com árvore
+                Arborização do entorno — faces de quadra com árvore {tempo && <SemTempo />}
               </p>
               <ul className="flex flex-col gap-1">
                 {ROTULOS_CLASSES_ARBORIZACAO.map((r, i) => (
@@ -2526,7 +2695,9 @@ function Legenda({
           )}
           {supressao && (
             <div data-testid="legenda-supressao">
-              <p className="font-semibold">Supressão anual (PRODES Caatinga)</p>
+              <p className="font-semibold">
+                Supressão anual (PRODES Caatinga) {tempo && <SemTempo />}
+              </p>
               <p className="mt-1 flex items-center gap-1.5">
                 <span className="text-texto-suave">
                   {typeof supressao === "object" && supressao.ano_inicial
@@ -2553,7 +2724,7 @@ function Legenda({
           {iluminacao && (
             <div data-testid="legenda-iluminacao">
               <p className="flex items-center gap-1.5">
-                <AmostraIluminacao /> Iluminação pública — ponto de serviço
+                <AmostraIluminacao /> Iluminação pública — ponto de serviço {tempo && <SemTempo />}
               </p>
               {iluminacao.aproximar && (
                 <p className="mt-0.5 max-w-64 text-texto-suave">
@@ -2572,6 +2743,15 @@ function Legenda({
         </div>
       )}
     </section>
+  );
+}
+
+/** Aviso nas camadas que não têm data: a linha do tempo não as altera. */
+function SemTempo({ rotulo }: { rotulo?: string }) {
+  return (
+    <span className="font-normal text-texto-suave italic">
+      {rotulo ? `${rotulo}: ` : "· "}camada sem linha do tempo
+    </span>
   );
 }
 

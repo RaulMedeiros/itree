@@ -7,5 +7,9 @@
  */
 
 export type MapaAlertasParams = {
+  /** Linha do tempo (AAAA-MM): situação ao fim desse mês. Sem ele, o mapa mostra o presente. Vale para árvores, ocorrências e alertas; iluminação e tarefas ignoram. */
+  ate?: string;
   bairro?: string;
+  /** Modo intervalo (AAAA-MM): do começo deste mês ao fim de `ate`. */
+  desde?: string;
 };

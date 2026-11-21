@@ -310,6 +310,26 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
       inteira: true,
     },
   );
+  // Linha do tempo: uma data passada (9 meses atrás), quando havia menos árvores cadastradas e
+  // outras condições; a semeadura espalha as datas de cadastro em ~18 meses (SINTÉTICO).
+  const mesPassado = (() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 9);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  })();
+  await tela(
+    p,
+    "53-mapa-linha-tempo",
+    `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=14.6&ate=${mesPassado}`,
+    { esperar: /Situação em/, espera: 7000 },
+  );
+  await tela(
+    p,
+    "54-mapa-comparar",
+    `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=14.6&ate=${mesPassado}&comparar=1`,
+    { esperar: "Hoje", espera: 8000 },
+  );
   await tela(p, "41-analises-mudas", "/analises?analise=mudas_doadas_por_especie", {
     esperar: /Ressalvas/,
     espera: 2500,

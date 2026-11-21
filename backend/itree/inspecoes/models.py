@@ -117,7 +117,16 @@ class Inspecao(models.Model):
 
     class Meta:
         ordering = ["-realizada_em"]
-        indexes = [models.Index(fields=["estado"]), models.Index(fields=["realizada_em"])]
+        indexes = [
+            models.Index(fields=["estado"]),
+            models.Index(fields=["realizada_em"]),
+            # Linha do tempo do mapa: condição na data = última inspeção validada até ela.
+            models.Index(
+                fields=["arvore", "-realizada_em"],
+                name="inspecao_validada_arvore_idx",
+                condition=models.Q(estado="validada"),
+            ),
+        ]
 
     @property
     def codigo(self) -> str:

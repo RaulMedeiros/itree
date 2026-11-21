@@ -247,6 +247,11 @@ const tiposOcorrencia = createRoute({
 // --- F1: mapa, inventário e ocorrências ---------------------------------------
 
 const numeroOpcional = z.coerce.number().optional().catch(undefined);
+const mesOpcional = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+  .optional()
+  .catch(undefined);
 
 const mapa = createRoute({
   getParentRoute: () => autenticado,
@@ -276,6 +281,12 @@ const mapa = createRoute({
     populacao: z.enum(["densidade", "arvores_por_mil", "renda", "idh"]).optional().catch(undefined),
     tarefas: bandeira("1"),
     alertas: bandeira("1"),
+    /** Linha do tempo (AAAA-MM): situação ao fim do mês; ausente = o mapa mostra o presente. */
+    ate: mesOpcional,
+    /** Linha do tempo no modo intervalo: do começo deste mês ao fim de `ate`. */
+    desde: mesOpcional,
+    /** Cortina "antes e depois": a data escolhida de um lado e hoje do outro. */
+    comparar: bandeira("1"),
     sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),
     especie_estado: z
       .enum(["confirmada", "sugerida_ia", "informada", "nao_identificada"])

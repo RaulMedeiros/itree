@@ -97,6 +97,8 @@ api_v1 = [
     path("relatorios/painel.pdf", relatorios.painel_pdf, name="relatorios-painel-pdf"),
     path("qualidade/pendencias", pendencias, name="qualidade-pendencias"),
     path("mapa/camadas", mapa.camadas, name="mapa-camadas"),
+    path("mapa/serie-temporal", mapa.serie_temporal, name="mapa-serie-temporal"),
+    path("mapa/situacao-na-data", mapa.situacao_na_data, name="mapa-situacao-na-data"),
     path(
         "mapa/camadas-referencia",
         conectores.camadas_referencia,
