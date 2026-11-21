@@ -136,6 +136,12 @@ describe("seletor de mapa base", () => {
       ),
     ).toBeVisible();
     expect(regiao).toHaveAttribute("data-base", "ruas");
+    // No celular, com o mapa comum, o aviso fica oculto para não cobrir o mapa.
+    expect(
+      within(grupo)
+        .getByText(/imagem de 10 m/)
+        .closest("p"),
+    ).toHaveClass("hidden", "md:block");
   });
 
   it("ao escolher Satélite, põe base=satelite na URL, lembra a escolha e mostra a atribuição", async () => {

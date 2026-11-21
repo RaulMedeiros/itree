@@ -39,6 +39,13 @@ A legenda usa as mesmas constantes.
 | Supressão anual (PRODES Caatinga), rampa do ano mais antigo ao mais recente | `#f4c0d1` → `#8a0f3c` (rosa, a 80% de opacidade); camada de referência, desligada por padrão |
 | Ilha de calor de superfície (UrbVerde), raster WMS, -5 °C a +5 °C | `#3288bd` → `#fee08b` → `#d53e4f` (rampa divergente da própria fonte, a 65% de opacidade, abaixo de todos os dados); camada de contexto, desligada por padrão, com a legenda oficial e a atribuição |
 | Arborização do entorno (Censo 2022), 5 classes de <20% a ≥80% | `#cde2fb` / `#86b6ef` / `#3987e5` / `#1c5cab` / `#0d366b` (um só matiz, claro → escuro, a 80% de opacidade); sem dado: hachura cinza `#a3ada7` |
+| Prioridade para plantio (página "Onde plantar"), 5 classes em quintos do ranking do cenário | `#fcf3d3` / `#ecbb4c` / `#d68a2c` / `#ad5c16` / `#6e3410` (um só matiz, ocre, claro → escuro, a 80% de opacidade); sem pontuação: hachura cinza `#a3ada7`; bairro aberto no painel: contorno `#0b7285` |
+
+
+A rampa de prioridade é ocre de propósito: é a única família que nenhuma outra camada de bairro usa (azul é do
+Censo, violeta da população e renda), e a classe é sempre relativa ao cenário aberto, nunca um valor absoluto.
+Fonte única: `apps/web/src/mapa/prioridade.ts`, conferida pelo `contraste.mjs` com as mesmas exigências da
+rampa do Censo.
 
 A rampa da supressão anual (PRODES) é rosa de propósito: o roxo é do alerta, o laranja e o marrom
 são da condição das árvores e o azul é do Censo. A cor segue o ano do mapeamento e nunca sugere

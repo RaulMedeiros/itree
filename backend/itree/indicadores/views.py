@@ -22,7 +22,13 @@ from itree.auditoria.views import ENTIDADES, EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo, requer
 from itree.contas.models import Equipe
 from itree.core.parametros import uuid_do_parametro
-from itree.indicadores import atencao, externos, instantaneos, populacao_indicadores
+from itree.indicadores import (
+    atencao,
+    externos,
+    instantaneos,
+    planejamento,
+    populacao_indicadores,
+)
 from itree.inspecoes.models import CondicaoAparente, EstadoInspecao, Inspecao
 from itree.inventario.models import Arvore, EstadoEspecie
 from itree.ocorrencias.models import ESTADOS_FINAIS, EstadoOcorrencia, Ocorrencia, Prioridade
@@ -569,3 +575,59 @@ def populacao_geojson(request: Request):
     except ValueError:
         precisao = 5
     return Response(populacao_indicadores.geojson_populacao(request.user, precisao))
+
+
+class CriterioPlanejamentoSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    nome = serializers.CharField()
+    unidade = serializers.CharField()
+    direcao = serializers.ChoiceField(
+        choices=[planejamento.BAIXO, planejamento.ALTO],
+        help_text="Qual ponta do valor pede plantio: o menor (baixo) ou o maior (alto).",
+    )
+    descricao = serializers.CharField()
+    disponivel = serializers.BooleanField()
+    motivo_indisponivel = serializers.CharField()
+    ressalva = serializers.CharField()
+    provisorio = serializers.BooleanField()
+    metodo = serializers.CharField()
+    bairros_com_dado = serializers.IntegerField()
+    minimo = serializers.FloatField(allow_null=True)
+    maximo = serializers.FloatField(allow_null=True)
+    fonte = serializers.CharField()
+    fonte_url = serializers.CharField()
+    licenca = serializers.CharField()
+    ano = serializers.IntegerField(allow_null=True)
+
+
+class BairroPlanejamentoSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    nome = serializers.CharField()
+    valores = serializers.DictField(
+        child=serializers.FloatField(allow_null=True),
+        help_text="Valor bruto de cada critério; nulo sem dado (nunca zero).",
+    )
+    percentis = serializers.DictField(
+        child=serializers.FloatField(allow_null=True),
+        help_text="Percentil de prioridade de 0 a 1 (1 = bairro que mais pede plantio).",
+    )
+
+
+class CriteriosPlanejamentoSerializer(serializers.Serializer):
+    gerado_em = serializers.DateTimeField()
+    aviso = serializers.CharField()
+    metodo_percentil = serializers.CharField()
+    criterios = CriterioPlanejamentoSerializer(many=True)
+    bairros = BairroPlanejamentoSerializer(many=True)
+
+
+@extend_schema(
+    operation_id="planejamento_criterios",
+    responses=CriteriosPlanejamentoSerializer,
+)
+@api_view(["GET"])
+@permission_classes([requer("relatorios.ler")])
+def planejamento_criterios(request: Request):
+    """Critérios do cenário "Onde plantar": valor bruto e percentil de prioridade por bairro do
+    escopo, com fonte e ano. Cenário de priorização, não índice oficial (DP-14)."""
+    return Response(planejamento.criterios_por_bairro(request.user))
