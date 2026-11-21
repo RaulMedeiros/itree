@@ -25,12 +25,18 @@ class OrigemLocalizacao(models.TextChoices):
     IMPORTADA = "importada", "Importada"
     ESTIMADA_WEB = "estimada_web", "Estimada (web)"
     GEOCODIFICADA = "geocodificada", "Geocodificada (endereço)"
+    DETECTADA = "detectada", "Detectada (imagem)"
 
 
 class OrigemRegistro(models.TextChoices):
     WEB = "web", "Painel web"
     APP = "app", "Aplicativo"
     IMPORTACAO = "importacao", "Importação"
+    DETECCAO_SATELITE = "deteccao_satelite", "Detecção via satélite"
+    DETECCAO_VIDEO = "deteccao_video", "Detecção via vídeo de rua"
+
+
+ORIGENS_DETECCAO = (OrigemRegistro.DETECCAO_SATELITE, OrigemRegistro.DETECCAO_VIDEO)
 
 
 # Formatter URL (P1630) da propriedade P10701 "Reflora ID" do Wikidata,
@@ -178,10 +184,31 @@ class Arvore(ModeloBase):
     )
     observacoes = models.TextField(blank=True)
 
+    # Confirmação (decisão de 21/11/2026): a árvore detectada automaticamente entra no
+    # inventário com ``confirmada=False`` e confiança; uma inspeção validada ou a revisão humana
+    # a confirma. Todo o resto (cadastro manual, importação, app) nasce confirmado.
+    confirmada = models.BooleanField(
+        default=True,
+        help_text="Falso só para árvore detectada automaticamente e ainda sem revisão humana.",
+    )
+    confianca = models.FloatField(
+        null=True, blank=True, help_text="Confiança da detecção (0 a 1); vazia fora das detectadas."
+    )
+    confirmada_em = models.DateTimeField(null=True, blank=True)
+    confirmada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    ultima_vez_vista_em = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Data da captura mais recente em que uma detecção automática viu a árvore.",
+    )
+
     class Meta:
         ordering = ["-numero"]
         indexes = [
             models.Index(fields=["situacao"]),
+            models.Index(fields=["confirmada"], name="arvore_confirmada_idx"),
             models.Index(fields=["especie_estado"]),
             # Linha do tempo do mapa: árvores cadastradas até uma data.
             models.Index(fields=["criado_em"], name="arvore_criado_em_idx"),
@@ -193,6 +220,14 @@ class Arvore(ModeloBase):
     @property
     def codigo(self) -> str:
         return f"ARV-{self.numero:06d}" if self.numero else "ARV-?"
+
+    @property
+    def deteccao(self) -> str:
+        """Sensor da detecção que originou o registro: "satelite", "video_rua" ou ""."""
+        return {
+            OrigemRegistro.DETECCAO_SATELITE: "satelite",
+            OrigemRegistro.DETECCAO_VIDEO: "video_rua",
+        }.get(self.origem_registro, "")
 
     @property
     def valida(self) -> bool:
