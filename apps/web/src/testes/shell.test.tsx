@@ -309,7 +309,7 @@ describe("cabeçalho", () => {
     await abrir("/administracao/integracoes");
     const busca = await screen.findByRole("combobox", { name: "Busca global" });
     const cabecalho = screen.getByTestId("shell").querySelector("header")!;
-    expect(cabecalho).toHaveClass("grid-cols-[1fr_auto_1fr]");
+    expect(cabecalho).toHaveClass("md:grid-cols-[1fr_auto_1fr]");
     expect(busca.closest("header")).toBe(cabecalho);
   });
 

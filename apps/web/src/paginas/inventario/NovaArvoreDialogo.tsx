@@ -71,7 +71,7 @@ export function NovaArvoreDialogo({ aoFechar }: { aoFechar: () => void }) {
           </p>
         )}
         <SeletorLocalizacao valor={ponto} aoMudar={setPonto} erros={erros.localizacao} />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo rotulo="Espécie (informada)" erros={erros.especie_id}>
             {(p) => (
               <Selecao {...p} value={especie} onChange={(e) => setEspecie(e.target.value)}>

@@ -27,6 +27,7 @@ import { Botao } from "../../ui/botao";
 import { Carregando } from "../../ui/estados";
 import type { BuscaArvores } from "../inventario/ArvoresPagina";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
+import { PainelDetalhe } from "../../mapa/PainelDetalhe";
 
 const TAMANHO_PAGINA = 50;
 
@@ -262,11 +263,7 @@ export function PainelSelecaoArea({
   const excedeLote = !!dados && !!arvores && arvores.total > dados.limite_tarefas_em_lote;
 
   return (
-    <aside
-      aria-label="Seleção por área"
-      onKeyDown={aoTeclar}
-      className="absolute top-3 right-3 z-10 flex max-h-[calc(100%-1.5rem)] w-96 flex-col gap-3 overflow-y-auto rounded-xl border border-borda bg-superficie p-4 text-sm shadow-lg"
-    >
+    <PainelDetalhe rotulo="Seleção por área" onKeyDown={aoTeclar} className="gap-3 text-sm">
       <div className="flex items-start justify-between gap-2">
         <h2 ref={titulo} tabIndex={-1} className="text-base font-semibold outline-none">
           Seleção por área
@@ -483,6 +480,6 @@ export function PainelSelecaoArea({
           aoFechar={() => setCriando(false)}
         />
       )}
-    </aside>
+    </PainelDetalhe>
   );
 }

@@ -216,6 +216,24 @@ async function abrirGaleria() {
   return usuario;
 }
 
+describe("ficha da árvore no celular", () => {
+  it("as abas rolam na horizontal e não quebram o rótulo", async () => {
+    await abrirGaleria();
+    const abas = screen.getByRole("tablist", { name: "Seções da árvore" });
+    expect(abas).toHaveClass("overflow-x-auto");
+    for (const aba of within(abas).getAllByRole("tab"))
+      expect(aba).toHaveClass("shrink-0", "whitespace-nowrap", "max-md:min-h-11");
+  });
+
+  it("a galeria mostra 2 colunas no celular", async () => {
+    await abrirGaleria();
+    const grade = (await screen.findAllByRole("button", { name: /^Abrir foto/ }))[0]!.closest(
+      "ul",
+    )!;
+    expect(grade).toHaveClass("grid-cols-2");
+  });
+});
+
 describe("galeria da árvore", () => {
   it("mostra o mosaico com miniaturas (não o original) em ordem cronológica", async () => {
     await abrirGaleria();

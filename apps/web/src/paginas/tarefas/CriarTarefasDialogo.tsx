@@ -135,7 +135,7 @@ export function CriarTarefasDialogo({ alvo, aoFechar }: { alvo: Alvo; aoFechar: 
             </p>
           )}
           <AvisoEquipeIncompleta equipe={equipes.data?.data.results.find((e) => e.id === equipe)} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Campo rotulo="Equipe">
               {(p) => (
                 <Selecao

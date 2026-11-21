@@ -465,7 +465,7 @@ function AssistenteImportacao({
               {ROTULOS_FORMATO[leitura.formato] ?? leitura.formato.toUpperCase()}
               {leitura.tem_geometria && " · geometria de pontos encontrada no arquivo"}
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Campo
                 rotulo="Fonte dos dados"
                 obrigatorio
@@ -560,7 +560,7 @@ function AssistenteImportacao({
             )}
             <fieldset>
               <legend className="mb-2 text-sm font-medium">Correspondência de colunas</legend>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {CAMPOS.filter(
                   (c) => !(leitura.tem_geometria && (c.id === "latitude" || c.id === "longitude")),
                 ).map((c) => (

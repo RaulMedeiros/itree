@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { simularCelular } from "./celular";
 import { criarServidor } from "./servidorPadrao";
 
 vi.mock("react-oidc-context", () => ({
@@ -384,5 +385,41 @@ describe("R3-11: ação da linha nas tarefas", () => {
       expect(b.className).not.toMatch(/\bbg-marca\b/);
       expect(b).toHaveClass("border");
     }
+  });
+});
+
+describe("celular: listas em cartões e filtros em folha", () => {
+  it("ocorrências: botão 'Filtros (n)', folha com os filtros e linhas rotuladas como cartão", async () => {
+    simularCelular();
+    await abrir("/ocorrencias?atrasadas=true");
+    await screen.findByText("OCO-000001");
+    expect(screen.queryByLabelText("Estado")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /Filtros \(1\)/ }));
+    const folha = await screen.findByRole("dialog", { name: "Filtros" });
+    for (const rotulo of ["Buscar", "Estado", "Tipo", "Prioridade", "Bairro", "Equipe"])
+      expect(within(folha).getByLabelText(rotulo)).toBeInTheDocument();
+    await userEvent.click(within(folha).getByRole("button", { name: "Ver resultados" }));
+    // O código é o título do cartão; o responsável não entra no cartão.
+    const codigo = screen.getByRole("link", { name: /OCO-000001/ }).closest("td")!;
+    expect(codigo).toHaveAttribute("data-titulo");
+    const celulas = Array.from(codigo.closest("tr")!.querySelectorAll("td[data-oculta]"));
+    expect(celulas.length).toBeGreaterThan(0);
+  });
+
+  it("tarefas: a barra de filtros também vira folha", async () => {
+    simularCelular();
+    await abrir("/equipes-tarefas");
+    await screen.findByText("TAR-000001");
+    await userEvent.click(screen.getByRole("button", { name: /Filtros \(0\)/ }));
+    const folha = await screen.findByRole("dialog", { name: "Filtros" });
+    expect(within(folha).getByLabelText("Situação")).toBeInTheDocument();
+    expect(within(folha).getByLabelText("Só atrasadas")).toBeInTheDocument();
+  });
+
+  it("no desktop os filtros seguem na página", async () => {
+    await abrir("/equipes-tarefas");
+    await screen.findByText("TAR-000001");
+    expect(screen.queryByRole("button", { name: /Filtros \(/ })).toBeNull();
+    expect(screen.getByLabelText("Situação")).toBeInTheDocument();
   });
 });

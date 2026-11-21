@@ -21,6 +21,7 @@ import {
 import { Selo } from "../../ui/selo";
 import { Selecao } from "../../ui/campos";
 import { formatarData, formatarDataHora } from "../../util/formatos";
+import { PainelDetalhe } from "../../mapa/PainelDetalhe";
 
 /** Controle do grupo Contexto: caixa da camada e seletor do indicador. Desligada por padrão. */
 export function ControlePopulacao({
@@ -209,10 +210,7 @@ export function PainelPopulacaoBairro({
   const fmt = (id: IndicadorPopulacao, v: number | null | undefined) =>
     v === null || v === undefined ? "sem dado" : formatarIndicadorPopulacao(id, Number(v));
   return (
-    <aside
-      aria-label="População e renda do bairro"
-      className="absolute top-3 right-3 z-10 flex max-h-[calc(100%-1.5rem)] w-96 flex-col gap-2 overflow-y-auto rounded-xl border border-borda bg-superficie p-4 text-sm shadow-lg"
-    >
+    <PainelDetalhe rotulo="População e renda do bairro" className="gap-2 text-sm">
       <button
         className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo"
         aria-label="Fechar detalhes"
@@ -289,6 +287,6 @@ export function PainelPopulacaoBairro({
           </p>
         </div>
       )}
-    </aside>
+    </PainelDetalhe>
   );
 }

@@ -178,7 +178,7 @@ function EquipeDialogo({ equipe, aoFechar }: { equipe: Equipe | null; aoFechar: 
             {mutacao.error.message}
           </p>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo rotulo="Nome" obrigatorio erros={erros.nome}>
             {(p) => (
               <Entrada {...p} required value={nome} onChange={(e) => setNome(e.target.value)} />
@@ -202,7 +202,7 @@ function EquipeDialogo({ equipe, aoFechar }: { equipe: Equipe | null; aoFechar: 
             <AreaTexto {...p} value={descricao} onChange={(e) => setDescricao(e.target.value)} />
           )}
         </Campo>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <ListaMarcavel
             legenda="Membros"
             opcoes={usuarios.opcoes}

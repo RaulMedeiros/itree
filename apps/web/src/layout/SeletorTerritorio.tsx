@@ -32,7 +32,9 @@ export function SeletorTerritorio() {
         ) : (
           <Selo tom="atencao">Sem escopo territorial atribuído</Selo>
         )}
-        <AjudaTermo id="escopo_territorial" />
+        <span className="max-md:hidden">
+          <AjudaTermo id="escopo_territorial" />
+        </span>
       </div>
     );
   }
@@ -57,12 +59,12 @@ export function SeletorTerritorio() {
     <div className="flex items-center gap-2 text-sm">
       <MapPin className="size-4 text-marca" aria-hidden />
       <label className="flex items-center gap-1.5">
-        <span className="text-texto-suave">Território:</span>
+        <span className="text-texto-suave max-md:sr-only">Território:</span>
         <Selecao
           aria-label="Território"
           value={ativo.id ?? ""}
           onChange={(e) => escolher(e.target.value)}
-          className="h-8 max-w-56 font-medium"
+          className="h-8 max-w-56 font-medium max-md:h-11 max-md:max-w-40"
         >
           <option value="">{municipio?.nome ?? "Todos os meus territórios"}</option>
           {eu.territorios
@@ -74,7 +76,9 @@ export function SeletorTerritorio() {
             ))}
         </Selecao>
       </label>
-      <AjudaTermo id="escopo_territorial" />
+      <span className="max-md:hidden">
+        <AjudaTermo id="escopo_territorial" />
+      </span>
     </div>
   );
 }

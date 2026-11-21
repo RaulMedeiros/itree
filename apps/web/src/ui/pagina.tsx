@@ -59,12 +59,12 @@ export function AbasSecao({ rotulo, abas }: { rotulo: string; abas: AbaSecao[] }
   // some e o conteúdo sobe (R3-04).
   if (abas.some((a) => caminho.startsWith(`${a.para}/`))) return null;
   return (
-    <nav aria-label={rotulo} className="mb-4 flex gap-1 border-b border-borda">
+    <nav aria-label={rotulo} className="mb-4 flex gap-1 overflow-x-auto border-b border-borda">
       {abas.map((a) => (
         <Link
           key={a.para}
           to={a.para as LinkProps["to"]}
-          className="-mb-px border-b-2 border-transparent px-3 py-2 text-sm text-texto-suave hover:text-texto"
+          className="-mb-px flex shrink-0 items-center border-b-2 border-transparent px-3 py-2 text-sm whitespace-nowrap text-texto-suave hover:text-texto max-md:min-h-11"
           activeProps={{ className: "border-marca! font-medium text-texto!" }}
           activeOptions={{ exact: false }}
         >
@@ -135,7 +135,7 @@ export function Paginacao({
   return (
     <nav
       aria-label="Paginação"
-      className="mt-3 flex items-center justify-between text-sm text-texto-suave"
+      className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm text-texto-suave"
     >
       <span>
         {inicio}–{fim} de {total.toLocaleString("pt-BR")}
@@ -144,14 +144,14 @@ export function Paginacao({
       </span>
       <div className="flex gap-2">
         <button
-          className="rounded-md border border-borda bg-superficie px-2.5 py-1 disabled:opacity-50"
+          className="rounded-md border border-borda bg-superficie px-2.5 py-1 disabled:opacity-50 max-md:min-h-11 max-md:px-4"
           disabled={pagina <= 1}
           onClick={() => aoMudar(pagina - 1)}
         >
           Anterior
         </button>
         <button
-          className="rounded-md border border-borda bg-superficie px-2.5 py-1 disabled:opacity-50"
+          className="rounded-md border border-borda bg-superficie px-2.5 py-1 disabled:opacity-50 max-md:min-h-11 max-md:px-4"
           disabled={pagina >= paginas}
           onClick={() => aoMudar(pagina + 1)}
         >

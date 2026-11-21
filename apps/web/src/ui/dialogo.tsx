@@ -27,7 +27,7 @@ export function Dialogo({
         <Radix.Overlay className="fixed inset-0 z-40 bg-texto/40" />
         <Radix.Content
           className={cn(
-            "fixed top-1/2 left-1/2 z-50 flex max-h-[90vh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg bg-superficie shadow-xl",
+            "fixed top-1/2 left-1/2 z-50 flex max-h-[90dvh] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg bg-superficie shadow-xl",
             largura,
           )}
         >

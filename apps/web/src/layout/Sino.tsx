@@ -43,7 +43,7 @@ export function Sino() {
     <Menu.Root open={aberto} onOpenChange={setAberto}>
       <Menu.Trigger
         aria-label={naoLidas > 0 ? `Notificações: ${plural(naoLidas, "não lida")}` : "Notificações"}
-        className="relative flex size-9 items-center justify-center rounded-md hover:bg-fundo"
+        className="relative flex size-9 items-center justify-center rounded-md hover:bg-fundo max-md:size-11"
       >
         <Bell className="size-5 text-texto-suave" aria-hidden />
         {naoLidas > 0 && (

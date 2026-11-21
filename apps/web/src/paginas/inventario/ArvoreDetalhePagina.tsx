@@ -235,7 +235,7 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
       <div
         role="tablist"
         aria-label="Seções da árvore"
-        className="mb-4 flex gap-1 border-b border-borda"
+        className="mb-4 flex gap-1 overflow-x-auto border-b border-borda"
       >
         {abas.map((a) => (
           <button
@@ -243,7 +243,7 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
             role="tab"
             aria-selected={aba === a.id}
             onClick={() => setAba(a.id)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm ${aba === a.id ? "border-marca font-medium" : "border-transparent text-texto-suave hover:text-texto"}`}
+            className={`-mb-px shrink-0 border-b-2 px-3 py-2 text-sm whitespace-nowrap max-md:min-h-11 ${aba === a.id ? "border-marca font-medium" : "border-transparent text-texto-suave hover:text-texto"}`}
           >
             {a.rotulo}
           </button>
@@ -937,7 +937,7 @@ function EditarDialogo({ arvore, aoFechar }: { arvore: Arvore; aoFechar: () => v
             {Object.values(erros).flat()[0] ?? atualizar.error.message}
           </p>
         )}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo rotulo="Espécie">
             {(p) => (
               <Selecao {...p} value={especie} onChange={(e) => setEspecie(e.target.value)}>
@@ -1049,7 +1049,7 @@ function MedidaDialogo({ arvore, aoFechar }: { arvore: Arvore; aoFechar: () => v
         </>
       }
     >
-      <form id="form-medida" onSubmit={enviar} className="grid grid-cols-2 gap-3">
+      <form id="form-medida" onSubmit={enviar} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Campo rotulo="Medida" erros={erros.tipo}>
           {(p) => (
             <Selecao

@@ -49,6 +49,7 @@ import { Mapa } from "../../mapa/Mapa";
 import { paddingDoMapa } from "../../mapa/enquadramento";
 import { cn } from "../../util/cn";
 import { AreaRolavel } from "../../ui/rolagem";
+import { useCelular } from "../../util/useMediaQuery";
 import { maplibregl } from "../../mapa/maplibre";
 import {
   adicionarRealce,
@@ -159,6 +160,7 @@ import {
 import { BarraSelecaoArea, PainelSelecaoArea } from "./SelecaoArea";
 import { NovaOcorrenciaDialogo } from "../ocorrencias/NovaOcorrenciaDialogo";
 import { CriarTarefasDialogo } from "../tarefas/CriarTarefasDialogo";
+import { PainelDetalhe } from "../../mapa/PainelDetalhe";
 
 export interface BuscaMapa {
   lon?: number;
@@ -305,7 +307,9 @@ export function MapaPagina() {
   const limitesRotulos = useRef<([number, number, number, number] | null)[]>([]);
   const [pronto, setPronto] = useState(false);
   useTituloDocumento("Mapa");
-  const [painel, setPainel] = useState(true);
+  // No celular o painel é uma folha inferior e começa recolhida: o mapa ocupa a tela.
+  const celular = useCelular();
+  const [painel, setPainel] = useState(!celular);
   // Ao ocultar/mostrar o painel, o botão que o usuário acionou desaparece:
   // o foco vai para o botão equivalente, em vez de cair no início da página.
   const botaoMostrar = useRef<HTMLButtonElement>(null);
@@ -1353,7 +1357,7 @@ export function MapaPagina() {
     {}) as Record<string, number>;
 
   return (
-    <div className="-m-6 h-[calc(100%+3rem)]">
+    <div className="-m-4 h-[calc(100%+2rem)] md:-m-6 md:h-[calc(100%+3rem)]">
       <Mapa
         base={base}
         rotulo="Mapa de árvores e ocorrências"
@@ -1368,7 +1372,7 @@ export function MapaPagina() {
           <div
             role="group"
             aria-label="Mapa base"
-            className="absolute right-2.5 bottom-[7.75rem] z-10 flex w-44 flex-col gap-1.5 rounded-lg border border-borda bg-superficie/95 p-1.5 text-xs shadow-md backdrop-blur"
+            className="absolute right-2.5 bottom-[7.75rem] z-10 flex w-44 flex-col gap-1.5 rounded-lg border border-borda bg-superficie/95 p-1.5 text-xs shadow-md backdrop-blur max-md:top-16 max-md:bottom-auto max-md:w-36"
           >
             <div className="grid grid-cols-2 gap-1.5">
               {(["ruas", "satelite"] as const).map((b) => (
@@ -1405,19 +1409,37 @@ export function MapaPagina() {
           </div>
         )}
         {/* Coluna esquerda: painel (encolhe e rola) e legenda, sem se sobrepor. */}
-        <div className="pointer-events-none absolute top-3 bottom-9 left-3 z-10 flex w-80 flex-col gap-2">
+        <div
+          className={cn(
+            "pointer-events-none absolute top-3 bottom-9 left-3 z-10 flex w-80 flex-col gap-2",
+            // Celular: coluna na base da tela. Fechado, o botão e a legenda sobem acima da
+            // escala do mapa e deixam o zoom livre; aberto, a folha ocupa a largura toda.
+            "max-md:inset-x-0 max-md:top-auto max-md:w-auto max-md:flex-col-reverse max-md:gap-2",
+            painel
+              ? "max-md:bottom-0"
+              : "max-md:right-14 max-md:bottom-7 max-md:left-3 max-md:w-auto",
+          )}
+        >
           {painel ? (
             <aside
               aria-label="Camadas e filtros"
-              className="pointer-events-auto flex min-h-0 shrink flex-col overflow-hidden rounded-xl border border-borda bg-superficie/95 text-sm shadow-lg backdrop-blur"
+              className="pointer-events-auto flex min-h-0 shrink flex-col overflow-hidden rounded-xl border border-borda bg-superficie/95 text-sm shadow-lg backdrop-blur max-md:max-h-[70dvh] max-md:rounded-t-2xl max-md:rounded-b-none"
             >
-              <div className="flex items-center justify-between border-b border-borda px-4 py-3">
+              <button
+                type="button"
+                aria-label="Recolher camadas e filtros"
+                onClick={() => alternarPainel(false)}
+                className="flex h-7 shrink-0 items-center justify-center md:hidden"
+              >
+                <span aria-hidden className="h-1.5 w-10 rounded-full bg-borda" />
+              </button>
+              <div className="flex items-center justify-between border-b border-borda px-4 py-3 max-md:pt-1">
                 <h1 className="flex items-center gap-2 font-semibold">
                   <Layers className="size-4 text-marca" aria-hidden /> Camadas e filtros
                 </h1>
                 <button
                   ref={botaoOcultar}
-                  className="rounded p-1 hover:bg-fundo"
+                  className="rounded p-1 hover:bg-fundo max-md:p-3"
                   aria-label="Ocultar painel"
                   onClick={() => alternarPainel(false)}
                 >
@@ -1901,26 +1923,28 @@ export function MapaPagina() {
             <Botao
               ref={botaoMostrar}
               variante="secundario"
-              className="pointer-events-auto self-start shadow"
+              className="pointer-events-auto self-start shadow max-md:h-12 max-md:px-4"
               onClick={() => alternarPainel(true)}
             >
               <Layers /> Camadas e filtros
             </Botao>
           )}
           <div className="flex-1" />
-          <Legenda
-            modoCor={modoCor}
-            arvores={mostrarArvores}
-            ocorrencias={mostrarOcorrencias}
-            tarefas={mostrarTarefas}
-            alertas={mostrarAlertas}
-            supressao={mostrarSupressao ? (provSupressao ?? "carregando") : null}
-            recolhidaPorPadrao={painel}
-            areasVerdes={mostrarAreasVerdes}
-            iluminacao={mostrarIluminacao ? { aproximar: aproximarIluminacao } : null}
-            arborizacao={mostrarArborizacao}
-            definicaoArborizacao={proveniencia?.definicao ?? DEFINICAO_ARBORIZACAO}
-          />
+          <div className={cn("contents", painel && "max-md:hidden")}>
+            <Legenda
+              modoCor={modoCor}
+              arvores={mostrarArvores}
+              ocorrencias={mostrarOcorrencias}
+              tarefas={mostrarTarefas}
+              alertas={mostrarAlertas}
+              supressao={mostrarSupressao ? (provSupressao ?? "carregando") : null}
+              recolhidaPorPadrao={painel || celular}
+              areasVerdes={mostrarAreasVerdes}
+              iluminacao={mostrarIluminacao ? { aproximar: aproximarIluminacao } : null}
+              arborizacao={mostrarArborizacao}
+              definicaoArborizacao={proveniencia?.definicao ?? DEFINICAO_ARBORIZACAO}
+            />
+          </div>
           {mostrarPopulacao && busca.populacao && (
             <LegendaPopulacao
               indicador={dadosPopulacao?.indicadores.find((i) => i.id === busca.populacao) ?? null}
@@ -1930,7 +1954,7 @@ export function MapaPagina() {
           {mostrarIlhaCalor && (
             <section
               aria-label="Legenda da ilha de calor"
-              className="pointer-events-auto shrink-0 rounded-xl border border-borda bg-superficie/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
+              className="pointer-events-auto shrink-0 rounded-xl border border-borda bg-superficie/95 px-3 py-2 text-xs shadow-lg backdrop-blur max-md:max-h-[45dvh] max-md:overflow-y-auto"
             >
               <LegendaIlhaCalor />
             </section>
@@ -1944,6 +1968,8 @@ export function MapaPagina() {
             painel
               ? "left-[21.75rem] max-w-[calc(100%-44rem)]"
               : "left-52 max-w-[calc(100%-14rem)]",
+            // Celular: as ferramentas ficam no topo, na largura da tela (o painel é a folha de baixo).
+            "max-md:right-3 max-md:left-3 max-md:max-w-none max-md:min-w-0",
           )}
         >
           <BarraSelecaoArea
@@ -2002,7 +2028,7 @@ export function MapaPagina() {
         </div>
         {cursor && (
           <div
-            className="pointer-events-none absolute right-14 bottom-2 z-10 rounded bg-superficie/90 px-2 py-0.5 font-mono text-[11px] text-texto-suave shadow-sm"
+            className="pointer-events-none absolute right-14 bottom-2 z-10 rounded bg-superficie/90 max-md:hidden px-2 py-0.5 font-mono text-[11px] text-texto-suave shadow-sm"
             aria-hidden
           >
             {formatarPontoGeografico(cursor.lat, cursor.lon)}
@@ -2364,7 +2390,7 @@ function Legenda({
   return (
     <section
       aria-label="Legenda"
-      className="pointer-events-auto shrink-0 rounded-xl border border-borda bg-superficie/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
+      className="pointer-events-auto shrink-0 rounded-xl border border-borda bg-superficie/95 px-3 py-2 text-xs shadow-lg backdrop-blur max-md:max-h-[45dvh] max-md:overflow-y-auto"
     >
       <button
         className="flex w-full items-center justify-between gap-4 font-semibold"
@@ -2553,19 +2579,16 @@ function PainelContextual({
   aoFechar: () => void;
 }) {
   return (
-    <aside
-      aria-label="Detalhes da seleção"
-      className="absolute top-3 right-3 z-10 flex max-h-[calc(100%-1.5rem)] w-96 flex-col overflow-y-auto rounded-xl border border-borda bg-superficie p-4 shadow-lg"
-    >
+    <PainelDetalhe rotulo="Detalhes da seleção">
       <button
-        className="absolute top-3 right-3 z-10 rounded-full bg-superficie/90 p-1 shadow-sm hover:bg-fundo"
+        className="absolute top-3 right-3 z-10 rounded-full bg-superficie/90 p-1 shadow-sm hover:bg-fundo max-md:top-1 max-md:right-1 max-md:p-3.5"
         aria-label="Fechar detalhes"
         onClick={aoFechar}
       >
         <X className="size-4" />
       </button>
       {tipo === "arvore" ? <ResumoArvore id={id} /> : <ResumoOcorrencia id={id} />}
-    </aside>
+    </PainelDetalhe>
   );
 }
 
@@ -2634,12 +2657,9 @@ function PainelPoste({
 }) {
   const lampadas = listaDeLampadas(poste.lampadas);
   return (
-    <aside
-      aria-label="Detalhes do ponto de iluminação"
-      className="absolute top-3 right-3 z-10 flex max-h-[calc(100%-1.5rem)] w-96 flex-col gap-2 overflow-y-auto rounded-xl border border-borda bg-superficie p-4 text-sm shadow-lg"
-    >
+    <PainelDetalhe rotulo="Detalhes do ponto de iluminação" className="gap-2 text-sm">
       <button
-        className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo"
+        className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo max-md:top-1 max-md:right-1 max-md:p-3.5"
         aria-label="Fechar detalhes"
         onClick={aoFechar}
       >
@@ -2683,7 +2703,7 @@ function PainelPoste({
           {fonte?.ingerido_em ? ` · ingerido em ${formatarDataHora(fonte.ingerido_em)}` : ""}
         </p>
       </div>
-    </aside>
+    </PainelDetalhe>
   );
 }
 
@@ -2691,12 +2711,9 @@ function PainelPoste({
 function PainelAreaVerde({ area, aoFechar }: { area: AreaVerdeSelecionada; aoFechar: () => void }) {
   const tipo = ROTULOS_TIPO_AREA_VERDE[area.tipo as keyof typeof ROTULOS_TIPO_AREA_VERDE];
   return (
-    <aside
-      aria-label="Detalhes da área verde"
-      className="absolute top-3 right-3 z-10 flex max-h-[calc(100%-1.5rem)] w-96 flex-col gap-2 overflow-y-auto rounded-xl border border-borda bg-superficie p-4 text-sm shadow-lg"
-    >
+    <PainelDetalhe rotulo="Detalhes da área verde" className="gap-2 text-sm">
       <button
-        className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo"
+        className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo max-md:top-1 max-md:right-1 max-md:p-3.5"
         aria-label="Fechar detalhes"
         onClick={aoFechar}
       >
@@ -2750,7 +2767,7 @@ function PainelAreaVerde({ area, aoFechar }: { area: AreaVerdeSelecionada; aoFec
           {area.ingerido_em ? ` · ingerido em ${formatarDataHora(area.ingerido_em)}` : ""}
         </p>
       </div>
-    </aside>
+    </PainelDetalhe>
   );
 }
 
@@ -2774,12 +2791,9 @@ function PainelArborizacaoEntorno({
     ? Number(bairro.valor).toLocaleString("pt-BR", { maximumFractionDigits: 1 })
     : null;
   return (
-    <aside
-      aria-label="Arborização do entorno do bairro"
-      className="absolute top-3 right-3 z-10 flex max-h-[calc(100%-1.5rem)] w-96 flex-col gap-2 overflow-y-auto rounded-xl border border-borda bg-superficie p-4 text-sm shadow-lg"
-    >
+    <PainelDetalhe rotulo="Arborização do entorno do bairro" className="gap-2 text-sm">
       <button
-        className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo"
+        className="absolute top-3 right-3 rounded-full p-1 hover:bg-fundo max-md:top-1 max-md:right-1 max-md:p-3.5"
         aria-label="Fechar detalhes"
         onClick={aoFechar}
       >
@@ -2863,7 +2877,7 @@ function PainelArborizacaoEntorno({
           </>
         )}
       </div>
-    </aside>
+    </PainelDetalhe>
   );
 }
 

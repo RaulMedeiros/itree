@@ -27,10 +27,10 @@ export function FontesIndicador() {
     <Link
       to="/administracao/integracoes"
       title={detalhe}
-      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-fundo"
+      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-fundo max-md:size-11 max-md:justify-center max-md:p-0"
     >
       <span className="size-2.5 rounded-full bg-atencao" aria-hidden />
-      <span>
+      <span className="max-md:sr-only">
         {problemas.length === 1
           ? "1 fonte externa com problema"
           : `${problemas.length} fontes externas com problema`}
