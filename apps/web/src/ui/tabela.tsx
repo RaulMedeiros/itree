@@ -28,13 +28,17 @@ export function Tabela({ className, ...props }: HTMLAttributes<HTMLTableElement>
     setMaisADireita(el.scrollWidth - el.scrollLeft - el.clientWidth > 4);
   }, []);
 
+  // Só troca o estado quando a leitura mudou, para a renderização a cada efeito não virar laço.
+  const atualizarBarra = useCallback((nova: InfoBarra | null) => {
+    setBarra((atual) => (JSON.stringify(atual) === JSON.stringify(nova) ? atual : nova));
+  }, []);
+
   // Copia o cabeçalho de cada coluna para as células, que o CSS do cartão usa como rótulo.
   // Roda a cada renderização: trocar de página ou de filtro troca as linhas.
   useLayoutEffect(() => {
     if (!tabela.current) return;
     rotularCelulas(tabela.current);
-    const nova = lerBarra(tabela.current);
-    setBarra((atual) => (JSON.stringify(atual) === JSON.stringify(nova) ? atual : nova));
+    atualizarBarra(lerBarra(tabela.current));
   });
 
   useEffect(() => {

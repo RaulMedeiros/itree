@@ -21,7 +21,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 
 import { usePermissao, useUsuario } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
@@ -36,7 +36,6 @@ import { CabecalhoPagina } from "../../ui/pagina";
 import { Recolhivel } from "../../ui/recolhivel";
 import { plataformaDoDispositivo } from "./dispositivo";
 import { Selo } from "../../ui/selo";
-import { cn } from "../../util/cn";
 import { invalidarCaminhos } from "../../util/cache";
 import {
   formatarData,
@@ -44,6 +43,7 @@ import {
   formatarPontoGeografico,
   plural,
 } from "../../util/formatos";
+import { LinhaComparacao, TabelaComparacao } from "./LinhaComparacao";
 import { compararMedidas, descreverDiferenca, descreverMedidaAnterior } from "./medidas";
 
 const ROTULOS_APLICAVEL: Record<string, string> = {
@@ -75,33 +75,6 @@ export function InspecaoDetalhePagina() {
         <Detalhe inspecao={consulta.data.data} />
       )}
     </div>
-  );
-}
-
-function Linha3({
-  campo,
-  inspecao,
-  cadastro,
-  anterior,
-  destaque,
-}: {
-  campo: string;
-  inspecao: ReactNode;
-  cadastro: ReactNode;
-  anterior?: ReactNode;
-  destaque?: boolean;
-}) {
-  return (
-    <tr className="border-t border-borda align-top">
-      <th scope="row" className="py-2 pr-4 text-left text-sm font-medium">
-        {campo}
-      </th>
-      <td className={cn("py-2 pr-4 text-sm", destaque && "font-medium text-marca-escura")}>
-        {inspecao}
-      </td>
-      <td className="py-2 pr-4 text-sm">{cadastro}</td>
-      {anterior !== undefined && <td className="py-2 text-sm text-texto-suave">{anterior}</td>}
-    </tr>
   );
 }
 
@@ -202,8 +175,8 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
         {!i.anterior && (
           <p className="mb-2 text-xs text-texto-suave">Não há inspeção anterior desta árvore.</p>
         )}
-        <table className="w-full">
-          <thead>
+        <TabelaComparacao
+          cabecalho={
             <tr className="text-left text-xs tracking-wide text-texto-suave uppercase">
               <th className="pb-2" />
               <th className="pb-2">Esta inspeção</th>
@@ -220,124 +193,123 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
               </th>
               {i.anterior && <th className="pb-2">Inspeção anterior</th>}
             </tr>
-          </thead>
-          <tbody>
-            <Linha3
-              campo="Espécie"
-              inspecao={
-                i.especie ? <i>{i.especie.nome_cientifico}</i> : i.especie_texto || "Não informada"
-              }
-              cadastro={
-                a.especie ? (
-                  <>
-                    <i>{a.especie.nome_cientifico}</i>{" "}
-                    <Selo>{ROTULOS_ESTADO_ESPECIE[a.especie_estado ?? "nao_identificada"]}</Selo>
-                  </>
-                ) : (
-                  "Não identificada"
-                )
-              }
-              anterior={i.anterior ? (i.anterior.especie?.nome_cientifico ?? "—") : undefined}
-              destaque={!!i.especie && i.especie.id !== a.especie?.id}
-            />
-            <Linha3
-              campo="Condição aparente"
-              inspecao={condicao}
-              cadastro={
-                a.condicao_aparente
-                  ? ROTULOS_CONDICAO[a.condicao_aparente as keyof typeof ROTULOS_CONDICAO]
-                  : "Sem avaliação registrada"
-              }
-              anterior={
-                i.anterior
-                  ? ROTULOS_CONDICAO[i.anterior.condicao_aparente ?? "nao_avaliada"]
-                  : undefined
-              }
-              destaque={i.condicao_aparente !== a.condicao_aparente}
-            />
-            <Linha3
-              campo="Localização"
-              inspecao={
-                i.localizacao ? (
-                  <>
-                    <ValorMedido className="text-xs">
-                      {formatarPontoGeografico(i.localizacao.latitude, i.localizacao.longitude)}
-                    </ValorMedido>
-                    <br />
-                    <SeloLocalizacao origem="gps_campo" precisao={i.precisao_m} />
-                  </>
-                ) : (
-                  "Sem GPS"
-                )
-              }
-              cadastro={
-                a.localizacao ? (
-                  <>
-                    <ValorMedido className="text-xs">
-                      {formatarPontoGeografico(a.localizacao.latitude, a.localizacao.longitude)}
-                    </ValorMedido>
-                    <br />
-                    <SeloLocalizacao origem={a.localizacao_origem ?? ""} precisao={a.precisao_m} />
-                  </>
-                ) : (
-                  "—"
-                )
-              }
+          }
+        >
+          <LinhaComparacao
+            campo="Espécie"
+            inspecao={
+              i.especie ? <i>{i.especie.nome_cientifico}</i> : i.especie_texto || "Não informada"
+            }
+            cadastro={
+              a.especie ? (
+                <>
+                  <i>{a.especie.nome_cientifico}</i>{" "}
+                  <Selo>{ROTULOS_ESTADO_ESPECIE[a.especie_estado ?? "nao_identificada"]}</Selo>
+                </>
+              ) : (
+                "Não identificada"
+              )
+            }
+            anterior={i.anterior ? (i.anterior.especie?.nome_cientifico ?? "—") : undefined}
+            destaque={!!i.especie && i.especie.id !== a.especie?.id}
+          />
+          <LinhaComparacao
+            campo="Condição aparente"
+            inspecao={condicao}
+            cadastro={
+              a.condicao_aparente
+                ? ROTULOS_CONDICAO[a.condicao_aparente as keyof typeof ROTULOS_CONDICAO]
+                : "Sem avaliação registrada"
+            }
+            anterior={
+              i.anterior
+                ? ROTULOS_CONDICAO[i.anterior.condicao_aparente ?? "nao_avaliada"]
+                : undefined
+            }
+            destaque={i.condicao_aparente !== a.condicao_aparente}
+          />
+          <LinhaComparacao
+            campo="Localização"
+            inspecao={
+              i.localizacao ? (
+                <>
+                  <ValorMedido className="text-xs">
+                    {formatarPontoGeografico(i.localizacao.latitude, i.localizacao.longitude)}
+                  </ValorMedido>
+                  <br />
+                  <SeloLocalizacao origem="gps_campo" precisao={i.precisao_m} />
+                </>
+              ) : (
+                "Sem GPS"
+              )
+            }
+            cadastro={
+              a.localizacao ? (
+                <>
+                  <ValorMedido className="text-xs">
+                    {formatarPontoGeografico(a.localizacao.latitude, a.localizacao.longitude)}
+                  </ValorMedido>
+                  <br />
+                  <SeloLocalizacao origem={a.localizacao_origem ?? ""} precisao={a.precisao_m} />
+                </>
+              ) : (
+                "—"
+              )
+            }
+            anterior={i.anterior ? "—" : undefined}
+          />
+          {comparacoes.length === 0 ? (
+            <LinhaComparacao
+              campo="Medidas"
+              inspecao={<span className="text-texto-suave">Nenhuma medida</span>}
+              cadastro="—"
               anterior={i.anterior ? "—" : undefined}
             />
-            {comparacoes.length === 0 ? (
-              <Linha3
-                campo="Medidas"
-                inspecao={<span className="text-texto-suave">Nenhuma medida</span>}
-                cadastro="—"
-                anterior={i.anterior ? "—" : undefined}
-              />
-            ) : (
-              comparacoes.map((c) => (
-                <Linha3
-                  key={c.proposta.id}
-                  campo={ROTULOS_TIPO_MEDIDA[c.proposta.tipo]}
-                  inspecao={
+          ) : (
+            comparacoes.map((c) => (
+              <LinhaComparacao
+                key={c.proposta.id}
+                campo={ROTULOS_TIPO_MEDIDA[c.proposta.tipo]}
+                inspecao={
+                  <>
+                    <ValorMedido>
+                      {c.proposta.origem === "estimado" ? "≈ " : ""}
+                      {Number(c.proposta.valor).toLocaleString("pt-BR")} {c.proposta.unidade}
+                    </ValorMedido>{" "}
+                    <SeloOrigemValor origem={c.proposta.origem} />
+                    <p className="text-xs font-normal text-texto-suave">
+                      {ROTULOS_METODO_MEDIDA[c.proposta.metodo]}
+                    </p>
+                    <p className="text-xs">{descreverDiferenca(c)}</p>
+                  </>
+                }
+                cadastro={
+                  c.cadastro ? (
                     <>
                       <ValorMedido>
-                        {c.proposta.origem === "estimado" ? "≈ " : ""}
-                        {Number(c.proposta.valor).toLocaleString("pt-BR")} {c.proposta.unidade}
-                      </ValorMedido>{" "}
-                      <SeloOrigemValor origem={c.proposta.origem} />
-                      <p className="text-xs font-normal text-texto-suave">
-                        {ROTULOS_METODO_MEDIDA[c.proposta.metodo]}
-                      </p>
-                      <p className="text-xs">{descreverDiferenca(c)}</p>
+                        {c.cadastro.origem === "estimado" ? "≈ " : ""}
+                        {Number(c.cadastro.valor).toLocaleString("pt-BR")} {c.cadastro.unidade}
+                      </ValorMedido>
+                      {c.cadastro.data_medicao && (
+                        <p className="text-xs text-texto-suave">
+                          em {formatarData(c.cadastro.data_medicao)}
+                        </p>
+                      )}
                     </>
-                  }
-                  cadastro={
-                    c.cadastro ? (
-                      <>
-                        <ValorMedido>
-                          {c.cadastro.origem === "estimado" ? "≈ " : ""}
-                          {Number(c.cadastro.valor).toLocaleString("pt-BR")} {c.cadastro.unidade}
-                        </ValorMedido>
-                        {c.cadastro.data_medicao && (
-                          <p className="text-xs text-texto-suave">
-                            em {formatarData(c.cadastro.data_medicao)}
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-texto-suave">Sem valor no cadastro</span>
-                    )
-                  }
-                  anterior={
-                    i.anterior
-                      ? descreverMedidaAnterior(i.anterior.medidas, c.proposta.tipo)
-                      : undefined
-                  }
-                  destaque={c.diferenca !== 0}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
+                  ) : (
+                    <span className="text-texto-suave">Sem valor no cadastro</span>
+                  )
+                }
+                anterior={
+                  i.anterior
+                    ? descreverMedidaAnterior(i.anterior.medidas, c.proposta.tipo)
+                    : undefined
+                }
+                destaque={c.diferenca !== 0}
+              />
+            ))
+          )}
+        </TabelaComparacao>
       </section>
 
       <div className="mb-6">

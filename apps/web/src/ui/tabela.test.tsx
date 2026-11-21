@@ -151,7 +151,7 @@ describe("Tabela em cartões no celular", () => {
 });
 
 describe("Barra de seleção e ordenação do modo cartão", () => {
-  function ordenavel(aoOrdenar = (_: string) => {}) {
+  function ordenavel(aoOrdenar: (campo: string) => void = () => {}) {
     function Exemplo() {
       const [marcados, setMarcados] = useState<string[]>([]);
       const [ordem, setOrdem] = useState<{ campo: string; direcao: "asc" | "desc" } | null>({
