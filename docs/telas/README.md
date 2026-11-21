@@ -236,3 +236,13 @@ cadastradas):
 causalidade):
 
 ![Árvores × renda](50-analises-arvores-renda.png)
+
+## Onde plantar
+
+Cenário de priorização por bairro (não é índice oficial, DP-14), com pesos ajustáveis:
+
+![Onde plantar](51-planejamento.png)
+
+Cenário "Equidade", com um bairro aberto no painel:
+
+![Onde plantar, equidade](52-planejamento-equidade.png)

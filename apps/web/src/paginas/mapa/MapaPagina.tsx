@@ -1402,7 +1402,13 @@ export function MapaPagina() {
               ))}
             </div>
             {satelite.aviso && (
-              <p className="px-0.5 text-[11px] leading-tight text-texto-suave">
+              // No celular, o aviso só aparece com o satélite ligado, para não cobrir o mapa.
+              <p
+                className={cn(
+                  "px-0.5 text-[11px] leading-tight text-texto-suave",
+                  base !== "satelite" && "hidden md:block",
+                )}
+              >
                 <span className="font-medium">Satélite:</span> {satelite.aviso}.
               </p>
             )}
