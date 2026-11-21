@@ -22,14 +22,14 @@ responsável, a decisão e as specs atualizadas.
 | <a id="dp-11"></a>DP-11 | Credenciais, limites e condições das APIs externas | W-08, T-05 | F3 | Aberta. INPE (focos) não declara licença: registrado em cada ingestão; consultar o órgão |
 | <a id="dp-12"></a>DP-12 | Interoperabilidade com sistemas municipais | T-05, importação W-03 | F1 | Aberta |
 | <a id="dp-13"></a>DP-13 | Calibração e validação dos modelos de IA | T-04 | F3 | Aberta |
-| <a id="dp-14"></a>DP-14 | Indicadores oficiais e fórmulas (incl. "registro válido") | W-06, W-09, RN-INV-001 | F2 | Aberta |
+| <a id="dp-14"></a>DP-14 | Indicadores oficiais e fórmulas (incl. "registro válido") | W-06, W-09, RN-INV-001 | F2 | Decidida em 21/11: regra 3-30-300 ([rumo do produto](2026-11-21-rumo-do-produto.md)) |
 | <a id="dp-15"></a>DP-15 | Fluxo institucional de encaminhamento e confirmação de infrações | W-08 | F3 | Aberta |
 | <a id="dp-16"></a>DP-16 | Permitir registrar inspeção pelo web (contingência)? | W-05 RF-INSP-008, W-00 §4 | F2 | Aberta |
 | <a id="dp-17"></a>DP-17 | Tipos de ocorrência, fluxo de estados e prazos (SLA) | W-04, W-10 | F1 | Aberta |
-| <a id="dp-18"></a>DP-18 | Existe inventário legado a importar? Formato e fonte | W-03 importação, W-00 §4 | F1 | Aberta |
+| <a id="dp-18"></a>DP-18 | Existe inventário legado a importar? Formato e fonte | W-03 importação, W-00 §4 | F1 | Decidida em 21/11: sem inventário oficial; detecção automática (vídeo e satélite) e pesquisas existentes ([rumo do produto](2026-11-21-rumo-do-produto.md)) |
 | <a id="dp-19"></a>DP-19 | Provedor de autenticação (SSO institucional?) | RF-ACL-001 | F0 | Parcial: OIDC via Keycloak (ADR-0001); papéis na aplicação (ADR-0002); confirmar se a prefeitura tem SSO para federar |
 | <a id="dp-20"></a>DP-20 | Stack técnica (web, backend e app) | Todas | F0 | **Decidido** em 2026-10-31 — [ADR-0001](../adr/0001-stack-tecnica.md) |
-| <a id="dp-21"></a>DP-21 | Hospedagem: nuvem comercial ou infraestrutura da prefeitura | ADR de implantação, local de armazenamento (DP-08) | Produção | Aberta |
+| <a id="dp-21"></a>DP-21 | Hospedagem: nuvem comercial ou infraestrutura da prefeitura | ADR de implantação, local de armazenamento (DP-08) | Produção | Adiada em 21/11: só demonstração por enquanto ([rumo do produto](2026-11-21-rumo-do-produto.md)) |
 | <a id="dp-22"></a>DP-22 | Conflito de árvores com a iluminação pública: raio, critérios (altura do poste, porte da espécie) e uso para priorizar poda | Lista "Árvores próximas à iluminação", ficha da árvore, tarefas de poda preventiva | F2 | Aberta. Hoje o sistema só lista as árvores ativas a até 3 m de um ponto de iluminação (SEINF), com o raio **provisório** em `ILUMINACAO_RAIO_CONFLITO_M`; não afirma dano nem risco. A URBFOR e a SEINF definem o raio, os critérios e se isso prioriza poda |
 
 ## Próximo passo recomendado
