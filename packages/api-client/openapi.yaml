@@ -3477,6 +3477,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/OperacaoEmLote'
           description: ''
+  /api/v1/planejamento/criterios:
+    get:
+      operationId: planejamento_criterios
+      description: |-
+        Critérios do cenário "Onde plantar": valor bruto e percentil de prioridade por bairro do
+        escopo, com fonte e ano. Cenário de priorização, não índice oficial (DP-14).
+      tags:
+      - planejamento
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CriteriosPlanejamento'
+          description: ''
   /api/v1/qualidade/pendencias:
     get:
       operationId: qualidade_pendencias
@@ -4857,6 +4874,33 @@ components:
             $ref: '#/components/schemas/PreferenciaNotificacaoRequest'
       required:
       - preferencias
+    BairroPlanejamento:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        valores:
+          type: object
+          additionalProperties:
+            type: number
+            format: double
+            nullable: true
+          description: Valor bruto de cada critério; nulo sem dado (nunca zero).
+        percentis:
+          type: object
+          additionalProperties:
+            type: number
+            format: double
+            nullable: true
+          description: Percentil de prioridade de 0 a 1 (1 = bairro que mais pede
+            plantio).
+      required:
+      - id
+      - nome
+      - percentis
+      - valores
     BlankEnum:
       enum:
       - ''
@@ -5266,6 +5310,96 @@ components:
       required:
       - descricao
       - tipo_id
+    CriterioPlanejamento:
+      type: object
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        unidade:
+          type: string
+        direcao:
+          allOf:
+          - $ref: '#/components/schemas/DirecaoEnum'
+          description: |-
+            Qual ponta do valor pede plantio: o menor (baixo) ou o maior (alto).
+
+            * `baixo` - baixo
+            * `alto` - alto
+        descricao:
+          type: string
+        disponivel:
+          type: boolean
+        motivo_indisponivel:
+          type: string
+        ressalva:
+          type: string
+        provisorio:
+          type: boolean
+        metodo:
+          type: string
+        bairros_com_dado:
+          type: integer
+        minimo:
+          type: number
+          format: double
+          nullable: true
+        maximo:
+          type: number
+          format: double
+          nullable: true
+        fonte:
+          type: string
+        fonte_url:
+          type: string
+        licenca:
+          type: string
+        ano:
+          type: integer
+          nullable: true
+      required:
+      - ano
+      - bairros_com_dado
+      - descricao
+      - direcao
+      - disponivel
+      - fonte
+      - fonte_url
+      - id
+      - licenca
+      - maximo
+      - metodo
+      - minimo
+      - motivo_indisponivel
+      - nome
+      - provisorio
+      - ressalva
+      - unidade
+    CriteriosPlanejamento:
+      type: object
+      properties:
+        gerado_em:
+          type: string
+          format: date-time
+        aviso:
+          type: string
+        metodo_percentil:
+          type: string
+        criterios:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriterioPlanejamento'
+        bairros:
+          type: array
+          items:
+            $ref: '#/components/schemas/BairroPlanejamento'
+      required:
+      - aviso
+      - bairros
+      - criterios
+      - gerado_em
+      - metodo_percentil
     DecisaoDecisaoEnum:
       enum:
       - aceita
@@ -5332,6 +5466,14 @@ components:
       - campo
       - novo
       - rotulo
+    DirecaoEnum:
+      enum:
+      - baixo
+      - alto
+      type: string
+      description: |-
+        * `baixo` - baixo
+        * `alto` - alto
     DuplicataImportacao:
       type: object
       properties:

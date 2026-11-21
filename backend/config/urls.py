@@ -13,7 +13,12 @@ from itree.core.views import OperacaoEmLoteViewSet, saude
 from itree.evidencias.views import EvidenciaViewSet
 from itree.iluminacao import views as iluminacao
 from itree.indicadores.implantacao import primeiros_passos
-from itree.indicadores.views import arborizacao_entorno_geojson, painel, populacao_geojson
+from itree.indicadores.views import (
+    arborizacao_entorno_geojson,
+    painel,
+    planejamento_criterios,
+    populacao_geojson,
+)
 from itree.inspecoes.views import InspecaoViewSet
 from itree.inventario.views import (
     ArvoreViewSet,
@@ -72,6 +77,7 @@ api_v1 = [
         populacao_geojson,
         name="indicadores-populacao",
     ),
+    path("planejamento/criterios", planejamento_criterios, name="planejamento-criterios"),
     path(
         "iluminacao/arvores-proximas",
         iluminacao.ArvoresProximasView.as_view(),
