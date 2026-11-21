@@ -15,6 +15,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from itree.contas.acesso import filtrar_por_escopo
+from itree.indicadores import contagem
 from itree.inventario.models import Arvore, SituacaoArvore
 
 from . import ficha
@@ -139,7 +140,9 @@ class BairroViewSet(viewsets.GenericViewSet):
             qs = qs.filter(nome__icontains=busca)
         return Response(TerritorioSerializer(qs.order_by("nome"), many=True).data)
 
-    @extend_schema(operation_id="bairros_ficha", responses=FichaSerializer)
+    @extend_schema(
+        operation_id="bairros_ficha", parameters=[contagem.PARAMETRO], responses=FichaSerializer
+    )
     @action(detail=True, methods=["get"])
     def ficha(self, request: Request, pk: str) -> Response:
         """Tudo o que a plataforma sabe do bairro, com fonte e data de cada bloco. Quem não
@@ -156,5 +159,11 @@ class BairroViewSet(viewsets.GenericViewSet):
             raise PermissionDenied("Este bairro está fora do seu escopo.")
         agora = timezone.now()
         return Response(
-            ficha.montar(bairro, request.user, hoje=timezone.localdate(agora), agora=agora)
+            ficha.montar(
+                bairro,
+                request.user,
+                hoje=timezone.localdate(agora),
+                agora=agora,
+                contagem=contagem.do_pedido(request),
+            )
         )

@@ -26,6 +26,7 @@ from itree.contas.acesso import filtrar_por_escopo, tem_escopo_municipal
 from itree.core.textos import sem_codigos_internos
 from itree.indicadores import (
     analises_mudas,
+    contagem,
     doacao_plantio,
     externos,
     manejo_urbfor,
@@ -66,6 +67,13 @@ ANALISES = {
         "definicao": "Árvores ativas, com localização e origem conhecida, agrupadas pelo bairro que contém o ponto.",
         "permissao": "inventario.ler",
         "por_bairro": True,
+        "contagem": True,
+        "colunas_csv": [
+            ("rotulo", "Bairro"),
+            ("valor", "Árvores (contagem escolhida)"),
+            ("total", "Todas as árvores"),
+            ("confirmadas", "Árvores confirmadas"),
+        ],
     },
     "arborizacao_entorno_por_bairro": {
         "titulo": "Arborização do entorno por bairro (Censo 2022)",
@@ -96,10 +104,13 @@ ANALISES = {
         "provisorio": True,
         "ordenavel": True,
         "sem_total": True,
+        "contagem": True,
         "colunas_csv": [
             ("rotulo", "Bairro"),
             ("valor", "Árvores cadastradas por 1.000 habitantes"),
-            ("arvores", "Árvores cadastradas"),
+            ("arvores", "Árvores cadastradas (contagem escolhida)"),
+            ("arvores_total", "Árvores cadastradas (todas)"),
+            ("arvores_confirmadas", "Árvores confirmadas"),
             ("populacao", "População (Censo)"),
             ("habitantes_por_arvore", "Habitantes por árvore cadastrada"),
         ],
@@ -137,6 +148,7 @@ ANALISES = {
         ),
         "permissao": "inventario.ler",
         "por_bairro": True,
+        "contagem": True,
         "fonte": "IBGE, Censo Demográfico 2022 (população e rendimento) e inventário do iTree",
         "unidade": "",
         "base_rotulo": "habitantes",
@@ -230,7 +242,9 @@ ANALISES = {
 NAO_SOMAVEIS = {"tempo_atendimento_por_tipo"}
 
 
-def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
+def _linhas_analise(
+    chave: str, usuario, inicio: date, fim: date, escolha: str = contagem.TODAS
+) -> list[dict]:
     ocorrencias = filtrar_por_escopo(Ocorrencia.objects.all(), usuario).filter(
         criado_em__date__gte=inicio, criado_em__date__lte=fim
     )
@@ -241,19 +255,24 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             ),
             usuario,
         )
-        contagem = dict(validas.values_list("bairro_id").annotate(n=Count("id")))
+        por_bairro = contagem.por_grupo(validas, "bairro_id")
+
+        def linha(rotulo, par, territorio_id):
+            total, confirmadas = par
+            return {
+                "rotulo": rotulo,
+                "valor": contagem.escolher(total, confirmadas, escolha),
+                "total": total,
+                "confirmadas": confirmadas,
+                "territorio_id": territorio_id,
+            }
+
         linhas = [
-            {"rotulo": b.nome, "valor": contagem.get(b.id, 0), "territorio_id": str(b.id)}
+            linha(b.nome, por_bairro.get(b.id, (0, 0)), str(b.id))
             for b in Territorio.objects.filter(tipo=TipoTerritorio.BAIRRO).order_by("nome")
         ]
-        if contagem.get(None):
-            linhas.append(
-                {
-                    "rotulo": "Fora dos bairros cadastrados",
-                    "valor": contagem[None],
-                    "territorio_id": None,
-                }
-            )
+        if por_bairro.get(None, (0, 0))[0]:
+            linhas.append(linha("Fora dos bairros cadastrados", por_bairro[None], None))
         return sorted(linhas, key=lambda linha: -linha["valor"])
     if chave == "arborizacao_entorno_por_bairro":
         # Só bairros do escopo e com dado: sem dado não aparece (nunca zero).
@@ -273,11 +292,11 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             for i in sorted(dados, key=lambda i: (-i.valor, i.territorio.nome))
         ]
     if chave == "arvores_por_mil_habitantes_por_bairro":
-        return populacao_indicadores.linhas_arvores_por_mil(usuario)
+        return populacao_indicadores.linhas_arvores_por_mil(usuario, escolha)
     if chave == "populacao_densidade_por_bairro":
         return populacao_indicadores.linhas_populacao(usuario)
     if chave == "arvores_mil_x_renda":
-        return populacao_indicadores.linhas_dispersao(usuario)
+        return populacao_indicadores.linhas_dispersao(usuario, escolha)
     if chave == "manejo_urbfor_por_bairro":
         return _linhas_manejo(usuario)
     if chave == "mudas_doadas_por_especie":
@@ -534,6 +553,7 @@ def _serie_mensal(chave: str, usuario, inicio: date, fim: date) -> dict | None:
         OpenApiParameter("analise", str, required=True, description=", ".join(ANALISES)),
         OpenApiParameter("inicio", str),
         OpenApiParameter("fim", str),
+        contagem.PARAMETRO,
     ],
     responses=inline_serializer(
         "Analise",
@@ -545,6 +565,10 @@ def _serie_mensal(chave: str, usuario, inicio: date, fim: date) -> dict | None:
             "periodo": serializers.DictField(),
             "calculado_em": serializers.DateTimeField(),
             "por_bairro": serializers.BooleanField(),
+            "contagem": serializers.CharField(
+                allow_null=True,
+                help_text="todas ou confirmadas, nas análises que contam árvores; nulo nas demais.",
+            ),
             "unidade": serializers.CharField(),
             "base_rotulo": serializers.CharField(),
             "linhas": serializers.ListField(child=serializers.DictField()),
@@ -590,7 +614,8 @@ def analise(request: Request):
         # Dado do município inteiro, sem local: não há recorte por bairro que o escopo permita.
         raise PermissionDenied("Esta análise é do município inteiro e exige escopo municipal.")
     inicio, fim = _periodo(request.query_params)
-    linhas = _linhas_analise(chave, request.user, inicio, fim)
+    escolha = contagem.do_pedido(request)
+    linhas = _linhas_analise(chave, request.user, inicio, fim, escolha)
     return Response(
         {
             "id": chave,
@@ -600,6 +625,7 @@ def analise(request: Request):
             "periodo": {"inicio": inicio, "fim": fim},
             "calculado_em": timezone.now(),
             "por_bairro": definicao.get("por_bairro", False),
+            "contagem": escolha if definicao.get("contagem") else None,
             "unidade": definicao.get("unidade", ""),
             "base_rotulo": definicao.get("base_rotulo", ""),
             "linhas": linhas,
@@ -614,7 +640,7 @@ def analise(request: Request):
             "provisorio": definicao.get("provisorio", False),
             "ordenavel": definicao.get("ordenavel", False),
             "colunas_csv": [{"chave": c, "rotulo": r} for c, r in definicao.get("colunas_csv", [])],
-            "dispersao": populacao_indicadores.dispersao_renda(request.user)
+            "dispersao": populacao_indicadores.dispersao_renda(request.user, escolha)
             if chave == "arvores_mil_x_renda"
             else None,
         }

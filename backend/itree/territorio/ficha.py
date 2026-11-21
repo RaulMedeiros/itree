@@ -30,6 +30,9 @@ from itree.indicadores import (
     manejo_urbfor,
     populacao_indicadores,
 )
+from itree.indicadores import (
+    contagem as cont,
+)
 from itree.indicadores.doacao_plantio import FONTE as FONTE_URBFOR
 from itree.indicadores.doacao_plantio import FONTE_URL as FONTE_URL_URBFOR
 from itree.indicadores.doacao_plantio import LICENCA as LICENCA_URBFOR
@@ -561,10 +564,22 @@ def _ranking(
     }
 
 
-def montar(bairro: Territorio, usuario: Usuario, *, hoje: date, agora: datetime) -> dict:
-    """``bairro`` vem de ``bairros_para_ficha`` e já está no escopo de ``usuario``."""
+def montar(
+    bairro: Territorio,
+    usuario: Usuario,
+    *,
+    hoje: date,
+    agora: datetime,
+    contagem: str = cont.TODAS,
+) -> dict:
+    """``bairro`` vem de ``bairros_para_ficha`` e já está no escopo de ``usuario``.
+
+    ``contagem`` (``todas`` ou ``confirmadas``) escolhe quais árvores alimentam os indicadores
+    do bairro; o cartão de árvores mostra sempre as duas contagens."""
     geom = bairro.geom
     arvores = Arvore.objects.filter(geom__intersects=geom)
+    validas_total, validas_confirmadas = cont.totais(instantaneos.arvores_validas(arvores))
+    arvores = cont.filtrar(arvores, contagem)
     ocorrencias = Ocorrencia.objects.filter(geom__intersects=geom)
     tarefas = Tarefa.objects.filter(geom__intersects=geom)
     validas = instantaneos.arvores_validas(arvores)
@@ -586,7 +601,12 @@ def montar(bairro: Territorio, usuario: Usuario, *, hoje: date, agora: datetime)
             "arvores",
             "Árvores cadastradas",
             valor=do_bairro["validas"],
-            detalhe=f"{do_bairro['registros']} registro(s) no total, em qualquer situação",
+            detalhe=f"{cont.rotulo(validas_total, validas_confirmadas)} · "
+            f"{do_bairro['registros']} registro(s) no total, em qualquer situação",
+            extras=[
+                {"rotulo": "Todas", "valor": str(validas_total)},
+                {"rotulo": "Confirmadas", "valor": str(validas_confirmadas)},
+            ],
             data_referencia=hoje,
             definicao=f"Registros {_DEFINICAO_VALIDA} dentro do bairro.",
             metodo="Contagem de árvores válidas cuja localização intersecta o bairro.",
@@ -648,7 +668,7 @@ def montar(bairro: Territorio, usuario: Usuario, *, hoje: date, agora: datetime)
             link={"pagina": "/equipes-tarefas", "filtros": {}},
         ),
         _cartao_censo(bairro, usuario),
-        *populacao_indicadores.cartoes_ficha(bairro, usuario, _cartao, rotulo_cidade),
+        *populacao_indicadores.cartoes_ficha(bairro, usuario, _cartao, rotulo_cidade, contagem),
         _cartao_ilha_calor(bairro),
         _cartao_iluminacao(bairro, arvores),
         _cartao_plantio(bairro),

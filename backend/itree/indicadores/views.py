@@ -24,6 +24,7 @@ from itree.contas.models import Equipe
 from itree.core.parametros import uuid_do_parametro
 from itree.indicadores import (
     atencao,
+    contagem,
     externos,
     instantaneos,
     planejamento,
@@ -80,6 +81,7 @@ Painel = inline_serializer(
         OpenApiParameter("fim", str, description="AAAA-MM-DD (padrão: hoje)"),
         OpenApiParameter("bairro", str),
         OpenApiParameter("equipe", str),
+        contagem.PARAMETRO,
     ],
     responses=Painel,
 )
@@ -90,6 +92,7 @@ def painel(request: Request):
         raise PermissionDenied()
     hoje = timezone.localdate()
     p = request.query_params
+    escolha = contagem.do_pedido(request)
     fim = _data(p.get("fim"), "fim", hoje)
     inicio = _data(p.get("inicio"), "inicio", fim - timedelta(days=30))
     if inicio > fim:
@@ -132,6 +135,10 @@ def painel(request: Request):
         realizada_em__date__gte=inicio_anterior, realizada_em__date__lte=fim_anterior
     )
     enviadas = [EstadoInspecao.EM_REVISAO, EstadoInspecao.VALIDADA]
+    # As duas contagens numa só consulta; com "confirmadas", todos os indicadores de árvores
+    # passam a olhar só as confirmadas (os registros diários guardados são de todas).
+    validas_total, validas_confirmadas = contagem.totais(instantaneos.arvores_validas(arvores))
+    arvores = contagem.filtrar(arvores, escolha)
     validas = instantaneos.arvores_validas(arvores)
     inst = instantaneos.calcular(
         arvores, ocorrencias, inspecoes, tarefas, hoje=hoje, agora=timezone.now()
@@ -163,7 +170,7 @@ def painel(request: Request):
     # só os registros daquele território, se estiver no escopo do usuário.
     percentuais = {k for k, (_, den) in inst.items() if den is not None}
     historico: dict[str, dict] = {}
-    if not equipe_nome:
+    if not equipe_nome and escolha == contagem.TODAS:
         if bairro_obj is None:
             territorios = instantaneos.territorios_do_escopo(usuario)
         elif instantaneos.territorio_no_escopo(usuario, bairro_obj):
@@ -223,7 +230,12 @@ def painel(request: Request):
             "contagem de registros válidos",
             inst["arvores_validas"][0],
             link={"pagina": "/inventario/arvores", "filtros": {}},
-        ),
+        )
+        | {
+            "total": validas_total,
+            "confirmadas": validas_confirmadas,
+            "rotulo_contagem": contagem.rotulo(validas_total, validas_confirmadas),
+        },
         ind(
             "especie_confirmada",
             "Espécie confirmada",
@@ -521,12 +533,12 @@ def painel(request: Request):
     return Response(
         {
             "periodo": {"inicio": inicio, "fim": fim},
-            "filtros": {"bairro": bairro_nome, "equipe": equipe_nome},
+            "filtros": {"bairro": bairro_nome, "equipe": equipe_nome, "contagem": escolha},
             "calculado_em": timezone.now(),
             "indicadores": indicadores,
             # Fontes externas ficam fora de ``indicadores``: não são da operação
             # e não passam pelo filtro de equipe (o dado é por bairro).
-            "contexto_externo": externos.contexto_externo(usuario, bairro_obj),
+            "contexto_externo": externos.contexto_externo(usuario, bairro_obj, escolha),
             "distribuicoes": distribuicoes,
             "series_mensais": series_mensais,
             "pendencias": pendencias,
@@ -561,7 +573,10 @@ def arborizacao_entorno_geojson(request: Request):
 
 @extend_schema(
     operation_id="indicadores_populacao_geojson",
-    parameters=[OpenApiParameter("precisao", int, description="Casas decimais (padrão 5).")],
+    parameters=[
+        OpenApiParameter("precisao", int, description="Casas decimais (padrão 5)."),
+        contagem.PARAMETRO,
+    ],
     responses={(200, "application/geo+json"): OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
@@ -574,7 +589,9 @@ def populacao_geojson(request: Request):
         precisao = min(max(int(request.query_params.get("precisao", 5)), 1), 8)
     except ValueError:
         precisao = 5
-    return Response(populacao_indicadores.geojson_populacao(request.user, precisao))
+    return Response(
+        populacao_indicadores.geojson_populacao(request.user, precisao, contagem.do_pedido(request))
+    )
 
 
 class CriterioPlanejamentoSerializer(serializers.Serializer):
@@ -603,6 +620,8 @@ class CriterioPlanejamentoSerializer(serializers.Serializer):
 class BairroPlanejamentoSerializer(serializers.Serializer):
     id = serializers.CharField()
     nome = serializers.CharField()
+    arvores = serializers.IntegerField(help_text="Árvores válidas no bairro (todas).")
+    arvores_confirmadas = serializers.IntegerField(help_text="Dessas, as confirmadas.")
     valores = serializers.DictField(
         child=serializers.FloatField(allow_null=True),
         help_text="Valor bruto de cada critério; nulo sem dado (nunca zero).",
@@ -615,6 +634,9 @@ class BairroPlanejamentoSerializer(serializers.Serializer):
 
 class CriteriosPlanejamentoSerializer(serializers.Serializer):
     gerado_em = serializers.DateTimeField()
+    contagem = serializers.CharField(
+        help_text="todas ou confirmadas: o que alimenta árvores/1.000."
+    )
     aviso = serializers.CharField()
     metodo_percentil = serializers.CharField()
     criterios = CriterioPlanejamentoSerializer(many=True)
@@ -623,6 +645,7 @@ class CriteriosPlanejamentoSerializer(serializers.Serializer):
 
 @extend_schema(
     operation_id="planejamento_criterios",
+    parameters=[contagem.PARAMETRO],
     responses=CriteriosPlanejamentoSerializer,
 )
 @api_view(["GET"])
@@ -630,4 +653,4 @@ class CriteriosPlanejamentoSerializer(serializers.Serializer):
 def planejamento_criterios(request: Request):
     """Critérios do cenário "Onde plantar": valor bruto e percentil de prioridade por bairro do
     escopo, com fonte e ano. Cenário de priorização, não índice oficial (DP-14)."""
-    return Response(planejamento.criterios_por_bairro(request.user))
+    return Response(planejamento.criterios_por_bairro(request.user, contagem.do_pedido(request)))

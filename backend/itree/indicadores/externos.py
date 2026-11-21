@@ -190,7 +190,9 @@ def bairros_do_escopo(usuario: Usuario):
     return bairros.annotate(ponto=PointOnSurface("geom")).filter(ponto__within=area)
 
 
-def contexto_externo(usuario: Usuario, bairro: Territorio | None = None) -> list[dict]:
+def contexto_externo(
+    usuario: Usuario, bairro: Territorio | None = None, contagem: str = "todas"
+) -> list[dict]:
     """Seção "Contexto (fontes externas)" da visão geral: um item por indicador,
     com o valor do escopo (soma de numeradores e denominadores) e a proveniência.
     Sem dado, a lista é vazia (nunca zero)."""
@@ -235,7 +237,7 @@ def contexto_externo(usuario: Usuario, bairro: Territorio | None = None) -> list
     # Árvores por 1.000 habitantes (provisório): cartão discreto, só com população importada.
     from . import populacao_indicadores
 
-    extra = populacao_indicadores.item_visao_geral(usuario, bairro)
+    extra = populacao_indicadores.item_visao_geral(usuario, bairro, contagem)
     if extra is not None:
         itens.append(extra)
     return itens
