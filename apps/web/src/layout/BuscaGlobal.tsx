@@ -1,7 +1,10 @@
 import { mapaBusca, type ResultadoBusca } from "@itree/api-client";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import * as Radix from "@radix-ui/react-dialog";
+import { Search, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
+
+import { useCelular } from "../util/useMediaQuery";
 
 const TIPOS: Record<string, string> = {
   arvore: "Árvore",
@@ -11,8 +14,52 @@ const TIPOS: Record<string, string> = {
   coordenada: "Coordenada",
 };
 
-/** Busca por código, identificador externo, endereço, bairro ou coordenada (RF-SHELL-003). */
+/**
+ * Busca por código, identificador externo, endereço, bairro ou coordenada (RF-SHELL-003).
+ * No celular vira um ícone que abre a busca em tela cheia.
+ */
 export function BuscaGlobal() {
+  const celular = useCelular();
+  const [aberta, setAberta] = useState(false);
+  if (!celular) return <CampoBusca />;
+  return (
+    <Radix.Root open={aberta} onOpenChange={setAberta}>
+      <Radix.Trigger
+        aria-label="Abrir busca"
+        className="ml-auto flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-fundo"
+      >
+        <Search className="size-5 text-texto-suave" aria-hidden />
+      </Radix.Trigger>
+      <Radix.Portal>
+        <Radix.Content
+          aria-describedby={undefined}
+          className="fixed inset-0 z-50 flex flex-col bg-superficie p-3"
+        >
+          <div className="flex items-center gap-2">
+            <Radix.Title className="sr-only">Busca</Radix.Title>
+            <div className="min-w-0 flex-1">
+              <CampoBusca emTelaCheia aoEscolher={() => setAberta(false)} />
+            </div>
+            <Radix.Close
+              aria-label="Fechar busca"
+              className="flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-fundo"
+            >
+              <X className="size-5" aria-hidden />
+            </Radix.Close>
+          </div>
+        </Radix.Content>
+      </Radix.Portal>
+    </Radix.Root>
+  );
+}
+
+function CampoBusca({
+  emTelaCheia,
+  aoEscolher,
+}: {
+  emTelaCheia?: boolean;
+  aoEscolher?: () => void;
+}) {
   const [termo, setTermo] = useState("");
   const [resultados, setResultados] = useState<ResultadoBusca[]>([]);
   const [aberto, setAberto] = useState(false);
@@ -62,6 +109,7 @@ export function BuscaGlobal() {
   }, []);
 
   const escolher = (r: ResultadoBusca) => {
+    aoEscolher?.();
     setAberto(false);
     setTermo("");
     if (r.tipo === "arvore" && r.id)
@@ -91,9 +139,9 @@ export function BuscaGlobal() {
   };
 
   return (
-    <div ref={raiz} className="relative w-96">
+    <div ref={raiz} className={emTelaCheia ? "relative w-full" : "relative w-96"}>
       <Search
-        className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-texto-suave"
+        className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-texto-suave max-md:top-3.5"
         aria-hidden
       />
       <input
@@ -107,7 +155,7 @@ export function BuscaGlobal() {
         aria-label="Busca global"
         aria-keyshortcuts="/"
         placeholder="Buscar árvore, ocorrência, bairro ou coordenada"
-        className="h-9 w-full rounded-md border border-borda-campo bg-fundo pr-8 pl-8 text-sm"
+        className="h-9 w-full rounded-md border border-borda-campo bg-fundo pr-8 pl-8 text-sm max-md:h-11 max-md:text-base"
         value={termo}
         onChange={(e) => setTermo(e.target.value)}
         onFocus={() => resultados.length && setAberto(true)}
@@ -130,7 +178,7 @@ export function BuscaGlobal() {
         <ul
           id={id}
           role="listbox"
-          className="absolute top-10 z-50 w-full overflow-hidden rounded-md border border-borda bg-superficie shadow-lg"
+          className={`z-50 w-full overflow-hidden rounded-md border border-borda bg-superficie shadow-lg ${emTelaCheia ? "absolute top-12 max-h-[70dvh] overflow-y-auto" : "absolute top-10"}`}
         >
           {resultados.length === 0 && (
             <li role="presentation" className="px-3 py-2 text-sm text-texto-suave">
@@ -143,7 +191,7 @@ export function BuscaGlobal() {
               id={`${id}-opcao-${i}`}
               role="option"
               aria-selected={i === ativo}
-              className={`cursor-pointer px-3 py-2 text-sm ${i === ativo ? "bg-marca-clara" : ""}`}
+              className={`cursor-pointer px-3 py-2 text-sm max-md:py-3 ${i === ativo ? "bg-marca-clara" : ""}`}
               onMouseEnter={() => setAtivo(i)}
               onMouseDown={(e) => (e.preventDefault(), escolher(r))}
             >

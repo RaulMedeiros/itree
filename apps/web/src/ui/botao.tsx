@@ -18,9 +18,9 @@ const variantes = cva(
         perigoContorno: "border border-perigo/40 bg-superficie text-perigo hover:bg-perigo-clara",
       },
       tamanho: {
-        normal: "h-9 px-3.5",
-        pequeno: "h-8 px-2.5 text-[13px]",
-        icone: "size-9",
+        normal: "h-9 px-3.5 max-md:h-11",
+        pequeno: "h-8 px-2.5 text-[13px] max-md:h-11",
+        icone: "size-9 max-md:size-11",
       },
     },
     defaultVariants: { variante: "primario", tamanho: "normal" },
