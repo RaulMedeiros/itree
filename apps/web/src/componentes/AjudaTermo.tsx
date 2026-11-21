@@ -18,7 +18,7 @@ export function AjudaTermo({ id, className }: { id: IdTermo; className?: string 
         onClick={() => setAberto(true)}
         aria-label={`O que é ${termo.termo.toLocaleLowerCase("pt-BR")}?`}
         className={cn(
-          "inline-flex size-5 shrink-0 items-center justify-center rounded-full align-middle text-texto-suave hover:text-marca-escura",
+          "inline-flex size-5 shrink-0 items-center justify-center rounded-full align-middle text-texto-suave max-md:-m-3 max-md:size-11 hover:text-marca-escura",
           className,
         )}
       >

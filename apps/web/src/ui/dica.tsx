@@ -18,7 +18,7 @@ export function Dica({ texto, className }: { texto: string; className?: string }
         aria-expanded={aberta}
         title={texto}
         onClick={() => setAberta((a) => !a)}
-        className="inline-flex size-8 items-center justify-center rounded-md text-texto-suave hover:text-texto"
+        className="inline-flex size-8 items-center justify-center rounded-md text-texto-suave hover:text-texto max-md:-m-1.5 max-md:size-11"
       >
         <Info className="size-4" aria-hidden />
       </button>
