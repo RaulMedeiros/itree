@@ -85,21 +85,21 @@ def _decodificar(conteudo: bytes) -> str:
     raise ErroArquivo("Não foi possível ler o arquivo como texto (UTF-8 ou Latin-1).")
 
 
-def _abrir_zip(conteudo: bytes) -> zipfile.ZipFile:
+def _abrir_zip(
+    conteudo: bytes, max_membros: int | None = None, max_descompactado_mb: int | None = None
+) -> zipfile.ZipFile:
+    """Abre o ZIP conferindo membros e tamanho descompactado (limites padrão: os da importação)."""
+    max_membros = max_membros or settings.IMPORTACAO_MAX_MEMBROS_ZIP
+    max_descompactado_mb = max_descompactado_mb or settings.IMPORTACAO_MAX_DESCOMPACTADO_MB
     try:
         arquivo = zipfile.ZipFile(io.BytesIO(conteudo))
     except zipfile.BadZipFile as exc:
         raise ErroArquivo("O arquivo não é um ZIP válido.") from exc
     membros = [i for i in arquivo.infolist() if not i.is_dir()]
-    if len(membros) > settings.IMPORTACAO_MAX_MEMBROS_ZIP:
-        raise ErroArquivo(
-            f"O ZIP tem {len(membros)} arquivos; o limite é {settings.IMPORTACAO_MAX_MEMBROS_ZIP}."
-        )
-    if sum(i.file_size for i in membros) > _mb(settings.IMPORTACAO_MAX_DESCOMPACTADO_MB):
-        raise ErroArquivo(
-            f"O conteúdo descompactado passa do limite de "
-            f"{settings.IMPORTACAO_MAX_DESCOMPACTADO_MB} MB."
-        )
+    if len(membros) > max_membros:
+        raise ErroArquivo(f"O ZIP tem {len(membros)} arquivos; o limite é {max_membros}.")
+    if sum(i.file_size for i in membros) > _mb(max_descompactado_mb):
+        raise ErroArquivo(f"O conteúdo descompactado passa do limite de {max_descompactado_mb} MB.")
     return arquivo
 
 
