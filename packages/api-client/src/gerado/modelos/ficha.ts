@@ -8,12 +8,16 @@
 import type { FichaBairro } from './fichaBairro';
 import type { FichaCartao } from './fichaCartao';
 import type { FichaGraficos } from './fichaGraficos';
+import type { FichaMacrozoneamento } from './fichaMacrozoneamento';
 import type { FichaRanking } from './fichaRanking';
+import type { FichaRegra330300 } from './fichaRegra330300';
 
 export interface Ficha {
   gerado_em: string;
   bairro: FichaBairro;
   cartoes: FichaCartao[];
+  regra_3_30_300: FichaRegra330300;
+  macrozoneamento: FichaMacrozoneamento | null;
   graficos: FichaGraficos;
   ranking: FichaRanking;
 }

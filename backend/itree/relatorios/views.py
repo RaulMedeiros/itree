@@ -29,8 +29,10 @@ from itree.indicadores import (
     contagem,
     doacao_plantio,
     externos,
+    imoveis_indicadores,
     manejo_urbfor,
     populacao_indicadores,
+    regra_3_30_300,
 )
 from itree.indicadores import populacao as pop
 from itree.indicadores.models import IndicadorTerritorialExterno
@@ -239,6 +241,49 @@ ANALISES = {
 }
 
 
+def _analises_regra() -> dict:
+    """Rankings e dispersões com a renda das três partes da regra 3-30-300."""
+    saida = {}
+    for parte, spec in regra_3_30_300.PARTES.items():
+        comum = {
+            "permissao": "inventario.ler",
+            "por_bairro": True,
+            "fonte": f"Regra 3-30-300, cálculo do iTree. Método: {regra_3_30_300.FONTE_METODO}",
+            "unidade": "%",
+            "base_rotulo": "pixels medidos" if parte == "30" else "edificações",
+            "ressalvas": [
+                regra_3_30_300.METODO,
+                *([regra_3_30_300.RESSALVA_INVENTARIO] if parte == "3" else []),
+            ],
+            "ordenavel": True,
+            "sem_total": True,
+        }
+        saida[f"regra_{parte}_por_bairro"] = {
+            **comum,
+            "titulo": f"Regra 3-30-300, parte {parte}: {spec['nome']}, por bairro",
+            "definicao": spec["descricao"] + " Meta: " + spec["meta"] + ". Calculado mensalmente.",
+            "colunas_csv": [("rotulo", "Bairro"), ("valor", f"{spec['nome']} (%)")],
+        }
+        saida[f"regra_{parte}_x_renda"] = {
+            **comum,
+            "titulo": f"Regra 3-30-300, parte {parte} × rendimento do responsável, por bairro",
+            "definicao": "Cada ponto é um bairro: "
+            + spec["descricao"][0].lower()
+            + spec["descricao"][1:]
+            + " contra o rendimento médio mensal do responsável (Censo 2022). Descrição dos "
+            "dados; não afirma causa.",
+            "unidade": "",
+            "colunas_csv": [
+                ("rotulo", "Bairro"),
+                ("valor", f"{spec['nome']} (%)"),
+                ("renda", "Rendimento médio do responsável (R$)"),
+            ],
+        }
+    return saida
+
+
+ANALISES.update(_analises_regra())
+
 NAO_SOMAVEIS = {"tempo_atendimento_por_tipo"}
 
 
@@ -297,6 +342,10 @@ def _linhas_analise(
         return populacao_indicadores.linhas_populacao(usuario)
     if chave == "arvores_mil_x_renda":
         return populacao_indicadores.linhas_dispersao(usuario, escolha)
+    if chave.startswith("regra_") and chave.endswith("_por_bairro"):
+        return imoveis_indicadores.linhas_regra(usuario, chave.split("_")[1], escolha)
+    if chave.startswith("regra_") and chave.endswith("_x_renda"):
+        return imoveis_indicadores.linhas_dispersao_regra(usuario, chave.split("_")[1], escolha)
     if chave == "manejo_urbfor_por_bairro":
         return _linhas_manejo(usuario)
     if chave == "mudas_doadas_por_especie":
@@ -642,6 +691,8 @@ def analise(request: Request):
             "colunas_csv": [{"chave": c, "rotulo": r} for c, r in definicao.get("colunas_csv", [])],
             "dispersao": populacao_indicadores.dispersao_renda(request.user, escolha)
             if chave == "arvores_mil_x_renda"
+            else imoveis_indicadores.dispersao_regra(request.user, chave.split("_")[1], escolha)
+            if chave.startswith("regra_") and chave.endswith("_x_renda")
             else None,
         }
     )

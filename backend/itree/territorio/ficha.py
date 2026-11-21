@@ -26,6 +26,7 @@ from itree.indicadores import (
     atencao,
     externos,
     ilha_calor,
+    imoveis_indicadores,
     instantaneos,
     manejo_urbfor,
     populacao_indicadores,
@@ -575,7 +576,7 @@ def montar(
     """``bairro`` vem de ``bairros_para_ficha`` e já está no escopo de ``usuario``.
 
     ``contagem`` (``todas`` ou ``confirmadas``) escolhe quais árvores alimentam os indicadores
-    do bairro; o cartão de árvores mostra sempre as duas contagens."""
+    do bairro, inclusive o "3" da regra 3-30-300; o cartão de árvores mostra sempre as duas."""
     geom = bairro.geom
     arvores = Arvore.objects.filter(geom__intersects=geom)
     validas_total, validas_confirmadas = cont.totais(instantaneos.arvores_validas(arvores))
@@ -669,6 +670,7 @@ def montar(
         ),
         _cartao_censo(bairro, usuario),
         *populacao_indicadores.cartoes_ficha(bairro, usuario, _cartao, rotulo_cidade, contagem),
+        *imoveis_indicadores.cartoes_ficha(bairro, usuario, _cartao, rotulo_cidade, contagem),
         _cartao_ilha_calor(bairro),
         _cartao_iluminacao(bairro, arvores),
         _cartao_plantio(bairro),
@@ -696,6 +698,8 @@ def montar(
             "geometria": json.loads(bairro.geometria),
         },
         "cartoes": cartoes,
+        "regra_3_30_300": imoveis_indicadores.bloco_regra(bairro, usuario, contagem),
+        "macrozoneamento": imoveis_indicadores.bloco_macrozoneamento(bairro),
         "graficos": {
             "especies": _grafico_especies(validas),
             "condicao": _grafico_condicao(validas),
@@ -707,5 +711,5 @@ def montar(
 
 _DEFINICAO_VALIDA = (
     "ativos, com localização e origem da localização conhecida "
-    "(critério provisório, em definição pela prefeitura)"
+    "(critério provisório do inventário; o método dos indicadores é a regra 3-30-300)"
 )

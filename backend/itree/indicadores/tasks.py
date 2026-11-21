@@ -33,3 +33,12 @@ def renovar_fontes_populacao() -> list[dict]:
     from . import populacao
 
     return populacao.renovar(origem="agendada")
+
+
+@shared_task
+def calcular_3_30_300() -> dict:
+    """Recalcula a regra 3-30-300 por bairro (mensal e depois das importações). Cálculo pesado:
+    sempre aqui, nunca na requisição."""
+    from . import regra_3_30_300
+
+    return regra_3_30_300.calcular()

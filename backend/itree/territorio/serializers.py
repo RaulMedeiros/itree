@@ -154,9 +154,63 @@ class FichaBairroSerializer(serializers.Serializer):
     geometria = serializers.DictField(help_text="GeoJSON do polígono do bairro.")
 
 
+class FichaParteRegraSerializer(serializers.Serializer):
+    id = serializers.ChoiceField(choices=["3", "30", "300"])
+    nome = serializers.CharField()
+    meta = serializers.CharField(help_text='"3 árvores a até 30 m", "30% de cobertura"...')
+    meta_pct = serializers.FloatField(
+        help_text="Percentual que o bairro precisa atingir para a parte atender."
+    )
+    unidade = serializers.CharField()
+    valor = serializers.FloatField(allow_null=True, help_text="Percentual; nulo sem dado.")
+    numerador = serializers.IntegerField(allow_null=True)
+    denominador = serializers.IntegerField(allow_null=True)
+    cidade = serializers.FloatField(allow_null=True)
+    atende = serializers.BooleanField(allow_null=True, help_text="Nulo sem dado.")
+    sem_dado = serializers.BooleanField()
+    nota = serializers.CharField()
+    definicao = serializers.CharField()
+
+
+class FichaRegra330300Serializer(serializers.Serializer):
+    contagem = serializers.ChoiceField(choices=["todas", "confirmadas"])
+    calculado_em = serializers.DateTimeField(allow_null=True)
+    data = serializers.DateField(allow_null=True)
+    base_edificacoes = serializers.CharField(help_text='"residenciais", "todas" ou vazio.')
+    base_texto = serializers.CharField()
+    edificacoes = serializers.IntegerField()
+    classificadas = serializers.IntegerField(allow_null=True)
+    edificacoes_no_bairro = serializers.IntegerField(allow_null=True)
+    limiar_ndvi = serializers.FloatField(allow_null=True)
+    partes = FichaParteRegraSerializer(many=True)
+    regra = serializers.CharField()
+    fonte_metodo = serializers.CharField()
+    fonte_url = serializers.CharField()
+    metodo = serializers.CharField()
+    ressalva = serializers.CharField()
+    rotulo_cidade = serializers.CharField()
+
+
+class FichaZonaSerializer(serializers.Serializer):
+    nome = serializers.CharField()
+    sigla = serializers.CharField()
+    pct = serializers.FloatField(help_text="Percentual da área do bairro nesta zona.")
+
+
+class FichaMacrozoneamentoSerializer(serializers.Serializer):
+    zonas = FichaZonaSerializer(many=True)
+    predominante = serializers.CharField()
+    fonte = serializers.CharField()
+    fonte_url = serializers.CharField()
+    licenca = serializers.CharField()
+    data_referencia = serializers.DateField()
+
+
 class FichaSerializer(serializers.Serializer):
     gerado_em = serializers.DateTimeField()
     bairro = FichaBairroSerializer()
     cartoes = FichaCartaoSerializer(many=True)
+    regra_3_30_300 = FichaRegra330300Serializer()
+    macrozoneamento = FichaMacrozoneamentoSerializer(allow_null=True)
     graficos = FichaGraficosSerializer()
     ranking = FichaRankingSerializer()
