@@ -271,8 +271,8 @@ export function AuditoriaPagina() {
                 <Th>Registro</Th>
                 <Th>Ação</Th>
                 <Th>Autor</Th>
-                <Th>Origem</Th>
-                <Th>Justificativa</Th>
+                <Th cartao="oculta">Origem</Th>
+                <Th cartao="oculta">Justificativa</Th>
               </tr>
             </thead>
             <tbody>

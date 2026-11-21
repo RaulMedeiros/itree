@@ -153,6 +153,25 @@ async function abrir(caminho: string) {
 }
 
 describe("lista de usuários", () => {
+  it("no cartão do celular mostra o essencial e oculta as colunas secundárias", async () => {
+    await abrir("/administracao/usuarios");
+    const tabela = await screen.findByRole("table");
+    await within(tabela).findByText("Tadeu Técnico");
+    const oculta = (nome: string) =>
+      within(tabela).getByRole("columnheader", { name: nome }).dataset.cartao === "oculta";
+    expect(["Escopo territorial", "Equipes", "Último acesso"].map(oculta)).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(["Usuário", "Papéis", "Situação"].map(oculta)).toEqual([false, false, false]);
+    // A célula do cartão herda a marca da coluna, que o CSS usa para escondê-la.
+    expect(
+      within(tabela).getByText("Aguardando primeiro acesso").closest("td"),
+    ).not.toHaveAttribute("data-oculta");
+    expect(within(tabela).getAllByText("Nunca")[0]!.closest("td")).toHaveAttribute("data-oculta");
+  });
+
   it("mostra um único estado por usuário", async () => {
     await abrir("/administracao/usuarios");
     const tabela = await screen.findByRole("table");

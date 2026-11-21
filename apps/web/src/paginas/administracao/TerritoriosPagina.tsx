@@ -60,10 +60,10 @@ export function TerritoriosPagina() {
               <Th>Nome</Th>
               <Th>Tipo</Th>
               <Th className="text-right">Árvores</Th>
-              <Th>Código na fonte</Th>
+              <Th cartao="oculta">Código na fonte</Th>
               <Th>Fonte</Th>
-              <Th>Data do dado</Th>
-              <Th>Ingerido em</Th>
+              <Th cartao="oculta">Data do dado</Th>
+              <Th cartao="oculta">Ingerido em</Th>
             </tr>
           </thead>
           <tbody>

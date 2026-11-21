@@ -83,7 +83,7 @@ export function ConectoresSecao() {
           <thead>
             <tr>
               <Th>Conector</Th>
-              <Th>Destino</Th>
+              <Th cartao="oculta">Destino</Th>
               <Th>Última execução</Th>
               <Th>Ações</Th>
             </tr>

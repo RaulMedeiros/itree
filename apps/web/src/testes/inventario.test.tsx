@@ -903,6 +903,14 @@ describe("importações (C-19)", () => {
     expect(within(dialogo).getByText("Escolha um arquivo para continuar.")).toBeInTheDocument();
     expect(within(dialogo).getByRole("list", { name: "Etapas da importação" })).toBeInTheDocument();
   });
+
+  it("ocupa a tela toda no celular", async () => {
+    const usuario = userEvent.setup();
+    await abrir("/inventario/importacoes");
+    await usuario.click((await screen.findAllByRole("button", { name: /Nova importação/ }))[0]!);
+    const dialogo = await screen.findByRole("dialog");
+    expect(dialogo).toHaveClass("max-md:inset-0", "max-md:h-dvh", "max-md:rounded-none");
+  });
 });
 
 describe("assistente de importação: passos coerentes com a tela (R2-20)", () => {

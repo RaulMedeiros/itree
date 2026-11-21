@@ -133,10 +133,10 @@ export function IntegracoesPagina() {
           <thead>
             <tr>
               <Th>Fonte</Th>
-              <Th>Origem</Th>
+              <Th cartao="oculta">Origem</Th>
               <Th>Execução</Th>
               <Th>Resultado</Th>
-              <Th>Responsável</Th>
+              <Th cartao="oculta">Responsável</Th>
             </tr>
           </thead>
           <tbody>

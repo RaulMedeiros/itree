@@ -60,7 +60,7 @@ export function EquipesPagina() {
               <Th>Equipe</Th>
               <Th>Coordenador</Th>
               <Th>Membros</Th>
-              <Th>Territórios</Th>
+              <Th cartao="oculta">Territórios</Th>
               <Th>Situação</Th>
             </tr>
           </thead>
