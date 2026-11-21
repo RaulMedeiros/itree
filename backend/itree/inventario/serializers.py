@@ -220,6 +220,14 @@ class ArvoreResumoSerializer(serializers.ModelSerializer):
     bairro = TerritorioResumoSerializer(read_only=True)
     valida = serializers.BooleanField(read_only=True)
     ocorrencias_abertas = serializers.IntegerField(read_only=True, default=0)
+    deteccao = serializers.CharField(
+        read_only=True,
+        help_text='Sensor da detecção que originou o registro: "satelite", "video_rua" ou vazio.',
+    )
+    faixa_confianca = serializers.SerializerMethodField(
+        help_text='Selo de confiança da detecção: "baixa", "media" ou "alta" (vazio se não '
+        "houver confiança)."
+    )
 
     class Meta:
         model = Arvore
@@ -237,6 +245,11 @@ class ArvoreResumoSerializer(serializers.ModelSerializer):
             "situacao",
             "valida",
             "origem_registro",
+            "deteccao",
+            "confirmada",
+            "confianca",
+            "faixa_confianca",
+            "ultima_vez_vista_em",
             "ocorrencias_abertas",
             "condicao_aparente",
             "condicao_aparente_em",
@@ -244,7 +257,19 @@ class ArvoreResumoSerializer(serializers.ModelSerializer):
             "criado_em",
             "atualizado_em",
         ]
-        read_only_fields = ["condicao_aparente", "condicao_aparente_em", "ultima_inspecao_em"]
+        read_only_fields = [
+            "condicao_aparente",
+            "condicao_aparente_em",
+            "ultima_inspecao_em",
+            "confirmada",
+            "confianca",
+            "ultima_vez_vista_em",
+        ]
+
+    def get_faixa_confianca(self, obj) -> str:
+        from itree.deteccao.confianca import faixa_de_confianca
+
+        return faixa_de_confianca(obj.confianca)
 
 
 class ArvoreSerializer(ArvoreResumoSerializer):
@@ -285,6 +310,7 @@ class ArvoreSerializer(ArvoreResumoSerializer):
             "lote",
             "criado_por_nome",
             "observacoes",
+            "confirmada_em",
             "motivo",
         ]
         read_only_fields = [
@@ -294,6 +320,9 @@ class ArvoreSerializer(ArvoreResumoSerializer):
             "condicao_aparente",
             "condicao_aparente_em",
             "ultima_inspecao_em",
+            "confirmada",
+            "confianca",
+            "ultima_vez_vista_em",
         ]
 
     @extend_schema_field(MedidaSerializer(many=True))
@@ -371,6 +400,32 @@ class ArvoreSerializer(ArvoreResumoSerializer):
 
 class AcaoComMotivoSerializer(serializers.Serializer):
     motivo = serializers.CharField(max_length=500)
+
+
+class AcaoComMotivoOpcionalSerializer(serializers.Serializer):
+    motivo = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
+
+class ObservacaoSerializer(serializers.Serializer):
+    """Passagem de detecção automática por uma árvore."""
+
+    id = serializers.UUIDField()
+    sensor = serializers.CharField()
+    resultado = serializers.CharField()
+    confianca = serializers.FloatField()
+    faixa_confianca = serializers.SerializerMethodField()
+    capturada_em = serializers.DateField()
+    incerteza_m = serializers.FloatField()
+    id_rastreamento = serializers.CharField()
+    lote_id = serializers.UUIDField()
+    lote_projeto = serializers.CharField(source="lote.projeto_origem")
+    lote_versao_modelo = serializers.CharField(source="lote.versao_modelo")
+    valores = serializers.DictField()
+
+    def get_faixa_confianca(self, obj) -> str:
+        from itree.deteccao.confianca import faixa_de_confianca
+
+        return faixa_de_confianca(obj.confianca)
 
 
 class FusaoSerializer(serializers.Serializer):

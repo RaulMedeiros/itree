@@ -35,6 +35,7 @@ from itree.ocorrencias.models import ESTADOS_FINAIS
 
 from . import duplicidades, historico_visual, importacao, leitura_arquivos, referencias, tasks
 from .models import (
+    ORIGENS_DETECCAO,
     Arvore,
     Especie,
     EstadoEspecie,
@@ -46,6 +47,7 @@ from .models import (
     SituacaoArvore,
 )
 from .serializers import (
+    AcaoComMotivoOpcionalSerializer,
     AcaoComMotivoSerializer,
     ArvoreResumoSerializer,
     ArvoreSerializer,
@@ -59,6 +61,7 @@ from .serializers import (
     MedidaSerializer,
     ModeloImportacaoSerializer,
     NovaImportacaoSerializer,
+    ObservacaoSerializer,
     ParDuplicidadeSerializer,
     ParRevisadoSerializer,
 )
@@ -182,6 +185,17 @@ FILTROS_ARVORE = [
         "situacao", str, description="Padrão: ativa. Use 'todas' para incluir as demais."
     ),
     OpenApiParameter("valida", bool),
+    OpenApiParameter(
+        "confirmada",
+        bool,
+        description="'false' = detectadas automaticamente e ainda sem revisão humana.",
+    ),
+    OpenApiParameter(
+        "deteccao",
+        str,
+        description="'satelite' ou 'video_rua' (origem da detecção); 'qualquer' = as de "
+        "qualquer detecção.",
+    ),
     OpenApiParameter("lote", str),
     OpenApiParameter(
         "sem_inspecao_dias", int, description="Sem inspeção validada há mais de N dias."
@@ -247,6 +261,17 @@ def filtrar_arvores(qs, params):
     situacao = params.get("situacao", "ativa")
     if situacao != "todas":
         qs = qs.filter(situacao=situacao)
+    if (confirmada := params.get("confirmada")) in ("true", "false"):
+        qs = qs.filter(confirmada=confirmada == "true")
+    if sensor := params.get("deteccao"):
+        origens = {
+            "satelite": [OrigemRegistro.DETECCAO_SATELITE],
+            "video_rua": [OrigemRegistro.DETECCAO_VIDEO],
+            "qualquer": list(ORIGENS_DETECCAO),
+        }.get(sensor)
+        if origens is None:
+            raise ValidationError({"deteccao": ["Use satelite, video_rua ou qualquer."]})
+        qs = qs.filter(origem_registro__in=origens)
     if (valida := params.get("valida")) in ("true", "false"):
         condicao = Q(situacao=SituacaoArvore.ATIVA, geom__isnull=False) & ~Q(localizacao_origem="")
         qs = qs.filter(condicao) if valida == "true" else qs.exclude(condicao)
@@ -314,8 +339,11 @@ class ArvoreViewSet(
             "duplicidades",
             "fotos",
             "linha_do_tempo",
+            "observacoes",
         ):
             return [requer(P.INVENTARIO_LER)()]
+        if self.action == "confirmar":
+            return [requer(P.DETECCAO_REVISAR)()]
         if self.action in ("excluir", "fundir", "nao_duplicadas"):
             return [requer(P.INVENTARIO_FUNDIR_EXCLUIR)()]
         return [requer(P.INVENTARIO_EDITAR)()]
@@ -396,6 +424,36 @@ class ArvoreViewSet(
         arvore = self.get_object()
         dados = historico_visual.fotos_da_arvore(arvore, request.user)
         return Response(historico_visual.FotoArvoreSerializer(dados, many=True).data)
+
+    @extend_schema(
+        operation_id="arvores_observacoes",
+        responses=ObservacaoSerializer(many=True),
+    )
+    @action(detail=True, pagination_class=None)
+    def observacoes(self, request, pk=None):
+        """Passagens de detecção automática pela árvore (origem, confiança, data e valores)."""
+        arvore = self.get_object()
+        qs = arvore.observacoes_deteccao.select_related("lote")[:50]
+        return Response(ObservacaoSerializer(qs, many=True).data)
+
+    @extend_schema(
+        operation_id="arvores_confirmar",
+        request=AcaoComMotivoOpcionalSerializer,
+        responses=ArvoreSerializer,
+    )
+    @action(detail=True, methods=["post"])
+    def confirmar(self, request, pk=None):
+        """Promove a árvore detectada automaticamente a "confirmada" (revisão humana)."""
+        from itree.deteccao import servico as deteccao
+
+        arvore = self.get_object()
+        dados = AcaoComMotivoOpcionalSerializer(data=request.data)
+        dados.is_valid(raise_exception=True)
+        try:
+            deteccao.confirmar_arvore(arvore, request.user, dados.validated_data.get("motivo", ""))
+        except deteccao.ErroRevisao as exc:
+            raise ValidationError(str(exc)) from exc
+        return Response(ArvoreSerializer(self.get_object(), context={"request": request}).data)
 
     @extend_schema(
         operation_id="arvores_linha_do_tempo",

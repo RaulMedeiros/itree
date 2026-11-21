@@ -156,6 +156,7 @@ def _sql_base_arvores(periodo: "tempo.Periodo | None") -> str:
         juncao = tempo.juncao_condicao()
     return f"""
             SELECT a.id::text AS id, a.numero, a.especie_estado, a.localizacao_origem,
+                   a.confirmada,
                    COALESCE(NULLIF({condicao}, ''), 'nao_avaliada') AS condicao,
                    COALESCE(a.precisao_m, -1) AS precisao_m,
                    COALESCE(e.nome_cientifico, '') AS especie,
@@ -174,7 +175,8 @@ CAMADAS = {
         "filtros": _filtros_arvores,
         "base": lambda periodo: _sql_base_arvores(periodo),
         "propriedades": (
-            "id, numero, especie_estado, localizacao_origem, condicao, precisao_m, especie"
+            "id, numero, especie_estado, localizacao_origem, confirmada, condicao,"
+            " precisao_m, especie"
         ),
     },
     "ocorrencias": {
@@ -415,6 +417,15 @@ ResultadoBusca = inline_serializer(
         "subtipo": serializers.CharField(
             required=False, help_text="Só nos territórios: municipio, regional ou bairro."
         ),
+        "deteccao": serializers.CharField(
+            required=False,
+            allow_blank=True,
+            help_text='Só nas árvores: "satelite" ou "video_rua" se vieram de detecção '
+            "automática (selo de origem); vazio nas demais.",
+        ),
+        "confirmada": serializers.BooleanField(
+            required=False, help_text="Só nas árvores: falso = detectada e ainda sem revisão."
+        ),
     },
 )
 
@@ -485,6 +496,8 @@ def busca(request: Request):
                     if a.geom
                     else None,
                     "limites": None,
+                    "deteccao": a.deteccao,
+                    "confirmada": a.confirmada,
                 }
             )
 
