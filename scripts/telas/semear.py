@@ -116,7 +116,8 @@ for a in random.sample(arvores, 90):
     if a.especie_id:
         a.especie_estado = "confirmada"
         a.save(update_fields=["especie_estado"])
-for a in random.sample(arvores, 120):
+com_condicao = random.sample(arvores, 120)
+for a in com_condicao:
     a.condicao_aparente = random.choice(["boa", "boa", "boa", "regular", "regular", "ruim", "morta"])
     a.condicao_aparente_em = agora - timedelta(days=random.randint(5, 500))
     a.save(update_fields=["condicao_aparente", "condicao_aparente_em"])
@@ -363,5 +364,29 @@ for territorio in Territorio.objects.all():
             )
         dia = dia.replace(day=1)
 instantaneos.registrar(hoje)
+
+# --- Linha do tempo do mapa: datas de cadastro espalhadas em 18 meses ------------------
+# SINTÉTICO. As árvores de demonstração nasceram todas no dia da semeadura; aqui o cadastro delas
+# é distribuído em ~18 meses (sempre antes da primeira inspeção validada de cada uma) e a condição
+# das 120 avaliadas ganha a inspeção validada que a originou, na data em que foi "aplicada". Assim
+# o mapa de uma data passada difere do de hoje: menos árvores e outras condições.
+from django.db.models import Min
+
+for a in com_condicao:
+    Inspecao.objects.create(
+        arvore=a, tecnico=tecnicos[0], realizada_em=a.condicao_aparente_em,
+        condicao_aparente=a.condicao_aparente, estado="validada", revisor=gestor,
+        validada_em=a.condicao_aparente_em, aplicado_ao_cadastro=["condicao_aparente"],
+        observacoes="Inspeção sintética de demonstração (linha do tempo).",
+    )
+primeira_inspecao = dict(
+    Inspecao.objects.filter(estado="validada").values_list("arvore_id").annotate(m=Min("realizada_em"))
+)
+for a in Arvore.objects.all():
+    quando = agora - timedelta(days=random.randint(0, 540), hours=random.randint(0, 20))
+    limite = primeira_inspecao.get(a.id)
+    if limite is not None and quando >= limite:
+        quando = limite - timedelta(days=random.randint(1, 30))
+    Arvore.objects.filter(pk=a.pk).update(criado_em=quando)
 
 print("árvores", Arvore.objects.count(), "ocorrências", Ocorrencia.objects.count(), "tarefas", Tarefa.objects.count())
