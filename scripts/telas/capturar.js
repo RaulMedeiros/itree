@@ -7,9 +7,17 @@ const ids = require(path.resolve(process.argv[2]));
 const BASE = "http://localhost:8088";
 const SAIDA = process.argv[3];
 
-async function entrar(nav, email, senha) {
+// Celular: 390 x 844, toque, tela de densidade 2 (equivale a um iPhone 13 em CSS px).
+const CELULAR = {
+  viewport: { width: 390, height: 844 },
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true,
+};
+
+async function entrar(nav, email, senha, dispositivo = { viewport: { width: 1440, height: 900 } }) {
   const ctx = await nav.newContext({
-    viewport: { width: 1440, height: 900 },
+    ...dispositivo,
     locale: "pt-BR",
     timezoneId: "America/Fortaleza",
   });
@@ -289,6 +297,51 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
   await tela(p, "41-analises-mudas", "/analises?analise=mudas_doadas_por_especie", {
     esperar: /Ressalvas/,
     espera: 2500,
+  });
+  await ctx.close();
+
+  // Segunda passada, de celular (390 px): menu em gaveta, mapa com folha de camadas, listas em
+  // cartões e fichas em coluna única. Os nomes começam com "m" (SO=m gera só estas).
+  ({ ctx, p } = await entrar(nav, "gestor@itree.local", "gestor", CELULAR));
+  await tela(p, "m01-visao-geral", "/visao-geral", {
+    esperar: "Como é calculado",
+    espera: 4000,
+    inteira: true,
+  });
+  await tela(p, "m02-mapa", `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=14.6`, {
+    esperar: "Legenda",
+    espera: 5000,
+  });
+  await tela(p, "m03-mapa-camadas", `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=14.6`, {
+    esperar: "Legenda",
+    espera: 3000,
+    acao: async (q) => {
+      await q.getByRole("button", { name: "Camadas e filtros" }).click();
+      await q.getByRole("complementary", { name: "Camadas e filtros" }).waitFor();
+    },
+  });
+  await tela(p, "m04-arvores", "/inventario/arvores", { esperar: /ARV-/ });
+  await tela(p, "m05-arvore-ficha", `/inventario/arvores/${ids.arvore_foto}`, {
+    esperar: "Resumo",
+    espera: 2500,
+    inteira: true,
+  });
+  await tela(p, "m06-inspecao-revisao", `/inspecoes/${ids.inspecao}`, {
+    esperar: /INS-/,
+    espera: 2000,
+  });
+  await tela(p, "m07-menu", "/visao-geral", {
+    esperar: "Como é calculado",
+    espera: 1000,
+    acao: async (q) => {
+      await q.getByRole("button", { name: "Abrir menu" }).click();
+      await q.getByRole("dialog", { name: "Menu de navegação" }).waitFor();
+    },
+  });
+  await tela(p, "m08-bairro", `/bairros/${ids.bairro_demo_id}`, {
+    esperar: "Indicadores do bairro",
+    espera: 6000,
+    inteira: true,
   });
   await ctx.close();
 

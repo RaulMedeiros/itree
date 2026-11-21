@@ -27,6 +27,10 @@ arquivo de identificadores gerado na última execução:
 SO=01,15 node scripts/telas/capturar.js /tmp/telas-ids.json docs/telas
 ```
 
+Ao fim do roteiro há uma segunda passada de **celular** (390 × 844, toque, densidade 2) que
+salva as telas `m01` a `m08` (visão geral, mapa, folha de camadas, árvores em cartões, ficha da
+árvore, revisão de inspeção, menu em gaveta e bairro). `SO=m` gera só elas.
+
 ## Arquivos
 
 | Arquivo                                                                                                   | Conteúdo                                                                                                                                                                  |
