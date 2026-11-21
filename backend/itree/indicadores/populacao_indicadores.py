@@ -439,19 +439,25 @@ def cartoes_ficha(bairro, usuario: Usuario, cartao, rotulo_cidade: str) -> list[
 # --- Análises ------------------------------------------------------------------------------------
 
 
+def _br(valor, casas: int = 0) -> str:
+    """Número no formato brasileiro: ponto nos milhares, vírgula nos decimais."""
+    texto = f"{valor:,.{casas}f}"
+    return texto.replace(",", "\0").replace(".", ",").replace("\0", ".")
+
+
 def linhas_arvores_por_mil(usuario: Usuario) -> list[dict]:
     saida = []
     for x in quadro(usuario):
         if x["por_mil"] is None:
             continue
-        hab = f"{x['hab_por_arvore']:,.1f}".replace(".", ",") if x["hab_por_arvore"] else "—"
+        hab = _br(x["hab_por_arvore"], 1) if x["hab_por_arvore"] else "—"
         saida.append(
             {
                 "rotulo": x["nome"],
                 "valor": x["por_mil"],
                 "territorio_id": str(x["id"]),
-                "detalhe": f"{x['arvores']:,} árvores cadastradas · {x['populacao']:,} habitantes "
-                f"(Censo) · {hab} hab. por árvore".replace(",", "."),
+                "detalhe": f"{_br(x['arvores'])} árvores cadastradas · "
+                f"{_br(x['populacao'])} habitantes (Censo) · {hab} hab. por árvore",
                 "arvores": x["arvores"],
                 "populacao": x["populacao"],
                 "habitantes_por_arvore": x["hab_por_arvore"],

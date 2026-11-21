@@ -19,7 +19,7 @@ export interface DadosDispersao {
 
 const L = 640;
 const A = 320;
-const MARGEM = { e: 56, d: 12, t: 12, b: 40 };
+const MARGEM = { e: 56, d: 36, t: 12, b: 40 };
 
 const inteiro = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 

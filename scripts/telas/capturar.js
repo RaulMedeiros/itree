@@ -266,10 +266,10 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
   // do inventário) e as análises por bairro com população, renda e a dispersão.
   await tela(
     p,
-    "48-mapa-arvores-por-habitante",
-    `/mapa?lon=${-38.54}&lat=${-3.78}&zoom=11.2&populacao=arvores_por_mil`,
+    "48-mapa-renda-por-bairro",
+    `/mapa?lon=${-38.54}&lat=${-3.78}&zoom=11.2&populacao=renda`,
     {
-      esperar: /falta de cadastro/,
+      esperar: /Censo 2022/,
       espera: 6000,
     },
   );
