@@ -1,6 +1,7 @@
 import {
   areasVerdesListar,
   indicadoresArborizacaoEntornoGeojson,
+  indicadoresPopulacaoGeojson,
   mapaAlertas,
   mapaSupressaoAnual,
   territoriosGeojson,
@@ -71,6 +72,13 @@ import {
   type AreaSimplificada,
 } from "../../mapa/areaUrl";
 import {
+  CAMADAS_POPULACAO,
+  FONTE_POPULACAO,
+  OPACIDADE_POPULACAO,
+  corPorQuebras,
+  filtroComDado,
+  filtroSemDado,
+  type IndicadorPopulacao,
   CAMADAS_ARBORIZACAO,
   COR_POR_VALOR,
   COR_SEM_DADO,
@@ -83,6 +91,18 @@ import {
   ROTULOS_CLASSES_ARBORIZACAO,
   registrarHachuraSemDado,
 } from "../../mapa/coropletica";
+import {
+  AmostraPopulacao,
+  ControlePopulacao,
+  LegendaPopulacao,
+  PainelPopulacaoBairro,
+} from "./CamadaPopulacao";
+import {
+  PROPRIEDADE,
+  textoDicaPopulacao,
+  type BairroPopulacao,
+  type DadosPopulacao,
+} from "../../mapa/populacao";
 import { urlApi } from "../../mapa/url";
 import type { TipoBase } from "../../mapa/estilo";
 import { baseEfetiva, lembrarBase, lerBaseLembrada } from "../../mapa/baseLembrada";
@@ -156,6 +176,8 @@ export interface BuscaMapa {
   adotadas?: "1";
   /** Camada coroplética "Arborização do entorno (Censo 2022)"; desligada por padrão. */
   arborizacao_entorno?: "1";
+  /** Camada "População e renda por bairro" e o indicador escolhido; ausente = desligada. */
+  populacao?: IndicadorPopulacao;
   tarefas?: "1";
   alertas?: "1";
   /** Camada histórica "Supressão anual (PRODES Caatinga)"; desligada por padrão. */
@@ -334,6 +356,12 @@ export function MapaPagina() {
   // Bairro clicado na camada do Censo: abre o painel com o dado e a proveniência (M-18).
   const [bairroCenso, setBairroCenso] = useState<DicaArborizacao | null>(null);
   const arborizacaoIniciada = useRef(false);
+  // População e renda por bairro: carregada na primeira vez que a camada é ligada.
+  const [estadoPopulacao, setEstadoPopulacao] = useState<"inicial" | "pronto" | "erro">("inicial");
+  const [dadosPopulacao, setDadosPopulacao] = useState<DadosPopulacao | null>(null);
+  const [bairroPopulacao, setBairroPopulacao] = useState<BairroPopulacao | null>(null);
+  const populacaoIniciada = useRef(false);
+  const escolhidoPopulacao = useRef<IndicadorPopulacao | undefined>(undefined);
   // Supressão anual do PRODES: carregada na primeira vez que a camada é ligada.
   const [estadoSupressao, setEstadoSupressao] = useState<"inicial" | "pronto" | "erro">("inicial");
   const [provSupressao, setProvSupressao] = useState<ProvenienciaSupressao | null>(null);
@@ -361,6 +389,8 @@ export function MapaPagina() {
   const mostrarBairros = busca.bairros !== "0";
   const mostrarAreasVerdes = podeMapa && busca.areas_verdes === "1";
   const mostrarArborizacao = podeMapa && busca.arborizacao_entorno === "1";
+  const mostrarPopulacao = podeMapa && busca.populacao !== undefined;
+
   const mostrarIluminacao = podeMapa && busca.iluminacao === "1";
   const mostrarIlhaCalor = podeMapa && busca.ilha_calor === "1";
   const [opacidadeIlhaCalor, setOpacidadeIlhaCalor] = useState(OPACIDADE_ILHA_CALOR);
@@ -536,6 +566,63 @@ export function MapaPagina() {
         const p = e.features?.[0]?.properties;
         if (!p) return;
         setBairroCenso(p as DicaArborizacao);
+        setAreaVerde(null);
+        setPoste(null);
+        atualizarBusca({ selecao: undefined });
+      });
+    }
+
+    // População e renda por bairro: mesma ordem de camadas da arborização do entorno; a cor e o
+    // filtro seguem o indicador escolhido e as quebras (quantis) vindas da API.
+    m.addSource(FONTE_POPULACAO, {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+    m.addLayer(
+      {
+        id: "populacao-preenchimento",
+        type: "fill",
+        source: FONTE_POPULACAO,
+        filter: filtroComDado("densidade"),
+        layout: { visibility: "none" },
+        paint: { "fill-color": "#ece4f6", "fill-opacity": OPACIDADE_POPULACAO },
+      },
+      "bairros-contorno",
+    );
+    m.addLayer(
+      {
+        id: "populacao-sem-dado",
+        type: "fill",
+        source: FONTE_POPULACAO,
+        filter: filtroSemDado("densidade"),
+        layout: { visibility: "none" },
+        paint: { "fill-pattern": IMAGEM_SEM_DADO, "fill-opacity": 0.7 },
+      },
+      "bairros-contorno",
+    );
+    for (const camada of CAMADAS_POPULACAO) {
+      m.on("mousemove", camada, (e: MapLayerMouseEvent) => {
+        const operacionais = CAMADAS_COM_CLIQUE.filter((id) => m.getLayer(id));
+        if (
+          desenhando.current ||
+          (operacionais.length && m.queryRenderedFeatures(e.point, { layers: operacionais }).length)
+        )
+          return;
+        const escolhido = escolhidoPopulacao.current ?? "densidade";
+        const p = (e.features?.[0]?.properties ?? {}) as BairroPopulacao;
+        setDica({ x: e.point.x, y: e.point.y, texto: textoDicaPopulacao(p, escolhido) });
+      });
+      m.on("mouseleave", camada, () => setDica(null));
+      m.on("click", camada, (e: MapLayerMouseEvent) => {
+        if (desenhando.current || areaAtiva.current) return;
+        const porCima = [...CAMADAS_COM_CLIQUE, "areas-verdes-preenchimento"].filter((id) =>
+          m.getLayer(id),
+        );
+        if (porCima.length && m.queryRenderedFeatures(e.point, { layers: porCima }).length) return;
+        const p = e.features?.[0]?.properties;
+        if (!p) return;
+        setBairroPopulacao(p as BairroPopulacao);
+        setBairroCenso(null);
         setAreaVerde(null);
         setPoste(null);
         atualizarBusca({ selecao: undefined });
@@ -957,12 +1044,53 @@ export function MapaPagina() {
       .catch(() => setEstadoArborizacao("erro"));
   }, [pronto, mostrarArborizacao]);
 
+  // O indicador escolhido, para os manipuladores do mapa (registrados uma só vez).
+  useEffect(() => {
+    escolhidoPopulacao.current = busca.populacao;
+  }, [busca.populacao]);
+
+  // População e renda por bairro: busca única, na primeira vez que a camada é ligada.
+  useEffect(() => {
+    if (!pronto || !mostrarPopulacao || populacaoIniciada.current) return;
+    populacaoIniciada.current = true;
+    void indicadoresPopulacaoGeojson({ precisao: 5 })
+      .then(({ data }) => {
+        const { indicadores, estimativa, ...colecao } = data as unknown as DadosPopulacao & {
+          type: string;
+          features: unknown[];
+        };
+        (mapa.current?.getSource(FONTE_POPULACAO) as GeoJSONSource | undefined)?.setData(
+          colecao as unknown as Parameters<GeoJSONSource["setData"]>[0],
+        );
+        setDadosPopulacao({ indicadores, estimativa });
+        setEstadoPopulacao("pronto");
+      })
+      .catch(() => setEstadoPopulacao("erro"));
+  }, [pronto, mostrarPopulacao]);
+
+  // Trocar o indicador repinta a camada: cor pelas quebras (quantis) e filtro do "sem dado".
+  useEffect(() => {
+    const m = mapa.current;
+    if (!pronto || !m || !busca.populacao || !dadosPopulacao) return;
+    const indicador = dadosPopulacao.indicadores.find((i) => i.id === busca.populacao);
+    if (!indicador || !m.getLayer("populacao-preenchimento")) return;
+    const propriedade = PROPRIEDADE[busca.populacao];
+    m.setPaintProperty(
+      "populacao-preenchimento",
+      "fill-color",
+      corPorQuebras(propriedade, indicador.quebras),
+    );
+    m.setFilter("populacao-preenchimento", filtroComDado(propriedade));
+    m.setFilter("populacao-sem-dado", filtroSemDado(propriedade));
+  }, [pronto, busca.populacao, dadosPopulacao]);
+
   // Desligar a camada ou selecionar uma árvore/ocorrência fecha o painel do ponto de iluminação.
   if (poste && (!mostrarIluminacao || tipoSelecao)) setPoste(null);
   // Desligar a camada ou selecionar uma árvore/ocorrência fecha o painel da área verde.
   if (areaVerde && (!mostrarAreasVerdes || tipoSelecao)) setAreaVerde(null);
   // O mesmo vale para o painel do bairro do Censo, que também cede a vez a uma área verde.
   if (bairroCenso && (!mostrarArborizacao || tipoSelecao || areaVerde)) setBairroCenso(null);
+  if (bairroPopulacao && (!mostrarPopulacao || tipoSelecao || areaVerde)) setBairroPopulacao(null);
 
   // Limites e nomes dos bairros (contexto territorial).
   useEffect(() => {
@@ -1145,6 +1273,7 @@ export function MapaPagina() {
     definir(["iluminacao-pontos"], mostrarIluminacao);
     definir([CAMADA_ILHA_CALOR], mostrarIlhaCalor);
     definir(CAMADAS_ARBORIZACAO, mostrarArborizacao);
+    definir(CAMADAS_POPULACAO, mostrarPopulacao);
     definir(["bairros-preenchimento", "bairros-contorno"], mostrarBairros);
     definir(
       [
@@ -1163,6 +1292,7 @@ export function MapaPagina() {
     mostrarBairros,
     mostrarAreasVerdes,
     mostrarArborizacao,
+    mostrarPopulacao,
     mostrarTarefas,
     mostrarAlertas,
     mostrarSupressao,
@@ -1408,7 +1538,12 @@ export function MapaPagina() {
                 {podeMapa && (
                   <Grupo
                     titulo="Contexto (fontes externas)"
-                    aberto={mostrarArborizacao || mostrarIluminacao || mostrarIlhaCalor}
+                    aberto={
+                      mostrarArborizacao ||
+                      mostrarPopulacao ||
+                      mostrarIluminacao ||
+                      mostrarIlhaCalor
+                    }
                   >
                     <Camada
                       rotulo="Arborização do entorno (Censo 2022)"
@@ -1430,6 +1565,13 @@ export function MapaPagina() {
                         Não foi possível carregar a arborização do entorno.
                       </p>
                     )}
+                    <ControlePopulacao
+                      escolhido={busca.populacao}
+                      aoMudar={(v) => atualizarBusca({ populacao: v })}
+                      carregando={pronto && estadoPopulacao === "inicial"}
+                      erro={estadoPopulacao === "erro"}
+                      amostra={<AmostraPopulacao />}
+                    />
                     <Camada
                       rotulo="Iluminação pública"
                       marcador={<AmostraIluminacao />}
@@ -1661,6 +1803,42 @@ export function MapaPagina() {
                           : " · data dos dados não informada"}
                       </p>
                     )}
+                    {mostrarPopulacao &&
+                      dadosPopulacao?.indicadores
+                        .filter((i) => i.id === busca.populacao)
+                        .map(
+                          (i) =>
+                            i.proveniencia && (
+                              <p key={i.id}>
+                                {i.nome}: {i.proveniencia.fonte}
+                                {i.proveniencia.versao ? ` (versão ${i.proveniencia.versao})` : ""}
+                                {i.proveniencia.licenca ? ` · ${i.proveniencia.licenca}` : ""} ·
+                                ingerido em {formatarDataHora(i.proveniencia.ingerido_em)}
+                                {i.proveniencia.data_referencia
+                                  ? ` · dados de ${anoDaData(i.proveniencia.data_referencia)}`
+                                  : " · data dos dados não informada"}
+                                {i.provisorio ? " · valor provisório (DP-14)" : ""}
+                              </p>
+                            ),
+                        )}
+                    {mostrarPopulacao && dadosPopulacao?.estimativa && (
+                      <p>
+                        Estimativa iTree por bairro (não é dado oficial): base IBGE{" "}
+                        {dadosPopulacao.estimativa.ano}, versão {dadosPopulacao.estimativa.versao}.{" "}
+                        {dadosPopulacao.estimativa.hipotese}
+                      </p>
+                    )}
+                    {(info?.populacao ?? []).map((f) => (
+                      <p
+                        key={String(f.fonte)}
+                        className={f.desatualizada || f.falhou ? "text-atencao" : undefined}
+                      >
+                        {String(f.nome)}: versão {String(f.versao || "—")} · conferida em{" "}
+                        {formatarDataHora(String(f.ultima_conferencia))}
+                        {f.falhou ? " · a última conferência falhou" : ""}
+                        {f.desatualizada ? " · desatualizada" : ""}
+                      </p>
+                    ))}
                     {base === "ruas" && config.mapaRuas && <p>{config.mapaRuas.atribuicao}</p>}
                     {base === "satelite" && satelite && (
                       <p>
@@ -1743,6 +1921,12 @@ export function MapaPagina() {
             arborizacao={mostrarArborizacao}
             definicaoArborizacao={proveniencia?.definicao ?? DEFINICAO_ARBORIZACAO}
           />
+          {mostrarPopulacao && busca.populacao && (
+            <LegendaPopulacao
+              indicador={dadosPopulacao?.indicadores.find((i) => i.id === busca.populacao) ?? null}
+              carregado={estadoPopulacao === "pronto"}
+            />
+          )}
           {mostrarIlhaCalor && (
             <section
               aria-label="Legenda da ilha de calor"
@@ -1866,6 +2050,19 @@ export function MapaPagina() {
             aoFechar={() => setBairroCenso(null)}
           />
         )}
+        {bairroPopulacao &&
+          busca.populacao &&
+          !area &&
+          !tipoSelecao &&
+          !areaVerde &&
+          !bairroCenso && (
+            <PainelPopulacaoBairro
+              bairro={bairroPopulacao}
+              escolhido={busca.populacao}
+              dados={dadosPopulacao}
+              aoFechar={() => setBairroPopulacao(null)}
+            />
+          )}
         {tipoSelecao && idSelecao && (
           <PainelContextual
             tipo={tipoSelecao}

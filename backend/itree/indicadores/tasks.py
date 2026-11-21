@@ -23,3 +23,13 @@ def reimportar_ilha_calor() -> None:
     except Exception:
         logging.getLogger(__name__).exception("Falha ao reimportar a ilha de calor.")
         raise
+
+
+@shared_task
+def renovar_fontes_populacao() -> list[dict]:
+    """Confere todo mês as fontes de população, renda, estimativa e IDH por bairro e reimporta o
+    que mudou (ano ou versão nova). Cada execução é registrada; a falha de uma fonte não impede
+    as outras e aparece no aviso de fonte desatualizada."""
+    from . import populacao
+
+    return populacao.renovar(origem="agendada")

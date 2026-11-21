@@ -24,6 +24,8 @@ import type {
   IndicadoresArborizacaoEntornoGeojson200,
   IndicadoresArborizacaoEntornoGeojsonParams,
   IndicadoresPainelParams,
+  IndicadoresPopulacaoGeojson200,
+  IndicadoresPopulacaoGeojsonParams,
   PainelIndicadores
 } from '../modelos';
 
@@ -155,6 +157,124 @@ export function useIndicadoresArborizacaoEntornoGeojson<TData = Awaited<ReturnTy
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getIndicadoresArborizacaoEntornoGeojsonQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type indicadoresPopulacaoGeojsonResponse200 = {
+  data: IndicadoresPopulacaoGeojson200
+  status: 200
+}
+
+export type indicadoresPopulacaoGeojsonResponseSuccess = (indicadoresPopulacaoGeojsonResponse200) & {
+  headers: Headers;
+};
+;
+
+export type indicadoresPopulacaoGeojsonResponse = (indicadoresPopulacaoGeojsonResponseSuccess)
+
+export const getIndicadoresPopulacaoGeojsonUrl = (params?: IndicadoresPopulacaoGeojsonParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/indicadores/externos/populacao?${stringifiedParams}` : `/api/v1/indicadores/externos/populacao`
+}
+
+/**
+ * Camada coroplética de população e renda: bairros do escopo com densidade, árvores por 1.000
+ * habitantes (provisório), rendimento do responsável e IDH 2010, as quebras por quantis e a
+ * proveniência de cada indicador.
+ */
+export const indicadoresPopulacaoGeojson = async (params?: IndicadoresPopulacaoGeojsonParams, options?: Parameters<typeof requisicao>[1]): Promise<indicadoresPopulacaoGeojsonResponse> => {
+
+  return requisicao<indicadoresPopulacaoGeojsonResponse>(getIndicadoresPopulacaoGeojsonUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getIndicadoresPopulacaoGeojsonQueryKey = (params?: IndicadoresPopulacaoGeojsonParams,) => {
+    return [
+    `/api/v1/indicadores/externos/populacao`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getIndicadoresPopulacaoGeojsonQueryOptions = <TData = Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError = unknown>(params?: IndicadoresPopulacaoGeojsonParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getIndicadoresPopulacaoGeojsonQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>> = ({ signal }) => indicadoresPopulacaoGeojson(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type IndicadoresPopulacaoGeojsonQueryResult = NonNullable<Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>>
+export type IndicadoresPopulacaoGeojsonQueryError = unknown
+
+
+export function useIndicadoresPopulacaoGeojson<TData = Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError = unknown>(
+ params: undefined |  IndicadoresPopulacaoGeojsonParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>,
+          TError,
+          Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useIndicadoresPopulacaoGeojson<TData = Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError = unknown>(
+ params?: IndicadoresPopulacaoGeojsonParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>,
+          TError,
+          Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useIndicadoresPopulacaoGeojson<TData = Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError = unknown>(
+ params?: IndicadoresPopulacaoGeojsonParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useIndicadoresPopulacaoGeojson<TData = Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError = unknown>(
+ params?: IndicadoresPopulacaoGeojsonParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof indicadoresPopulacaoGeojson>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getIndicadoresPopulacaoGeojsonQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

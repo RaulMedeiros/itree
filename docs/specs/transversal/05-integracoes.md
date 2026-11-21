@@ -104,3 +104,16 @@ Endereços de referência: ver §7.2 da [especificação consolidada](../../refe
 5. Consultar licenças quando houver dados acessíveis e compatíveis.
 6. Criar alerta para triagem humana (W-08).
 7. Registrar análise, encaminhamento e eventual confirmação pela autoridade.
+- **RF-INT-017** — População, renda e IDH por bairro (`importar_populacao_censo`,
+  `importar_renda_censo`, `importar_estimativa_populacao`, `importar_idh_bairros`). O arquivo
+  atual do IBGE vem da listagem do diretório (o sufixo de data muda a cada revisão) e o ano do
+  Censo vem do caminho do arquivo. A população oficial por bairro é a do Censo; a estimativa anual
+  do IBGE é só municipal, e a por bairro é **estimativa iTree** (Censo × razão municipal), sempre
+  rotulada com o método e a hipótese de crescimento uniforme. O IDH é de 2010 e nunca é estimado.
+  A tarefa mensal `renovar_fontes_populacao` reimporta o que mudou e registra cada execução
+  (`ExecucaoFonteExterna`), que alimenta "Fontes dos dados" e o aviso de fonte desatualizada.
+- **RF-IND-POP-001** — "Árvores cadastradas por 1.000 habitantes" e "habitantes por árvore
+  cadastrada" usam a população do Censo, levam o selo **provisório** (DP-14) e a ressalva de que
+  um valor baixo pode indicar falta de cadastro, não falta de árvores. Aparecem na ficha do
+  bairro, na camada do mapa (quintis), nas Análises (barras, ordenação e CSV; dispersão contra a
+  renda, com correlação só descritiva) e na visão geral.

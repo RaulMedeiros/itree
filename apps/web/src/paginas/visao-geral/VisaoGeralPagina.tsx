@@ -376,10 +376,11 @@ function LinhaIndicador({ i }: { i: Indicador }) {
 /** Indicador de fonte pública externa: separado dos da operação (borda tracejada,
  * fundo neutro) e sempre com órgão, data de referência, ingestão e definição. */
 function CartaoExterno({ i }: { i: IndicadorExterno }) {
+  const porMil = i.id === "arvores_por_mil_habitantes";
   const numero =
     i.valor === null
       ? "Sem dados"
-      : `${i.valor.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}${i.unidade === "%" ? "%" : ""}`;
+      : `${i.valor.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}${i.unidade === "%" ? "%" : ""}${porMil ? ` ${i.unidade}` : ""}`;
   const ano = i.data_referencia?.slice(0, 4);
   return (
     <article
@@ -397,10 +398,18 @@ function CartaoExterno({ i }: { i: IndicadorExterno }) {
       </p>
       {i.base !== null && (
         <p className="text-xs text-texto-suave">
-          {i.numerador.toLocaleString("pt-BR")} de {i.base.toLocaleString("pt-BR")} faces de quadra
+          {porMil
+            ? `${i.numerador.toLocaleString("pt-BR")} árvores cadastradas para ${i.base.toLocaleString("pt-BR")} habitantes (Censo)`
+            : `${i.numerador.toLocaleString("pt-BR")} de ${i.base.toLocaleString("pt-BR")} faces de quadra`}
           {i.bairros_no_escopo > i.bairros_com_dado
             ? ` · ${i.bairros_com_dado} de ${i.bairros_no_escopo} bairros do escopo com dado`
             : ` · ${i.bairros_com_dado} bairro${i.bairros_com_dado === 1 ? "" : "s"}`}
+        </p>
+      )}
+      {porMil && (
+        <p className="mt-1 text-xs text-texto-suave">
+          Provisório (DP-14). Conta só as árvores cadastradas: valor baixo pode ser falta de
+          cadastro, não falta de árvores.
         </p>
       )}
       <p className="mt-1 text-xs text-texto-suave">

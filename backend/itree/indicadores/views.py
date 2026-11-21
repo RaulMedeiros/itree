@@ -22,7 +22,7 @@ from itree.auditoria.views import ENTIDADES, EventoAuditoriaSerializer
 from itree.contas.acesso import filtrar_por_escopo, requer
 from itree.contas.models import Equipe
 from itree.core.parametros import uuid_do_parametro
-from itree.indicadores import atencao, externos, instantaneos
+from itree.indicadores import atencao, externos, instantaneos, populacao_indicadores
 from itree.inspecoes.models import CondicaoAparente, EstadoInspecao, Inspecao
 from itree.inventario.models import Arvore, EstadoEspecie
 from itree.ocorrencias.models import ESTADOS_FINAIS, EstadoOcorrencia, Ocorrencia, Prioridade
@@ -551,3 +551,21 @@ def arborizacao_entorno_geojson(request: Request):
     except ValueError:
         precisao = 5
     return Response(externos.arborizacao_geojson(request.user, precisao))
+
+
+@extend_schema(
+    operation_id="indicadores_populacao_geojson",
+    parameters=[OpenApiParameter("precisao", int, description="Casas decimais (padrão 5).")],
+    responses={(200, "application/geo+json"): OpenApiTypes.OBJECT},
+)
+@api_view(["GET"])
+@permission_classes([requer("mapa.ler")])
+def populacao_geojson(request: Request):
+    """Camada coroplética de população e renda: bairros do escopo com densidade, árvores por 1.000
+    habitantes (provisório), rendimento do responsável e IDH 2010, as quebras por quantis e a
+    proveniência de cada indicador."""
+    try:
+        precisao = min(max(int(request.query_params.get("precisao", 5)), 1), 8)
+    except ValueError:
+        precisao = 5
+    return Response(populacao_indicadores.geojson_populacao(request.user, precisao))

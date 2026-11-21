@@ -22,7 +22,14 @@ from itree.contas.acesso import filtrar_por_escopo, tem_escopo_municipal
 from itree.contas.models import Usuario
 from itree.iluminacao import servico as iluminacao
 from itree.iluminacao.models import PontoIluminacao
-from itree.indicadores import atencao, externos, ilha_calor, instantaneos, manejo_urbfor
+from itree.indicadores import (
+    atencao,
+    externos,
+    ilha_calor,
+    instantaneos,
+    manejo_urbfor,
+    populacao_indicadores,
+)
 from itree.indicadores.doacao_plantio import FONTE as FONTE_URBFOR
 from itree.indicadores.doacao_plantio import FONTE_URL as FONTE_URL_URBFOR
 from itree.indicadores.doacao_plantio import LICENCA as LICENCA_URBFOR
@@ -87,6 +94,7 @@ def _cartao(
     definicao: str = "",
     metodo: str = "",
     link: dict | None = None,
+    escala: dict | None = None,
 ) -> dict:
     return {
         "id": id_,
@@ -109,6 +117,8 @@ def _cartao(
         "definicao": definicao,
         "metodo": metodo,
         "link": link,
+        # Menor e maior valor entre os bairros, para a régua de indicadores que não são percentuais.
+        "escala": escala,
     }
 
 
@@ -638,6 +648,7 @@ def montar(bairro: Territorio, usuario: Usuario, *, hoje: date, agora: datetime)
             link={"pagina": "/equipes-tarefas", "filtros": {}},
         ),
         _cartao_censo(bairro, usuario),
+        *populacao_indicadores.cartoes_ficha(bairro, usuario, _cartao, rotulo_cidade),
         _cartao_ilha_calor(bairro),
         _cartao_iluminacao(bairro, arvores),
         _cartao_plantio(bairro),

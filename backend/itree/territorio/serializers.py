@@ -54,11 +54,18 @@ class FichaLinkSerializer(serializers.Serializer):
     filtros = serializers.DictField(child=serializers.CharField())
 
 
+class FichaEscalaSerializer(serializers.Serializer):
+    min = serializers.FloatField()
+    max = serializers.FloatField()
+
+
 class FichaCartaoSerializer(serializers.Serializer):
     id = serializers.CharField()
     titulo = serializers.CharField()
     valor = serializers.FloatField(allow_null=True, help_text="Nulo quando ``sem_dado``.")
-    unidade = serializers.CharField(help_text='"%", "°C" ou vazio (contagem).')
+    unidade = serializers.CharField(
+        help_text='"%", "°C", "R$", "hab/km²", "por 1.000 hab.", "IDH", "pessoas" ou vazio.'
+    )
     detalhe = serializers.CharField()
     nota = serializers.CharField(help_text="Ressalva, ou o motivo de não haver dado.")
     sem_dado = serializers.BooleanField()
@@ -73,6 +80,12 @@ class FichaCartaoSerializer(serializers.Serializer):
     definicao = serializers.CharField()
     metodo = serializers.CharField()
     link = FichaLinkSerializer(allow_null=True)
+    escala = FichaEscalaSerializer(
+        allow_null=True,
+        required=False,
+        help_text="Menor e maior valor entre os bairros: escala da régua dos indicadores que não "
+        "são percentuais.",
+    )
 
 
 class FichaItemGraficoSerializer(serializers.Serializer):

@@ -218,3 +218,21 @@ Análises com período, definição e fonte, e exportações com metadados:
 ![Tipos de ocorrência](28-admin-tipos-ocorrencia.png)
 ![Integrações — ingestões de alertas](29-admin-integracoes.png)
 ![Auditoria](30-admin-auditoria.png)
+
+## População, renda e IDH por bairro
+
+Rendimento médio do responsável pelo domicílio por bairro (IBGE, Censo 2022), um dos
+indicadores do seletor da camada de população (densidade, árvores por 1.000
+habitantes, rendimento e IDH 2010):
+
+![Rendimento por bairro](48-mapa-renda-por-bairro.png)
+
+Árvores cadastradas por 1.000 habitantes (provisório, DP-14; conta só as árvores
+cadastradas):
+
+![Árvores por 1.000 habitantes](49-analises-pessoas-arvore.png)
+
+Árvores por 1.000 habitantes × rendimento, um ponto por bairro (descritivo, sem
+causalidade):
+
+![Árvores × renda](50-analises-arvores-renda.png)

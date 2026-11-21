@@ -49,7 +49,7 @@ class IndicadorTerritorialExterno(models.Model):
     )
     indicador = models.CharField(max_length=60, help_text="Id do indicador.")
     valor = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, help_text="Vazio sem base."
+        max_digits=14, decimal_places=4, null=True, blank=True, help_text="Vazio sem base."
     )
     numerador = models.BigIntegerField()
     denominador = models.BigIntegerField(null=True, blank=True)
@@ -64,6 +64,11 @@ class IndicadorTerritorialExterno(models.Model):
     ingerido_em = models.DateTimeField(help_text="Quando o dado foi ingerido no sistema.")
     definicao = models.TextField()
     metodo = models.TextField(help_text="Como o valor foi obtido a partir da fonte.")
+    versao = models.CharField(
+        max_length=60,
+        blank=True,
+        help_text="Versão do arquivo na fonte (por exemplo, o sufixo de data do IBGE).",
+    )
 
     class Meta:
         ordering = ["indicador", "territorio__nome"]
@@ -75,6 +80,31 @@ class IndicadorTerritorialExterno(models.Model):
 
     def __str__(self) -> str:
         return f"{self.indicador} ({self.territorio_id})"
+
+
+class ExecucaoFonteExterna(models.Model):
+    """Cada execução da importação ou da conferência mensal de uma fonte externa de bairros
+    (população, renda, IDH). Alimenta "Fontes dos dados" e o aviso de fonte desatualizada."""
+
+    fonte = models.CharField(max_length=40, help_text="Id da fonte (ver populacao.FONTES).")
+    iniciada_em = models.DateTimeField()
+    concluida_em = models.DateTimeField(null=True, blank=True)
+    sucesso = models.BooleanField(default=False)
+    importou = models.BooleanField(
+        default=False, help_text="Falso quando a conferência não achou versão nova."
+    )
+    versao = models.CharField(max_length=60, blank=True)
+    ano_referencia = models.PositiveSmallIntegerField(null=True, blank=True)
+    origem = models.CharField(max_length=20, default="manual", help_text="manual ou agendada.")
+    resumo = models.JSONField(default=dict, blank=True)
+    erro = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-iniciada_em"]
+        indexes = [models.Index(fields=["fonte", "-iniciada_em"])]
+
+    def __str__(self) -> str:
+        return f"{self.fonte} {self.iniciada_em:%Y-%m-%d} ({'ok' if self.sucesso else 'falha'})"
 
 
 class TipoBeneficiario(models.TextChoices):

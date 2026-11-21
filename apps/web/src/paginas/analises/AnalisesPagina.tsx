@@ -5,7 +5,7 @@ import {
   useRelatoriosCatalogo,
 } from "@itree/api-client";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { Download, FileText } from "lucide-react";
+import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
@@ -20,7 +20,17 @@ import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarData, formatarDataHora } from "../../util/formatos";
 import { GraficoMensal, type Serie } from "../visao-geral/graficos";
 import { mesEmAndamento } from "../visao-geral/mes";
-import { ROTULO_SEM_VALOR, ROTULO_VALOR, separarZeros } from "./linhas";
+import { Dispersao, type DadosDispersao } from "./Dispersao";
+import {
+  ROTULOS_ORDEM,
+  ROTULO_SEM_VALOR,
+  ROTULO_VALOR,
+  gerarCsv,
+  ordenarLinhas,
+  separarZeros,
+  type CriterioOrdem,
+} from "./linhas";
+import { Selo } from "../../ui/selo";
 
 export interface BuscaAnalises {
   analise?: string;
@@ -149,6 +159,7 @@ export function AnalisesPagina() {
   const podeExportar = usePermissao("relatorios.exportar");
   const [baixando, setBaixando] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [ordem, setOrdem] = useState<CriterioOrdem>("maior");
   const filtrar = (parcial: Partial<BuscaAnalises>) =>
     void navegar({ search: (s: BuscaAnalises) => ({ ...s, ...parcial }) });
 
@@ -174,7 +185,30 @@ export function AnalisesPagina() {
   const baseRotulo = dados?.base_rotulo || "concluídas";
   const maximo = percentual ? 100 : Math.max(1, ...linhas.map((l) => l.valor));
   const evolucao = (dados?.serie_mensal ?? null) as SerieMensal | null;
-  const { principais, zeros } = separarZeros(linhas, dados?.por_bairro ?? false, percentual);
+  const ordenavel = dados?.ordenavel ?? false;
+  const linhasOrdenadas = ordenavel ? ordenarLinhas(linhas, ordem) : linhas;
+  const { principais, zeros } = separarZeros(
+    linhasOrdenadas,
+    dados?.por_bairro ?? false,
+    percentual,
+  );
+  const colunasCsv = (dados?.colunas_csv ?? []) as unknown as { chave: string; rotulo: string }[];
+  const dispersao = (dados?.dispersao ?? null) as unknown as DadosDispersao | null;
+  const baixarCsv = () => {
+    if (!dados) return;
+    const csv = gerarCsv(colunasCsv, linhasOrdenadas as unknown as Record<string, unknown>[], {
+      titulo: dados.titulo,
+      fonte: dados.fonte,
+      calculadoEm: formatarDataHora(dados.calculado_em) ?? "",
+      ressalvas: dados.ressalvas ?? [],
+    });
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `itree-${dados.id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -270,8 +304,25 @@ export function AnalisesPagina() {
         <Erro erro={consulta.error} />
       ) : (
         <section className="rounded-lg border border-borda bg-superficie p-4">
-          <h2 className="font-semibold">{dados!.titulo}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold">{dados!.titulo}</h2>
+            {dados!.provisorio && (
+              <Selo tom="atencao" title="Critério em definição pela prefeitura (DP-14)">
+                Provisório
+              </Selo>
+            )}
+          </div>
           <p className="text-sm text-texto-suave">{dados!.definicao}</p>
+          {(dados!.ressalvas ?? []).length > 0 && (
+            <ul
+              aria-label="Ressalvas"
+              className="my-2 list-disc rounded-md border border-atencao/40 bg-atencao-clara px-6 py-2 text-sm"
+            >
+              {dados!.ressalvas.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          )}
           <p className="mb-4 text-xs text-texto-suave">
             Período: {formatarData(String(dados!.periodo.inicio))} a{" "}
             {formatarData(String(dados!.periodo.fim))} · calculado em{" "}
@@ -282,6 +333,30 @@ export function AnalisesPagina() {
           ) : (
             <div className={evolucao ? "grid gap-6 lg:grid-cols-2" : undefined}>
               <div>
+                {dispersao && <Dispersao dados={dispersao} />}
+                {(ordenavel || colunasCsv.length > 0) && (
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    {ordenavel && (
+                      <Selecao
+                        aria-label="Ordenar a tabela"
+                        value={ordem}
+                        onChange={(e) => setOrdem(e.target.value as CriterioOrdem)}
+                        className="max-w-64"
+                      >
+                        {(Object.keys(ROTULOS_ORDEM) as CriterioOrdem[]).map((c) => (
+                          <option key={c} value={c}>
+                            {ROTULOS_ORDEM[c]}
+                          </option>
+                        ))}
+                      </Selecao>
+                    )}
+                    {colunasCsv.length > 0 && (
+                      <Botao variante="secundario" onClick={baixarCsv}>
+                        <FileSpreadsheet /> Baixar CSV
+                      </Botao>
+                    )}
+                  </div>
+                )}
                 <TabelaDaAnalise
                   linhas={principais}
                   tituloItem={dados!.por_bairro ? "Bairro" : "Item"}

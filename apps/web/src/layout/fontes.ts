@@ -43,3 +43,19 @@ export function conectoresComProblema(conectores: Conector[]): ProblemaFonte[] {
       motivo: c.situacao === "falha" ? ("indisponivel" as const) : ("desatualizada" as const),
     }));
 }
+
+/**
+ * Fontes de população, renda e IDH por bairro (conferência mensal): a última conferência falhou
+ * (indisponível) ou passou do limite sem conferência bem-sucedida (desatualizada). Vêm de
+ * `mapa/camadas`, que já calcula o limite no servidor.
+ */
+export function fontesPopulacaoComProblema(
+  fontes: Record<string, unknown>[] | undefined,
+): ProblemaFonte[] {
+  return (fontes ?? [])
+    .filter((f) => f.falhou || f.desatualizada)
+    .map((f) => ({
+      fonte: String(f.nome),
+      motivo: f.falhou ? ("indisponivel" as const) : ("desatualizada" as const),
+    }));
+}

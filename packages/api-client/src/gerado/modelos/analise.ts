@@ -5,6 +5,8 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { AnaliseColunasCsvItem } from './analiseColunasCsvItem';
+import type { AnaliseDispersao } from './analiseDispersao';
 import type { AnaliseLinhasItem } from './analiseLinhasItem';
 import type { AnalisePeriodo } from './analisePeriodo';
 import type { AnaliseSerieMensal } from './analiseSerieMensal';
@@ -30,4 +32,14 @@ export interface Analise {
      * @nullable
      */
   total: number | null;
+  ressalvas: string[];
+  provisorio: boolean;
+  ordenavel: boolean;
+  /** Colunas ({chave, rotulo}) do CSV que a tela gera a partir das linhas. */
+  colunas_csv: AnaliseColunasCsvItem[];
+  /**
+     * Pontos de um gráfico de dispersão por bairro, com a correlação apenas como descrição (r e número de bairros).
+     * @nullable
+     */
+  dispersao: AnaliseDispersao;
 }

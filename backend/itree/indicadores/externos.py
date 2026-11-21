@@ -232,6 +232,12 @@ def contexto_externo(usuario: Usuario, bairro: Territorio | None = None) -> list
                 "bairros_no_escopo": len(ids),
             }
         )
+    # Árvores por 1.000 habitantes (provisório): cartão discreto, só com população importada.
+    from . import populacao_indicadores
+
+    extra = populacao_indicadores.item_visao_geral(usuario, bairro)
+    if extra is not None:
+        itens.append(extra)
     return itens
 
 

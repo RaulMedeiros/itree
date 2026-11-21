@@ -271,6 +271,8 @@ const mapa = createRoute({
     /** Na camada de áreas verdes, só as praças com termo de adoção. */
     adotadas: bandeira("1"),
     arborizacao_entorno: bandeira("1"),
+    /** Camada "População e renda por bairro" e o indicador escolhido; ausente = desligada. */
+    populacao: z.enum(["densidade", "arvores_por_mil", "renda", "idh"]).optional().catch(undefined),
     tarefas: bandeira("1"),
     alertas: bandeira("1"),
     sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),

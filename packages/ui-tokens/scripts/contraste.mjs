@@ -145,7 +145,18 @@ export function lerCoropletica(coropleticaTs) {
   const cores = [...lista[1].matchAll(/"(#[0-9a-fA-F]{6})"/g)].map((m) => m[1].toLowerCase());
   const opacidade = coropleticaTs.match(/OPACIDADE_ARBORIZACAO\s*=\s*([0-9.]+)/);
   if (!opacidade) throw new Error("Não achei OPACIDADE_ARBORIZACAO.");
-  return { cores, opacidade: Number(opacidade[1]) };
+  // Camada "População e renda por bairro": rampa violeta própria, mesma exigência.
+  const listaPop = coropleticaTs.match(/CORES_POPULACAO\s*=\s*\[([^\]]+)\]/);
+  const opacPop = coropleticaTs.match(/OPACIDADE_POPULACAO\s*=\s*([0-9.]+)/);
+  const populacao =
+    listaPop && opacPop
+      ? {
+          nome: "população e renda por bairro",
+          cores: [...listaPop[1].matchAll(/"(#[0-9a-fA-F]{6})"/g)].map((m) => m[1].toLowerCase()),
+          opacidade: Number(opacPop[1]),
+        }
+      : null;
+  return { cores, opacidade: Number(opacidade[1]), populacao };
 }
 
 /** Lê a rampa e a opacidade da supressão anual (PRODES) em `simbologia.ts`. */
@@ -202,23 +213,29 @@ const ENTRE_CLASSES = 1.4;
  */
 function paresDaColoropletica(coro, mapa) {
   const pares = [];
-  for (const [nome, osm] of FUNDOS_OSM) {
-    const base = pinturaRaster(osm, mapa.raster);
-    const pintadas = coro.cores.map((c) => compor(c, base, coro.opacidade));
-    pintadas.slice(1).forEach((cor, i) =>
+  const rampas = [
+    { nome: "arborização do entorno", cores: coro.cores, opacidade: coro.opacidade },
+    ...(coro.populacao ? [coro.populacao] : []),
+  ];
+  for (const rampa of rampas) {
+    for (const [nome, osm] of FUNDOS_OSM) {
+      const base = pinturaRaster(osm, mapa.raster);
+      const pintadas = rampa.cores.map((c) => compor(c, base, rampa.opacidade));
+      pintadas.slice(1).forEach((cor, i) =>
+        pares.push({
+          descricao: `${rampa.nome}: classe ${i + 2} sobre classe ${i + 1}, sobre ${nome}`,
+          frente: cor,
+          fundo: pintadas[i],
+          minimo: ENTRE_CLASSES,
+        }),
+      );
       pares.push({
-        descricao: `arborização do entorno: classe ${i + 2} sobre classe ${i + 1}, sobre ${nome}`,
-        frente: cor,
-        fundo: pintadas[i],
-        minimo: ENTRE_CLASSES,
-      }),
-    );
-    pares.push({
-      descricao: `arborização do entorno: classe mais escura sobre ${nome}`,
-      frente: pintadas.at(-1),
-      fundo: base,
-      minimo: NAO_TEXTO,
-    });
+        descricao: `${rampa.nome}: classe mais escura sobre ${nome}`,
+        frente: pintadas.at(-1),
+        fundo: base,
+        minimo: NAO_TEXTO,
+      });
+    }
   }
   return pares;
 }

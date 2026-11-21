@@ -42,6 +42,38 @@ if curl -sf -m 90 --retry 4 --retry-all-errors "${MAPAS}17" -o "$TMP/regionais.g
     docker compose cp "$TMP/censo.zip" api:/tmp/telas-dados/censo-entorno.zip
     $M importar_censo_arborizacao --arquivo /tmp/telas-dados/censo-entorno.zip || true
   fi
+  # População, renda e IDH por bairro (IBGE e SDE): o nome do arquivo do IBGE leva a data da revisão,
+  # então vem da listagem do diretório, no host. Sem acesso, as telas novas ficam sem dado.
+  IBGE_CENSO="https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022"
+  IBGE_SETORES="$IBGE_CENSO/Agregados_por_Setores_Censitarios"
+  atual() { curl -sf -m 60 --retry 3 "$1" | grep -o "href=\"$2\"" | sed 's/href="//;s/"//' | sort | tail -1; }
+  BAS="$(atual "$IBGE_SETORES/Agregados_por_Bairro_csv/" 'Agregados_por_bairros_basico_BR_[0-9]*\.zip')"
+  MUN="$(atual "$IBGE_SETORES/Agregados_por_Municipio_csv/" 'Agregados_por_municipios_basico_BR_[0-9]*\.zip')"
+  REN="$(atual "$IBGE_CENSO/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/" 'Agregados_por_bairros_renda_responsavel_BR_[0-9]*_csv\.zip')"
+  ANO_EST="$(curl -sf -m 60 --retry 3 https://ftp.ibge.gov.br/Estimativas_de_Populacao/ | grep -o 'href="Estimativas_[0-9]*/"' | grep -o '[0-9]\{4\}' | sort | tail -1)"
+  EST="$(atual "https://ftp.ibge.gov.br/Estimativas_de_Populacao/Estimativas_$ANO_EST/" "POP${ANO_EST}_[0-9]*\.xlsx")"
+  if [ -n "$BAS" ] && curl -sf -m 180 --retry 4 --retry-all-errors "$IBGE_SETORES/Agregados_por_Bairro_csv/$BAS" -o "$TMP/$BAS"; then
+    docker compose cp "$TMP/$BAS" "api:/tmp/telas-dados/$BAS"
+    ARQ_MUN=""
+    if [ -n "$MUN" ] && curl -sf -m 180 --retry 4 --retry-all-errors "$IBGE_SETORES/Agregados_por_Municipio_csv/$MUN" -o "$TMP/$MUN"; then
+      docker compose cp "$TMP/$MUN" "api:/tmp/telas-dados/$MUN"
+      ARQ_MUN="--arquivo-municipio /tmp/telas-dados/$MUN"
+    fi
+    $M importar_populacao_censo --arquivo "/tmp/telas-dados/$BAS" $ARQ_MUN --ano 2022 || true
+  fi
+  if [ -n "$REN" ] && curl -sf -m 180 --retry 4 --retry-all-errors "$IBGE_CENSO/Agregados_por_Setores_Censitarios_Rendimento_do_Responsavel/$REN" -o "$TMP/$REN"; then
+    docker compose cp "$TMP/$REN" "api:/tmp/telas-dados/$REN"
+    $M importar_renda_censo --arquivo "/tmp/telas-dados/$REN" --ano 2022 || true
+  fi
+  if [ -n "$EST" ] && curl -sf -m 180 --retry 4 --retry-all-errors "https://ftp.ibge.gov.br/Estimativas_de_Populacao/Estimativas_$ANO_EST/$EST" -o "$TMP/$EST"; then
+    docker compose cp "$TMP/$EST" "api:/tmp/telas-dados/$EST"
+    $M importar_estimativa_populacao --arquivo "/tmp/telas-dados/$EST" || true
+  fi
+  # IDH 2010 por bairro (SDE, via Fortaleza em Mapas, camada 35).
+  if curl -sf -m 90 --retry 4 --retry-all-errors "${MAPAS}35" -o "$TMP/idh.geojson"; then
+    docker compose cp "$TMP/idh.geojson" api:/tmp/telas-dados/idh-bairros.geojson
+    $M importar_idh_bairros --arquivo /tmp/telas-dados/idh-bairros.geojson || true
+  fi
 else
   echo "Sem acesso ao Fortaleza em Mapas: usando bairros sintéticos."
   $M importar_territorios /tmp/telas-dados/bairros-sinteticos.geojson --tipo bairro \

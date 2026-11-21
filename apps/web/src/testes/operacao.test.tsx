@@ -772,6 +772,120 @@ const grupo = <T extends { id: string }>(eventos: T[], quantidade = eventos.leng
   eventos,
 });
 
+describe("análises: população, árvores por 1.000 habitantes e renda", () => {
+  const POR_MIL = {
+    id: "arvores_por_mil_habitantes_por_bairro",
+    titulo: "Árvores por 1.000 habitantes por bairro (provisório)",
+    definicao: "Árvores cadastradas para cada 1.000 habitantes do bairro, pela população do Censo.",
+    fonte: "IBGE, Censo Demográfico 2022 (população) e inventário do iTree",
+    periodo: { inicio: "2025-11-10", fim: "2026-11-10" },
+    calculado_em: "2026-11-10T12:00:00Z",
+    por_bairro: true,
+    unidade: "",
+    base_rotulo: "habitantes",
+    total: null,
+    provisorio: true,
+    ordenavel: true,
+    ressalvas: [
+      "Conta só as árvores cadastradas; enquanto o inventário não cobre o bairro, um valor baixo pode indicar falta de cadastro, não falta de árvores.",
+      "Valor provisório: a fórmula oficial dos indicadores ainda depende de decisão da prefeitura (DP-14). Não é índice oficial.",
+    ],
+    colunas_csv: [
+      { chave: "rotulo", rotulo: "Bairro" },
+      { chave: "valor", rotulo: "Árvores cadastradas por 1.000 habitantes" },
+      { chave: "arvores", rotulo: "Árvores cadastradas" },
+    ],
+    linhas: [
+      { rotulo: "Aldeota", valor: 0.5, arvores: 20, territorio_id: "b-1", detalhe: "20 árvores" },
+      { rotulo: "Messejana", valor: 0.1, arvores: 4, territorio_id: "b-2", detalhe: "4 árvores" },
+      { rotulo: "Centro", valor: 1.2, arvores: 29, territorio_id: "b-3", detalhe: "29 árvores" },
+    ],
+    serie_mensal: null,
+    dispersao: null,
+  };
+
+  const servir = (corpo: object) =>
+    servidor.use(
+      http.get(`${API}/api/v1/relatorios/catalogo`, () =>
+        HttpResponse.json({
+          analises: [{ id: (corpo as { id: string }).id, titulo: "x", definicao: "d" }],
+        }),
+      ),
+      http.get(`${API}/api/v1/relatorios/analise`, () => HttpResponse.json(corpo)),
+    );
+
+  it("mostra o selo provisório, as ressalvas e ordena a tabela", async () => {
+    servir(POR_MIL);
+    const usuario = userEvent.setup();
+    await abrir("/analises");
+    expect(await screen.findByText("Provisório")).toBeInTheDocument();
+    const ressalvas = screen.getByRole("list", { name: "Ressalvas" });
+    expect(within(ressalvas).getByText(/pode indicar falta de cadastro/)).toBeInTheDocument();
+    expect(within(ressalvas).getByText(/Não é índice oficial/)).toBeInTheDocument();
+    const ordem = () =>
+      screen.getAllByRole("link", { name: /Aldeota|Messejana|Centro/ }).map((a) => a.textContent);
+    expect(ordem()).toEqual(["Centro", "Aldeota", "Messejana"]);
+    await usuario.selectOptions(
+      screen.getByRole("combobox", { name: "Ordenar a tabela" }),
+      "menor",
+    );
+    expect(ordem()).toEqual(["Messejana", "Aldeota", "Centro"]);
+    await usuario.selectOptions(screen.getByRole("combobox", { name: "Ordenar a tabela" }), "nome");
+    expect(ordem()).toEqual(["Aldeota", "Centro", "Messejana"]);
+  });
+
+  it("baixa o CSV na ordem da tela, com as colunas e a ressalva", async () => {
+    servir(POR_MIL);
+    const blobs: Blob[] = [];
+    URL.createObjectURL = vi.fn((b: Blob) => {
+      blobs.push(b);
+      return "blob:csv";
+    });
+    URL.revokeObjectURL = vi.fn();
+    const usuario = userEvent.setup();
+    await abrir("/analises");
+    await usuario.click(await screen.findByRole("button", { name: /Baixar CSV/ }));
+    expect(blobs).toHaveLength(1);
+    const texto = await blobs[0]!.text();
+    expect(texto).toContain("# ressalva: Conta só as árvores cadastradas");
+    expect(texto).toContain("Bairro;Árvores cadastradas por 1.000 habitantes;Árvores cadastradas");
+    expect(texto.indexOf("Centro;1,2;29")).toBeLessThan(texto.indexOf("Aldeota;0,5;20"));
+  });
+
+  it("a dispersão por renda mostra os pontos, a correlação só como descrição e a tabela", async () => {
+    servir({
+      ...POR_MIL,
+      id: "arvores_mil_x_renda",
+      titulo: "Árvores por 1.000 habitantes × rendimento do responsável, por bairro",
+      colunas_csv: [{ chave: "rotulo", rotulo: "Bairro" }],
+      dispersao: {
+        x_rotulo: "Rendimento médio do responsável (R$, Censo 2022)",
+        y_rotulo: "Árvores cadastradas por 1.000 habitantes (provisório)",
+        pontos: [
+          { id: "b-1", rotulo: "Aldeota", x: 10572, y: 0.5, populacao: 42580, arvores: 20 },
+          { id: "b-2", rotulo: "Messejana", x: 2854, y: 0.1, populacao: 43205, arvores: 4 },
+          { id: "b-3", rotulo: "Centro", x: 4192, y: 1.2, populacao: 24096, arvores: 29 },
+        ],
+        correlacao: {
+          r: 0.12,
+          bairros: 3,
+          metodo: "É só uma descrição dos dados: não mede causa, não é índice oficial.",
+        },
+      },
+    });
+    await abrir("/analises");
+    const figura = await screen.findByTestId("dispersao");
+    expect(within(figura).getByRole("img", { name: /Dispersão de 3 bairros/ })).toBeInTheDocument();
+    expect(within(figura).getAllByText(/árvores por 1\.000 hab\./).length).toBeGreaterThan(0);
+    expect(
+      within(figura).getByText(/Descrição, não afirmação de causa: r = 0,12 entre 3 bairros/),
+    ).toBeInTheDocument();
+    expect(within(figura).getByText(/não mede causa/)).toBeInTheDocument();
+    // A tabela com os mesmos bairros acompanha o gráfico.
+    expect(screen.getByRole("link", { name: "Aldeota" })).toHaveAttribute("href", "/bairros/b-1");
+  });
+});
+
 describe("auditoria", () => {
   const evento = (id: string, parcial: Record<string, unknown>) => ({
     id,

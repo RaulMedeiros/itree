@@ -85,6 +85,59 @@ const CENSO = cartao({
   licenca: "Não declarada no FTP do IBGE",
 });
 
+const POR_MIL = cartao({
+  id: "arvores_por_mil",
+  titulo: "Árvores cadastradas por 1.000 habitantes",
+  valor: 0.09,
+  unidade: "por 1.000 hab.",
+  provisorio: true,
+  detalhe: "4 árvores cadastradas · 10.645,0 habitantes por árvore",
+  nota: "Conta só as árvores cadastradas; enquanto o inventário não cobre o bairro, um valor baixo pode indicar falta de cadastro, não falta de árvores.",
+  cidade: { valor: 0.2, rotulo: "Média de Fortaleza" },
+  escala: { min: 0, max: 1.5 },
+  fonte: "IBGE, Censo Demográfico 2022",
+});
+
+const POPULACAO = cartao({
+  id: "populacao",
+  titulo: "População residente (Censo 2022)",
+  valor: 42580,
+  unidade: "pessoas",
+  detalhe: "18.714 domicílios",
+  nota: "Estimativa iTree para 2026: cerca de 45.274 pessoas (não é dado oficial; supõe crescimento uniforme entre os bairros).",
+  cidade: { valor: 20072, rotulo: "Média por bairro" },
+  escala: { min: 1000, max: 90000 },
+  fonte: "IBGE, Censo Demográfico 2022",
+});
+
+const DENSIDADE = cartao({
+  id: "densidade",
+  titulo: "Densidade populacional",
+  valor: 10987,
+  unidade: "hab/km²",
+  cidade: { valor: 7779, rotulo: "Média de Fortaleza" },
+  escala: { min: 100, max: 20000 },
+});
+
+const RENDA = cartao({
+  id: "renda",
+  titulo: "Rendimento médio do responsável pelo domicílio (Censo 2022)",
+  valor: 10572,
+  unidade: "R$",
+  nota: "Rendimento do responsável pelo domicílio, em R$ de 2022; não é renda per capita.",
+  cidade: { valor: 3103, rotulo: "Média de Fortaleza" },
+  escala: { min: 1000, max: 12000 },
+});
+
+const IDH_SEM_DADO = cartao({
+  id: "idh",
+  titulo: "IDH 2010 (SDE, Prefeitura de Fortaleza)",
+  sem_dado: true,
+  valor: null,
+  unidade: "IDH",
+  nota: "Sem IDH 2010 para este bairro: não existia com este nome nos limites da época.",
+});
+
 const ILHA_SEM_DADO = cartao({
   id: "ilha_calor",
   titulo: "Ilha de calor de superfície (UrbVerde, 2025)",
@@ -208,6 +261,51 @@ async function abrir(caminho: string) {
 
 const servirFicha = (corpo: Ficha) =>
   servidor.use(http.get(`${API}/api/v1/bairros/${ID}/ficha`, () => HttpResponse.json(corpo)));
+
+describe("ficha do bairro: população, renda e IDH", () => {
+  it("mostra os cartões com a unidade, a régua pela escala dos bairros e a estimativa com a hipótese", async () => {
+    servirFicha(ficha([POPULACAO, DENSIDADE, POR_MIL, RENDA, IDH_SEM_DADO]));
+    await abrir(`/bairros/${ID}`);
+    const populacao = await screen.findByRole("article", { name: POPULACAO.titulo });
+    expect(within(populacao).getByText("42.580")).toBeVisible();
+    expect(within(populacao).getByText(/Estimativa iTree para 2026/)).toBeVisible();
+    expect(within(populacao).getByText(/supõe crescimento uniforme/)).toBeVisible();
+    // Régua bairro × cidade também nos indicadores que não são percentuais.
+    expect(
+      within(populacao).getByRole("img", {
+        name: /Aldeota: 42\.580\. Média por bairro: 20\.072\./,
+      }),
+    ).toBeVisible();
+    expect(
+      within(screen.getByRole("article", { name: DENSIDADE.titulo })).getByText("10.987 hab/km²"),
+    ).toBeVisible();
+    const renda = screen.getByRole("article", { name: RENDA.titulo });
+    expect(within(renda).getByText("R$ 10.572")).toBeVisible();
+    expect(within(renda).getByText(/não é renda per capita/)).toBeVisible();
+    expect(screen.getByTestId("regua-renda")).toBeVisible();
+  });
+
+  it("árvores por 1.000 habitantes traz o selo provisório e a ressalva do inventário", async () => {
+    servirFicha(ficha([POR_MIL]));
+    await abrir(`/bairros/${ID}`);
+    const cartao = await screen.findByRole("article", { name: POR_MIL.titulo });
+    expect(within(cartao).getByText("Provisório")).toBeVisible();
+    expect(within(cartao).getByText("0,09 por 1.000 hab.")).toBeVisible();
+    expect(
+      within(cartao).getByText(/pode indicar falta de cadastro, não falta de árvores/),
+    ).toBeVisible();
+    expect(within(cartao).getByText(/habitantes por árvore/)).toBeVisible();
+    expect(within(cartao).queryByText(/índice oficial/i)).toBeNull();
+  });
+
+  it("bairro sem IDH diz que não há dado, nunca zero", async () => {
+    servirFicha(ficha([IDH_SEM_DADO]));
+    await abrir(`/bairros/${ID}`);
+    const cartao = await screen.findByRole("article", { name: IDH_SEM_DADO.titulo });
+    expect(within(cartao).getByText("Sem dado neste bairro")).toBeVisible();
+    expect(within(cartao).getByText(/limites da época/)).toBeVisible();
+  });
+});
 
 describe("ficha do bairro", () => {
   it("mostra o cabeçalho, os cartões com fonte e data, a régua e o ranking", async () => {

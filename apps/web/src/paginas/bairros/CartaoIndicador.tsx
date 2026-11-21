@@ -54,8 +54,8 @@ export function CartaoIndicador({
             {formatarValorCartao(cartao)}
           </p>
           {cartao.detalhe && <p className="mt-0.5 text-sm text-texto-suave">{cartao.detalhe}</p>}
-          {percentual && <Regua cartao={cartao} nome={nome} />}
-          {!percentual && cartao.cidade && (
+          {(percentual || cartao.escala) && <Regua cartao={cartao} nome={nome} />}
+          {!percentual && !cartao.escala && cartao.cidade && (
             <p className="mt-2 text-xs text-texto-suave">
               {cartao.cidade.rotulo}:{" "}
               <strong className="tabular-nums">

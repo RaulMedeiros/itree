@@ -9,6 +9,7 @@ import type { CamadasAreasVerdesItem } from './camadasAreasVerdesItem';
 import type { CamadasArvores } from './camadasArvores';
 import type { CamadasIluminacao } from './camadasIluminacao';
 import type { CamadasOcorrencias } from './camadasOcorrencias';
+import type { CamadasPopulacaoItem } from './camadasPopulacaoItem';
 import type { CamadasTerritoriosItem } from './camadasTerritoriosItem';
 
 export interface Camadas {
@@ -16,6 +17,8 @@ export interface Camadas {
   areas_verdes: CamadasAreasVerdesItem[];
   /** @nullable */
   iluminacao: CamadasIluminacao;
+  /** Fontes de população, renda e IDH: versão em uso, última conferência e se estão desatualizadas ou com falha. */
+  populacao: CamadasPopulacaoItem[];
   /** @nullable */
   arvores: CamadasArvores;
   /** @nullable */

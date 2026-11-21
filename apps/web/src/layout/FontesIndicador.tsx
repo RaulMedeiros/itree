@@ -1,8 +1,8 @@
-import { useAlertasIngestoes, useConectoresListar } from "@itree/api-client";
+import { useAlertasIngestoes, useConectoresListar, useMapaCamadas } from "@itree/api-client";
 import { Link } from "@tanstack/react-router";
 
 import { usePermissao } from "../acesso/ContextoUsuario";
-import { conectoresComProblema, fontesComProblema } from "./fontes";
+import { conectoresComProblema, fontesComProblema, fontesPopulacaoComProblema } from "./fontes";
 
 /** Ponto âmbar no cabeçalho, com link para Administração > Integrações, só quando há problema. */
 export function FontesIndicador() {
@@ -12,9 +12,12 @@ export function FontesIndicador() {
   const conectores = useConectoresListar({
     query: { enabled: podeConectores, staleTime: 5 * 60_000 },
   });
+  const podeMapa = usePermissao("mapa.ler");
+  const camadas = useMapaCamadas({ query: { enabled: podeMapa, staleTime: 5 * 60_000 } });
   const problemas = [
     ...(pode && consulta.data ? fontesComProblema(consulta.data.data) : []),
     ...(podeConectores && conectores.data ? conectoresComProblema(conectores.data.data) : []),
+    ...(podeMapa && camadas.data ? fontesPopulacaoComProblema(camadas.data.data.populacao) : []),
   ];
   if (problemas.length === 0) return null;
   const detalhe = problemas
