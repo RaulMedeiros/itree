@@ -389,14 +389,14 @@ function Detalhe({ inspecao: i }: { inspecao: Inspecao }) {
       {podeValidar && (
         <>
           {/* A barra é fixa na base da janela: este espaço impede que ela cubra o fim do conteúdo. */}
-          <div aria-hidden data-reserva-barra className="h-20" />
+          <div aria-hidden data-reserva-barra className="h-20 max-md:h-32" />
           <div
             role="region"
             aria-label="Decisão da revisão"
-            className="sticky bottom-0 z-10 -mx-6 flex flex-wrap items-center justify-end gap-3 border-t border-borda bg-superficie px-6 py-3"
+            className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-end gap-3 border-t border-borda bg-superficie px-4 py-3 max-md:gap-2 max-md:pb-[max(0.75rem,env(safe-area-inset-bottom))] md:-mx-6 md:px-6 [&>button]:max-md:min-w-36 [&>button]:max-md:flex-1"
           >
             {semEvidencias && (
-              <p className="mr-auto text-sm font-medium text-atencao">
+              <p className="mr-auto text-sm font-medium text-atencao max-md:w-full">
                 Sem evidências anexadas: confira com o técnico antes de validar.
               </p>
             )}

@@ -228,7 +228,7 @@ function FormularioUsuario({ usuario }: { usuario: UsuarioAdmin }) {
         <div
           role="region"
           aria-label="Salvar alterações"
-          className="sticky bottom-0 z-10 -mx-6 flex gap-2 border-t border-borda bg-superficie px-6 py-3 lg:col-span-2"
+          className="sticky bottom-0 z-10 -mx-4 flex gap-2 border-t border-borda bg-superficie px-4 py-3 md:-mx-6 md:px-6 lg:col-span-2"
         >
           <Botao type="submit" disabled={!alterado || atualizar.isPending}>
             {atualizar.isPending ? "Salvando…" : "Salvar alterações"}

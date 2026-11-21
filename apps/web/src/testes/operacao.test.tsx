@@ -315,6 +315,15 @@ describe("inspeções", () => {
     expect(reserva.className).toMatch(/\bh-20\b/);
   });
 
+  it("no celular a barra de decisão fica fixa no rodapé, com botões que dividem a largura", async () => {
+    await abrir("/inspecoes/i-1");
+    const barra = await screen.findByRole("region", { name: "Decisão da revisão" });
+    expect(barra).toHaveClass("sticky", "bottom-0", "-mx-4", "px-4");
+    expect(barra.className).toContain("[&>button]:max-md:flex-1");
+    // Os botões quebram em duas linhas no celular: a reserva é maior.
+    expect(barra.previousElementSibling).toHaveClass("max-md:h-32");
+  });
+
   it("depois de validada, mostra a ocorrência aberta com link", async () => {
     servidor.use(
       http.get(`${API}/api/v1/inspecoes/i-1`, () =>

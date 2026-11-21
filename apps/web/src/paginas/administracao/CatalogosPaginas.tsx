@@ -176,7 +176,7 @@ function EspecieDialogo({ especie, aoFechar }: { especie: Especie | null; aoFech
         <Campo rotulo="Nomes comuns" ajuda="Separados por vírgula." erros={erros.nomes_comuns}>
           {(p) => <Entrada {...p} value={comuns} onChange={(e) => setComuns(e.target.value)} />}
         </Campo>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Campo rotulo="Família">
             {(p) => <Entrada {...p} value={familia} onChange={(e) => setFamilia(e.target.value)} />}
           </Campo>
