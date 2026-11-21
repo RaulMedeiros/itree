@@ -83,13 +83,14 @@ else
 fi
 # Ilha de calor por bairro (UrbVerde, IAU-USP): o contêiner não tem rede externa, então o comando roda
 # no host contra o banco do compose, depois dos limites oficiais. Os Termos de Uso da UrbVerde não são
-# licença aberta: só grava com URBVERDE_GRAVAR_VALORES=true exportado antes de rodar este script; sem
-# isso, o comando só calcula e a ficha do bairro (captura 42) mostra "Veja a camada no mapa". A
+# licença aberta, mas permitem uso acadêmico e não comercial com citação, que é o enquadramento do
+# iTree (decisão de 21/11/2026, docs/decisoes/2026-11-21-rumo-do-produto.md): a demonstração grava os
+# valores por padrão. Para só calcular, exporte URBVERDE_GRAVAR_VALORES=false. A
 # camada do mapa (captura 43) não depende disso, mas o navegador do Playwright precisa alcançar
 # urbverde.iau.usp.br.
 if [ "$LIMITES_OFICIAIS" = 1 ]; then
   (cd "$RAIZ/backend" && DATABASE_URL=postgis://itree:itree@localhost:5432/itree \
-    URBVERDE_GRAVAR_VALORES="${URBVERDE_GRAVAR_VALORES:-false}" \
+    URBVERDE_GRAVAR_VALORES="${URBVERDE_GRAVAR_VALORES:-true}" \
     uv run python manage.py importar_ilha_calor_urbverde --bairros Aldeota Centro Messejana) \
     || echo "Ilha de calor por bairro não calculada."
 fi

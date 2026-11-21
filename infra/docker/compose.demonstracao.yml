@@ -9,12 +9,18 @@ services:
   api:
     environment:
       ITREE_AMBIENTE: demonstracao
+      # Uso acadêmico e não comercial, com citação (decisão de 21/11/2026).
+      URBVERDE_GRAVAR_VALORES: "true"
   worker:
     environment:
       ITREE_AMBIENTE: demonstracao
+      # Uso acadêmico e não comercial, com citação (decisão de 21/11/2026).
+      URBVERDE_GRAVAR_VALORES: "true"
   beat:
     environment:
       ITREE_AMBIENTE: demonstracao
+      # Uso acadêmico e não comercial, com citação (decisão de 21/11/2026).
+      URBVERDE_GRAVAR_VALORES: "true"
   web:
     environment:
       ITREE_MAPA_SATELITE_URL: "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg"
