@@ -60,7 +60,7 @@ export function EquipesPagina() {
               <Th>Equipe</Th>
               <Th>Coordenador</Th>
               <Th>Membros</Th>
-              <Th>Territórios</Th>
+              <Th cartao="oculta">Territórios</Th>
               <Th>Situação</Th>
             </tr>
           </thead>
@@ -69,7 +69,7 @@ export function EquipesPagina() {
               <Linha key={e.id} className="hover:bg-fundo">
                 <Td>
                   <button
-                    className="text-left font-medium text-marca-escura hover:underline"
+                    className="text-left font-medium text-marca-escura hover:underline max-md:min-h-11"
                     onClick={() => setEditando(e)}
                   >
                     {e.nome}

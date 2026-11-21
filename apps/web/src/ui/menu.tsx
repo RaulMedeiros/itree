@@ -17,7 +17,7 @@ export function MenuAcoes({ rotulo, itens }: { rotulo: string; itens: ItemMenu[]
     <Menu.Root>
       <Menu.Trigger
         aria-label={rotulo}
-        className="inline-flex size-8 items-center justify-center rounded-md border border-borda bg-superficie text-texto hover:bg-neutro-clara"
+        className="inline-flex size-8 items-center justify-center rounded-md border border-borda bg-superficie text-texto hover:bg-neutro-clara max-md:size-11"
       >
         <MoreHorizontal className="size-4" aria-hidden />
       </Menu.Trigger>

@@ -21,6 +21,7 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { CondicaoAparente } from "../../componentes/CondicaoAparente";
 import { SeloEspecie, SeloLocalizacao, nomeEspecie } from "../../componentes/selos";
+import { BarraAcoesLote } from "../../ui/barraLote";
 import { Botao } from "../../ui/botao";
 import { BarraFiltros, Entrada, Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
@@ -415,11 +416,7 @@ export function ArvoresPagina() {
       ) : (
         <>
           {totalSelecionado > 0 && (
-            <div
-              role="region"
-              aria-label="Ações da seleção"
-              className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-marca bg-marca-clara px-3 py-2"
-            >
+            <BarraAcoesLote>
               <p role="status" className="mr-2 text-sm font-medium">
                 {plural(totalSelecionado, "árvore selecionada", "árvores selecionadas")}
                 {todosFiltrados && " (todas as dos filtros)"}
@@ -479,7 +476,7 @@ export function ArvoresPagina() {
                   Reduza a seleção ou refine os filtros para criar as tarefas.
                 </p>
               )}
-            </div>
+            </BarraAcoesLote>
           )}
           <Tabela>
             <thead>

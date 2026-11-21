@@ -115,10 +115,10 @@ export function ImportacoesPagina() {
             <tr>
               <Th>Lote</Th>
               <Th>Fonte</Th>
-              <Th>Linhas</Th>
+              <Th cartao="oculta">Linhas</Th>
               <Th>Árvores</Th>
               <Th>Situação</Th>
-              <Th>Responsável</Th>
+              <Th cartao="oculta">Responsável</Th>
               <Th />
             </tr>
           </thead>
@@ -186,7 +186,7 @@ export function ImportacoesPagina() {
                   {l.estado === "confirmado" && (l.linhas_com_falha ?? 0) > 0 && (
                     <button
                       type="button"
-                      className="mt-1 text-xs text-perigo hover:underline"
+                      className="mt-1 text-xs text-perigo hover:underline max-md:min-h-11"
                       onClick={() => setFalhas(l)}
                     >
                       {plural(
@@ -415,6 +415,7 @@ function AssistenteImportacao({
       titulo="Nova importação"
       descricao="Nada é criado antes da confirmação."
       largura="max-w-3xl"
+      telaCheiaNoCelular
       rodape={
         <>
           {etapa === 1 && faltando && (

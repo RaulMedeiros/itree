@@ -127,3 +127,11 @@
     break-inside: avoid;
   }
 }
+
+/* Abaixo de md a barra de ações em lote fica fixa no rodapé (`BarraAcoesLote`); o conteúdo ganha
+   o espaço dela para o último cartão não ficar escondido. */
+@media (max-width: 767.98px) {
+  main {
+    padding-bottom: calc(1rem + var(--altura-barra-lote, 0px));
+  }
+}

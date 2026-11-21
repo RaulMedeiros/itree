@@ -65,10 +65,10 @@ export function EspeciesPagina() {
             <tr>
               <Th>Nome científico</Th>
               <Th>Nomes comuns</Th>
-              <Th>Família</Th>
+              <Th cartao="oculta">Família</Th>
               <Th>Origem</Th>
               <Th>Situação</Th>
-              <Th>Referências externas</Th>
+              <Th cartao="oculta">Referências externas</Th>
             </tr>
           </thead>
           <tbody>
@@ -76,7 +76,7 @@ export function EspeciesPagina() {
               <Linha key={e.id} className="hover:bg-fundo">
                 <Td>
                   <button
-                    className="text-left font-medium text-marca-escura italic hover:underline"
+                    className="text-left font-medium text-marca-escura italic hover:underline max-md:min-h-11"
                     onClick={() => setEditando(e)}
                   >
                     {e.nome_cientifico}
@@ -277,7 +277,7 @@ export function TiposOcorrenciaPagina() {
               <Th>Tipo</Th>
               <Th>Prazo padrão</Th>
               {COLUNAS_CONTAGEM.map((c) => (
-                <Th key={c.rotulo} className="text-right">
+                <Th key={c.rotulo} className="text-right" cartao="oculta">
                   {c.rotulo}
                 </Th>
               ))}

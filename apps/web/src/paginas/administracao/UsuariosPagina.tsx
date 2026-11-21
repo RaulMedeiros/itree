@@ -126,10 +126,10 @@ export function UsuariosPagina() {
               <tr>
                 <Th>Usuário</Th>
                 <Th>Papéis</Th>
-                <Th>Escopo territorial</Th>
-                <Th>Equipes</Th>
+                <Th cartao="oculta">Escopo territorial</Th>
+                <Th cartao="oculta">Equipes</Th>
                 <Th>Situação</Th>
-                <Th>Último acesso</Th>
+                <Th cartao="oculta">Último acesso</Th>
               </tr>
             </thead>
             <tbody>

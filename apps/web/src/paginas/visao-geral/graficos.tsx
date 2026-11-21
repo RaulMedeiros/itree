@@ -4,7 +4,7 @@
  * de 8 px com anel da superfície, grade fina, legenda para ≥ 2 séries, rótulo
  * só no fim da linha, tooltip com cruz e tabela equivalente.
  */
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import { formatarDataCurta } from "../../util/formatos";
 
@@ -22,6 +22,36 @@ function teto(maximo: number) {
   if (maximo <= 5) return 5;
   const passo = 10 ** Math.floor(Math.log10(maximo));
   return Math.ceil(maximo / passo) * passo;
+}
+
+/** Largura do desenho quando o contêiner ainda não foi medido (e no jsdom, que não mede). */
+const LARGURA_PADRAO = 640;
+/** Abaixo disto o gráfico é "estreito" (celular): fonte maior, margens menores e menos marcas. */
+const LARGURA_ESTREITA = 520;
+
+/**
+ * Largura do contêiner, acompanhada com ResizeObserver. O SVG usa essa largura como `viewBox`:
+ * assim o desenho fica em escala 1:1 e os textos mantêm o tamanho em pixels, em vez de encolher
+ * junto com o gráfico no celular.
+ */
+function useLargura(ref: React.RefObject<HTMLElement | null>) {
+  const [largura, setLargura] = useState(LARGURA_PADRAO);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ler = (w: number) => {
+      if (w > 0) setLargura((atual) => (Math.abs(atual - w) < 1 ? atual : Math.round(w)));
+    };
+    ler(el.clientWidth);
+    if (typeof ResizeObserver === "undefined") return;
+    const observador = new ResizeObserver((entradas) => {
+      const w = entradas[0]?.contentRect.width;
+      if (w !== undefined) ler(w);
+    });
+    observador.observe(el);
+    return () => observador.disconnect();
+  }, [ref]);
+  return largura;
 }
 
 export interface Serie {
@@ -51,9 +81,16 @@ export function GraficoMensal({
   const [tabela, setTabela] = useState(false);
   const idTabela = useId();
   const idHachura = `hachura-${idTabela.replace(/[^a-zA-Z0-9]/g, "")}`;
-  const L = 640;
-  const A = 220;
-  const m = { esq: 36, dir: 96, topo: 12, base: 28 };
+  const area = useRef<HTMLDivElement>(null);
+  const L = useLargura(area);
+  const estreito = L < LARGURA_ESTREITA;
+  const fonte = estreito ? 12 : 10;
+  const A = estreito ? 240 : 220;
+  // No celular o valor final cabe numa margem menor e o eixo vertical precisa de mais espaço
+  // para o texto maior.
+  const m = estreito
+    ? { esq: 40, dir: 48, topo: 12, base: 32 }
+    : { esq: 36, dir: 96, topo: 12, base: 28 };
   const largura = L - m.esq - m.dir;
   const altura = A - m.topo - m.base;
   const maximo = teto(
@@ -64,6 +101,8 @@ export function GraficoMensal({
   const x = (i: number) => m.esq + (largura * i) / Math.max(1, meses.length - 1);
   const y = (v: number) => m.topo + altura - (altura * v) / maximo;
   const marcas = [0, maximo / 2, maximo];
+  // Cada rótulo de mês precisa de ~52 px no celular: só um a cada `salto`, sempre incluindo o último.
+  const salto = estreito ? Math.max(2, Math.ceil(52 / passo)) : 2;
 
   return (
     <div>
@@ -81,7 +120,7 @@ export function GraficoMensal({
           </li>
         ))}
       </ul>
-      <div className="relative">
+      <div ref={area} className="relative">
         <svg
           viewBox={`0 0 ${L} ${A}`}
           className="w-full"
@@ -114,20 +153,22 @@ export function GraficoMensal({
                 x={m.esq - 6}
                 y={y(v) + 4}
                 textAnchor="end"
-                className="fill-texto-suave text-[10px] tabular-nums"
+                fontSize={fonte}
+                className="fill-texto-suave tabular-nums"
               >
                 {v.toLocaleString("pt-BR")}
               </text>
             </g>
           ))}
           {meses.map((mes, i) =>
-            i % 2 === meses.length % 2 ? null : (
+            (meses.length - 1 - i) % salto !== 0 ? null : (
               <text
                 key={mes}
                 x={x(i)}
                 y={A - 8}
-                textAnchor="middle"
-                className="fill-texto-suave text-[10px]"
+                textAnchor={estreito && i === meses.length - 1 ? "end" : "middle"}
+                fontSize={fonte}
+                className="fill-texto-suave"
               >
                 {rotuloMes(mes)}
                 {mes === parcial ? " (parcial)" : ""}
@@ -148,7 +189,8 @@ export function GraficoMensal({
                   x={x(i)}
                   y={m.topo + 12}
                   textAnchor="middle"
-                  className="fill-texto-suave text-[9px]"
+                  fontSize={estreito ? 10 : 9}
+                  className="fill-texto-suave"
                 >
                   <tspan x={x(i)}>sem dado</tspan>
                   <tspan x={x(i)} dy={11}>
@@ -239,7 +281,8 @@ export function GraficoMensal({
                     <text
                       x={x(ultimo) + 8}
                       y={y(s.valores[ultimo] ?? 0) + 4}
-                      className="fill-texto text-[11px] font-medium tabular-nums"
+                      fontSize={estreito ? 12 : 11}
+                      className="fill-texto font-medium tabular-nums"
                     >
                       {(s.valores[ultimo] ?? 0).toLocaleString("pt-BR")}
                     </text>

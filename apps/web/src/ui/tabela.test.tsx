@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Linha, Tabela, Td, Th } from "./tabela";
+import { Linha, Tabela, Td, Th, ThOrdenavel } from "./tabela";
 
 function medidas(largura: number, visivel: number) {
   const proto = HTMLElement.prototype;
@@ -145,5 +147,113 @@ describe("Tabela em cartões no celular", () => {
       </Tabela>,
     );
     expect(screen.getByRole("cell", { name: "Oiti" })).toHaveAttribute("data-rotulo", "Espécie");
+  });
+});
+
+describe("Barra de seleção e ordenação do modo cartão", () => {
+  function ordenavel(aoOrdenar: (campo: string) => void = () => {}) {
+    function Exemplo() {
+      const [marcados, setMarcados] = useState<string[]>([]);
+      const [ordem, setOrdem] = useState<{ campo: string; direcao: "asc" | "desc" } | null>({
+        campo: "codigo",
+        direcao: "asc",
+      });
+      const ordenar = (campo: string) => {
+        aoOrdenar(campo);
+        setOrdem({
+          campo,
+          direcao: ordem?.campo === campo && ordem.direcao === "asc" ? "desc" : "asc",
+        });
+      };
+      const ids = ["a", "b"];
+      return (
+        <Tabela>
+          <thead>
+            <tr>
+              <Th>
+                <input
+                  type="checkbox"
+                  aria-label="Selecionar todas da página"
+                  checked={marcados.length === ids.length}
+                  onChange={(e) => setMarcados(e.target.checked ? ids : [])}
+                />
+              </Th>
+              <ThOrdenavel
+                direcao={ordem?.campo === "codigo" ? ordem.direcao : undefined}
+                aoOrdenar={() => ordenar("codigo")}
+              >
+                Código
+              </ThOrdenavel>
+              <ThOrdenavel
+                direcao={ordem?.campo === "data" ? ordem.direcao : undefined}
+                aoOrdenar={() => ordenar("data")}
+              >
+                Atualizado em
+              </ThOrdenavel>
+              <Th>Espécie</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {ids.map((id) => (
+              <Linha key={id}>
+                <Td>
+                  <input
+                    type="checkbox"
+                    aria-label={`Selecionar ${id}`}
+                    checked={marcados.includes(id)}
+                    readOnly
+                  />
+                </Td>
+                <Td>{id}</Td>
+                <Td>hoje</Td>
+                <Td>Ipê</Td>
+              </Linha>
+            ))}
+          </tbody>
+        </Tabela>
+      );
+    }
+    return <Exemplo />;
+  }
+
+  it("mostra, só abaixo de md, a caixa 'Selecionar todos (n)' e o seletor 'Ordenar por'", () => {
+    render(ordenavel());
+    const barra = screen.getByTestId("barra-cartoes");
+    expect(barra).toHaveClass("md:hidden");
+    expect(screen.getByLabelText("Selecionar todos (2)")).toBeInTheDocument();
+    const seletor = screen.getByRole("combobox", { name: "Ordenar por" });
+    expect(Array.from((seletor as HTMLSelectElement).options).map((o) => o.text)).toEqual([
+      "Código",
+      "Atualizado em",
+    ]);
+    expect(seletor).toHaveValue("0");
+  });
+
+  it("a caixa da barra marca e desmarca todos pela caixa do cabeçalho", async () => {
+    const usuario = userEvent.setup();
+    render(ordenavel());
+    const caixa = screen.getByLabelText("Selecionar todos (2)");
+    await usuario.click(caixa);
+    expect(screen.getByRole("checkbox", { name: "Selecionar todas da página" })).toBeChecked();
+    expect(screen.getByLabelText("Selecionar todos (2)")).toBeChecked();
+    await usuario.click(screen.getByLabelText("Selecionar todos (2)"));
+    expect(screen.getByRole("checkbox", { name: "Selecionar todas da página" })).not.toBeChecked();
+  });
+
+  it("escolher uma coluna no seletor ordena por ela, e o botão inverte a direção", async () => {
+    const usuario = userEvent.setup();
+    const ordenou: string[] = [];
+    render(ordenavel((c) => ordenou.push(c)));
+    await usuario.selectOptions(screen.getByRole("combobox", { name: "Ordenar por" }), "1");
+    expect(ordenou).toEqual(["data"]);
+    expect(screen.getByRole("combobox", { name: "Ordenar por" })).toHaveValue("1");
+    await usuario.click(screen.getByRole("button", { name: /Ordem crescente/ }));
+    expect(ordenou).toEqual(["data", "data"]);
+    expect(screen.getByRole("button", { name: /Ordem decrescente/ })).toBeInTheDocument();
+  });
+
+  it("não mostra a barra numa tabela sem seleção nem ordenação", () => {
+    render(exemplo());
+    expect(screen.queryByTestId("barra-cartoes")).toBeNull();
   });
 });

@@ -271,8 +271,8 @@ export function AuditoriaPagina() {
                 <Th>Registro</Th>
                 <Th>Ação</Th>
                 <Th>Autor</Th>
-                <Th>Origem</Th>
-                <Th>Justificativa</Th>
+                <Th cartao="oculta">Origem</Th>
+                <Th cartao="oculta">Justificativa</Th>
               </tr>
             </thead>
             <tbody>
@@ -289,7 +289,7 @@ export function AuditoriaPagina() {
                         <button
                           aria-expanded={aberto}
                           aria-label={aberto ? "Ocultar detalhes" : "Ver detalhes"}
-                          className="rounded p-0.5 hover:bg-neutro-clara"
+                          className="rounded p-0.5 hover:bg-neutro-clara max-md:grid max-md:size-11 max-md:place-items-center"
                           onClick={() => setExpandido(aberto ? null : grupo.id)}
                         >
                           {aberto ? (

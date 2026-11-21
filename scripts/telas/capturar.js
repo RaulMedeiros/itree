@@ -359,6 +359,40 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     espera: 6000,
     inteira: true,
   });
+  // Assistente de importação em tela cheia, no passo 2 (correspondência de colunas).
+  await tela(p, "m09-importacao-nova", "/inventario/importacoes", {
+    esperar: /inventario-sintetico/,
+    acao: async (q) => {
+      await q
+        .getByRole("button", { name: /Nova importação|Importar/ })
+        .first()
+        .click();
+      const dialogo = q.getByRole("dialog");
+      await dialogo
+        .locator('input[type="file"]')
+        .setInputFiles(path.join(__dirname, "inventario-exemplo.csv"));
+      await dialogo.getByLabel(/Fonte dos dados/).fill("Inventário de exemplo");
+      await dialogo.getByRole("button", { name: "Próximo" }).click();
+      await dialogo.getByText("Correspondência de colunas").waitFor();
+    },
+    espera: 1500,
+  });
+  // Lista em cartões com dois cartões marcados: a barra de ações em lote fica fixa no rodapé.
+  await tela(p, "m11-arvores-selecao", "/inventario/arvores", {
+    esperar: /ARV-/,
+    acao: async (q) => {
+      const caixas = q.getByRole("checkbox", { name: /^Selecionar ARV-/ });
+      await caixas.nth(0).check();
+      await caixas.nth(1).check();
+      await q.getByRole("region", { name: "Ações da seleção" }).waitFor();
+    },
+    espera: 800,
+  });
+  await ctx.close();
+
+  // Administração em cartões, no celular (só o administrador entra).
+  ({ ctx, p } = await entrar(nav, "admin@itree.local", "admin", CELULAR));
+  await tela(p, "m10-admin-usuarios", "/administracao/usuarios", { esperar: "Clara Campos" });
   await ctx.close();
 
   ({ ctx, p } = await entrar(nav, "admin@itree.local", "admin"));
