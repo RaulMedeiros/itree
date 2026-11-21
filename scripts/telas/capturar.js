@@ -262,6 +262,30 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     espera: 8000,
   });
   await tela(p, "44-bairros", "/bairros", { esperar: ids.bairro_demo, espera: 4000 });
+  // Pessoas por árvore: camada coroplética "Árvores por 1.000 habitantes" (provisório, com a ressalva
+  // do inventário) e as análises por bairro com população, renda e a dispersão.
+  await tela(
+    p,
+    "48-mapa-arvores-por-habitante",
+    `/mapa?lon=${-38.54}&lat=${-3.78}&zoom=11.2&populacao=arvores_por_mil`,
+    {
+      esperar: /falta de cadastro/,
+      espera: 6000,
+    },
+  );
+  await tela(
+    p,
+    "49-analises-pessoas-arvore",
+    "/analises?analise=arvores_por_mil_habitantes_por_bairro",
+    {
+      esperar: /falta de cadastro/,
+      espera: 3000,
+    },
+  );
+  await tela(p, "50-analises-arvores-renda", "/analises?analise=arvores_mil_x_renda", {
+    esperar: /falta de cadastro/,
+    espera: 3000,
+  });
   await tela(p, "41-analises-mudas", "/analises?analise=mudas_doadas_por_especie", {
     esperar: /Ressalvas/,
     espera: 2500,

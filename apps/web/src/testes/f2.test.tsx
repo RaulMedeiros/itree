@@ -458,6 +458,40 @@ describe("contexto de fontes externas", () => {
     expect(within(cartao).getByText(/Método: Numerador/)).toBeVisible();
   });
 
+  it("mostra as árvores por 1.000 habitantes da cidade como cartão discreto, provisório e com a ressalva", async () => {
+    servidor.use(
+      painelComContexto([
+        {
+          id: "arvores_por_mil_habitantes",
+          nome: "Árvores cadastradas por 1.000 habitantes (provisório)",
+          valor: 0.4,
+          numerador: 1000,
+          base: 2428708,
+          unidade: "por 1.000 hab.",
+          fonte: "IBGE, Censo Demográfico 2022 (população) e inventário do iTree (árvores)",
+          fonte_url: "https://ftp.ibge.gov.br/Censos/Censo_Demografico_2022/",
+          licenca: "Não declarada no FTP do IBGE",
+          data_referencia: "2022-07-31",
+          ingerido_em: "2026-11-21T10:00:00Z",
+          definicao: "Árvores cadastradas para cada 1.000 habitantes do bairro.",
+          metodo: "Árvores válidas × 1.000 ÷ população do Censo.",
+          bairros_com_dado: 121,
+          bairros_no_escopo: 121,
+        },
+      ]),
+    );
+    await abrir("/visao-geral");
+    const cartao = await screen.findByRole("article", {
+      name: "Árvores cadastradas por 1.000 habitantes (provisório)",
+    });
+    expect(within(cartao).getByText("0,4 por 1.000 hab.")).toBeInTheDocument();
+    expect(
+      within(cartao).getByText(/1\.000 árvores cadastradas para 2\.428\.708 habitantes \(Censo\)/),
+    ).toBeInTheDocument();
+    expect(within(cartao).getByText(/falta de cadastro, não falta de árvores/)).toBeInTheDocument();
+    expect(within(cartao).queryByText(/faces de quadra/)).toBeNull();
+  });
+
   it("sem dado externo a seção não aparece", async () => {
     servidor.use(painelComContexto([]));
     await abrir("/visao-geral");

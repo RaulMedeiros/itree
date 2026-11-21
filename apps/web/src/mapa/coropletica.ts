@@ -96,3 +96,102 @@ export function registrarHachuraSemDado(m: {
   }
   m.addImage(IMAGEM_SEM_DADO, c.getImageData(0, 0, lado, lado), { pixelRatio: 2 });
 }
+
+// --- População, renda e IDH por bairro -------------------------------------------------------
+
+/**
+ * Camada "População e renda por bairro" (grupo Contexto, desligada por padrão), com um seletor:
+ * densidade populacional, árvores cadastradas por 1.000 habitantes (provisório, DP-14), rendimento
+ * médio do responsável (Censo 2022) e IDH 2010.
+ *
+ * As classes vêm da distribuição real: as quebras são quantis calculados pela API sobre todos os
+ * bairros de Fortaleza (e não sobre o escopo, para o mesmo valor ter sempre a mesma cor). Valores
+ * repetidos nos limites fundem classes, nunca criam classe vazia. Um só matiz (violeta), que não
+ * compete com o azul do Censo, o verde da condição das árvores nem o laranja dos alertas; o
+ * contraste é conferido por `packages/ui-tokens/scripts/contraste.mjs`.
+ */
+export const CORES_POPULACAO = ["#ece4f6", "#c3a6e2", "#9d77cc", "#6a3f9f", "#3a1c66"] as const;
+export const OPACIDADE_POPULACAO = 0.75;
+
+export const FONTE_POPULACAO = "populacao-bairros";
+export const CAMADAS_POPULACAO = ["populacao-preenchimento", "populacao-sem-dado"];
+
+export type IndicadorPopulacao = "densidade" | "arvores_por_mil" | "renda" | "idh";
+
+export const INDICADORES_POPULACAO: {
+  id: IndicadorPopulacao;
+  rotulo: string;
+  unidade: string;
+  provisorio: boolean;
+}[] = [
+  { id: "densidade", rotulo: "Densidade populacional", unidade: "hab/km²", provisorio: false },
+  {
+    id: "arvores_por_mil",
+    rotulo: "Árvores por 1.000 habitantes",
+    unidade: "por 1.000 hab.",
+    provisorio: true,
+  },
+  { id: "renda", rotulo: "Rendimento médio do responsável", unidade: "R$", provisorio: false },
+  { id: "idh", rotulo: "IDH 2010", unidade: "IDH", provisorio: false },
+];
+
+export const ressalvaInventario =
+  "Conta só as árvores cadastradas; enquanto o inventário não cobre o bairro, um valor baixo pode indicar falta de cadastro, não falta de árvores.";
+
+/** Cores de `n` classes (2 a 5) tiradas da rampa, mantendo as pontas. */
+export function coresDasClasses(n: number): string[] {
+  const total = CORES_POPULACAO.length;
+  if (n >= total) return [...CORES_POPULACAO];
+  if (n <= 1) return [CORES_POPULACAO[Math.floor(total / 2)]!];
+  return Array.from(
+    { length: n },
+    (_, i) => CORES_POPULACAO[Math.round((i * (total - 1)) / (n - 1))]!,
+  );
+}
+
+/** Classe (0 a quebras.length) de um valor; `null` sem dado (nunca zero). */
+export function classePorQuebras(
+  valor: number | null | undefined,
+  quebras: number[],
+): number | null {
+  if (valor === null || valor === undefined || Number.isNaN(valor)) return null;
+  return quebras.filter((q) => valor >= q).length;
+}
+
+/** Preenchimento por classe da propriedade da feição; o limite inferior de cada classe é inclusivo. */
+export function corPorQuebras(propriedade: string, quebras: number[]): ExpressionSpecification {
+  const cores = coresDasClasses(quebras.length + 1);
+  const expressao: unknown[] = ["step", ["get", propriedade], cores[0]];
+  quebras.forEach((q, i) => expressao.push(q, cores[i + 1]));
+  return expressao as ExpressionSpecification;
+}
+
+export const filtroComDado = (propriedade: string): ExpressionSpecification => [
+  "!=",
+  ["typeof", ["get", propriedade]],
+  "null",
+];
+export const filtroSemDado = (propriedade: string): ExpressionSpecification => [
+  "==",
+  ["typeof", ["get", propriedade]],
+  "null",
+];
+
+/** Rótulos das classes ("Menos de X", "X a menos de Y", "Z ou mais"), com a unidade já formatada. */
+export function rotulosDasClasses(quebras: number[], formatar: (v: number) => string): string[] {
+  if (quebras.length === 0) return [];
+  return [
+    `Menos de ${formatar(quebras[0]!)}`,
+    ...quebras.slice(1).map((q, i) => `${formatar(quebras[i]!)} a menos de ${formatar(q)}`),
+    `${formatar(quebras.at(-1)!)} ou mais`,
+  ];
+}
+
+/** Valor do indicador como a pessoa lê: "10.987 hab/km²", "R$ 4.192", "0,56" ou "0,09 por 1.000". */
+export function formatarIndicadorPopulacao(id: IndicadorPopulacao, v: number): string {
+  if (id === "densidade") return `${Math.round(v).toLocaleString("pt-BR")} hab/km²`;
+  if (id === "renda") return `R$ ${Math.round(v).toLocaleString("pt-BR")}`;
+  if (id === "idh")
+    return v.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  return `${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} por 1.000 hab.`;
+}

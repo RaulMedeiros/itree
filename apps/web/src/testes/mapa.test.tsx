@@ -1311,3 +1311,228 @@ describe("iluminação pública (SEINF)", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("população e renda por bairro", () => {
+  const COLECAO = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        id: "b-1",
+        geometry: BAIRRO.geometry,
+        properties: {
+          id: "b-1",
+          nome: "Aldeota",
+          densidade: 10987,
+          arvores_por_mil: 0.09,
+          renda: 10572,
+          idh: 0.8666,
+          populacao: 42580,
+          arvores: 4,
+          estimada: 45274,
+        },
+      },
+      {
+        type: "Feature",
+        id: "b-3",
+        geometry: BAIRRO.geometry,
+        properties: {
+          id: "b-3",
+          nome: "Aracapé",
+          densidade: 5000,
+          arvores_por_mil: 0,
+          renda: 2000,
+          idh: null,
+          populacao: 30000,
+          arvores: 0,
+          estimada: null,
+        },
+      },
+    ],
+    indicadores: [
+      ["densidade", "Densidade populacional", "hab/km²", false, [5688, 8722, 11023, 14008]],
+      [
+        "arvores_por_mil",
+        "Árvores por 1.000 habitantes",
+        "por 1.000 hab.",
+        true,
+        [0.1, 0.3, 0.6, 1],
+      ],
+      ["renda", "Rendimento médio do responsável", "R$", false, [1636, 2063, 2801, 4207]],
+      ["idh", "IDH 2010", "IDH", false, [0.226, 0.292, 0.37, 0.52]],
+    ].map(([id, nome, unidade, provisorio, quebras]) => ({
+      id,
+      nome,
+      unidade,
+      provisorio,
+      ressalva: provisorio
+        ? "Conta só as árvores cadastradas; valor baixo pode ser falta de cadastro."
+        : "",
+      aviso: "",
+      quebras,
+      bairros_com_dado: 2,
+      proveniencia: {
+        fonte: id === "idh" ? "SDE, Prefeitura de Fortaleza" : "IBGE, Censo Demográfico 2022",
+        licenca: "Não declarada no FTP do IBGE",
+        data_referencia: id === "idh" ? "2010-12-31" : "2022-07-31",
+        ingerido_em: "2026-11-21T12:00:00Z",
+        versao: "20260520",
+        definicao: "Definição vinda da API.",
+        metodo: "Método vindo da API.",
+      },
+    })),
+    estimativa: {
+      ano: 2026,
+      populacao: 2582360,
+      versao: "20261029",
+      hipotese: "Estimativa iTree, não dado oficial: supõe crescimento uniforme entre os bairros.",
+    },
+  };
+  const pedidos: URL[] = [];
+
+  beforeEach(() => {
+    pedidos.length = 0;
+    servidor.use(
+      http.get(`${API}/api/v1/indicadores/externos/populacao`, ({ request }) => {
+        pedidos.push(new URL(request.url));
+        return HttpResponse.json(COLECAO);
+      }),
+    );
+  });
+
+  it("fica no grupo Contexto, desligada por padrão, sem baixar nada e sem seletor", async () => {
+    const mapa = await abrirMapa();
+    const grupo = (await screen.findByText("Contexto (fontes externas)")).closest("details")!;
+    const caixa = within(grupo).getByRole("checkbox", { name: /População e renda por bairro/ });
+    expect(caixa).not.toBeChecked();
+    expect(within(grupo).queryByRole("combobox", { name: "Indicador por bairro" })).toBeNull();
+    expect(pedidos).toHaveLength(0);
+    for (const id of ["populacao-preenchimento", "populacao-sem-dado"])
+      expect(mapa.setLayoutProperty).not.toHaveBeenCalledWith(id, "visibility", "visible");
+    expect(screen.queryByRole("region", { name: "Legenda da população e renda" })).toBeNull();
+  });
+
+  it("ao ligar, carrega uma vez e mostra legenda com classes por quantis, fonte e sem dado", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa();
+    await usuario.click(
+      await screen.findByRole("checkbox", { name: /População e renda por bairro/ }),
+    );
+    await vi.waitFor(() => expect(mapa.dadosDe("populacao-bairros").features).toHaveLength(2));
+    expect(pedidos).toHaveLength(1);
+    // Os indicadores e a estimativa não viram feição do mapa.
+    expect(
+      (mapa.dadosDe("populacao-bairros") as unknown as Record<string, unknown>).indicadores,
+    ).toBeUndefined();
+    for (const id of ["populacao-preenchimento", "populacao-sem-dado"])
+      expect(mapa.setLayoutProperty).toHaveBeenCalledWith(id, "visibility", "visible");
+
+    const legenda = await screen.findByRole("region", { name: "Legenda da população e renda" });
+    expect(await within(legenda).findByText("Menos de 5.688 hab/km²")).toBeInTheDocument();
+    expect(within(legenda).getByText("14.008 hab/km² ou mais")).toBeInTheDocument();
+    expect(within(legenda).getByText("Sem dado")).toBeInTheDocument();
+    expect(
+      within(legenda).getByText(/Fonte: IBGE, Censo Demográfico 2022 · dados de 2022/),
+    ).toBeInTheDocument();
+    expect(within(legenda).getByText(/quintis/)).toBeInTheDocument();
+    // Densidade não é provisória.
+    expect(within(legenda).queryByText("Provisório")).toBeNull();
+    // A cor segue as quebras (quantis) da API.
+    await vi.waitFor(() =>
+      expect(mapa.setPaintProperty).toHaveBeenCalledWith(
+        "populacao-preenchimento",
+        "fill-color",
+        expect.arrayContaining(["step", ["get", "densidade"], 5688, 8722, 11023, 14008]),
+      ),
+    );
+  });
+
+  it("árvores por 1.000 habitantes leva o selo provisório e a ressalva do inventário", async () => {
+    const usuario = userEvent.setup();
+    const mapa = await abrirMapa("/mapa?populacao=densidade");
+    await vi.waitFor(() => expect(pedidos).toHaveLength(1));
+    await usuario.selectOptions(
+      screen.getByRole("combobox", { name: "Indicador por bairro" }),
+      "arvores_por_mil",
+    );
+    const legenda = await screen.findByRole("region", { name: "Legenda da população e renda" });
+    expect(await within(legenda).findByText("Provisório")).toBeInTheDocument();
+    expect(
+      within(legenda).getByText(/pode indicar falta de cadastro, não falta de árvores/),
+    ).toBeInTheDocument();
+    expect(within(legenda).getByText(/não é índice oficial/)).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(mapa.setFilter).toHaveBeenCalledWith("populacao-sem-dado", [
+        "==",
+        ["typeof", ["get", "arvores_por_mil"]],
+        "null",
+      ]),
+    );
+    expect(pedidos).toHaveLength(1); // trocar o indicador não baixa de novo
+  });
+
+  it("o IDH mostra o ano e o aviso de que não é atual", async () => {
+    const usuario = userEvent.setup();
+    await abrirMapa("/mapa?populacao=idh");
+    const legenda = await screen.findByRole("region", { name: "Legenda da população e renda" });
+    expect(await within(legenda).findByText(/Dado de 2010/)).toBeInTheDocument();
+    expect(within(legenda).getByText(/não é atual/)).toBeInTheDocument();
+    expect(usuario).toBeTruthy();
+  });
+
+  it("clicar no bairro mostra os valores, a estimativa iTree com a hipótese e a proveniência", async () => {
+    const mapa = await abrirMapa("/mapa?populacao=densidade");
+    await vi.waitFor(() => expect(mapa.dadosDe("populacao-bairros").features).toHaveLength(2));
+    act(() =>
+      mapa.emitir(
+        "click",
+        { point: { x: 1, y: 1 }, features: [{ properties: COLECAO.features[0]!.properties }] },
+        "populacao-preenchimento",
+      ),
+    );
+    const painel = await screen.findByRole("complementary", {
+      name: "População e renda do bairro",
+    });
+    expect(within(painel).getByText("42.580 pessoas")).toBeInTheDocument();
+    expect(within(painel).getByText("10.987 hab/km²")).toBeInTheDocument();
+    expect(within(painel).getByText("0,867")).toBeInTheDocument();
+    expect(
+      within(painel).getByText(/Estimativa iTree para 2026: cerca de 45.274 pessoas/),
+    ).toBeInTheDocument();
+    expect(within(painel).getByText(/supõe crescimento uniforme/)).toBeInTheDocument();
+    expect(within(painel).getByText(/Definição vinda da API/)).toBeInTheDocument();
+  });
+
+  it("Fontes dos dados mostra a estimativa com a hipótese e a fonte desatualizada", async () => {
+    servidor.use(
+      http.get(`${API}/api/v1/mapa/camadas`, () =>
+        HttpResponse.json({
+          territorios: [],
+          areas_verdes: [],
+          iluminacao: null,
+          populacao: [
+            {
+              fonte: "estimativa_populacao",
+              nome: "Estimativa anual da população de Fortaleza (IBGE)",
+              versao: "20261029",
+              ultima_conferencia: "2026-09-01T10:00:00Z",
+              falhou: false,
+              desatualizada: true,
+            },
+          ],
+          arvores: null,
+          ocorrencias: null,
+          limites_escopo: null,
+        }),
+      ),
+    );
+    await abrirMapa("/mapa?populacao=densidade");
+    await vi.waitFor(() => expect(pedidos).toHaveLength(1));
+    expect(
+      await screen.findByText(/Estimativa iTree por bairro \(não é dado oficial\)/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Estimativa anual da população de Fortaleza \(IBGE\): versão 20261029/),
+    ).toHaveTextContent("desatualizada");
+  });
+});

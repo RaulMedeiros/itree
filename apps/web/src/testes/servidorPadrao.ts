@@ -13,6 +13,18 @@ export const handlersPadrao = [
   http.get(`${API}/api/v1/notificacoes/agrupadas`, () => HttpResponse.json([])),
   // Conectores (RF-INT-006): lista vazia para quem administra e nenhuma camada de referência.
   http.get(`${API}/api/v1/conectores`, () => HttpResponse.json([])),
+  // Fontes de população e renda (aviso de fonte desatualizada do cabeçalho): sem problema.
+  http.get(`${API}/api/v1/mapa/camadas`, () =>
+    HttpResponse.json({
+      territorios: [],
+      areas_verdes: [],
+      iluminacao: null,
+      populacao: [],
+      arvores: null,
+      ocorrencias: null,
+      limites_escopo: null,
+    }),
+  ),
   http.get(`${API}/api/v1/mapa/camadas-referencia`, () => HttpResponse.json([])),
   http.get(`${API}/api/v1/notificacoes`, () =>
     HttpResponse.json({ count: 0, next: null, previous: null, results: [] }),

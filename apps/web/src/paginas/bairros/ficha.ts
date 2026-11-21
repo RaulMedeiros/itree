@@ -7,6 +7,10 @@ const decimal1 = new Intl.NumberFormat("pt-BR", {
   minimumFractionDigits: 0,
   maximumFractionDigits: 1,
 });
+const decimal3 = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 3,
+  maximumFractionDigits: 3,
+});
 const decimal2 = new Intl.NumberFormat("pt-BR", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -17,6 +21,10 @@ export function formatarValorCartao(c: Pick<FichaCartao, "valor" | "unidade">): 
   if (c.valor === null || c.valor === undefined) return "—";
   if (c.unidade === "%") return `${decimal1.format(c.valor)}%`;
   if (c.unidade === "°C") return `${c.valor > 0 ? "+" : ""}${decimal2.format(c.valor)} °C`;
+  if (c.unidade === "R$") return `R$ ${inteiro.format(Math.round(c.valor))}`;
+  if (c.unidade === "hab/km²") return `${inteiro.format(Math.round(c.valor))} hab/km²`;
+  if (c.unidade === "por 1.000 hab.") return `${decimal2.format(c.valor)} por 1.000 hab.`;
+  if (c.unidade === "IDH") return decimal3.format(c.valor);
   return inteiro.format(c.valor);
 }
 
@@ -28,6 +36,18 @@ export function textoDaFonte(c: Pick<FichaCartao, "fonte" | "data_referencia">):
 
 /** Posição (0 a 100) na régua de percentuais, sem sair da trilha. */
 export const posicaoNaReguaPct = (valor: number): number => Math.min(100, Math.max(0, valor));
+
+/**
+ * Posição (0 a 100) na régua de um indicador que não é percentual: o menor e o maior valor entre os
+ * bairros são as pontas. Sem escala (ou com uma só), o meio da trilha.
+ */
+export function posicaoNaEscala(
+  valor: number,
+  escala: { min: number; max: number } | null | undefined,
+): number {
+  if (!escala || escala.max <= escala.min) return 50;
+  return Math.min(100, Math.max(0, ((valor - escala.min) / (escala.max - escala.min)) * 100));
+}
 
 /** "Aldeota: 54,3% · Média de Fortaleza: 48,0%", para o leitor de tela. */
 export function descricaoDaRegua(c: FichaCartao, nome: string): string {

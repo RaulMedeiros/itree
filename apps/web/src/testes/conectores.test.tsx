@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { conectoresComProblema } from "../layout/fontes";
+import { conectoresComProblema, fontesPopulacaoComProblema } from "../layout/fontes";
 import { escreverRotulos, lerRotulos } from "../paginas/administracao/conectores";
 import { criarServidor } from "./servidorPadrao";
 
@@ -405,5 +405,21 @@ describe("conectores no indicador de fontes", () => {
     const aviso = await screen.findByRole("link", { name: /1 fonte externa com problema/ });
     expect(aviso).toHaveAttribute("href", "/administracao/integracoes");
     expect(aviso).toHaveAttribute("title", "Atendimentos (indisponível)");
+  });
+});
+
+describe("fontes de população, renda e IDH (aviso de fonte desatualizada)", () => {
+  it("falha vira indisponível, passar do limite vira desatualizada e a conferência em dia não alerta", () => {
+    expect(
+      fontesPopulacaoComProblema([
+        { nome: "Estimativa anual", falhou: true, desatualizada: true },
+        { nome: "Censo 2022", falhou: false, desatualizada: true },
+        { nome: "Renda", falhou: false, desatualizada: false },
+      ]),
+    ).toEqual([
+      { fonte: "Estimativa anual", motivo: "indisponivel" },
+      { fonte: "Censo 2022", motivo: "desatualizada" },
+    ]);
+    expect(fontesPopulacaoComProblema(undefined)).toEqual([]);
   });
 });

@@ -67,6 +67,38 @@ test("uma rampa com classes quase iguais, ou clara demais, falha na verificaçã
   assert.ok(daColoropletica(clara).some((r) => r.razao < r.minimo));
 });
 
+const daPopulacao = (coro) =>
+  verificar(css, lerMapa(realce, estilo), coro).filter((r) =>
+    r.descricao.startsWith("população e renda por bairro"),
+  );
+
+test("a rampa de população e renda separa as classes e a mais escura contrasta com o mapa", () => {
+  const coro = lerCoropletica(coropletica);
+  assert.equal(coro.populacao.cores.length, 5);
+  const pares = daPopulacao(coro);
+  assert.equal(pares.length, 25);
+  for (const r of pares)
+    assert.ok(r.razao >= r.minimo, `${r.descricao}: ${r.razao.toFixed(2)}:1 (mín. ${r.minimo})`);
+});
+
+test("uma rampa de população com classes iguais, ou clara demais, falha na verificação", () => {
+  const coro = lerCoropletica(coropletica);
+  const cores = coro.populacao.cores;
+  const igual = {
+    ...coro,
+    populacao: { ...coro.populacao, cores: [cores[0], cores[0], ...cores.slice(2)] },
+  };
+  assert.ok(daPopulacao(igual).some((r) => r.razao < r.minimo));
+  const clara = {
+    ...coro,
+    populacao: {
+      ...coro.populacao,
+      cores: ["#ece4f6", "#efe8f8", "#f2ecf9", "#f5f0fa", "#f8f4fc"],
+    },
+  };
+  assert.ok(daPopulacao(clara).some((r) => r.razao < r.minimo));
+});
+
 const simbologia = readFileSync(join(web, "simbologia.ts"), "utf8");
 const daSupressao = (sup) =>
   verificar(css, lerMapa(realce, estilo), undefined, sup).filter((r) =>
