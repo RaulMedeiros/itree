@@ -21,7 +21,7 @@ import { BarraAcoesEmLote, CaixaDaPagina } from "../../componentes/lote";
 import { PrazoEmLoteDialogo } from "../../componentes/PrazoEmLoteDialogo";
 import { SeloEstadoTarefa } from "../../componentes/selos";
 import { Botao } from "../../ui/botao";
-import { AreaTexto, Campo, EntradaData, Selecao } from "../../ui/campos";
+import { AreaTexto, Campo, EntradaData, FiltrosEmLinha, Selecao } from "../../ui/campos";
 import { useTerritorioAtivo } from "../../layout/territorio";
 import { Dialogo } from "../../ui/dialogo";
 import { Carregando, Erro, ListaVazia } from "../../ui/estados";
@@ -128,7 +128,10 @@ export function TarefasPagina() {
           ))}
         </ul>
       )}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      <FiltrosEmLinha
+        className="mb-3 flex flex-wrap items-center gap-2"
+        ativos={contarFiltros({ ...filtros, bairro: territorioAtivo.id })}
+      >
         <Selecao
           aria-label="Responsável"
           value={filtros.responsavel ?? ""}
@@ -178,7 +181,7 @@ export function TarefasPagina() {
           />
           Só atrasadas
         </label>
-      </div>
+      </FiltrosEmLinha>
       {consulta.isPending ? (
         <Carregando />
       ) : consulta.isError ? (
@@ -244,7 +247,7 @@ export function TarefasPagina() {
                 )}
                 <Th>Tarefa</Th>
                 <Th>Alvo</Th>
-                <Th>Responsável / equipe</Th>
+                <Th cartao="oculta">Responsável / equipe</Th>
                 <Th>Prazo</Th>
                 <Th>Situação</Th>
                 <Th />

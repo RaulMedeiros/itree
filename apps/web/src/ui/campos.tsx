@@ -1,4 +1,4 @@
-import { Paperclip } from "lucide-react";
+import { Paperclip, SlidersHorizontal } from "lucide-react";
 import {
   useId,
   useRef,
@@ -10,20 +10,22 @@ import {
 } from "react";
 
 import { cn } from "../util/cn";
+import { useCelular } from "../util/useMediaQuery";
 import { dataBrParaIso, dataIsoParaBr, mascararDataBr } from "../util/formatos";
 import { Botao } from "./botao";
 import { ContextoLinhaFormulario } from "./contextoFormulario";
+import { FolhaInferior } from "./folha";
 import { Recolhivel } from "./recolhivel";
 
 const base =
-  "w-full rounded-md border border-borda-campo bg-superficie px-3 text-sm text-texto placeholder:text-texto-suave disabled:opacity-60 aria-invalid:border-perigo";
+  "w-full rounded-md border border-borda-campo bg-superficie px-3 text-sm text-texto max-md:text-base placeholder:text-texto-suave disabled:opacity-60 aria-invalid:border-perigo";
 
 export function Entrada({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(base, "h-9", className)} {...props} />;
+  return <input className={cn(base, "h-9 max-md:h-11", className)} {...props} />;
 }
 
 export function Selecao({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(base, "seletor h-9 pr-8", className)} {...props} />;
+  return <select className={cn(base, "seletor h-9 pr-8 max-md:h-11", className)} {...props} />;
 }
 
 export const MENSAGEM_DATA_INVALIDA = "Data inválida. Use dd/mm/aaaa.";
@@ -68,7 +70,7 @@ export function EntradaData({ value, onChange, className, ...props }: PropsData)
         lang="pt-BR"
         aria-invalid={invalido || props["aria-invalid"] || undefined}
         aria-describedby={descricao || undefined}
-        className={cn(base, "h-9", className)}
+        className={cn(base, "h-9 max-md:h-11", className)}
         value={texto}
         onChange={(e) => {
           const novo = mascararDataBr(e.target.value);
@@ -279,21 +281,97 @@ export function LinhaFormulario({
 }
 
 /**
+ * Botão "Filtros (n)" que abre uma folha com os filtros, um embaixo do outro. É o que
+ * `BarraFiltros` e `FiltrosEmLinha` mostram no celular.
+ */
+function FiltrosEmFolha({
+  ativos,
+  className,
+  children,
+}: {
+  ativos: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [aberta, setAberta] = useState(false);
+  return (
+    <div className={cn("mb-3", className)}>
+      <Botao
+        variante="secundario"
+        className="w-full justify-center"
+        onClick={() => setAberta(true)}
+      >
+        <SlidersHorizontal aria-hidden /> Filtros ({ativos})
+      </Botao>
+      <FolhaInferior
+        aberta={aberta}
+        aoMudar={setAberta}
+        titulo="Filtros"
+        rodape={
+          <Botao className="w-full" onClick={() => setAberta(false)}>
+            Ver resultados
+          </Botao>
+        }
+      >
+        <div className="flex flex-col gap-3 [&_select]:max-w-none [&_label:has(input[type=checkbox])]:min-h-11">
+          {children}
+        </div>
+      </FolhaInferior>
+    </div>
+  );
+}
+
+/**
+ * Filtros soltos numa linha (desktop); no celular, o botão "Filtros (n)" com a folha.
+ * Para listas cuja barra não usa `BarraFiltros`.
+ */
+export function FiltrosEmLinha({
+  ativos,
+  className,
+  children,
+}: {
+  ativos: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const celular = useCelular();
+  if (celular) return <FiltrosEmFolha ativos={ativos}>{children}</FiltrosEmFolha>;
+  return <div className={className}>{children}</div>;
+}
+
+/**
  * Barra de filtros de uma lista (R3-09): até 4 filtros principais numa só
  * linha; o que passar disso, e os `extras`, ficam em "Mais filtros", com a
  * contagem dos ativos. `extrasAtivos` é quantos filtros de dentro estão em uso.
+ *
+ * Abaixo de `md` (celular) a barra vira um botão "Filtros (n)" que abre uma
+ * folha com todos os filtros, um embaixo do outro. `ativos` é quantos filtros
+ * estão em uso no total (o `n` do botão).
  */
 export function BarraFiltros({
   principais,
   extras = [],
   extrasAtivos = 0,
+  ativos,
   className,
 }: {
   principais: ReactNode[];
   extras?: ReactNode[];
   extrasAtivos?: number;
+  ativos?: number;
   className?: string;
 }) {
+  const celular = useCelular();
+  if (celular)
+    return (
+      <FiltrosEmFolha ativos={ativos ?? extrasAtivos} className={className}>
+        {[...principais, ...extras].map((filtro, n) => (
+          <div key={n} className="[&>*]:w-full">
+            {filtro}
+          </div>
+        ))}
+      </FiltrosEmFolha>
+    );
   const visiveis = principais.slice(0, MAX_FILTROS_PRINCIPAIS);
   const escondidos = [...principais.slice(MAX_FILTROS_PRINCIPAIS), ...extras];
   return (

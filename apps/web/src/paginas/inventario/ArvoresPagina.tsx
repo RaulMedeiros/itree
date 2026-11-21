@@ -346,6 +346,11 @@ export function ArvoresPagina() {
             Nunca inspecionadas primeiro
           </label>,
         ]}
+        ativos={
+          contarFiltros({ ...filtros, bairro, situacao: filtros.situacao ?? "ativa" }, [
+            "situacao",
+          ]) + ((filtros.situacao ?? "ativa") !== "ativa" ? 1 : 0)
+        }
         extrasAtivos={filtrosExtras + (ordenacao === ORDENACAO_ATRASO ? 1 : 0)}
       />
       {filtros.area && (
@@ -499,7 +504,7 @@ export function ArvoresPagina() {
                   Código
                 </ThOrdenavel>
                 <Th>Espécie</Th>
-                <Th>Localização</Th>
+                <Th cartao="oculta">Localização</Th>
                 <Th>Endereço / bairro</Th>
                 <ThOrdenavel
                   direcao={direcaoDe(ordenacao, "condicao_aparente")}
@@ -510,13 +515,15 @@ export function ArvoresPagina() {
                 <ThOrdenavel
                   direcao={direcaoDe(ordenacao, "ultima_inspecao_em")}
                   aoOrdenar={() => ordenarPor("ultima_inspecao_em")}
+                  cartao="oculta"
                 >
                   Última inspeção
                 </ThOrdenavel>
-                {temOcorrenciasAbertas && <Th>Ocorrências abertas</Th>}
+                {temOcorrenciasAbertas && <Th cartao="oculta">Ocorrências abertas</Th>}
                 <ThOrdenavel
                   direcao={direcaoDe(ordenacao, "atualizado_em")}
                   aoOrdenar={() => ordenarPor("atualizado_em")}
+                  cartao="oculta"
                 >
                   Atualizado em
                 </ThOrdenavel>

@@ -239,6 +239,7 @@ export function OcorrenciasPagina() {
             Só atrasadas
           </label>,
         ]}
+        ativos={contarFiltros({ ...filtros, bairro })}
         extrasAtivos={contarFiltros({
           bairro,
           equipe: filtros.equipe,
@@ -325,12 +326,12 @@ export function OcorrenciasPagina() {
                 )}
                 <Th>Código</Th>
                 <Th>Tipo e descrição</Th>
-                <Th>Local</Th>
+                <Th cartao="oculta">Local</Th>
                 <Th>Estado</Th>
                 <Th>
                   Prioridade <AjudaTermo id="prioridade_operacional" />
                 </Th>
-                <Th>Responsável</Th>
+                <Th cartao="oculta">Responsável</Th>
                 <Th>Prazo</Th>
               </tr>
             </thead>

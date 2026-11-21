@@ -1,9 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { Botao } from "./botao";
-import { BarraFiltros, Entrada, LinhaFormulario } from "./campos";
+import { simularCelular } from "../testes/celular";
+import { BarraFiltros, Entrada, FiltrosEmLinha, LinhaFormulario } from "./campos";
 import { Recolhivel } from "./recolhivel";
 
 describe("Botao em linha de formulário (R3-07)", () => {
@@ -61,5 +62,77 @@ describe("BarraFiltros (R3-09)", () => {
     const mais = screen.getByText("Mais filtros").closest("details")!;
     expect(mais).toHaveAttribute("open");
     expect(within(mais).getByText("2 ativos")).toBeInTheDocument();
+  });
+});
+
+describe("filtros em folha no celular", () => {
+  const filtros = (n: number) =>
+    Array.from({ length: n }, (_, i) => <Entrada key={i} aria-label={`Filtro ${i + 1}`} />);
+
+  it("troca a barra por um botão 'Filtros (n)' com a contagem dos ativos", () => {
+    simularCelular();
+    render(<BarraFiltros principais={filtros(3)} ativos={2} />);
+    expect(screen.getByRole("button", { name: /Filtros \(2\)/ })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByText("Mais filtros")).toBeNull();
+  });
+
+  it("abre a folha com todos os filtros, inclusive os extras, e fecha em 'Ver resultados'", async () => {
+    simularCelular();
+    render(<BarraFiltros principais={filtros(5)} extras={filtros(1)} ativos={0} />);
+    await userEvent.click(screen.getByRole("button", { name: /Filtros \(0\)/ }));
+    const folha = await screen.findByRole("dialog", { name: "Filtros" });
+    expect(within(folha).getAllByRole("textbox")).toHaveLength(6);
+    await userEvent.click(within(folha).getByRole("button", { name: "Ver resultados" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("fecha a folha com Esc", async () => {
+    simularCelular();
+    render(<BarraFiltros principais={filtros(2)} />);
+    await userEvent.click(screen.getByRole("button", { name: /Filtros/ }));
+    await screen.findByRole("dialog", { name: "Filtros" });
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("o valor digitado na folha chega ao controle da página", async () => {
+    simularCelular();
+    const aoMudar = vi.fn();
+    render(
+      <BarraFiltros
+        principais={[
+          <Entrada key="b" aria-label="Buscar" onChange={(e) => aoMudar(e.target.value)} />,
+        ]}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Filtros/ }));
+    await userEvent.type(await screen.findByRole("textbox", { name: "Buscar" }), "ipê");
+    expect(aoMudar).toHaveBeenLastCalledWith("ipê");
+  });
+
+  it("filtros soltos (FiltrosEmLinha) também viram folha no celular e ficam em linha no desktop", async () => {
+    render(
+      <FiltrosEmLinha ativos={1}>
+        <Entrada aria-label="Responsável" />
+      </FiltrosEmLinha>,
+    );
+    expect(screen.getByRole("textbox", { name: "Responsável" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Filtros/ })).toBeNull();
+    cleanup();
+    simularCelular();
+    render(
+      <FiltrosEmLinha ativos={1}>
+        <Entrada aria-label="Responsável" />
+      </FiltrosEmLinha>,
+    );
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.getByRole("button", { name: /Filtros \(1\)/ })).toBeInTheDocument();
+  });
+
+  it("no desktop a barra continua como era, sem o botão", () => {
+    render(<BarraFiltros principais={filtros(2)} ativos={1} />);
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /Filtros/ })).toBeNull();
   });
 });

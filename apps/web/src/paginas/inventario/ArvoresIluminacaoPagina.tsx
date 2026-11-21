@@ -12,6 +12,7 @@ import { SeloEspecie, nomeEspecie } from "../../componentes/selos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { capitalizar } from "../../mapa/iluminacao";
 import { Botao } from "../../ui/botao";
+import { contarFiltros } from "../../util/filtros";
 import { BarraFiltros, Entrada, Selecao } from "../../ui/campos";
 import { Carregando, Erro, ListaVazia } from "../../ui/estados";
 import { CabecalhoPagina, Paginacao } from "../../ui/pagina";
@@ -146,6 +147,7 @@ export function ArvoresIluminacaoPagina() {
             ))}
           </Selecao>,
         ]}
+        ativos={contarFiltros({ ...filtros, bairro })}
       />
 
       {consulta.isPending ? (
@@ -218,7 +220,7 @@ export function ArvoresIluminacaoPagina() {
                 <Th>Espécie</Th>
                 <Th>Endereço / bairro</Th>
                 <Th>Distância do poste</Th>
-                <Th>Poste mais próximo</Th>
+                <Th cartao="oculta">Poste mais próximo</Th>
               </tr>
             </thead>
             <tbody>

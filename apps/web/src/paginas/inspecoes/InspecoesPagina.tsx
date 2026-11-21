@@ -176,6 +176,7 @@ export function InspecoesPagina() {
             />
           </label>,
         ]}
+        ativos={contarFiltros({ ...filtros, bairro })}
         extrasAtivos={contarFiltros({
           requer_encaminhamento: filtros.requer_encaminhamento,
           desde: filtros.desde,
@@ -241,10 +242,10 @@ export function InspecoesPagina() {
                 )}
                 <Th>Inspeção</Th>
                 <Th>Árvore</Th>
-                <Th>Técnico</Th>
+                <Th cartao="oculta">Técnico</Th>
                 <Th>Condição aparente</Th>
                 <Th>Situação</Th>
-                <Th>Recebida em</Th>
+                <Th cartao="oculta">Recebida em</Th>
               </tr>
             </thead>
             <tbody>

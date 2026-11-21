@@ -191,6 +191,7 @@ export function AlertasPagina() {
             />
           </label>,
         ]}
+        ativos={contarFiltros({ ...filtros, bairro }, ["raio"])}
         extrasAtivos={contarFiltros({
           junto_area_verde: filtros.junto_area_verde,
           deteccao_desde: filtros.deteccao_desde,
@@ -259,8 +260,8 @@ export function AlertasPagina() {
                   Fonte e tipo <AjudaTermo id="fonte_externa" />
                 </Th>
                 <Th>Detecção (fonte)</Th>
-                <Th>Ingestão</Th>
-                <Th>Bairros</Th>
+                <Th cartao="oculta">Ingestão</Th>
+                <Th cartao="oculta">Bairros</Th>
                 <ThOrdenavel
                   direcao={direcaoDe("arvores_proximas")}
                   aoOrdenar={() => ordenarPor("arvores_proximas")}
