@@ -294,6 +294,22 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     esperar: /falta de cadastro/,
     espera: 3000,
   });
+  // Planejamento "Onde plantar": cenário Equilibrado e cenário Equidade com um bairro aberto.
+  await tela(p, "51-planejamento", "/planejamento", {
+    esperar: /Os 20 bairros com maior prioridade/,
+    espera: 6000,
+    inteira: true,
+  });
+  await tela(
+    p,
+    "52-planejamento-equidade",
+    `/planejamento?renda=5&arborizacao=4&densidade=2&arvores=2&verde=2&bairro=${ids.bairro_demo_id}`,
+    {
+      esperar: /Abrir a ficha do bairro/,
+      espera: 6000,
+      inteira: true,
+    },
+  );
   await tela(p, "41-analises-mudas", "/analises?analise=mudas_doadas_por_especie", {
     esperar: /Ressalvas/,
     espera: 2500,
