@@ -479,7 +479,7 @@ export function Sparkline({ serie, unidade = "" }: { serie: PontoSerie[]; unidad
       viewBox={`0 0 ${largura} ${altura}`}
       width={largura}
       height={altura}
-      className="mt-1"
+      className="mt-1 max-w-full"
     >
       <polyline
         points={pontos.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}
