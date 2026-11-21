@@ -246,3 +246,16 @@ Cenário de priorização por bairro (não é índice oficial, DP-14), com pesos
 Cenário "Equidade", com um bairro aberto no painel:
 
 ![Onde plantar, equidade](52-planejamento-equidade.png)
+
+## Celular (390 px)
+
+| Menu | Mapa | Camadas | Árvores |
+| --- | --- | --- | --- |
+| ![Menu](m07-menu.png) | ![Mapa](m02-mapa.png) | ![Camadas](m03-mapa-camadas.png) | ![Árvores](m04-arvores.png) |
+
+Revisão de inspeção com a barra de decisão fixa no rodapé:
+
+![Revisão no celular](m06-inspecao-revisao.png)
+
+Também: [visão geral](m01-visao-geral.png), [ficha da árvore](m05-arvore-ficha.png) e
+[ficha do bairro](m08-bairro.png), em página inteira.
