@@ -7,6 +7,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, type ReactNode } from "react";
 
+import { BarraAcoesLote } from "../ui/barraLote";
 import { Botao } from "../ui/botao";
 import { Dialogo } from "../ui/dialogo";
 import { invalidarCaminhos } from "../util/cache";
@@ -42,11 +43,7 @@ export function BarraAcoesEmLote({
   const excede = excedeLimiteDoLote(total, todosFiltrados);
   const emSegundoPlano = todosFiltrados && !excede && total > LIMITE_ACOES_EM_LOTE;
   return (
-    <div
-      role="region"
-      aria-label="Ações da seleção"
-      className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-marca bg-marca-clara px-3 py-2"
-    >
+    <BarraAcoesLote>
       <p role="status" className="mr-2 text-sm font-medium">
         {plural(total, singular, pluralForma)}
         {todosFiltrados && (
@@ -75,7 +72,7 @@ export function BarraAcoesEmLote({
           andamento.
         </p>
       )}
-    </div>
+    </BarraAcoesLote>
   );
 }
 

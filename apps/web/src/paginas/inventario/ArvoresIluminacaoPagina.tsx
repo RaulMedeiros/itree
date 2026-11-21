@@ -11,6 +11,7 @@ import { BotaoExportarCsv } from "../../componentes/BotaoExportarCsv";
 import { SeloEspecie, nomeEspecie } from "../../componentes/selos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { capitalizar } from "../../mapa/iluminacao";
+import { BarraAcoesLote } from "../../ui/barraLote";
 import { Botao } from "../../ui/botao";
 import { contarFiltros } from "../../util/filtros";
 import { BarraFiltros, Entrada, Selecao } from "../../ui/campos";
@@ -174,11 +175,7 @@ export function ArvoresIluminacaoPagina() {
       ) : (
         <>
           {selecionadas.length > 0 && (
-            <div
-              role="region"
-              aria-label="Ações da seleção"
-              className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-marca bg-marca-clara px-3 py-2"
-            >
+            <BarraAcoesLote>
               <p role="status" className="mr-2 text-sm font-medium">
                 {plural(selecionadas.length, "árvore selecionada", "árvores selecionadas")}
               </p>
@@ -190,7 +187,7 @@ export function ArvoresIluminacaoPagina() {
               <Botao variante="fantasma" onClick={() => definir([])}>
                 Limpar seleção
               </Botao>
-            </div>
+            </BarraAcoesLote>
           )}
           <Tabela>
             <thead>
