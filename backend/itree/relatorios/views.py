@@ -24,7 +24,14 @@ from itree.alertas.models import AlertaAmbiental
 from itree.alertas.views import filtrar_alertas
 from itree.contas.acesso import filtrar_por_escopo, tem_escopo_municipal
 from itree.core.textos import sem_codigos_internos
-from itree.indicadores import analises_mudas, doacao_plantio, externos, manejo_urbfor
+from itree.indicadores import (
+    analises_mudas,
+    doacao_plantio,
+    externos,
+    manejo_urbfor,
+    populacao_indicadores,
+)
+from itree.indicadores import populacao as pop
 from itree.indicadores.models import IndicadorTerritorialExterno
 from itree.inspecoes.models import EstadoInspecao, Inspecao
 from itree.inspecoes.views import filtrar_inspecoes
@@ -71,6 +78,80 @@ ANALISES = {
         "fonte": f"{externos.FONTE_CENSO} ({externos.URL_CENSO_FACES})",
         "unidade": "%",
         "base_rotulo": "faces de quadra",
+    },
+    "arvores_por_mil_habitantes_por_bairro": {
+        "titulo": "Árvores por 1.000 habitantes por bairro (provisório)",
+        "definicao": populacao_indicadores.DEFINICAO_POR_MIL
+        + " Dado da população do Censo e do inventário atual: não depende do período escolhido.",
+        "permissao": "inventario.ler",
+        "por_bairro": True,
+        "fonte": f"{populacao_indicadores.pop.ORGAO_IBGE}, Censo Demográfico 2022 (população) e "
+        "inventário do iTree (árvores cadastradas)",
+        "unidade": "",
+        "base_rotulo": "habitantes",
+        "ressalvas": [
+            populacao_indicadores.RESSALVA_INVENTARIO,
+            populacao_indicadores.AVISO_PROVISORIO,
+        ],
+        "provisorio": True,
+        "ordenavel": True,
+        "sem_total": True,
+        "colunas_csv": [
+            ("rotulo", "Bairro"),
+            ("valor", "Árvores cadastradas por 1.000 habitantes"),
+            ("arvores", "Árvores cadastradas"),
+            ("populacao", "População (Censo)"),
+            ("habitantes_por_arvore", "Habitantes por árvore cadastrada"),
+        ],
+    },
+    "populacao_densidade_por_bairro": {
+        "titulo": "População e densidade por bairro (Censo 2022)",
+        "definicao": pop.DEFINICAO_POPULACAO
+        + " "
+        + pop.METODO_POPULACAO
+        + " A estimativa iTree do ano, quando existe, aparece à parte e não é dado oficial: "
+        + populacao_indicadores.HIPOTESE
+        + " Dado do Censo: não depende do período escolhido.",
+        "permissao": "inventario.ler",
+        "por_bairro": True,
+        "fonte": f"{pop.ORGAO_IBGE}, Censo Demográfico 2022, agregados por bairro",
+        "unidade": "",
+        "base_rotulo": "habitantes",
+        "ordenavel": True,
+        "colunas_csv": [
+            ("rotulo", "Bairro"),
+            ("valor", "População residente (Censo 2022)"),
+            ("densidade", "Densidade (hab/km²)"),
+            ("area_km2", "Área (km²)"),
+            ("domicilios", "Domicílios"),
+            ("estimativa_itree", "Estimativa iTree do ano (não oficial)"),
+        ],
+    },
+    "arvores_mil_x_renda": {
+        "titulo": "Árvores por 1.000 habitantes × rendimento do responsável, por bairro",
+        "definicao": (
+            "Cada ponto é um bairro: árvores cadastradas por 1.000 habitantes (provisório) contra "
+            "o rendimento médio mensal do responsável pelo domicílio (Censo 2022, R$ de 2022). "
+            "Serve para olhar se a distribuição das árvores cadastradas acompanha a renda. Não "
+            "afirma causa: " + populacao_indicadores.RESSALVA_INVENTARIO
+        ),
+        "permissao": "inventario.ler",
+        "por_bairro": True,
+        "fonte": "IBGE, Censo Demográfico 2022 (população e rendimento) e inventário do iTree",
+        "unidade": "",
+        "base_rotulo": "habitantes",
+        "ressalvas": [
+            populacao_indicadores.RESSALVA_INVENTARIO,
+            populacao_indicadores.AVISO_PROVISORIO,
+        ],
+        "provisorio": True,
+        "ordenavel": True,
+        "sem_total": True,
+        "colunas_csv": [
+            ("rotulo", "Bairro"),
+            ("valor", "Árvores cadastradas por 1.000 habitantes"),
+            ("renda", "Rendimento médio do responsável (R$)"),
+        ],
     },
     "manejo_urbfor_por_bairro": {
         "titulo": manejo_urbfor.NOME_ANALISE,
@@ -191,6 +272,12 @@ def _linhas_analise(chave: str, usuario, inicio: date, fim: date) -> list[dict]:
             }
             for i in sorted(dados, key=lambda i: (-i.valor, i.territorio.nome))
         ]
+    if chave == "arvores_por_mil_habitantes_por_bairro":
+        return populacao_indicadores.linhas_arvores_por_mil(usuario)
+    if chave == "populacao_densidade_por_bairro":
+        return populacao_indicadores.linhas_populacao(usuario)
+    if chave == "arvores_mil_x_renda":
+        return populacao_indicadores.linhas_dispersao(usuario)
     if chave == "manejo_urbfor_por_bairro":
         return _linhas_manejo(usuario)
     if chave == "mudas_doadas_por_especie":
@@ -473,6 +560,18 @@ def _serie_mensal(chave: str, usuario, inicio: date, fim: date) -> dict | None:
                 allow_null=True,
                 help_text="Soma das linhas, só quando são contagens que não se sobrepõem.",
             ),
+            "ressalvas": serializers.ListField(child=serializers.CharField()),
+            "provisorio": serializers.BooleanField(),
+            "ordenavel": serializers.BooleanField(),
+            "colunas_csv": serializers.ListField(
+                child=serializers.DictField(),
+                help_text="Colunas ({chave, rotulo}) do CSV que a tela gera a partir das linhas.",
+            ),
+            "dispersao": serializers.DictField(
+                allow_null=True,
+                help_text="Pontos de um gráfico de dispersão por bairro, com a correlação apenas "
+                "como descrição (r e número de bairros).",
+            ),
         },
     ),
 )
@@ -505,10 +604,19 @@ def analise(request: Request):
             "base_rotulo": definicao.get("base_rotulo", ""),
             "linhas": linhas,
             "serie_mensal": _serie_mensal(chave, request.user, inicio, fim),
-            # Médias (tempo de atendimento) e percentuais não se somam; contagens, sim.
+            # Médias (tempo de atendimento), razões e percentuais não se somam; contagens, sim.
             "total": None
-            if chave in NAO_SOMAVEIS or definicao.get("unidade") == "%"
+            if chave in NAO_SOMAVEIS
+            or definicao.get("unidade") == "%"
+            or definicao.get("sem_total")
             else sum(linha["valor"] for linha in linhas),
+            "ressalvas": definicao.get("ressalvas", []),
+            "provisorio": definicao.get("provisorio", False),
+            "ordenavel": definicao.get("ordenavel", False),
+            "colunas_csv": [{"chave": c, "rotulo": r} for c, r in definicao.get("colunas_csv", [])],
+            "dispersao": populacao_indicadores.dispersao_renda(request.user)
+            if chave == "arvores_mil_x_renda"
+            else None,
         }
     )
 

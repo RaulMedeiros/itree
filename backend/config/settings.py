@@ -356,6 +356,12 @@ CELERY_BEAT_SCHEDULE = {
         "task": "itree.indicadores.tasks.reimportar_ilha_calor",
         "schedule": crontab(minute=0, hour=5, day_of_month=5, month_of_year=2),
     },
+    # População, renda e IDH por bairro: confere mensalmente as listagens do IBGE (versão nova do
+    # Censo, estimativa nova) e reimporta só o que mudou.
+    "renovar-fontes-populacao": {
+        "task": "itree.indicadores.tasks.renovar_fontes_populacao",
+        "schedule": crontab(minute=0, hour=5, day_of_month=6),
+    },
     # Conectores vencidos pela periodicidade (RF-INT-006): confere de hora em hora.
     "disparar-conectores": {
         "task": "itree.conectores.tasks.disparar_conectores_vencidos",

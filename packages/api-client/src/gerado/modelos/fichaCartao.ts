@@ -5,6 +5,7 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { FichaEscala } from './fichaEscala';
 import type { FichaExtra } from './fichaExtra';
 import type { FichaLink } from './fichaLink';
 import type { FichaReferencia } from './fichaReferencia';
@@ -17,7 +18,7 @@ export interface FichaCartao {
      * @nullable
      */
   valor: number | null;
-  /** "%", "°C" ou vazio (contagem). */
+  /** "%", "°C", "R$", "hab/km²", "por 1.000 hab.", "IDH", "pessoas" ou vazio. */
   unidade: string;
   detalhe: string;
   /** Ressalva, ou o motivo de não haver dado. */
@@ -36,4 +37,6 @@ export interface FichaCartao {
   definicao: string;
   metodo: string;
   link: FichaLink | null;
+  /** Menor e maior valor entre os bairros: escala da régua dos indicadores que não são percentuais. */
+  escala?: FichaEscala | null;
 }

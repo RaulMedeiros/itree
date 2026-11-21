@@ -2013,6 +2013,31 @@ paths:
                 type: object
                 additionalProperties: {}
           description: ''
+  /api/v1/indicadores/externos/populacao:
+    get:
+      operationId: indicadores_populacao_geojson
+      description: |-
+        Camada coroplética de população e renda: bairros do escopo com densidade, árvores por 1.000
+        habitantes (provisório), rendimento do responsável e IDH 2010, as quebras por quantis e a
+        proveniência de cada indicador.
+      parameters:
+      - in: query
+        name: precisao
+        schema:
+          type: integer
+        description: Casas decimais (padrão 5).
+      tags:
+      - indicadores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/v1/indicadores/painel:
     get:
       operationId: indicadores_painel
@@ -3474,7 +3499,8 @@ paths:
         name: analise
         schema:
           type: string
-        description: arvores_por_bairro, arborizacao_entorno_por_bairro, manejo_urbfor_por_bairro,
+        description: arvores_por_bairro, arborizacao_entorno_por_bairro, arvores_por_mil_habitantes_por_bairro,
+          populacao_densidade_por_bairro, arvores_mil_x_renda, manejo_urbfor_por_bairro,
           mudas_doadas_por_especie, mudas_doadas_por_categoria, plantios_por_bairro,
           ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo,
           inspecoes_por_mes, alertas_por_fonte
@@ -4287,15 +4313,41 @@ components:
           type: integer
           nullable: true
           description: Soma das linhas, só quando são contagens que não se sobrepõem.
+        ressalvas:
+          type: array
+          items:
+            type: string
+        provisorio:
+          type: boolean
+        ordenavel:
+          type: boolean
+        colunas_csv:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: Colunas ({chave, rotulo}) do CSV que a tela gera a partir das
+            linhas.
+        dispersao:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          description: Pontos de um gráfico de dispersão por bairro, com a correlação
+            apenas como descrição (r e número de bairros).
       required:
       - base_rotulo
       - calculado_em
+      - colunas_csv
       - definicao
+      - dispersao
       - fonte
       - id
       - linhas
+      - ordenavel
       - periodo
       - por_bairro
+      - provisorio
+      - ressalvas
       - serie_mensal
       - titulo
       - total
@@ -4883,6 +4935,13 @@ components:
           type: object
           additionalProperties: {}
           nullable: true
+        populacao:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: 'Fontes de população, renda e IDH: versão em uso, última conferência
+            e se estão desatualizadas ou com falha.'
         arvores:
           type: object
           additionalProperties: {}
@@ -4903,6 +4962,7 @@ components:
       - iluminacao
       - limites_escopo
       - ocorrencias
+      - populacao
       - territorios
     CatalogoAnalises:
       type: object
@@ -6330,7 +6390,8 @@ components:
           description: Nulo quando ``sem_dado``.
         unidade:
           type: string
-          description: '"%", "°C" ou vazio (contagem).'
+          description: '"%", "°C", "R$", "hab/km²", "por 1.000 hab.", "IDH", "pessoas"
+            ou vazio.'
         detalhe:
           type: string
         nota:
@@ -6369,6 +6430,12 @@ components:
           allOf:
           - $ref: '#/components/schemas/FichaLink'
           nullable: true
+        escala:
+          allOf:
+          - $ref: '#/components/schemas/FichaEscala'
+          nullable: true
+          description: 'Menor e maior valor entre os bairros: escala da régua dos
+            indicadores que não são percentuais.'
       required:
       - base
       - cidade
@@ -6404,6 +6471,18 @@ components:
       - peso
       - quantidade
       - rotulo
+    FichaEscala:
+      type: object
+      properties:
+        min:
+          type: number
+          format: double
+        max:
+          type: number
+          format: double
+      required:
+      - max
+      - min
     FichaExtra:
       type: object
       properties:
