@@ -43,11 +43,19 @@ def det(ident="d1", local=None, **extra) -> dict:
 
 
 def corpo(deteccoes=None, **lote_extra) -> dict:
-    return {"lote": lote(**lote_extra), "deteccoes": deteccoes if deteccoes is not None else [det()]}
+    return {
+        "lote": lote(**lote_extra),
+        "deteccoes": deteccoes if deteccoes is not None else [det()],
+    }
 
 
 def foto(arquivo="a.png", **extra) -> dict:
-    return {"arquivo": arquivo, "capturada_em": "2026-11-20T10:00:00-03:00", "anonimizada": True, **extra}
+    return {
+        "arquivo": arquivo,
+        "capturada_em": "2026-11-20T10:00:00-03:00",
+        "anonimizada": True,
+        **extra,
+    }
 
 
 def imagem(formato="PNG", lado=64) -> bytes:

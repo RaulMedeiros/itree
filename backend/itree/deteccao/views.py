@@ -350,12 +350,13 @@ class SinalRemocaoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             "arvore", "arvore__especie", "arvore__bairro", "lote"
         )
         qs = filtrar_por_escopo(qs, self.request.user, campo_geom="arvore__geom")
-        p = self.request.query_params
-        situacao = p.get("situacao", "pendente")
-        if situacao != "todas":
-            qs = qs.filter(situacao=situacao)
-        if lote := p.get("lote"):
-            qs = qs.filter(lote_id=lote)
+        if self.action == "list":
+            p = self.request.query_params
+            situacao = p.get("situacao", "pendente")
+            if situacao != "todas":
+                qs = qs.filter(situacao=situacao)
+            if lote := p.get("lote"):
+                qs = qs.filter(lote_id=lote)
         return qs.order_by("-criado_em", "arvore__numero")
 
     def _decidir(self, request, confirmar: bool) -> Response:

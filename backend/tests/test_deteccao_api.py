@@ -6,7 +6,6 @@ import zipfile
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.utils import timezone
 
 from itree.conectores import seguranca
 from itree.deteccao import servico, tasks
@@ -14,11 +13,16 @@ from itree.deteccao.models import LoteDeteccao, SituacaoLote, TokenIntegracao
 from itree.evidencias.models import Evidencia
 from itree.inventario.models import Arvore
 
-from .conftest import PONTO_A, com_escopo, criar_usuario
+from .conftest import PONTO_A, com_escopo
 from .deteccao_util import LOTE_URL, com_token, corpo, deslocar, det, foto, imagem
-from .test_galeria_miniaturas import s3  # noqa: F401 - fixture do armazenamento simulado
+from .test_galeria_miniaturas import s3 as _armazenamento  # noqa: F401
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def s3(request):
+    return request.getfixturevalue("_armazenamento")
 
 
 @pytest.fixture
@@ -81,7 +85,10 @@ def test_token_sem_a_permissao_de_enviar_e_barrado(cliente, integracao):
 
 def test_escopo_territorial_do_token_recusa_o_que_esta_fora(cliente, territorios, admin):
     com_token(cliente, [territorios["b"]], admin)  # só o Bairro B
-    r = enviar(cliente, corpo([det("dentro", deslocar({"longitude": -38.535, "latitude": -3.755})), det("fora")]))
+    r = enviar(
+        cliente,
+        corpo([det("dentro", deslocar({"longitude": -38.535, "latitude": -3.755})), det("fora")]),
+    )
     assert r.status_code == 201, r.json()
     dados = r.json()
     assert (dados["arvores_criadas"], dados["recusadas"]) == (1, 1)
@@ -147,9 +154,7 @@ def test_usuario_de_servico_nao_entra_por_oidc(cliente, integracao):
     cliente.credentials(HTTP_AUTHORIZATION="Token x")  # e o e-mail dele não vira login
     from .conftest import emitir_token
 
-    cliente.credentials(
-        HTTP_AUTHORIZATION=f"Bearer {emitir_token(sub='fake', email=u.email)}"
-    )
+    cliente.credentials(HTTP_AUTHORIZATION=f"Bearer {emitir_token(sub='fake', email=u.email)}")
     assert cliente.get("/api/v1/eu").status_code == 401
 
 
@@ -178,9 +183,7 @@ def test_limite_de_deteccoes_por_lote(cliente, integracao, settings):
 
 def test_limite_de_tamanho_do_corpo(cliente, integracao, settings):
     settings.DETECCAO_MAX_CORPO_MB = 1
-    r = cliente.post(
-        LOTE_URL, corpo(), format="json", CONTENT_LENGTH=str(2 * 1024 * 1024)
-    )
+    r = cliente.post(LOTE_URL, corpo(), format="json", CONTENT_LENGTH=str(2 * 1024 * 1024))
     assert r.status_code == 413
 
 
@@ -194,12 +197,17 @@ def test_deteccao_invalida_e_recusada_e_o_resto_segue(cliente, integracao):
 # --- Foto sem anonimização -----------------------------------------------------------------
 
 
-def test_foto_sem_anonimizacao_recusa_a_deteccao_e_nao_guarda_a_foto(cliente, integracao, s3):  # noqa: F811
+def test_foto_sem_anonimizacao_recusa_a_deteccao_e_nao_guarda_a_foto(cliente, integracao, s3):
     sem = {"arquivo": "a.png", "capturada_em": "2026-11-20T10:00:00-03:00"}
     r = cliente.post(
         LOTE_URL,
         {
-            "dados": SimpleUploadedFile("dados.json", json.dumps(corpo([det("d1", fotos=[sem]), det("d2", deslocar(PONTO_A, 30))])).encode()),
+            "dados": SimpleUploadedFile(
+                "dados.json",
+                json.dumps(
+                    corpo([det("d1", fotos=[sem]), det("d2", deslocar(PONTO_A, 30))])
+                ).encode(),
+            ),
             "fotos": SimpleUploadedFile("a.png", imagem()),
         },
         format="multipart",
@@ -220,7 +228,7 @@ def multipart(dados, **arquivos):
     return partes
 
 
-def test_foto_em_multipart_vira_evidencia_da_arvore_com_origem_deteccao(cliente, integracao, s3):  # noqa: F811
+def test_foto_em_multipart_vira_evidencia_da_arvore_com_origem_deteccao(cliente, integracao, s3):
     dados = corpo([det("d1", fotos=[foto("a.png")])])
     r = cliente.post(
         LOTE_URL,
@@ -240,7 +248,7 @@ def test_foto_em_multipart_vira_evidencia_da_arvore_com_origem_deteccao(cliente,
     assert s3.head_object(Bucket="itree-teste", Key=evidencia.chave)["ContentLength"] > 0
 
 
-def test_foto_citada_e_ausente_ou_invalida_recusa_so_a_deteccao(cliente, integracao, s3):  # noqa: F811
+def test_foto_citada_e_ausente_ou_invalida_recusa_so_a_deteccao(cliente, integracao, s3):
     dados = corpo(
         [
             det("falta", fotos=[foto("nao-veio.png")]),
@@ -263,7 +271,7 @@ def test_foto_citada_e_ausente_ou_invalida_recusa_so_a_deteccao(cliente, integra
     assert (r.json()["arvores_criadas"], r.json()["recusadas"]) == (1, 2)
 
 
-def test_foto_grande_demais_e_recusada(cliente, integracao, s3, settings):  # noqa: F811
+def test_foto_grande_demais_e_recusada(cliente, integracao, s3, settings):
     settings.DETECCAO_MAX_FOTO_MB = 0  # qualquer foto passa do limite
     dados = corpo([det("d1", fotos=[foto("a.png")])])
     r = cliente.post(LOTE_URL, multipart(dados, **{"a.png": imagem()}), format="multipart")
@@ -285,7 +293,11 @@ def foto_url(url="https://fotos.itree.teste/a.png"):
 
 
 def test_foto_por_url_e_baixada_com_a_protecao_dos_conectores(
-    cliente, integracao, s3, settings, monkeypatch  # noqa: F811
+    cliente,
+    integracao,
+    s3,
+    settings,
+    monkeypatch,
 ):
     settings.ITREE_DETECCAO_HOSTS_FOTOS = ["fotos.itree.teste"]
     chamadas = []
@@ -297,7 +309,9 @@ def test_foto_por_url_e_baixada_com_a_protecao_dos_conectores(
     monkeypatch.setattr(seguranca, "buscar", falso_buscar)
     r = enviar(cliente, corpo([det("d1", fotos=[foto_url()])]))
     assert r.status_code == 201, r.json()
-    assert chamadas == [("https://fotos.itree.teste/a.png", {"fotos.itree.teste"}, 10 * 1024 * 1024)]
+    assert chamadas == [
+        ("https://fotos.itree.teste/a.png", {"fotos.itree.teste"}, 10 * 1024 * 1024)
+    ]
     assert Evidencia.objects.get().origem == "deteccao"
 
 
@@ -311,7 +325,12 @@ def test_foto_por_url_e_baixada_com_a_protecao_dos_conectores(
     ],
 )
 def test_foto_por_url_perigosa_nao_e_baixada_e_a_deteccao_segue(
-    cliente, integracao, s3, settings, monkeypatch, url  # noqa: F811
+    cliente,
+    integracao,
+    s3,
+    settings,
+    monkeypatch,
+    url,
 ):
     settings.ITREE_DETECCAO_HOSTS_FOTOS = ["fotos.itree.teste"]
     monkeypatch.setattr(seguranca, "_resolver", lambda host: ["93.184.216.34"])
@@ -326,7 +345,7 @@ def test_foto_por_url_perigosa_nao_e_baixada_e_a_deteccao_segue(
     assert "Foto não guardada" in r.json()["erros"][0]["motivo"]
 
 
-def test_foto_por_url_em_ip_privado_e_recusada(cliente, integracao, s3, settings, monkeypatch):  # noqa: F811
+def test_foto_por_url_em_ip_privado_e_recusada(cliente, integracao, s3, settings, monkeypatch):
     settings.ITREE_DETECCAO_HOSTS_FOTOS = ["fotos.itree.teste"]
     monkeypatch.setattr(seguranca, "_resolver", lambda host: ["10.0.0.5"])
     monkeypatch.setattr(seguranca, "_por_proxy", lambda url: False)
@@ -335,7 +354,7 @@ def test_foto_por_url_em_ip_privado_e_recusada(cliente, integracao, s3, settings
     assert "não público" in r.json()["erros"][0]["motivo"]
 
 
-def test_lista_de_hosts_de_fotos_vazia_nao_baixa_nada(cliente, integracao, s3):  # noqa: F811
+def test_lista_de_hosts_de_fotos_vazia_nao_baixa_nada(cliente, integracao, s3):
     r = enviar(cliente, corpo([det("d1", fotos=[foto_url()])]))
     assert r.json()["arvores_criadas"] == 1 and Evidencia.objects.count() == 0
 
@@ -443,7 +462,10 @@ def zip_pacote(dados=None, geojson=True, fotos=None, lote_json=True, extra=None)
     features = [
         {
             "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [d["localizacao"]["longitude"], d["localizacao"]["latitude"]]},
+            "geometry": {
+                "type": "Point",
+                "coordinates": [d["localizacao"]["longitude"], d["localizacao"]["latitude"]],
+            },
             "properties": {
                 "id_deteccao": d["id"],
                 **{k: v for k, v in d.items() if k not in ("id", "localizacao")},
@@ -456,7 +478,9 @@ def zip_pacote(dados=None, geojson=True, fotos=None, lote_json=True, extra=None)
         if lote_json:
             z.writestr("lote.json", json.dumps(dados["lote"]))
         if geojson:
-            z.writestr("deteccoes.geojson", json.dumps({"type": "FeatureCollection", "features": features}))
+            z.writestr(
+                "deteccoes.geojson", json.dumps({"type": "FeatureCollection", "features": features})
+            )
         for nome, conteudo in (fotos or {}).items():
             z.writestr(nome, conteudo)
         for nome, conteudo in (extra or {}).items():
@@ -470,8 +494,10 @@ def enviar_pacote(cliente, conteudo, nome="pacote.zip"):
     )
 
 
-def test_pacote_pela_tela_cria_o_mesmo_que_a_api(cliente, revisor, s3):  # noqa: F811
-    dados = corpo([det("p1", fotos=[foto("fotos/p1.png")]), det("p2", deslocar(PONTO_A, 40), tipo="toco")])
+def test_pacote_pela_tela_cria_o_mesmo_que_a_api(cliente, revisor, s3):
+    dados = corpo(
+        [det("p1", fotos=[foto("fotos/p1.png")]), det("p2", deslocar(PONTO_A, 40), tipo="toco")]
+    )
     r = enviar_pacote(cliente.como(revisor), zip_pacote(dados, fotos={"fotos/p1.png": imagem()}))
     assert r.status_code == 201, r.json()
     assert r.json()["canal"] == "pacote" and r.json()["arquivo_nome"] == "pacote.zip"
@@ -517,7 +543,7 @@ def test_pacote_com_membros_demais_e_recusado(cliente, revisor, settings):
     assert r.status_code == 422 and "limite" in r.json()["erros"][0]
 
 
-def test_pacote_ignora_caminhos_perigosos_e_nao_escreve_no_disco(cliente, revisor, s3, tmp_path):  # noqa: F811
+def test_pacote_ignora_caminhos_perigosos_e_nao_escreve_no_disco(cliente, revisor, s3, tmp_path):
     dados = corpo([det("p1", fotos=[foto("../../etc/passwd.png")])])
     pacote_zip = zip_pacote(dados, extra={"../../etc/passwd.png": imagem(), "/abs.png": b"x"})
     r = enviar_pacote(cliente.como(revisor), pacote_zip)
@@ -535,7 +561,10 @@ def test_pacote_geopackage(cliente, revisor, tmp_path):
         "features": [
             {
                 "type": "Feature",
-                "geometry": {"type": "Point", "coordinates": [PONTO_A["longitude"], PONTO_A["latitude"]]},
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [PONTO_A["longitude"], PONTO_A["latitude"]],
+                },
                 "properties": {
                     "id_deteccao": "g1",
                     "tipo": "arvore",
