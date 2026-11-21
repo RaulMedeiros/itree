@@ -50,6 +50,7 @@ import { AnalisesPagina } from "./paginas/analises/AnalisesPagina";
 import { AjudaPagina } from "./paginas/ajuda/AjudaPagina";
 import { BairroFichaPagina } from "./paginas/bairros/BairroFichaPagina";
 import { BairrosPagina } from "./paginas/bairros/BairrosPagina";
+import { PlanejamentoPagina } from "./paginas/planejamento/PlanejamentoPagina";
 import { MinhaContaPagina } from "./paginas/conta/MinhaContaPagina";
 import { NotificacoesPagina } from "./paginas/notificacoes/NotificacoesPagina";
 import { IntegracoesPagina } from "./paginas/administracao/IntegracoesPagina";
@@ -593,6 +594,27 @@ const analises = createRoute({
   ),
 });
 
+const pesoOpcional = z.coerce.number().int().min(0).max(5).optional().catch(undefined);
+
+const planejamento = createRoute({
+  getParentRoute: () => autenticado,
+  path: "planejamento",
+  validateSearch: z.object({
+    arborizacao: pesoOpcional,
+    densidade: pesoOpcional,
+    renda: pesoOpcional,
+    arvores: pesoOpcional,
+    verde: pesoOpcional,
+    calor: pesoOpcional,
+    bairro: textoOpcional,
+  }),
+  component: () => (
+    <Exige permissao="relatorios.ler">
+      <PlanejamentoPagina />
+    </Exige>
+  ),
+});
+
 const qualidade = createRoute({
   getParentRoute: () => inventario,
   path: "qualidade",
@@ -611,6 +633,7 @@ const integracoes = createRoute({
 
 const ENTREGUES = new Set([
   "analises",
+  "planejamento",
   "administracao",
   "mapa",
   "inventario",
@@ -690,6 +713,7 @@ const arvore = raiz.addChildren([
     tarefas.addChildren([tarefasLista, tarefaDetalhe]),
     alertas.addChildren([alertasLista, alertaDetalhe]),
     analises,
+    planejamento,
     notificacoes,
     ajuda,
     minhaConta,

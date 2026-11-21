@@ -41,6 +41,15 @@ Todas seguem o contrato de indicador de [W-06 §2](06-visao-geral.md#2-contrato-
   bairro lido do texto do endereço; a parcela "Sem bairro identificado" (e o motivo) é declarada e só
   aparece com escopo municipal. Bairro sem plantio identificado não é zero. Não cria árvore nem
   localiza o plantio (RF-INT-014).
+- **RF-REL-009** — "Onde plantar" (`/planejamento`, permissão de leitura de relatórios): cenário de
+  priorização de bairros para plantio, **não é índice oficial** (DP-14). Seis critérios, cada um
+  como percentil entre os bairros de Fortaleza na direção que pede plantio: pouca arborização do
+  entorno (Censo 2022), alta densidade, baixo rendimento do responsável, poucas árvores cadastradas
+  por 1.000 habitantes (provisório, com a ressalva do inventário), pouca área verde por habitante
+  e ilha de calor (só com valores gravados; sem eles o critério aparece desabilitado). O IDH 2010
+  não entra. A API devolve valores brutos e percentis com fonte e ano; os pesos (0 a 5, três
+  cenários prontos) ponderam no navegador, ficam na URL e podem ser copiados e exportados em CSV.
+  Bairro sem dado num critério tem esse critério ignorado na média e marcado.
 - **RF-REL-006** — Rascunho de relatório assistido por IA (P1, posterior): texto
   marcado como gerado por IA, com referências aos dados usados, editável antes
   de exportar (T-04).

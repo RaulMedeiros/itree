@@ -8,7 +8,7 @@ import {
   type FichaRanking,
 } from "@itree/api-client";
 import { Link, useParams } from "@tanstack/react-router";
-import { Download, Map as IconeMapa, Printer } from "lucide-react";
+import { Download, Map as IconeMapa, Printer, Sprout } from "lucide-react";
 import { useState } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
@@ -88,6 +88,7 @@ function Ranking({ ranking, nome }: { ranking: FichaRanking; nome: string }) {
 function Conteudo({ ficha }: { ficha: Ficha }) {
   const { bairro } = ficha;
   const podeExportar = usePermissao("relatorios.exportar");
+  const podePlanejar = usePermissao("relatorios.ler");
   const [baixando, setBaixando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -133,6 +134,13 @@ function Conteudo({ ficha }: { ficha: Ficha }) {
                 <IconeMapa aria-hidden /> Ver no mapa
               </Link>
             </Botao>
+            {podePlanejar && (
+              <Botao variante="secundario" asChild>
+                <Link to="/planejamento" search={{ bairro: bairro.id }}>
+                  <Sprout aria-hidden /> Ver no planejamento
+                </Link>
+              </Botao>
+            )}
             {podeExportar && (
               <Botao variante="secundario" disabled={baixando} onClick={() => void exportar()}>
                 <Download aria-hidden /> Exportar PDF

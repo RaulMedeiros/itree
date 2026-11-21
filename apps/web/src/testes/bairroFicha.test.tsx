@@ -407,6 +407,15 @@ describe("ficha do bairro", () => {
     );
   });
 
+  it("tem o link Ver no planejamento, que abre o painel deste bairro", async () => {
+    servirFicha(ficha([CENSO]));
+    await abrir(`/bairros/${ID}`);
+    expect(await screen.findByRole("link", { name: /Ver no planejamento/ })).toHaveAttribute(
+      "href",
+      `/planejamento?bairro=${ID}`,
+    );
+  });
+
   it("Exportar PDF baixa o relatório filtrado pelo bairro", async () => {
     servirFicha(ficha([CENSO]));
     let pedido: URL | null = null;

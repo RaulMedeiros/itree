@@ -139,7 +139,7 @@ function paresDoMapa(mapa) {
 }
 
 /** Lê as cores e a opacidade da camada "Arborização do entorno" (`coropletica.ts`). */
-export function lerCoropletica(coropleticaTs) {
+export function lerCoropletica(coropleticaTs, prioridadeTs) {
   const lista = coropleticaTs.match(/CORES_ARBORIZACAO\s*=\s*\[([^\]]+)\]/);
   if (!lista) throw new Error("Não achei CORES_ARBORIZACAO para checar o contraste do mapa.");
   const cores = [...lista[1].matchAll(/"(#[0-9a-fA-F]{6})"/g)].map((m) => m[1].toLowerCase());
@@ -156,7 +156,20 @@ export function lerCoropletica(coropleticaTs) {
           opacidade: Number(opacPop[1]),
         }
       : null;
-  return { cores, opacidade: Number(opacidade[1]), populacao };
+  // Camada "Prioridade para plantio" (Planejamento): rampa ocre própria, mesma exigência.
+  let prioridade = null;
+  if (prioridadeTs !== undefined) {
+    const listaPri = prioridadeTs.match(/CORES_PRIORIDADE\s*=\s*\[([^\]]+)\]/);
+    const opacPri = prioridadeTs.match(/OPACIDADE_PRIORIDADE\s*=\s*([0-9.]+)/);
+    if (!listaPri || !opacPri)
+      throw new Error("Não achei CORES_PRIORIDADE ou OPACIDADE_PRIORIDADE.");
+    prioridade = {
+      nome: "prioridade para plantio",
+      cores: [...listaPri[1].matchAll(/"(#[0-9a-fA-F]{6})"/g)].map((m) => m[1].toLowerCase()),
+      opacidade: Number(opacPri[1]),
+    };
+  }
+  return { cores, opacidade: Number(opacidade[1]), populacao, prioridade };
 }
 
 /** Lê a rampa e a opacidade da supressão anual (PRODES) em `simbologia.ts`. */
@@ -216,6 +229,7 @@ function paresDaColoropletica(coro, mapa) {
   const rampas = [
     { nome: "arborização do entorno", cores: coro.cores, opacidade: coro.opacidade },
     ...(coro.populacao ? [coro.populacao] : []),
+    ...(coro.prioridade ? [coro.prioridade] : []),
   ];
   for (const rampa of rampas) {
     for (const [nome, osm] of FUNDOS_OSM) {
@@ -409,7 +423,10 @@ function principal() {
     readFileSync(join(web, "realce.ts"), "utf8"),
     readFileSync(join(web, "estilo.ts"), "utf8"),
   );
-  const coropletica = lerCoropletica(readFileSync(join(web, "coropletica.ts"), "utf8"));
+  const coropletica = lerCoropletica(
+    readFileSync(join(web, "coropletica.ts"), "utf8"),
+    readFileSync(join(web, "prioridade.ts"), "utf8"),
+  );
   const simbologia = readFileSync(join(web, "simbologia.ts"), "utf8");
   const supressao = lerSupressao(simbologia);
   const areasVerdes = lerAreasVerdes(simbologia);

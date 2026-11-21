@@ -99,6 +99,39 @@ test("uma rampa de população com classes iguais, ou clara demais, falha na ver
   assert.ok(daPopulacao(clara).some((r) => r.razao < r.minimo));
 });
 
+const prioridade = readFileSync(join(web, "prioridade.ts"), "utf8");
+const daPrioridade = (coro) =>
+  verificar(css, lerMapa(realce, estilo), coro).filter((r) =>
+    r.descricao.startsWith("prioridade para plantio"),
+  );
+
+test("a rampa da prioridade para plantio separa as classes e a mais escura contrasta com o mapa", () => {
+  const coro = lerCoropletica(coropletica, prioridade);
+  assert.equal(coro.prioridade.cores.length, 5);
+  const pares = daPrioridade(coro);
+  assert.equal(pares.length, 25);
+  for (const r of pares)
+    assert.ok(r.razao >= r.minimo, `${r.descricao}: ${r.razao.toFixed(2)}:1 (mín. ${r.minimo})`);
+});
+
+test("uma rampa de prioridade com classes iguais, ou clara demais, falha na verificação", () => {
+  const coro = lerCoropletica(coropletica, prioridade);
+  const cores = coro.prioridade.cores;
+  const igual = {
+    ...coro,
+    prioridade: { ...coro.prioridade, cores: [cores[0], cores[0], ...cores.slice(2)] },
+  };
+  assert.ok(daPrioridade(igual).some((r) => r.razao < r.minimo));
+  const clara = {
+    ...coro,
+    prioridade: {
+      ...coro.prioridade,
+      cores: ["#fcf3d3", "#fdf5d9", "#fdf6de", "#fef8e3", "#fef9e8"],
+    },
+  };
+  assert.ok(daPrioridade(clara).some((r) => r.razao < r.minimo));
+});
+
 const simbologia = readFileSync(join(web, "simbologia.ts"), "utf8");
 const daSupressao = (sup) =>
   verificar(css, lerMapa(realce, estilo), undefined, sup).filter((r) =>
