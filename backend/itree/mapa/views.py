@@ -9,7 +9,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 from rest_framework import serializers
 from rest_framework.decorators import api_view
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -20,6 +20,7 @@ from itree.iluminacao.servico import resumo_da_iluminacao
 from itree.indicadores.populacao_indicadores import situacao_das_fontes
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
+from itree.mapa import tempo
 from itree.ocorrencias.models import ESTADOS_FINAIS, Ocorrencia
 from itree.territorio.models import Territorio
 
@@ -49,7 +50,7 @@ def tamanho_da_celula(z: int) -> float:
     return CIRCUNFERENCIA_3857 / 2**z * px / TILE_PX
 
 
-def _filtros_arvores(params) -> tuple[str, dict]:
+def _filtros_arvores(params, periodo: "tempo.Periodo | None" = None) -> tuple[str, dict]:
     clausulas, valores = [], {}
     if especie := params.get("especie"):
         clausulas.append("a.especie_id = %(especie)s")
@@ -68,20 +69,44 @@ def _filtros_arvores(params) -> tuple[str, dict]:
             valores["dias"] = int(dias)
         except ValueError:
             valores["dias"] = 0
-        clausulas.append(
-            "(a.ultima_inspecao_em IS NULL"
-            " OR a.ultima_inspecao_em < now() - make_interval(days => %(dias)s))"
-        )
+        if periodo is None:
+            clausulas.append(
+                "(a.ultima_inspecao_em IS NULL"
+                " OR a.ultima_inspecao_em < now() - make_interval(days => %(dias)s))"
+            )
+        else:
+            ultima = tempo.ultima_inspecao()
+            clausulas.append(
+                f"({ultima} IS NULL OR {ultima} < %(t_fim)s - make_interval(days => %(dias)s))"
+            )
     if condicao := params.get("condicao_aparente"):
-        clausulas.append("a.condicao_aparente = %(condicao)s")
-        valores["condicao"] = "" if condicao == "sem" else condicao
+        if periodo is None:
+            clausulas.append("a.condicao_aparente = %(condicao)s")
+        else:
+            clausulas.append(f"{tempo.EXPRESSAO_CONDICAO} = %(condicao)s")
+        valores["condicao"] = (
+            "nao_avaliada"
+            if periodo and condicao == "sem"
+            else ("" if condicao == "sem" else condicao)
+        )
     return "".join(f" AND {c}" for c in clausulas), valores
 
 
-def _filtros_ocorrencias(params) -> tuple[str, dict]:
+def _filtros_ocorrencias(params, periodo: "tempo.Periodo | None" = None) -> tuple[str, dict]:
     clausulas, valores = [], {}
     estado = params.get("estado", "abertas")
-    if estado == "abertas":
+    if periodo is not None:
+        # Na linha do tempo, "abertas" são as abertas na data; "todas", as registradas até ela.
+        # Estados escolhidos valem como estão hoje, limitados às registradas até a data.
+        if estado == "abertas":
+            clausulas.append(tempo.ocorrencia_aberta_na_data(periodo))
+        else:
+            clausulas.append(tempo.ocorrencia_registrada_ate(periodo))
+            if estado != "todas":
+                clausulas.append("o.estado = ANY(%(estados)s)")
+                valores["estados"] = estado.split(",")
+        valores.update(periodo.parametros())
+    elif estado == "abertas":
         clausulas.append("o.estado <> ALL(%(finais)s)")
         valores["finais"] = list(ESTADOS_FINAIS)
     elif estado != "todas":
@@ -117,22 +142,37 @@ _RANK_CONDICAO = " ".join(f"WHEN '{c}' THEN {i}" for i, c in enumerate(_CONDICOE
 _NOMES_CONDICAO = ", ".join(f"'{c}'" for c in _CONDICOES_POR_GRAVIDADE)
 SQL_PIOR_CONDICAO = f"(ARRAY[{_NOMES_CONDICAO}])[max(CASE condicao {_RANK_CONDICAO} ELSE 1 END)]"
 
-CAMADAS = {
-    "arvores": {
-        "permissao": "mapa.ler",
-        "filtros": _filtros_arvores,
-        "base": """
+
+def _sql_base_arvores(periodo: "tempo.Periodo | None") -> str:
+    """Árvores do tile. No presente: as ativas, com a condição do cadastro. Na linha do tempo: as
+    que existiam no período, com a condição da última inspeção validada até ele (``tempo``)."""
+    if periodo is None:
+        situacao = "a.situacao = 'ativa'"
+        condicao = "a.condicao_aparente"
+        juncao = ""
+    else:
+        situacao = tempo.arvore_na_data(periodo)
+        condicao = tempo.EXPRESSAO_CONDICAO
+        juncao = tempo.juncao_condicao()
+    return f"""
             SELECT a.id::text AS id, a.numero, a.especie_estado, a.localizacao_origem,
-                   COALESCE(NULLIF(a.condicao_aparente, ''), 'nao_avaliada') AS condicao,
+                   COALESCE(NULLIF({condicao}, ''), 'nao_avaliada') AS condicao,
                    COALESCE(a.precisao_m, -1) AS precisao_m,
                    COALESCE(e.nome_cientifico, '') AS especie,
                    ST_Transform(a.geom, 3857) AS g3857
               FROM inventario_arvore a
-              LEFT JOIN inventario_especie e ON e.id = a.especie_id, env
-             WHERE a.situacao = 'ativa' AND a.geom IS NOT NULL
+              LEFT JOIN inventario_especie e ON e.id = a.especie_id{juncao}, env
+             WHERE {situacao} AND a.geom IS NOT NULL
                AND a.geom && ST_Transform(env.g, 4326)
                AND ST_Intersects(a.geom, ST_GeomFromEWKB(%(area)s))
-        """,
+        """
+
+
+CAMADAS = {
+    "arvores": {
+        "permissao": "mapa.ler",
+        "filtros": _filtros_arvores,
+        "base": lambda periodo: _sql_base_arvores(periodo),
         "propriedades": (
             "id, numero, especie_estado, localizacao_origem, condicao, precisao_m, especie"
         ),
@@ -187,7 +227,12 @@ CAMADAS = {
 }
 
 
-def _sql_arvores_por_bairro(definicao: dict, extra: str) -> str:
+def _base_da_camada(definicao: dict, periodo: "tempo.Periodo | None") -> str:
+    base = definicao["base"]
+    return base(periodo) if callable(base) else base
+
+
+def _sql_arvores_por_bairro(definicao: dict, extra: str, periodo: "tempo.Periodo | None") -> str:
     """Tile de árvores em zoom afastado: um grupo por bairro (M-29).
 
     O grupo conta **todas** as árvores do bairro dentro do escopo e dos filtros, e não só as que
@@ -202,6 +247,11 @@ def _sql_arvores_por_bairro(definicao: dict, extra: str) -> str:
     )
     nulas = ", ".join("NULL" for _ in propriedades)
     colunas = ", ".join(propriedades)
+    if periodo is None:
+        situacao, condicao, juncao = "a.situacao = 'ativa'", "a.condicao_aparente", ""
+    else:
+        situacao = tempo.arvore_na_data(periodo)
+        condicao, juncao = tempo.EXPRESSAO_CONDICAO, tempo.juncao_condicao()
     return f"""
         WITH env AS (SELECT ST_TileEnvelope(%(z)s, %(x)s, %(y)s) AS g),
              pontos AS (
@@ -212,9 +262,9 @@ def _sql_arvores_por_bairro(definicao: dict, extra: str) -> str:
              no_tile AS (SELECT pontos.* FROM pontos, env WHERE pontos.p && env.g),
              base AS (
                 SELECT a.bairro_id,
-                       COALESCE(NULLIF(a.condicao_aparente, ''), 'nao_avaliada') AS condicao
-                  FROM inventario_arvore a
-                 WHERE a.situacao = 'ativa' AND a.geom IS NOT NULL
+                       COALESCE(NULLIF({condicao}, ''), 'nao_avaliada') AS condicao
+                  FROM inventario_arvore a{juncao}
+                 WHERE {situacao} AND a.geom IS NOT NULL
                    AND a.bairro_id IN (SELECT id FROM no_tile)
                    AND ST_Intersects(a.geom, ST_GeomFromEWKB(%(area)s)){extra}
              ),
@@ -224,7 +274,7 @@ def _sql_arvores_por_bairro(definicao: dict, extra: str) -> str:
                   FROM base JOIN no_tile n ON n.id = base.bairro_id, env
                  GROUP BY n.id, n.nome, n.p, env.g
              ),
-             avulsas AS ({definicao["base"]}{extra} AND a.bairro_id IS NULL),
+             avulsas AS ({_base_da_camada(definicao, periodo)}{extra} AND a.bairro_id IS NULL),
              em_celulas AS (
                 SELECT count(*)::int AS quantidade, {celulas},
                        {SQL_PIOR_CONDICAO} AS pior_condicao,
@@ -242,6 +292,13 @@ def _sql_arvores_por_bairro(definicao: dict, extra: str) -> str:
     """
 
 
+PARAM_ATE = (
+    "Linha do tempo (AAAA-MM): situação ao fim desse mês. Sem ele, o mapa mostra o presente. "
+    "Vale para árvores, ocorrências e alertas; iluminação e tarefas ignoram."
+)
+PARAM_DESDE = "Modo intervalo (AAAA-MM): do começo deste mês ao fim de `ate`."
+
+
 @extend_schema(
     operation_id="mapa_tile",
     parameters=[
@@ -252,6 +309,8 @@ def _sql_arvores_por_bairro(definicao: dict, extra: str) -> str:
         OpenApiParameter("estado", str),
         OpenApiParameter("prioridade", str),
         OpenApiParameter("tipo", str),
+        OpenApiParameter("ate", str, description=PARAM_ATE),
+        OpenApiParameter("desde", str, description=PARAM_DESDE),
     ],
     responses={(200, TIPO_MVT): OpenApiTypes.BINARY},
 )
@@ -277,15 +336,26 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
     if area is None or (camada == "iluminacao" and z < ZOOM_ILUMINACAO):
         return HttpResponse(b"", content_type=TIPO_MVT)
 
-    extra, valores = definicao["filtros"](request.query_params)
+    # Só árvores e ocorrências têm dimensão temporal; as demais camadas ignoram `ate`.
+    periodo = (
+        tempo.periodo_da_requisicao(request.query_params)
+        if camada in ("arvores", "ocorrencias")
+        else None
+    )
+    if periodo is None:
+        extra, valores = definicao["filtros"](request.query_params)
+    else:
+        extra, valores = definicao["filtros"](request.query_params, periodo)
     parametros = {"z": z, "x": x, "y": y, "area": area.ewkb, **valores}
-    base = definicao["base"] + extra
+    if periodo is not None:
+        parametros.update(periodo.parametros())
+    base = _base_da_camada(definicao, periodo) + extra
     if camada == "arvores" and z < ZOOM_AGRUPA_BAIRRO:
         # SQL montado só a partir de constantes deste módulo; valores vão como parâmetros.
         parametros["celula"] = tamanho_da_celula(z)
         parametros["camada"] = camada
         with connection.cursor() as cursor:
-            cursor.execute(_sql_arvores_por_bairro(definicao, extra), parametros)
+            cursor.execute(_sql_arvores_por_bairro(definicao, extra, periodo), parametros)
             dados = cursor.fetchone()[0]
         resposta = HttpResponse(bytes(dados or b""), content_type=TIPO_MVT)
         resposta["Cache-Control"] = "private, max-age=30"
@@ -549,7 +619,11 @@ def camadas(request: Request):
 
 @extend_schema(
     operation_id="mapa_alertas",
-    parameters=[OpenApiParameter("bairro", str)],
+    parameters=[
+        OpenApiParameter("bairro", str),
+        OpenApiParameter("ate", str, description=PARAM_ATE),
+        OpenApiParameter("desde", str, description=PARAM_DESDE),
+    ],
     responses={(200, "application/geo+json"): OpenApiTypes.OBJECT},
 )
 @api_view(["GET"])
@@ -624,3 +698,169 @@ def supressao_anual(request: Request):
             },
         }
     )
+
+
+def _mes_texto(d) -> str:
+    return f"{d.year:04d}-{d.month:02d}"
+
+
+@extend_schema(
+    operation_id="mapa_serie_temporal",
+    parameters=[OpenApiParameter("bairro", str)],
+    responses=inline_serializer(
+        "SerieTemporalMapa",
+        {
+            "primeiro_mes": serializers.CharField(
+                allow_null=True, help_text="AAAA-MM do primeiro dado; nulo quando não há dado."
+            ),
+            "ultimo_mes": serializers.CharField(help_text="AAAA-MM do mês atual."),
+            "meses": serializers.ListField(
+                child=serializers.DictField(),
+                help_text="Do primeiro ao último mês, sem lacunas: `mes` (AAAA-MM), "
+                "`arvores` (cadastradas), `ocorrencias` (registradas) e `alertas` (detectados). "
+                "Uma série ausente (sem permissão) vem como nula.",
+            ),
+        },
+    ),
+)
+@api_view(["GET"])
+def serie_temporal(request: Request):
+    """Séries mensais leves para o histograma da linha do tempo, com o escopo do usuário.
+
+    Cada série só aparece para quem pode ler a camada correspondente. As árvores contam por data de
+    cadastro no iTree (`criado_em`), não por data de plantio.
+    """
+    from django.db.models.functions import TruncMonth
+    from django.utils import timezone
+
+    from itree.alertas.escopo import filtrar_alertas_por_escopo
+    from itree.alertas.models import AlertaAmbiental
+    from itree.alertas.views import filtrar_por_bairro
+
+    usuario = request.user
+    bairro = request.query_params.get("bairro")
+    series: dict[str, dict[str, int]] = {}
+
+    def somar(nome: str, qs, campo: str) -> None:
+        linhas = (
+            qs.order_by()
+            .annotate(mes=TruncMonth(campo))
+            .values("mes")
+            .annotate(n=Count("id"))
+            .values_list("mes", "n")
+        )
+        series[nome] = {_mes_texto(mes): n for mes, n in linhas if mes}
+
+    if usuario.tem_permissao("mapa.ler"):
+        qs = filtrar_por_escopo(Arvore.objects.exclude(geom__isnull=True), usuario)
+        if bairro:
+            qs = qs.filter(bairro_id=uuid_do_parametro(bairro, "bairro"))
+        somar("arvores", qs, "criado_em")
+    if usuario.tem_permissao("ocorrencias.ler"):
+        qs = filtrar_por_escopo(Ocorrencia.objects.all(), usuario)
+        if bairro:
+            qs = qs.filter(bairro_id=uuid_do_parametro(bairro, "bairro"))
+        somar("ocorrencias", qs, "criado_em")
+    if usuario.tem_permissao("alertas.ler"):
+        qs = filtrar_por_bairro(
+            filtrar_alertas_por_escopo(AlertaAmbiental.objects.all(), usuario), bairro
+        )
+        somar("alertas", qs, "data_deteccao")
+
+    hoje = timezone.localdate()
+    atual = _mes_texto(hoje)
+    existentes = sorted({m for s in series.values() for m in s})
+    primeiro = existentes[0] if existentes else None
+    meses = []
+    if primeiro:
+        ano, mes = int(primeiro[:4]), int(primeiro[5:])
+        while f"{ano:04d}-{mes:02d}" <= atual:
+            chave = f"{ano:04d}-{mes:02d}"
+            meses.append(
+                {
+                    "mes": chave,
+                    "arvores": series["arvores"].get(chave, 0) if "arvores" in series else None,
+                    "ocorrencias": series["ocorrencias"].get(chave, 0)
+                    if "ocorrencias" in series
+                    else None,
+                    "alertas": series["alertas"].get(chave, 0) if "alertas" in series else None,
+                }
+            )
+            ano, mes = (ano + 1, 1) if mes == 12 else (ano, mes + 1)
+    resposta = Response({"primeiro_mes": primeiro, "ultimo_mes": atual, "meses": meses})
+    resposta["Cache-Control"] = "private, max-age=60"
+    return resposta
+
+
+@extend_schema(
+    operation_id="mapa_situacao_na_data",
+    parameters=[
+        OpenApiParameter("ate", str, required=True, description=PARAM_ATE),
+        OpenApiParameter("desde", str, description=PARAM_DESDE),
+        OpenApiParameter("bairro", str),
+    ],
+    responses=inline_serializer(
+        "SituacaoNaData",
+        {
+            "arvores": serializers.IntegerField(allow_null=True),
+            "ocorrencias_abertas": serializers.IntegerField(allow_null=True),
+            "alertas": serializers.IntegerField(allow_null=True),
+        },
+    ),
+)
+@api_view(["GET"])
+def situacao_na_data(request: Request):
+    """Contagens do período da linha do tempo (árvores, ocorrências abertas e alertas), com o mesmo
+    escopo e as mesmas regras dos tiles. A contagem de uma camada que o usuário não pode ler vem
+    nula."""
+    from itree.alertas.escopo import filtrar_alertas_por_escopo
+    from itree.alertas.models import AlertaAmbiental
+    from itree.alertas.views import filtrar_por_bairro
+
+    if not request.query_params.get("ate"):
+        raise ValidationError({"ate": "Informe o mês (AAAA-MM)."})
+    periodo = tempo.periodo_da_requisicao(request.query_params)
+    usuario = request.user
+    area = area_do_escopo(usuario)
+    bairro = request.query_params.get("bairro")
+    parametros: dict = {**periodo.parametros()}
+    if area is not None:
+        parametros["area"] = area.ewkb
+    filtro_bairro = {"arvores": "", "ocorrencias": ""}
+    if bairro:
+        parametros["bairro"] = str(uuid_do_parametro(bairro, "bairro"))
+        filtro_bairro = {k: f" AND {k[0]}.bairro_id = %(bairro)s" for k in filtro_bairro}
+
+    def contar(sql: str) -> int:
+        with connection.cursor() as cursor:
+            cursor.execute(sql, parametros)
+            return cursor.fetchone()[0]
+
+    aberta = tempo.ocorrencia_aberta_na_data(periodo)
+    arvores = ocorrencias = alertas = None
+    if usuario.tem_permissao("mapa.ler"):
+        arvores = (
+            contar(
+                f"""SELECT count(*) FROM inventario_arvore a
+                     WHERE a.geom IS NOT NULL AND ST_Intersects(a.geom, ST_GeomFromEWKB(%(area)s))
+                       AND {tempo.arvore_na_data(periodo)}{filtro_bairro["arvores"]}"""
+            )
+            if area is not None
+            else 0
+        )
+    if usuario.tem_permissao("ocorrencias.ler"):
+        ocorrencias = (
+            contar(
+                f"""SELECT count(*) FROM ocorrencias_ocorrencia o
+                     WHERE ST_Intersects(o.geom, ST_GeomFromEWKB(%(area)s))
+                       AND {aberta}{filtro_bairro["ocorrencias"]}"""
+            )
+            if area is not None
+            else 0
+        )
+    if usuario.tem_permissao("alertas.ler"):
+        qs = AlertaAmbiental.objects.filter(
+            data_deteccao__gte=periodo.inicio_dos_alertas, data_deteccao__lt=periodo.fim
+        )
+        alertas = filtrar_por_bairro(filtrar_alertas_por_escopo(qs, usuario), bairro).count()
+    return Response({"arvores": arvores, "ocorrencias_abertas": ocorrencias, "alertas": alertas})

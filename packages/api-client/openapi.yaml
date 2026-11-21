@@ -2426,9 +2426,21 @@ paths:
         com escopo.
       parameters:
       - in: query
+        name: ate
+        schema:
+          type: string
+        description: 'Linha do tempo (AAAA-MM): situação ao fim desse mês. Sem ele,
+          o mapa mostra o presente. Vale para árvores, ocorrências e alertas; iluminação
+          e tarefas ignoram.'
+      - in: query
         name: bairro
         schema:
           type: string
+      - in: query
+        name: desde
+        schema:
+          type: string
+        description: 'Modo intervalo (AAAA-MM): do começo deste mês ao fim de `ate`.'
       tags:
       - mapa
       security:
@@ -2591,6 +2603,66 @@ paths:
                 type: string
                 format: binary
           description: ''
+  /api/v1/mapa/serie-temporal:
+    get:
+      operationId: mapa_serie_temporal
+      description: |-
+        Séries mensais leves para o histograma da linha do tempo, com o escopo do usuário.
+
+        Cada série só aparece para quem pode ler a camada correspondente. As árvores contam por data de
+        cadastro no iTree (`criado_em`), não por data de plantio.
+      parameters:
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      tags:
+      - mapa
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SerieTemporalMapa'
+          description: ''
+  /api/v1/mapa/situacao-na-data:
+    get:
+      operationId: mapa_situacao_na_data
+      description: |-
+        Contagens do período da linha do tempo (árvores, ocorrências abertas e alertas), com o mesmo
+        escopo e as mesmas regras dos tiles. A contagem de uma camada que o usuário não pode ler vem
+        nula.
+      parameters:
+      - in: query
+        name: ate
+        schema:
+          type: string
+        description: 'Linha do tempo (AAAA-MM): situação ao fim desse mês. Sem ele,
+          o mapa mostra o presente. Vale para árvores, ocorrências e alertas; iluminação
+          e tarefas ignoram.'
+        required: true
+      - in: query
+        name: bairro
+        schema:
+          type: string
+      - in: query
+        name: desde
+        schema:
+          type: string
+        description: 'Modo intervalo (AAAA-MM): do começo deste mês ao fim de `ate`.'
+      tags:
+      - mapa
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SituacaoNaData'
+          description: ''
   /api/v1/mapa/supressao-anual:
     get:
       operationId: mapa_supressao_anual
@@ -2630,6 +2702,13 @@ paths:
         é vazio.
       parameters:
       - in: query
+        name: ate
+        schema:
+          type: string
+        description: 'Linha do tempo (AAAA-MM): situação ao fim desse mês. Sem ele,
+          o mapa mostra o presente. Vale para árvores, ocorrências e alertas; iluminação
+          e tarefas ignoram.'
+      - in: query
         name: bairro
         schema:
           type: string
@@ -2638,6 +2717,11 @@ paths:
         schema:
           type: string
         required: true
+      - in: query
+        name: desde
+        schema:
+          type: string
+        description: 'Modo intervalo (AAAA-MM): do começo deste mês ao fim de `ate`.'
       - in: query
         name: especie
         schema:
@@ -10049,6 +10133,28 @@ components:
       description: |-
         * `altura` - altura
         * `dap` - dap
+    SerieTemporalMapa:
+      type: object
+      properties:
+        primeiro_mes:
+          type: string
+          nullable: true
+          description: AAAA-MM do primeiro dado; nulo quando não há dado.
+        ultimo_mes:
+          type: string
+          description: AAAA-MM do mês atual.
+        meses:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          description: 'Do primeiro ao último mês, sem lacunas: `mes` (AAAA-MM), `arvores`
+            (cadastradas), `ocorrencias` (registradas) e `alertas` (detectados). Uma
+            série ausente (sem permissão) vem como nula.'
+      required:
+      - meses
+      - primeiro_mes
+      - ultimo_mes
     SinalObservadoEnum:
       enum:
       - folhagem_escassa
@@ -10087,6 +10193,22 @@ components:
         * `ativa` - Ativa
         * `excluida` - Excluída
         * `fundida` - Fundida em outro registro
+    SituacaoNaData:
+      type: object
+      properties:
+        arvores:
+          type: integer
+          nullable: true
+        ocorrencias_abertas:
+          type: integer
+          nullable: true
+        alertas:
+          type: integer
+          nullable: true
+      required:
+      - alertas
+      - arvores
+      - ocorrencias_abertas
     StatusAlertaEnum:
       enum:
       - detectado

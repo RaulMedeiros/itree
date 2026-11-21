@@ -36,7 +36,7 @@ export class MapaFalso {
     if (!fonte) return undefined;
     return {
       setData: (dados: unknown) => void (fonte.data = dados),
-      setTiles: vi.fn(),
+      setTiles: vi.fn((tiles: string[]) => void (fonte.tiles = tiles)),
     };
   }
   addLayer(
@@ -91,6 +91,12 @@ export class MapaFalso {
   }
   getCenter() {
     return { lng: -38.5, lat: -3.7 };
+  }
+  getBearing() {
+    return 0;
+  }
+  getPitch() {
+    return 0;
   }
   getBounds() {
     return {

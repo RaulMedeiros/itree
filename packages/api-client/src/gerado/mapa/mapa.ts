@@ -32,13 +32,17 @@ import type {
   MapaBuscaParams,
   MapaCamadaReferencia200,
   MapaCamadaReferenciaParams,
+  MapaSerieTemporalParams,
+  MapaSituacaoNaDataParams,
   MapaSupressaoAnual200,
   MapaSupressaoAnualParams,
   MapaTileParams,
   ResultadoBusca,
   SelecaoEntradaRequest,
   SelecaoExportarRequest,
-  SelecaoSaida
+  SelecaoSaida,
+  SerieTemporalMapa,
+  SituacaoNaData
 } from '../modelos';
 
 import { requisicao } from '../../cliente';
@@ -836,7 +840,244 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getMapaSelecaoExportarMutationOptions(options), queryClient);
     }
-    export type mapaSupressaoAnualResponse200 = {
+    export type mapaSerieTemporalResponse200 = {
+  data: SerieTemporalMapa
+  status: 200
+}
+
+export type mapaSerieTemporalResponseSuccess = (mapaSerieTemporalResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mapaSerieTemporalResponse = (mapaSerieTemporalResponseSuccess)
+
+export const getMapaSerieTemporalUrl = (params?: MapaSerieTemporalParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/mapa/serie-temporal?${stringifiedParams}` : `/api/v1/mapa/serie-temporal`
+}
+
+/**
+ * Séries mensais leves para o histograma da linha do tempo, com o escopo do usuário.
+ *
+ * Cada série só aparece para quem pode ler a camada correspondente. As árvores contam por data de
+ * cadastro no iTree (`criado_em`), não por data de plantio.
+ */
+export const mapaSerieTemporal = async (params?: MapaSerieTemporalParams, options?: Parameters<typeof requisicao>[1]): Promise<mapaSerieTemporalResponse> => {
+
+  return requisicao<mapaSerieTemporalResponse>(getMapaSerieTemporalUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getMapaSerieTemporalQueryKey = (params?: MapaSerieTemporalParams,) => {
+    return [
+    `/api/v1/mapa/serie-temporal`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getMapaSerieTemporalQueryOptions = <TData = Awaited<ReturnType<typeof mapaSerieTemporal>>, TError = unknown>(params?: MapaSerieTemporalParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSerieTemporal>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMapaSerieTemporalQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof mapaSerieTemporal>>> = ({ signal }) => mapaSerieTemporal(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mapaSerieTemporal>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type MapaSerieTemporalQueryResult = NonNullable<Awaited<ReturnType<typeof mapaSerieTemporal>>>
+export type MapaSerieTemporalQueryError = unknown
+
+
+export function useMapaSerieTemporal<TData = Awaited<ReturnType<typeof mapaSerieTemporal>>, TError = unknown>(
+ params: undefined |  MapaSerieTemporalParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSerieTemporal>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaSerieTemporal>>,
+          TError,
+          Awaited<ReturnType<typeof mapaSerieTemporal>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaSerieTemporal<TData = Awaited<ReturnType<typeof mapaSerieTemporal>>, TError = unknown>(
+ params?: MapaSerieTemporalParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSerieTemporal>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaSerieTemporal>>,
+          TError,
+          Awaited<ReturnType<typeof mapaSerieTemporal>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaSerieTemporal<TData = Awaited<ReturnType<typeof mapaSerieTemporal>>, TError = unknown>(
+ params?: MapaSerieTemporalParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSerieTemporal>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useMapaSerieTemporal<TData = Awaited<ReturnType<typeof mapaSerieTemporal>>, TError = unknown>(
+ params?: MapaSerieTemporalParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSerieTemporal>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getMapaSerieTemporalQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type mapaSituacaoNaDataResponse200 = {
+  data: SituacaoNaData
+  status: 200
+}
+
+export type mapaSituacaoNaDataResponseSuccess = (mapaSituacaoNaDataResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mapaSituacaoNaDataResponse = (mapaSituacaoNaDataResponseSuccess)
+
+export const getMapaSituacaoNaDataUrl = (params: MapaSituacaoNaDataParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/mapa/situacao-na-data?${stringifiedParams}` : `/api/v1/mapa/situacao-na-data`
+}
+
+/**
+ * Contagens do período da linha do tempo (árvores, ocorrências abertas e alertas), com o mesmo
+ * escopo e as mesmas regras dos tiles. A contagem de uma camada que o usuário não pode ler vem
+ * nula.
+ */
+export const mapaSituacaoNaData = async (params: MapaSituacaoNaDataParams, options?: Parameters<typeof requisicao>[1]): Promise<mapaSituacaoNaDataResponse> => {
+
+  return requisicao<mapaSituacaoNaDataResponse>(getMapaSituacaoNaDataUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getMapaSituacaoNaDataQueryKey = (params?: MapaSituacaoNaDataParams,) => {
+    return [
+    `/api/v1/mapa/situacao-na-data`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getMapaSituacaoNaDataQueryOptions = <TData = Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError = unknown>(params: MapaSituacaoNaDataParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMapaSituacaoNaDataQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof mapaSituacaoNaData>>> = ({ signal }) => mapaSituacaoNaData(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type MapaSituacaoNaDataQueryResult = NonNullable<Awaited<ReturnType<typeof mapaSituacaoNaData>>>
+export type MapaSituacaoNaDataQueryError = unknown
+
+
+export function useMapaSituacaoNaData<TData = Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError = unknown>(
+ params: MapaSituacaoNaDataParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaSituacaoNaData>>,
+          TError,
+          Awaited<ReturnType<typeof mapaSituacaoNaData>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaSituacaoNaData<TData = Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError = unknown>(
+ params: MapaSituacaoNaDataParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof mapaSituacaoNaData>>,
+          TError,
+          Awaited<ReturnType<typeof mapaSituacaoNaData>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useMapaSituacaoNaData<TData = Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError = unknown>(
+ params: MapaSituacaoNaDataParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useMapaSituacaoNaData<TData = Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError = unknown>(
+ params: MapaSituacaoNaDataParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof mapaSituacaoNaData>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getMapaSituacaoNaDataQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type mapaSupressaoAnualResponse200 = {
   data: MapaSupressaoAnual200
   status: 200
 }

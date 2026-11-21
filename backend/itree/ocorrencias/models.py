@@ -128,7 +128,12 @@ class Ocorrencia(ModeloBase):
 
     class Meta:
         ordering = ["-numero"]
-        indexes = [models.Index(fields=["estado"]), models.Index(fields=["prioridade"])]
+        indexes = [
+            models.Index(fields=["estado"]),
+            models.Index(fields=["prioridade"]),
+            # Linha do tempo do mapa: ocorrências registradas até uma data.
+            models.Index(fields=["criado_em"], name="ocorrencia_criado_em_idx"),
+        ]
 
     @property
     def codigo(self) -> str:

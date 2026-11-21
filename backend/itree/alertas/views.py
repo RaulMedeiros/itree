@@ -552,9 +552,17 @@ class AlertaViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.G
 
 # Geometrias para o mapa (polígonos e pontos), com escopo.
 def alertas_geojson(usuario, params) -> dict:
-    qs = filtrar_alertas_por_escopo(
-        AlertaAmbiental.objects.exclude(status__in=FINAIS_ALERTA), usuario
-    )
+    from itree.mapa.tempo import periodo_da_requisicao
+
+    periodo = periodo_da_requisicao(params)
+    if periodo is None:
+        base = AlertaAmbiental.objects.exclude(status__in=FINAIS_ALERTA)
+    else:
+        # Linha do tempo: os detectados no mês (ou no intervalo), qualquer que seja o status hoje.
+        base = AlertaAmbiental.objects.filter(
+            data_deteccao__gte=periodo.inicio_dos_alertas, data_deteccao__lt=periodo.fim
+        )
+    qs = filtrar_alertas_por_escopo(base, usuario)
     qs = filtrar_por_bairro(qs, params.get("bairro"))
     qs = qs.annotate(g=AsGeoJSON("geom", precision=6))[:5000]
     return {
