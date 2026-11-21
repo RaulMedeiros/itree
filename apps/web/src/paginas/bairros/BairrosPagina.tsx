@@ -14,25 +14,13 @@ import { CabecalhoPagina } from "../../ui/pagina";
 import { Linha, Tabela, Td, Th } from "../../ui/tabela";
 import { formatarValorCartao } from "./ficha";
 import { MapaCoropletico } from "./MapaCoropletico";
+import { filtrarBairros } from "./busca";
 
 interface Colecao {
   features: { id?: string | number; properties: { valor?: number | null } }[];
 }
 
 const inteiro = new Intl.NumberFormat("pt-BR");
-
-export function semAcento(texto: string): string {
-  return texto
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLocaleLowerCase("pt-BR");
-}
-
-/** Filtra pelo trecho do nome, sem diferenciar acento nem caixa. */
-export function filtrarBairros<T extends { nome: string }>(bairros: T[], busca: string): T[] {
-  const termo = semAcento(busca.trim());
-  return termo ? bairros.filter((b) => semAcento(b.nome).includes(termo)) : bairros;
-}
 
 /** Lista dos bairros do escopo, com busca, mini-indicadores e o mapa coroplético. */
 export function BairrosPagina() {
