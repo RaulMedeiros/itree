@@ -77,8 +77,10 @@ def por_grupo(arvores: QuerySet, campo: str) -> dict:
 
 
 def rotulo(total: int, confirmadas: int) -> str:
-    """Texto padrão: ``"1.234 árvores (567 confirmadas)"``."""
-    return f"{_br(total)} árvores ({_br(confirmadas)} confirmadas)"
+    """Texto padrão: ``"1.234 árvores (567 confirmadas)"`` (no singular com 1)."""
+    arvores = "árvore" if total == 1 else "árvores"
+    conf = "confirmada" if confirmadas == 1 else "confirmadas"
+    return f"{_br(total)} {arvores} ({_br(confirmadas)} {conf})"
 
 
 def _br(valor: int) -> str:

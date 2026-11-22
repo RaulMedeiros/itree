@@ -57,6 +57,8 @@ def test_filtrar_e_escolher(detectadas):
     assert cont.filtrar(Arvore.objects.all(), "confirmadas").count() == 2
     assert (cont.escolher(5, 2, "todas"), cont.escolher(5, 2, "confirmadas")) == (5, 2)
     assert cont.rotulo(1234, 56) == "1.234 árvores (56 confirmadas)"
+    assert cont.rotulo(1, 1) == "1 árvore (1 confirmada)"
+    assert cont.rotulo(0, 0) == "0 árvores (0 confirmadas)"
 
 
 # --- População: árvores por 1.000 habitantes ------------------------------------------------
@@ -133,16 +135,16 @@ def test_ficha_do_bairro_mostra_n_arvores_m_confirmadas(cliente, gestor, detecta
     url = f"/api/v1/bairros/{detectadas['a'].pk}/ficha"
     corpo = cliente.como(gestor).get(url).json()
     arvores = cartao(corpo, "arvores")
-    assert arvores["valor"] == 4 and "4 árvores (1 confirmadas)" in arvores["detalhe"]
+    assert arvores["valor"] == 4 and "4 árvores (1 confirmada)" in arvores["detalhe"]
     assert {e["rotulo"]: e["valor"] for e in arvores["extras"]} == {
         "Todas": "4",
         "Confirmadas": "1",
     }
     conf = cliente.get(url, {"contagem": "confirmadas"}).json()
     assert cartao(conf, "arvores")["valor"] == 1
-    assert "4 árvores (1 confirmadas)" in cartao(conf, "arvores")["detalhe"]  # as duas, sempre
+    assert "4 árvores (1 confirmada)" in cartao(conf, "arvores")["detalhe"]  # as duas, sempre
     assert cartao(conf, "arvores_por_mil")["valor"] < cartao(corpo, "arvores_por_mil")["valor"]
-    assert "4 árvores (1 confirmadas)" in cartao(corpo, "arvores_por_mil")["detalhe"]
+    assert "4 árvores (1 confirmada)" in cartao(corpo, "arvores_por_mil")["detalhe"]
 
 
 # --- Análises -------------------------------------------------------------------------------
@@ -168,7 +170,7 @@ def test_analise_por_mil_e_dispersao_seguem_a_contagem(cliente, gestor):
     conf = cliente.get(ANALISE, {"analise": a, "contagem": "confirmadas"}).json()
     ald = lambda r: next(x for x in r["linhas"] if x["rotulo"] == "Aldeota")  # noqa: E731
     assert ald(conf)["valor"] < ald(todas)["valor"]
-    assert "(1 confirmadas)" in ald(conf)["detalhe"]
+    assert "(1 confirmada)" in ald(conf)["detalhe"]
     assert conf["contagem"] == "confirmadas"
     sem = cliente.get(ANALISE, {"analise": "populacao_densidade_por_bairro"}).json()
     assert sem["contagem"] is None  # análise que não conta árvores

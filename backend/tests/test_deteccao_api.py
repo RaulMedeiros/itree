@@ -590,3 +590,10 @@ def test_pacote_geopackage(cliente, revisor, tmp_path):
 
     assert Observacao.objects.get().valores["interferencias"] == ["fiacao", "poste"]
     assert Arvore.objects.get().medidas.get().valor == 7.5
+
+
+def test_usuario_de_servico_nao_aparece_na_administracao_de_usuarios(cliente, admin, integracao):
+    r = cliente.como(admin).get("/api/v1/admin/usuarios", {"tamanho": 100})
+    assert r.status_code == 200
+    emails = {u["email"] for u in r.json()["results"]}
+    assert admin.email in emails and integracao.usuario.email not in emails

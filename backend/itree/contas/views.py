@@ -61,7 +61,10 @@ class UsuarioAdminViewSet(
     http_method_names = ["get", "post", "patch"]
 
     def get_queryset(self):
-        qs = Usuario.objects.prefetch_related("territorios", "equipes")
+        # Usuários de serviço dos tokens de integração não são pessoas: ficam fora da lista.
+        qs = Usuario.objects.exclude(token_integracao__isnull=False).prefetch_related(
+            "territorios", "equipes"
+        )
         params = self.request.query_params
         if busca := params.get("busca"):
             qs = qs.filter(Q(nome__icontains=busca) | Q(email__icontains=busca))
