@@ -1,3 +1,8 @@
+"""Serializadores da detecção automática: lotes, sinais de remoção, pontos de plantio e
+tokens de integração.
+
+O valor do token só aparece na resposta de criação; a lista mostra apenas o prefixo."""
+
 import json
 
 from drf_spectacular.utils import extend_schema_field

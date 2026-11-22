@@ -1,3 +1,6 @@
+"""API da iluminação pública: resumo da camada (fonte, licença e volume) e árvores a até o raio
+provisório de conflito de um poste. A camada em si é servida como MVT pelo app ``mapa``."""
+
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied, ValidationError

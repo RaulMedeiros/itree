@@ -1,3 +1,9 @@
+"""API da detecção automática, em ``/api/v1/deteccoes``.
+
+Recebe lotes (JSON, multipart ou pacote ZIP) com token de integração ou pessoa autorizada,
+lista lotes e sinais de possível remoção, entrega os pontos de plantio e administra os tokens.
+O contrato de dados está em docs/integracoes/deteccao-automatica.md."""
+
 import json
 
 from django.contrib.gis.db.models.functions import AsGeoJSON

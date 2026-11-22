@@ -1,3 +1,5 @@
+"""Serializadores da iluminação pública: resumo da camada e postes próximos de uma árvore."""
+
 from rest_framework import serializers
 
 

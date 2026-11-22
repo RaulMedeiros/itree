@@ -1,3 +1,7 @@
+"""Modelos dos indicadores: instantâneos diários da visão geral, indicadores por bairro de fontes
+externas (Censo, IDH, SEFIN, UrbVerde), resultado da regra 3-30-300, execuções das importações
+e dados da URBFOR (doação de mudas e plantio). Cada valor guarda fonte, método e data."""
+
 from django.db import models
 
 from itree.territorio.models import Territorio

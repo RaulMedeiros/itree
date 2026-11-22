@@ -1,3 +1,6 @@
+"""Tarefas Celery dos indicadores: instantâneo diário, regra 3-30-300, ilha de calor e renovação
+das fontes de população, renda e IDH. As agendas estão em ``CELERY_BEAT_SCHEDULE``."""
+
 from celery import shared_task
 
 from . import instantaneos
