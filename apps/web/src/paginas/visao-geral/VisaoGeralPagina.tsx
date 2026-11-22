@@ -711,7 +711,7 @@ export function VisaoGeralPagina() {
         titulo="Visão geral"
         descricao={
           dados
-            ? `Período de ${formatarData(String(dados.periodo.inicio))} a ${formatarData(String(dados.periodo.fim))} · calculado em ${formatarDataHora(dados.calculado_em)} · indicadores oficiais ainda em definição pela prefeitura`
+            ? `Período de ${formatarData(String(dados.periodo.inicio))} a ${formatarData(String(dados.periodo.fim))} · calculado em ${formatarDataHora(dados.calculado_em)} · metodologia: regra 3-30-300 e indicadores descritos em "Como é calculado"`
             : "Indicadores do seu escopo territorial."
         }
       />
