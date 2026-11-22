@@ -40,7 +40,9 @@ Instruções permanentes para sessões do Claude Code neste repositório.
   1. rebase sobre a `main`;
   2. verificação completa, igual à da CI (ruff, makemigrations, pytest,
      spectacular, `pnpm gerar:api`, format, lint, typecheck, test);
-  3. PR, CI verde e merge;
+  3. PR, CI verde e merge. O merge só acontece com **todas** as verificações em
+     `success` (ou `skipped`): "terminou" não é "passou". Um merge com a CI
+     vermelha já escapou assim;
   4. só então o próximo lote.
 - **Capturas** (`scripts/telas/gerar.sh`) disputam a porta 5432 com o banco de
   testes local. Gere-as só quando nenhum subagente estiver testando. Confira o
