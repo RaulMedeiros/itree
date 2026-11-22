@@ -2,8 +2,10 @@
 
 Diagramas da Engine de Inteligência Arbórea no modelo [C4](https://c4model.com/):
 contexto, contêineres, componentes, implantação e fluxos dinâmicos. Eles
-descrevem **o que está implementado** (fases F0–F3 do painel web). O que ainda
-é plano aparece tracejado e marcado como _planejado_.
+descrevem **o que está implementado**: o painel web (F0 a F3) e o que veio depois,
+como detecção automática, conectores, imóveis, população e a regra 3-30-300. O que
+ainda é plano aparece tracejado e marcado como _planejado_. O rumo atual (pesquisa
+e ONG, nada público) está em [decisões de 21/11/2026](../decisoes/2026-11-21-rumo-do-produto.md).
 
 As decisões por trás das escolhas estão nos ADRs
 ([ADR-0001 — stack](../adr/0001-stack-tecnica.md),
@@ -39,14 +41,16 @@ flowchart TB
     engine["<b>Engine de Inteligência Arbórea</b><br/>[Sistema]<br/>Inventário arbóreo georreferenciado, inspeções,<br/>ocorrências, tarefas, alertas e indicadores,<br/>com proveniência e auditoria"]:::sistema
 
     idp["<b>Provedor de identidade</b><br/>[Sistema externo]<br/>Keycloak (OIDC); pode federar com o<br/>SSO da prefeitura (DP-19)"]:::externo
-    inpe["<b>INPE / MapBiomas</b><br/>[Sistema externo]<br/>Focos de calor (BDQueimadas) e<br/>alertas de desmatamento (DETER)"]:::externo
+    deteccao["<b>Projeto de detecção</b><br/>[Sistema externo]<br/>Detecta árvores em vídeo de carros<br/>e em imagens de satélite"]:::externo
+    fontes["<b>Fontes públicas de dados</b><br/>[Sistemas externos]<br/>Fortaleza em Mapas, CKAN, IBGE, INPE,<br/>UrbVerde, Google Open Buildings"]:::externo
     mapas["<b>Provedores de mapa base</b><br/>[Sistema externo]<br/>Ruas (OpenStreetMap) e satélite (DP-07)"]:::externo
     municipais["<b>Sistemas municipais</b><br/>[Sistema externo]<br/>CKAN, cadastro e protocolo (DP-10, DP-12)"]:::planejado
 
     gestor & revisor & analista & admin -- "Usa o painel web<br/>[HTTPS]" --> engine
     tecnico -- "Usa o aplicativo de campo (planejado)<br/>e o painel web [HTTPS]" --> engine
     engine -- "Delega login e valida tokens<br/>[OIDC/JWT]" --> idp
-    engine -- "Ingere alertas periodicamente<br/>ou por arquivo [HTTPS]" --> inpe
+    deteccao -- "Envia lotes de detecções<br/>[HTTPS, token de integração]" --> engine
+    engine -- "Importa e atualiza dados em segundo plano<br/>[HTTPS]" --> fontes
     engine -- "Exibe camadas base<br/>[tiles HTTPS]" --> mapas
     engine -. "Importa dados e territórios<br/>(hoje por arquivo)" .-> municipais
 ```
@@ -55,10 +59,17 @@ Pontos do contexto:
 
 - **Ninguém de fora da prefeitura acessa o sistema.** Não há portal público
   nem canal de cidadão nesta fase.
+- **A base de árvores vem, em boa parte, de detecção automática.** Um projeto
+  externo envia lotes pela API ou por pacote ZIP. A detecção entra direto no
+  inventário, com selo de confiança e origem, e a inspeção ou a revisão humana a
+  confirma. O contrato está em
+  [detecção automática](../integracoes/deteccao-automatica.md).
 - **Alertas externos são sinais, não conclusões.** O sistema registra a fonte
   e o horário da detecção, e a decisão é sempre humana (W-08).
 - **Território.** Bairros e limites municipais entram por importação
   (`importar_territorios`), com fonte e data de referência registradas.
+- **Fontes públicas.** O que cada fonte alimenta, o comando de importação, a
+  periodicidade e a licença estão no [índice de integrações](../integracoes/README.md).
 - **Áreas verdes.** Praças, parques urbanos e unidades de conservação entram
   pelo comando `importar_areas_verdes`, a partir da API do Fortaleza em Mapas
   (mapas 99, 86 e 737), com fonte, licença, data de referência e data de
@@ -88,15 +99,16 @@ flowchart TB
         nginx["<b>Servidor do painel</b><br/>[nginx]<br/>Entrega o SPA, CSP e cabeçalhos;<br/>proxy reverso de /api/ (mesma origem)"]:::conteiner
         app["<b>Aplicativo de campo</b><br/>[Expo/React Native + SQLite]<br/>Inspeção offline — <i>planejado</i>"]:::planejado
         api["<b>API</b><br/>[Django 5.2 + GeoDjango + DRF, gunicorn]<br/>Regras de negócio, autorização por papel e<br/>escopo territorial, vector tiles, exportações"]:::conteiner
-        worker["<b>Worker</b><br/>[Celery]<br/>Ingestão de alertas externos"]:::conteiner
-        beat["<b>Agendador</b><br/>[Celery beat]<br/>Dispara a ingestão a cada N horas"]:::conteiner
+        worker["<b>Worker</b><br/>[Celery]<br/>Importações, ingestões, conectores,<br/>detecção e cálculos pesados"]:::conteiner
+        beat["<b>Agendador</b><br/>[Celery beat]<br/>Reimportações e cálculos periódicos<br/>(ver Tarefas Celery e agenda)"]:::conteiner
         db[("<b>Banco de dados</b><br/>[PostgreSQL 16 + PostGIS]<br/>Dados, geometrias, sequências de códigos<br/>e trilha de auditoria (pghistory)")]:::dado
         redis[("<b>Fila</b><br/>[Redis]<br/>Broker do Celery")]:::dado
         s3[("<b>Armazenamento de arquivos</b><br/>[S3-compatível: SeaweedFS local]<br/>Fotos e documentos; bucket privado")]:::dado
     end
 
     idp["<b>Keycloak</b><br/>[OIDC]"]:::externo
-    inpe["<b>INPE / MapBiomas</b>"]:::externo
+    inpe["<b>Fontes públicas</b><br/>[INPE, IBGE, Mapas, CKAN…]"]:::externo
+    detector["<b>Projeto de detecção</b>"]:::externo
     tiles["<b>Mapa base</b><br/>[tiles raster]"]:::externo
 
     usuario -- "HTTPS" --> nginx
@@ -108,6 +120,7 @@ flowchart TB
     spa -- "Tiles do mapa base" --> tiles
     campo -.-> app
     app -. "POST /inspecoes/sincronizar<br/>[HTTPS, Bearer JWT]" .-> api
+    detector -- "POST /deteccoes/lotes<br/>[HTTPS, Token]" --> nginx
     api -- "Valida assinatura (JWKS), iss, aud" --> idp
     api -- "SQL + PostGIS [TCP 5432]" --> db
     api -- "Assina URLs, confere arquivos" --> s3
@@ -115,14 +128,14 @@ flowchart TB
     beat -- "Agenda" --> redis
     worker -- "Consome" --> redis
     worker -- "Grava alertas" --> db
-    worker -- "Baixa focos e alertas [HTTPS]" --> inpe
+    worker -- "Baixa dados das fontes [HTTPS]" --> inpe
 ```
 
 | Contêiner | Tecnologia | Código | Imagem |
 | --- | --- | --- | --- |
 | Painel web + servidor | React + Vite, servido por nginx | `apps/web` | `apps/web/Dockerfile` |
 | API | Django + DRF em gunicorn | `backend/` | `backend/Dockerfile` (papel `api`) |
-| Worker / agendador | Celery worker / beat | `backend/itree/alertas/tasks.py` | mesma imagem (papéis `worker`, `beat`) |
+| Worker / agendador | Celery worker / beat | `backend/itree/*/tasks.py`, agenda em `backend/config/settings.py` | mesma imagem (papéis `worker`, `beat`) |
 | Banco | PostgreSQL 16 + PostGIS 3.4 | migrações em `backend/itree/*/migrations` | `postgis/postgis` |
 | Fila | Redis 7 | — | `redis` |
 | Arquivos | S3-compatível (SeaweedFS no ambiente local) | `backend/itree/core/armazenamento.py` | `chrislusf/seaweedfs` |
@@ -135,9 +148,12 @@ Escolhas que os diagramas não mostram:
 - **Arquivos não passam pela API.** A API cria a evidência, devolve uma URL
   pré-assinada com tamanho e tipo fixados, e depois confere o objeto no bucket
   antes de marcar a evidência como disponível.
-- **Importação e exportação são síncronas** na API. Os limites ficam em 50 mil
-  linhas por arquivo, e a exportação avisa quando o resultado foi cortado. O
-  Celery hoje só cuida dos alertas; tarefas longas podem migrar para ele.
+- **O trabalho pesado roda no Celery.** A confirmação de importação com mais de
+  500 linhas válidas, lotes de detecção com mais de 200 detecções, ações em lote
+  grandes, sincronização de conectores, reimportação das fontes e cálculo da
+  regra 3-30-300 vão para o worker. Abaixo desses limites, a própria requisição
+  resolve (200 ou 201); acima, a API responde 202 e a tela acompanha a situação.
+  As exportações continuam síncronas e avisam quando o resultado foi cortado.
 - **Contrato da API.** O `openapi.yaml` é gerado do código (drf-spectacular),
   e o cliente TypeScript (`packages/api-client`) é gerado dele (Orval). O CI
   falha se algum dos dois estiver desatualizado.
@@ -179,15 +195,22 @@ flowchart TB
             tarefas["<b>tarefas</b><br/>Criação em lote, atribuição, andamento"]:::comp
             alertas["<b>alertas</b><br/>Leitura das fontes, deduplicação, triagem"]:::comp
             qualidade["<b>qualidade</b><br/>Regras de pendência; sugestões de IA<br/>com decisão humana"]:::comp
+            deteccao["<b>deteccao</b><br/>Lotes de detecção automática, observações,<br/>pontos de plantio, sinais de remoção, tokens"]:::comp
+            conectores["<b>conectores</b><br/>Fontes externas agendadas (GeoJSON, WFS,<br/>ArcGIS, CKAN); camadas de referência"]:::comp
+            imoveis["<b>imoveis</b><br/>Edificações, uso por lote, macrozoneamento,<br/>IPTU e áreas edificadas por bairro"]:::comp
+            iluminacao["<b>iluminacao</b><br/>Pontos de iluminação pública;<br/>conflito entre árvore e poste"]:::comp
+            notificacoes["<b>notificacoes</b><br/>Sino, preferências e e-mail"]:::comp
             territorio ~~~ contas ~~~ tarefas
             inventario ~~~ evidencias ~~~ ocorrencias
             inspecoes ~~~ alertas ~~~ qualidade
+            deteccao ~~~ conectores ~~~ imoveis
+            iluminacao ~~~ notificacoes
         end
 
         subgraph leitura["Consulta e saída"]
             direction LR
             mapa["<b>mapa</b><br/>Vector tiles (ST_AsMVT) com escopo e<br/>agrupamento; busca global; camadas"]:::comp
-            indicadores["<b>indicadores</b><br/>Painel com definição, fórmula e fonte"]:::comp
+            indicadores["<b>indicadores</b><br/>Painel, ficha do bairro, população, renda, IDH,<br/>regra 3-30-300 e Onde plantar"]:::comp
             relatorios["<b>relatorios</b><br/>Análises; CSV, XLSX, GeoJSON, PDF;<br/>registro de cada exportação"]:::comp
         end
 
@@ -197,7 +220,7 @@ flowchart TB
     db[("PostgreSQL + PostGIS")]:::dado
     s3[("Armazenamento S3")]:::dado
     idp["Keycloak (JWKS)"]:::externo
-    fontes["INPE / MapBiomas"]:::externo
+    fontes["Fontes públicas e<br/>projeto de detecção"]:::externo
 
     cliente --> autent --> acesso --> auditoria
     auditoria --> dominio
@@ -206,7 +229,8 @@ flowchart TB
     dominio --> core
     leitura --> core
     evidencias --> s3
-    alertas --> fontes
+    alertas & conectores & imoveis & iluminacao & indicadores --> fontes
+    fontes -. "lotes de detecção" .-> deteccao
     core --> db
     dominio --> db
     leitura --> db
@@ -222,6 +246,74 @@ Regras transversais, aplicadas em todos os componentes:
   importado, sugerido por IA), e a localização guarda como foi obtida.
 - **Auditoria append-only.** As triggers do pghistory gravam cada alteração
   junto com o contexto da requisição (usuário, origem web/app e motivo).
+
+### Apps Django e responsabilidades
+
+Cada app tem um módulo `tasks.py` só quando roda algo em segundo plano.
+
+| App | Responsabilidade |
+| --- | --- |
+| `core` | Modelo base (UUIDv7), sequências de códigos, cliente S3, utilidades geográficas, paginação e ações em lote em segundo plano |
+| `contas` | Usuários, papéis, escopo territorial, equipes, autenticação OIDC e matriz de permissões |
+| `auditoria` | Contexto da requisição para a trilha (pghistory) e consulta da auditoria |
+| `territorio` | Município, regionais e bairros; ficha do bairro; importação dos limites oficiais |
+| `areas_verdes` | Praças, parques e unidades de conservação; subtipos; conferência com o CNUC; adoção de praças |
+| `inventario` | Árvores, espécies e suas referências (Wikidata, Commons, GBIF), medidas, importação de bases legadas, duplicidades e histórico visual |
+| `evidencias` | Fotos e documentos por URL pré-assinada, com miniaturas |
+| `ocorrencias`, `inspecoes`, `tarefas` | Fluxo operacional: registro, inspeção em campo (sincronização idempotente) e tarefas |
+| `alertas` | Focos de calor e supressão de vegetação (INPE), PRODES Caatinga, deduplicação e triagem humana |
+| `notificacoes` | Notificações no sino e por e-mail, preferências e retenção |
+| `qualidade` | Regras de pendência de dados e registro de sugestões de IA com decisão humana |
+| `deteccao` | Recebimento de lotes de detecção automática (API e pacote ZIP), selo de confiança, junção à árvore mais próxima, pontos de plantio e sinais de remoção |
+| `conectores` | Fontes externas agendadas com hosts permitidos e bloqueio de rede interna; destino em camada de referência ou lote em prévia |
+| `iluminacao` | Pontos de iluminação pública (SEINF) e árvores a até o raio provisório de um poste |
+| `imoveis` | Edificações (Google Open Buildings), uso por lote (SEFIN), macrozoneamento, IPTU e áreas edificadas por bairro |
+| `indicadores` | Painel da visão geral, instantâneos diários, indicadores externos por bairro (Censo, IDH, renda, ilha de calor), regra 3-30-300, "Onde plantar" e dados da URBFOR |
+| `mapa` | Vector tiles com escopo, busca global, camadas, linha do tempo e seleção por área |
+| `relatorios` | Análises, exportações (CSV, XLSX, GeoJSON, PDF) e registro de cada exportação |
+
+### Vector tiles do mapa
+
+`GET /api/v1/mapa/tiles/{camada}/{z}/{x}/{y}` gera o tile no PostGIS com
+`ST_AsMVT`, já recortado pelo escopo do usuário. As camadas são `arvores`,
+`ocorrencias`, `tarefas`, `iluminacao`, `edificacoes` e `macrozoneamento`; cada
+uma exige a permissão própria. As regras principais estão em
+`backend/itree/mapa/views.py`:
+
+- **Árvores, ocorrências e tarefas:** abaixo do zoom 12, as árvores vêm
+  agrupadas por bairro; abaixo do 16, em células com a contagem; a partir do 16,
+  uma feição por registro. Árvores e ocorrências aceitam `ate` (linha do tempo).
+- **Iluminação e edificações:** centenas de milhares de feições, sem
+  agrupamento, só a partir do zoom 15. Abaixo dele o tile vem vazio.
+- **Camadas de referência dos conectores** e a camada de população por bairro
+  não são MVT: vão em GeoJSON. A ilha de calor é WMS, direto do servidor da
+  UrbVerde.
+
+### Tarefas Celery e agenda
+
+O `beat` lê `CELERY_BEAT_SCHEDULE` em `backend/config/settings.py`, no fuso
+`America/Fortaleza`. Só uma instância do `beat` deve rodar.
+
+| Tarefa agendada | Quando | O que faz |
+| --- | --- | --- |
+| `registrar_indicadores` | todo dia, 01:30 | Grava os instantâneos da visão geral por território |
+| `limpar_notificacoes_antigas` | todo dia, 02:15 | Apaga notificações vencidas pela retenção |
+| `retomar_referencias_com_erro` | todo dia, 05:45 | Tenta de novo as referências de espécies que falharam |
+| `disparar_conectores_vencidos` | de hora em hora (minuto 10) | Sincroniza os conectores cuja periodicidade venceu |
+| `atualizar_referencias_antigas` | dia 1, 03:30 | Renova as referências de espécies mais antigas |
+| `reimportar_areas_verdes` | dia 2, 04:00 | Praças, parques e unidades de conservação |
+| `reimportar_adocao_pracas` | dia 2, 04:30 | Adoção de praças |
+| `reimportar_iluminacao_publica` | dia 3, 04:00 | Pontos de iluminação pública |
+| `reimportar_dados_imobiliarios` | dia 4, 04:40 | IPTU, áreas edificadas e macrozoneamento; depois chama o cálculo 3-30-300 |
+| `renovar_fontes_populacao` | dia 6, 05:00 | Confere população, renda, estimativa e IDH e reimporta o que mudou |
+| `calcular_3_30_300` | dia 7, 06:20 | Recalcula a regra 3-30-300 por bairro |
+| `reimportar_ilha_calor` | 5 de fevereiro, 05:00 | Ilha de calor por bairro (só grava com `URBVERDE_GRAVAR_VALORES`) |
+| `ingerir_fontes_configuradas` | a cada `ALERTAS_INTERVALO_HORAS` (padrão 6) | Só existe se `ALERTAS_FONTES` não estiver vazio |
+
+Tarefas sob demanda, disparadas pela API ou por outra tarefa:
+`confirmar_importacao` (importação grande), `processar_lote` (detecção),
+`sincronizar_conector`, `executar_operacao_em_lote`, `atualizar_referencias_especie`
+e `enviar_email_notificacao`.
 
 ### Componentes do painel web
 
@@ -445,3 +537,72 @@ sequenceDiagram
 
 A administração também pode enviar o arquivo de uma fonte pelo painel
 (Administração › Integrações). O caminho de ingestão é o mesmo.
+
+### Importação de fontes públicas
+
+```mermaid
+flowchart LR
+    beat["Celery beat<br/>(mensal ou anual)"] --> tarefa["tarefa reimportar_*"]
+    cli["manage.py importar_*<br/>(uso manual ou offline)"] --> cmd
+    tarefa --> cmd["comando de importação"]
+    cmd -- "baixa ou lê --arquivo" --> fonte["fonte pública"]
+    cmd --> valida["valida, filtra pelo município,<br/>descarta dado pessoal"]
+    valida --> db[("PostGIS<br/>valor + fonte, licença,<br/>data de referência e de ingestão")]
+    db --> api["API e telas<br/>(mapa, ficha do bairro, Análises)"]
+```
+
+Todo importador é **idempotente** e grava a proveniência junto do dado. Se a
+fonte falha, a importação atômica não muda nada e a falha sobe para o Celery;
+o aviso de "fonte desatualizada" aparece quando a última importação passa do
+limite. A lista de fontes está no [índice de integrações](../integracoes/README.md).
+
+### Conectores de fontes externas
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Celery beat
+    participant W as Worker
+    participant F as Fonte externa (HTTPS)
+    participant DB as PostGIS
+    actor P as Pessoa autorizada
+
+    B->>W: disparar_conectores_vencidos (de hora em hora)
+    W->>W: confere host permitido, porta 443, IP público e limites
+    W->>F: busca GeoJSON, WFS, ArcGIS REST ou CKAN
+    alt destino: camada de referência
+        W->>DB: troca as feições numa única transação
+    else destino: lote de importação
+        W->>DB: cria o lote em prévia e para
+        P->>DB: revisa e confirma a importação
+    end
+    W->>DB: registra a execução (origem, resultado, erros)
+```
+
+### Detecção automática
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant D as Projeto de detecção
+    participant API as API
+    participant W as Worker
+    participant DB as PostGIS
+    actor R as Pessoa na revisão
+
+    D->>API: POST /deteccoes/lotes (JSON ou multipart) ou pacote ZIP
+    API->>API: valida o contrato, guarda as fotos aceitas, registra o lote
+    alt até DETECCAO_LIMITE_SINCRONO detecções
+        API->>DB: processa na requisição (201)
+    else lote grande
+        API->>W: processar_lote (202; a origem acompanha a situação)
+        W->>DB: processa em blocos, com ponto de retomada
+    end
+    Note over DB: junta a observação à árvore ativa mais próxima<br/>ou cria árvore nova, com selo de confiança e origem
+    Note over DB: berço vazio e toco viram ponto de plantio;<br/>árvore conhecida não vista vira sinal de possível remoção
+    R->>DB: confirma a árvore ou decide sobre a remoção
+```
+
+Nada é removido sozinho: o sinal de remoção só pede revisão humana. Os selos
+(baixa, média, alta) e os raios de junção vêm de configuração
+([variáveis de ambiente](../desenvolvimento.md#variáveis-de-ambiente)).
