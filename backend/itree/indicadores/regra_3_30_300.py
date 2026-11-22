@@ -23,7 +23,7 @@ from django.db import connection, transaction
 from django.utils import timezone
 
 from itree.areas_verdes.models import AreaVerde, SubtipoAreaVerde
-from itree.inventario.models import Arvore, EstadoEspecie
+from itree.inventario.models import Arvore
 from itree.territorio.models import Territorio, TipoTerritorio
 
 from . import contagem as cont

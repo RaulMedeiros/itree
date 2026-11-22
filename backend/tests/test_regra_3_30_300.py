@@ -68,6 +68,8 @@ def arvore(dx, dy=0.0, confirmada=True, **extras):
         localizacao_origem="importada",
         geom=geo(dx, dy),
         especie_estado="confirmada" if confirmada else "sugerida_ia",
+        # "Confirmada" é a da detecção automática (helper indicadores.contagem).
+        confirmada=confirmada,
         **extras,
     )
 
@@ -408,7 +410,7 @@ def test_ficha_tem_o_bloco_3_30_300_com_tres_medidores_meta_cidade_e_selo(
 
 
 def test_ficha_com_contagem_confirmadas_usa_so_as_confirmadas(cliente, revisor, calculado):
-    Arvore.objects.update(especie_estado="sugerida_ia")
+    Arvore.objects.update(confirmada=False)
     regra.calcular()
     url = f"/api/v1/bairros/{calculado['a'].id}/ficha"
     c = cliente.como(revisor)

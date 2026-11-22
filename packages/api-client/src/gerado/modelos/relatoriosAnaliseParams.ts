@@ -8,7 +8,7 @@
 import type { RelatoriosAnaliseContagem } from './relatoriosAnaliseContagem';
 
 export type RelatoriosAnaliseParams = {
-  /** arvores_por_bairro, arborizacao_entorno_por_bairro, arvores_por_mil_habitantes_por_bairro, populacao_densidade_por_bairro, arvores_mil_x_renda, manejo_urbfor_por_bairro, mudas_doadas_por_especie, mudas_doadas_por_categoria, plantios_por_bairro, ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo, inspecoes_por_mes, alertas_por_fonte */
+  /** arvores_por_bairro, arborizacao_entorno_por_bairro, arvores_por_mil_habitantes_por_bairro, populacao_densidade_por_bairro, arvores_mil_x_renda, manejo_urbfor_por_bairro, mudas_doadas_por_especie, mudas_doadas_por_categoria, plantios_por_bairro, ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo, inspecoes_por_mes, alertas_por_fonte, regra_3_por_bairro, regra_3_x_renda, regra_30_por_bairro, regra_30_x_renda, regra_300_por_bairro, regra_300_x_renda */
   analise: string;
   /** Quais árvores entram nas contagens: `todas` (padrão, inclui as detectadas automaticamente e ainda sem revisão) ou `confirmadas` (só as confirmadas por inspeção ou revisão humana). A resposta traz as duas contagens quando se aplica. */
   contagem?: RelatoriosAnaliseContagem;

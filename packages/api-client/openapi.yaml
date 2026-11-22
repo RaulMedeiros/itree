@@ -2886,6 +2886,40 @@ paths:
                 items:
                   $ref: '#/components/schemas/ResultadoSincronizacao'
           description: ''
+  /api/v1/macrozoneamento/zona:
+    get:
+      operationId: macrozoneamento_zona
+      description: |-
+        Zona do Macrozoneamento Urbano (SEUMA, 2022) que contém o ponto ou a árvore. Só leitura;
+        o painel da árvore usa este endpoint. Ponto fora do escopo de quem consulta dá 403.
+      parameters:
+      - in: query
+        name: arvore
+        schema:
+          type: string
+        description: Id de uma árvore (usa a localização dela).
+      - in: query
+        name: lat
+        schema:
+          type: number
+          format: double
+        description: Latitude (com lon, no lugar de arvore).
+      - in: query
+        name: lon
+        schema:
+          type: number
+          format: double
+      tags:
+      - macrozoneamento
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZonaMacrozoneamento'
+          description: ''
   /api/v1/mapa/alertas:
     get:
       operationId: mapa_alertas
@@ -4083,7 +4117,8 @@ paths:
           populacao_densidade_por_bairro, arvores_mil_x_renda, manejo_urbfor_por_bairro,
           mudas_doadas_por_especie, mudas_doadas_por_categoria, plantios_por_bairro,
           ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo,
-          inspecoes_por_mes, alertas_por_fonte
+          inspecoes_por_mes, alertas_por_fonte, regra_3_por_bairro, regra_3_x_renda,
+          regra_30_por_bairro, regra_30_x_renda, regra_300_por_bairro, regra_300_x_renda
         required: true
       - in: query
         name: contagem
@@ -5680,6 +5715,11 @@ components:
           type: object
           additionalProperties: {}
           nullable: true
+        imoveis:
+          type: object
+          additionalProperties: {}
+          description: 'Edificações, uso do lote (SEFIN) e macrozoneamento: fonte,
+            licença, volume e datas.'
         populacao:
           type: array
           items:
@@ -5705,6 +5745,7 @@ components:
       - areas_verdes
       - arvores
       - iluminacao
+      - imoveis
       - limites_escopo
       - ocorrencias
       - populacao
@@ -5977,6 +6018,14 @@ components:
       - limite_tarefas_em_lote
       - total
       - validos
+    ContagemEnum:
+      enum:
+      - todas
+      - confirmadas
+      type: string
+      description: |-
+        * `todas` - todas
+        * `confirmadas` - confirmadas
     ContagemNaoLidas:
       type: object
       properties:
@@ -7226,6 +7275,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FichaCartao'
+        regra_3_30_300:
+          $ref: '#/components/schemas/FichaRegra330300'
+        macrozoneamento:
+          allOf:
+          - $ref: '#/components/schemas/FichaMacrozoneamento'
+          nullable: true
         graficos:
           $ref: '#/components/schemas/FichaGraficos'
         ranking:
@@ -7235,7 +7290,9 @@ components:
       - cartoes
       - gerado_em
       - graficos
+      - macrozoneamento
       - ranking
+      - regra_3_30_300
     FichaBairro:
       type: object
       properties:
@@ -7464,6 +7521,86 @@ components:
       required:
       - filtros
       - pagina
+    FichaMacrozoneamento:
+      type: object
+      properties:
+        zonas:
+          type: array
+          items:
+            $ref: '#/components/schemas/FichaZona'
+        predominante:
+          type: string
+        fonte:
+          type: string
+        fonte_url:
+          type: string
+        licenca:
+          type: string
+        data_referencia:
+          type: string
+          format: date
+      required:
+      - data_referencia
+      - fonte
+      - fonte_url
+      - licenca
+      - predominante
+      - zonas
+    FichaParteRegra:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdEnum'
+        nome:
+          type: string
+        meta:
+          type: string
+          description: '"3 árvores a até 30 m", "30% de cobertura"...'
+        meta_pct:
+          type: number
+          format: double
+          description: Percentual que o bairro precisa atingir para a parte atender.
+        unidade:
+          type: string
+        valor:
+          type: number
+          format: double
+          nullable: true
+          description: Percentual; nulo sem dado.
+        numerador:
+          type: integer
+          nullable: true
+        denominador:
+          type: integer
+          nullable: true
+        cidade:
+          type: number
+          format: double
+          nullable: true
+        atende:
+          type: boolean
+          nullable: true
+          description: Nulo sem dado.
+        sem_dado:
+          type: boolean
+        nota:
+          type: string
+        definicao:
+          type: string
+      required:
+      - atende
+      - cidade
+      - definicao
+      - denominador
+      - id
+      - meta
+      - meta_pct
+      - nome
+      - nota
+      - numerador
+      - sem_dado
+      - unidade
+      - valor
     FichaRanking:
       type: object
       properties:
@@ -7520,6 +7657,69 @@ components:
       required:
       - id
       - nome
+    FichaRegra330300:
+      type: object
+      properties:
+        contagem:
+          $ref: '#/components/schemas/ContagemEnum'
+        calculado_em:
+          type: string
+          format: date-time
+          nullable: true
+        data:
+          type: string
+          format: date
+          nullable: true
+        base_edificacoes:
+          type: string
+          description: '"residenciais", "todas" ou vazio.'
+        base_texto:
+          type: string
+        edificacoes:
+          type: integer
+        classificadas:
+          type: integer
+          nullable: true
+        edificacoes_no_bairro:
+          type: integer
+          nullable: true
+        limiar_ndvi:
+          type: number
+          format: double
+          nullable: true
+        partes:
+          type: array
+          items:
+            $ref: '#/components/schemas/FichaParteRegra'
+        regra:
+          type: string
+        fonte_metodo:
+          type: string
+        fonte_url:
+          type: string
+        metodo:
+          type: string
+        ressalva:
+          type: string
+        rotulo_cidade:
+          type: string
+      required:
+      - base_edificacoes
+      - base_texto
+      - calculado_em
+      - classificadas
+      - contagem
+      - data
+      - edificacoes
+      - edificacoes_no_bairro
+      - fonte_metodo
+      - fonte_url
+      - limiar_ndvi
+      - metodo
+      - partes
+      - regra
+      - ressalva
+      - rotulo_cidade
     FichaSerieMensal:
       type: object
       properties:
@@ -7544,6 +7744,21 @@ components:
       - meses
       - titulo
       - valores
+    FichaZona:
+      type: object
+      properties:
+        nome:
+          type: string
+        sigla:
+          type: string
+        pct:
+          type: number
+          format: double
+          description: Percentual da área do bairro nesta zona.
+      required:
+      - nome
+      - pct
+      - sigla
     FonteAlertaEnum:
       enum:
       - inpe_focos
@@ -7737,6 +7952,16 @@ components:
       - tipo
       - titulo
       - ultima_em
+    IdEnum:
+      enum:
+      - '3'
+      - '30'
+      - '300'
+      type: string
+      description: |-
+        * `3` - 3
+        * `30` - 30
+        * `300` - 300
     IdentificadorExterno:
       type: object
       properties:
@@ -12225,6 +12450,29 @@ components:
         motivo:
           type: string
           maxLength: 500
+    ZonaMacrozoneamento:
+      type: object
+      properties:
+        zona:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          description: Zona (nome, sigla, parâmetros de ocupação); nulo fora das zonas.
+        fonte:
+          type: string
+        fonte_url:
+          type: string
+        licenca:
+          type: string
+        data_referencia:
+          type: string
+          format: date
+      required:
+      - data_referencia
+      - fonte
+      - fonte_url
+      - licenca
+      - zona
   securitySchemes:
     oidc:
       type: http
