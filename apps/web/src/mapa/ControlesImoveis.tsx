@@ -4,7 +4,7 @@ import {
   ATRIBUICAO_USO_LOTE,
   COR_EDIFICACAO,
   CORES_MACROZONAS,
-  URL_LEGENDA_USO_LOTE,
+  CLASSES_USO_LOTE,
   ZOOM_EDIFICACOES,
 } from "./camadasImoveis";
 
@@ -121,12 +121,18 @@ export function LegendaImoveis({
       {usoLote && (
         <div className="max-w-64">
           <p className="font-semibold">Uso predominante por lote, 2022</p>
-          <img
-            src={URL_LEGENDA_USO_LOTE}
-            alt="Legenda do uso por lote: misto, não residencial, residencial e territorial"
-            className="mt-1"
-            loading="lazy"
-          />
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {CLASSES_USO_LOTE.map((c) => (
+              <li key={c.rotulo} className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="inline-block size-3 rounded-sm border border-borda"
+                  style={{ background: c.cor }}
+                />
+                {c.rotulo}
+              </li>
+            ))}
+          </ul>
           <p className="mt-1 text-texto-suave">Fonte: {ATRIBUICAO_USO_LOTE}.</p>
         </div>
       )}

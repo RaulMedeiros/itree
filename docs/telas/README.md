@@ -274,3 +274,27 @@ Comparar a data escolhida com hoje (cortina):
 Celular, seleção em lote com a barra de ações no rodapé:
 
 ![Seleção no celular](m11-arvores-selecao.png)
+
+## Detecção automática
+
+Lote de detecções (simulado e declarado), com o resultado de cada detecção no mapa:
+
+![Lote de detecções](55-deteccoes-lote.png)
+
+Árvore detectada por vídeo de rua, ainda não confirmada, com origem e confiança:
+
+![Árvore detectada](56-arvore-detectada.png)
+
+## Imóveis, uso do solo e regra 3-30-300
+
+Bloco 3-30-300 e macrozoneamento na ficha do bairro (o "3" usa árvores sintéticas):
+
+![Ficha do bairro com 3-30-300](58-ficha-bairro-3-30-300.png)
+
+Edificações (Google Open Buildings) com a legenda oficial do uso por lote (SEFIN):
+
+![Edificações](59-mapa-edificacoes.png)
+
+"300": edificações a até 300 m de área verde de pelo menos 0,5 ha, por bairro:
+
+![3-30-300 no mapa](60-mapa-3-30-300.png)

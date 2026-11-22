@@ -10,7 +10,6 @@ import {
   rotulosDasClasses,
   COR_SEM_DADO,
   CORES_POPULACAO,
-  FONTE_REGRA_3_30_300,
   type GrupoIndicador,
   type IndicadorPopulacao,
 } from "../../mapa/coropletica";
@@ -184,17 +183,17 @@ export function LegendaPopulacao({
             <>
               <p className="text-texto-suave">{ressalvaInventario}</p>
               <p className="text-texto-suave">
-                Indicador complementar à regra 3-30-300 (DP-14 decidida); não é índice oficial.
+                Indicador complementar à regra 3-30-300; não é índice oficial.
               </p>
             </>
           )}
           {(id === "regra_3" || id === "regra_30" || id === "regra_300") && (
             <>
-              <p className="text-texto-suave">Método: {FONTE_REGRA_3_30_300}</p>
+              {/* A fonte acima já cita o método (Konijnendijk, 2022). */}
               {id !== "regra_30" ? (
                 <p className="text-texto-suave">
-                  Percentual das edificações do bairro (distância em linha reta).{" "}
-                  {ressalvaInventario}
+                  Percentual das edificações do bairro (distância em linha reta).
+                  {id === "regra_3" && ` ${ressalvaInventario}`}
                 </p>
               ) : (
                 <p className="text-texto-suave">

@@ -10,7 +10,8 @@ Instruções permanentes para sessões do Claude Code neste repositório.
   Leia esse arquivo antes de estimar e atualize-o ao terminar.
 - **Regra prática atual:** item pequeno ~25 mil tokens; item de funcionalidade
   ~50 mil; item estrutural 150–200 mil (inclui importador de dado real
-  volumoso ou em formato irregular); mais 40 mil por PR integrado e 20% de
+  volumoso ou em formato irregular); app nova com modelos, API e tela conta como
+  2 itens estruturais (300–400 mil); mais 40 mil por PR integrado e 20% de
   folga. Detalhes e histórico em `docs/melhoria/estimativas.md`.
 - **Aprenda a cada plano.** Compare o estimado com o real, que é a soma dos
   `subagent_tokens` de cada entrega mais a integração. Se o erro passar de 25%,
@@ -20,6 +21,8 @@ Instruções permanentes para sessões do Claude Code neste repositório.
 
 - **No máximo 2 subagentes em paralelo.** Quatro em paralelo bateram no limite
   de 5 horas várias vezes.
+- **Ao receber o relatório final, encerre o subagente** se ele continuar ativo
+  (`TaskStop`): um já repetiu o relatório em laço, gastando tokens.
 - **Ao bater no limite, retome o mesmo subagente** (`SendMessage`) quando o
   limite for reiniciado. O trabalho fica no worktree; não recomece do zero.
 - **Modelos.** Implementação usa Sonnet. Revisão de prontidão e crítica usam

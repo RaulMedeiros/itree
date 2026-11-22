@@ -330,7 +330,7 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     "60-mapa-3-30-300",
     `/mapa?lon=${-38.52}&lat=${-3.77}&zoom=11.5&populacao=regra_300`,
     {
-      esperar: /Método: Konijnendijk/,
+      esperar: "Legenda",
       espera: 5000,
     },
   );

@@ -36,7 +36,17 @@ export const URL_TILES_USO_LOTE =
   "&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=true";
 
 /** Legenda oficial do WMS (uma camada regional serve: o estilo é o mesmo). */
-export const URL_LEGENDA_USO_LOTE = `${OWS}?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.1.1&FORMAT=image/png&LAYER=vw_UsoPorLoteSER2`;
+/**
+ * Classes e cores oficiais do uso por lote, como o próprio serviço as declara em
+ * `GetLegendGraphic` com `FORMAT=application/json`. A imagem PNG da legenda chega com a
+ * acentuação quebrada ("NÃ£o Residencial"); por isso a legenda é desenhada aqui.
+ */
+export const CLASSES_USO_LOTE = [
+  { rotulo: "Residencial", cor: "#FDD8B6" },
+  { rotulo: "Não residencial", cor: "#D9FFF7" },
+  { rotulo: "Misto", cor: "#D70C41" },
+  { rotulo: "Territorial (sem edificação)", cor: "#AADDAB" },
+] as const;
 
 /** Cores das zonas do macrozoneamento por tipo de zona (a sigla vem da API). */
 export const CORES_MACROZONAS: [string, string][] = [
