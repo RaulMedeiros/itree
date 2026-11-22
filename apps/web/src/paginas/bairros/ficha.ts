@@ -25,6 +25,8 @@ export function formatarValorCartao(c: Pick<FichaCartao, "valor" | "unidade">): 
   if (c.unidade === "hab/km²") return `${inteiro.format(Math.round(c.valor))} hab/km²`;
   if (c.unidade === "por 1.000 hab.") return `${decimal2.format(c.valor)} por 1.000 hab.`;
   if (c.unidade === "IDH") return decimal3.format(c.valor);
+  if (c.unidade === "m²") return `${inteiro.format(Math.round(c.valor))} m²`;
+  if (c.unidade === "inscrições") return `${inteiro.format(Math.round(c.valor))} inscrições`;
   return inteiro.format(c.valor);
 }
 

@@ -40,7 +40,7 @@ interface ColecaoBairros {
 /**
  * Planejamento "Onde plantar": cenário de priorização de bairros para plantio. Os critérios vêm da
  * API com percentis; os pesos são da pessoa, ficam na URL e a ponderação roda aqui, na hora.
- * Não é índice oficial (DP-14).
+ * Não é índice oficial; metodologia 3-30-300 (DP-14 decidida).
  */
 export function PlanejamentoPagina() {
   const busca = useSearch({ from: "/autenticado/planejamento" });
@@ -124,7 +124,7 @@ export function PlanejamentoPagina() {
     <div className="mx-auto max-w-7xl">
       <CabecalhoPagina
         titulo="Onde plantar"
-        descricao="Cenário de priorização — não é índice oficial (DP-14)"
+        descricao="Cenário de priorização — não é índice oficial; metodologia 3-30-300"
         acoes={
           <>
             <SeletorContagem

@@ -10,6 +10,8 @@ import {
   rotulosDasClasses,
   COR_SEM_DADO,
   CORES_POPULACAO,
+  FONTE_REGRA_3_30_300,
+  type GrupoIndicador,
   type IndicadorPopulacao,
 } from "../../mapa/coropletica";
 import {
@@ -22,6 +24,8 @@ import { Selo } from "../../ui/selo";
 import { Selecao } from "../../ui/campos";
 import { formatarData, formatarDataHora } from "../../util/formatos";
 import { PainelDetalhe } from "../../mapa/PainelDetalhe";
+
+const GRUPOS: GrupoIndicador[] = ["Censo e IDH", "Imóveis (SEFIN)", "Regra 3-30-300"];
 
 /** Controle do grupo Contexto: caixa da camada e seletor do indicador. Desligada por padrão. */
 export function ControlePopulacao({
@@ -58,16 +62,20 @@ export function ControlePopulacao({
           value={escolhido}
           onChange={(e) => aoMudar(e.target.value as IndicadorPopulacao)}
         >
-          {INDICADORES_POPULACAO.map((i) => (
-            <option key={i.id} value={i.id}>
-              {i.id === "arvores_por_mil" ? `${i.rotulo} (provisório)` : i.rotulo}
-            </option>
+          {GRUPOS.map((grupo) => (
+            <optgroup key={grupo} label={grupo}>
+              {INDICADORES_POPULACAO.filter((i) => i.grupo === grupo).map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.id === "arvores_por_mil" ? `${i.rotulo} (inventário parcial)` : i.rotulo}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </Selecao>
       )}
       <p className="text-xs text-texto-suave">
-        Densidade, árvores por 1.000 habitantes, rendimento do responsável e IDH. Fonte: IBGE (Censo
-        2022) e SDE (IDH 2010).
+        Densidade, rendimento, IDH, IPTU e áreas edificadas (SEFIN) e a regra 3-30-300. Fonte: IBGE
+        (Censo 2022), SDE (IDH 2010) e SEFIN.
       </p>
       {ativa && carregando && (
         <p role="status" className="text-xs text-texto-suave">
@@ -175,8 +183,30 @@ export function LegendaPopulacao({
           {id === "arvores_por_mil" && (
             <>
               <p className="text-texto-suave">{ressalvaInventario}</p>
-              <p className="text-texto-suave">Provisório (DP-14); não é índice oficial.</p>
+              <p className="text-texto-suave">
+                Indicador complementar à regra 3-30-300 (DP-14 decidida); não é índice oficial.
+              </p>
             </>
+          )}
+          {(id === "regra_3" || id === "regra_30" || id === "regra_300") && (
+            <>
+              <p className="text-texto-suave">Método: {FONTE_REGRA_3_30_300}</p>
+              {id !== "regra_30" ? (
+                <p className="text-texto-suave">
+                  Percentual das edificações do bairro (distância em linha reta).{" "}
+                  {ressalvaInventario}
+                </p>
+              ) : (
+                <p className="text-texto-suave">
+                  Vegetação (NDVI de 10 m), não só copa de árvore. Sem dado onde o NDVI não cobre.
+                </p>
+              )}
+            </>
+          )}
+          {(id === "iptu_medio" || id === "iptu_inscricoes") && (
+            <p className="text-texto-suave">
+              IPTU lançado em 2024: não é renda nem valor de mercado.
+            </p>
           )}
         </div>
       )}
@@ -245,11 +275,18 @@ export function PainelPopulacaoBairro({
         />
         <Linha rotulo="Densidade" valor={fmt("densidade", bairro.densidade)} />
         <Linha
-          rotulo="Árvores por 1.000 hab. (provisório)"
+          rotulo="Árvores por 1.000 hab. (inventário parcial)"
           valor={fmt("arvores_por_mil", bairro.arvores_por_mil)}
         />
         <Linha rotulo="Rendimento médio do responsável" valor={fmt("renda", bairro.renda)} />
         <Linha rotulo="IDH 2010" valor={fmt("idh", bairro.idh)} />
+        <Linha
+          rotulo="IPTU médio por inscrição (2024)"
+          valor={fmt("iptu_medio", bairro.iptu_medio)}
+        />
+        <Linha rotulo="Regra 3-30-300: 3" valor={fmt("regra_3", bairro.r3)} />
+        <Linha rotulo="Regra 3-30-300: 30" valor={fmt("regra_30", bairro.r30)} />
+        <Linha rotulo="Regra 3-30-300: 300" valor={fmt("regra_300", bairro.r300)} />
       </dl>
       {bairro.estimada ? (
         <p className="text-xs text-texto-suave">{textoEstimativa(bairro.estimada, dados)}</p>

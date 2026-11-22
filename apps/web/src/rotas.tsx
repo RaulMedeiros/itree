@@ -273,6 +273,10 @@ const mapa = createRoute({
     supressao_anual: bandeira("1"),
     iluminacao: bandeira("1"),
     ilha_calor: bandeira("1"),
+    /** Camadas de contexto de imóveis: edificações (zoom 15), uso por lote (SEFIN) e macrozoneamento. */
+    edificacoes: bandeira("1"),
+    uso_lote: bandeira("1"),
+    macrozona: bandeira("1"),
     /** Subtipo das praças mostrado na camada de áreas verdes; vazio mostra todos. */
     subtipo_praca: z
       .enum(["praca", "areninha", "calcadao", "rotatoria", "sem_denominacao"])
@@ -282,7 +286,22 @@ const mapa = createRoute({
     adotadas: bandeira("1"),
     arborizacao_entorno: bandeira("1"),
     /** Camada "População e renda por bairro" e o indicador escolhido; ausente = desligada. */
-    populacao: z.enum(["densidade", "arvores_por_mil", "renda", "idh"]).optional().catch(undefined),
+    populacao: z
+      .enum([
+        "densidade",
+        "arvores_por_mil",
+        "renda",
+        "idh",
+        "iptu_medio",
+        "iptu_inscricoes",
+        "area_residencial",
+        "area_comercial",
+        "regra_3",
+        "regra_30",
+        "regra_300",
+      ])
+      .optional()
+      .catch(undefined),
     tarefas: bandeira("1"),
     alertas: bandeira("1"),
     /** Pontos de plantio possível (berços vazios e tocos vistos por detecção automática). */
@@ -659,6 +678,9 @@ const planejamento = createRoute({
     arvores: pesoOpcional,
     verde: pesoOpcional,
     calor: pesoOpcional,
+    vegetacao: pesoOpcional,
+    tres: pesoOpcional,
+    verde300: pesoOpcional,
     bairro: textoOpcional,
     contagem: contagemOpcional,
   }),

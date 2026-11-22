@@ -420,8 +420,9 @@ function CartaoExterno({ i }: { i: IndicadorExterno }) {
       )}
       {porMil && (
         <p className="mt-1 text-xs text-texto-suave">
-          Provisório (DP-14). Conta só as árvores cadastradas: valor baixo pode ser falta de
-          cadastro, não falta de árvores.
+          Indicador complementar à regra 3-30-300 (DP-14 decidida), provisório pelo inventário
+          parcial. Conta só as árvores cadastradas: valor baixo pode ser falta de cadastro, não
+          falta de árvores.
         </p>
       )}
       <p className="mt-1 text-xs text-texto-suave">

@@ -185,6 +185,24 @@ for c in Conector.objects.all():
 else
   echo "Sem acesso ao Fortaleza em Mapas: a camada de áreas verdes fica vazia nas capturas."
 fi
+# Imóveis e regra 3-30-300. O contêiner não tem rede externa: as fontes são importadas no host,
+# contra o banco do compose, como as áreas verdes. Edificações (Google Open Buildings v3, CC BY 4.0,
+# ~100 MB, baixadas num diretório temporário e apagadas), macrozoneamento e indicadores da SEFIN
+# (Fortaleza em Mapas) e, por fim, o cálculo da regra. O uso por lote (WMS, demorado) só entra com
+# USO_LOTES=1. Sem NDVI de Fortaleza o "30" fica sem dado (ver docs/indicadores/3-30-300.md).
+if curl -sf -m 15 "https://mapas.fortaleza.ce.gov.br/api/v1/maps" >/dev/null; then
+  df -h / | tail -1
+  IMV="cd $RAIZ/backend && DATABASE_URL=postgis://itree:itree@localhost:5432/itree uv run python manage.py"
+  (eval "$IMV importar_macrozoneamento") || echo "Macrozoneamento não importado."
+  (eval "$IMV importar_indicadores_sefin") || echo "Indicadores da SEFIN não importados."
+  (eval "$IMV importar_edificacoes") || echo "Edificações não importadas."
+  if [ "${USO_LOTES:-0}" = "1" ]; then
+    (eval "$IMV importar_uso_lotes_sefin") || echo "Uso por lote não importado."
+  fi
+  (eval "$IMV calcular_3_30_300") || echo "Regra 3-30-300 não calculada."
+else
+  echo "Sem acesso ao Fortaleza em Mapas: imóveis e regra 3-30-300 não importados (capturas 58 a 61 sem dados)."
+fi
 $M shell -c "exec(open('/tmp/telas-dados/ids.py').read())" | tail -1 > /tmp/telas-ids.json
 
 node "$AQUI/capturar.js" /tmp/telas-ids.json "$RAIZ/docs/telas"

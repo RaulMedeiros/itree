@@ -329,7 +329,10 @@ export function AnalisesPagina() {
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-semibold">{dados!.titulo}</h2>
             {dados!.provisorio && (
-              <Selo tom="atencao" title="Critério em definição pela prefeitura (DP-14)">
+              <Selo
+                tom="atencao"
+                title="Inventário parcial: conta só as árvores cadastradas (método: regra 3-30-300)"
+              >
                 Provisório
               </Selo>
             )}

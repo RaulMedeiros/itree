@@ -9,6 +9,12 @@ export const ROTULO_VALOR: Record<string, string> = {
   arvores_por_mil_habitantes_por_bairro: "Árvores por 1.000 hab. (provisório)",
   populacao_densidade_por_bairro: "Habitantes (Censo 2022)",
   arvores_mil_x_renda: "Árvores por 1.000 hab. (provisório)",
+  regra_3_por_bairro: "Edificações com 3 árvores a até 30 m (%)",
+  regra_30_por_bairro: "Cobertura vegetal (%)",
+  regra_300_por_bairro: "Edificações a até 300 m de área verde (%)",
+  regra_3_x_renda: "Edificações com 3 árvores (%)",
+  regra_30_x_renda: "Cobertura vegetal (%)",
+  regra_300_x_renda: "Edificações perto de área verde (%)",
 };
 
 /** O que significa um bairro com valor zero, para o grupo recolhido ("Sem árvores no escopo"). */

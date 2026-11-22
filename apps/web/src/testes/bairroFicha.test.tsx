@@ -159,6 +159,71 @@ const ILUMINACAO = cartao({
   fonte: "Prefeitura de Fortaleza, SEINF",
 });
 
+const REGRA: Ficha["regra_3_30_300"] = {
+  contagem: "todas",
+  calculado_em: "2026-11-21T10:00:00Z",
+  data: "2026-11-21",
+  base_edificacoes: "residenciais",
+  base_texto: "edificações em lote de uso residencial (SEFIN, 2022)",
+  edificacoes: 8194,
+  classificadas: 8000,
+  edificacoes_no_bairro: 9000,
+  limiar_ndvi: 0.4,
+  regra: "Regra 3-30-300: 3 árvores visíveis de cada casa.",
+  fonte_metodo: "Konijnendijk, C. C. (2022). Journal of Forestry Research, 33, 1707-1717.",
+  fonte_url: "https://doi.org/10.1007/s11676-022-01523-z",
+  metodo: "Distância euclidiana do ponto central da edificação.",
+  ressalva: "Conta só as árvores do inventário.",
+  rotulo_cidade: "Fortaleza",
+  partes: [
+    {
+      id: "3",
+      nome: "3 árvores a até 30 m",
+      meta: "3 árvores a até 30 m",
+      meta_pct: 100,
+      unidade: "% das edificações",
+      valor: 12.5,
+      numerador: 1024,
+      denominador: 8194,
+      cidade: 20,
+      atende: false,
+      sem_dado: false,
+      nota: "",
+      definicao: "Percentual das edificações com 3 árvores a até 30 m.",
+    },
+    {
+      id: "30",
+      nome: "30% de cobertura vegetal",
+      meta: "30% de cobertura",
+      meta_pct: 30,
+      unidade: "% da área do bairro",
+      valor: null,
+      numerador: null,
+      denominador: null,
+      cidade: null,
+      atende: null,
+      sem_dado: true,
+      nota: "Sem cobertura vegetal: o NDVI não cobre Fortaleza.",
+      definicao: "Percentual da área com vegetação.",
+    },
+    {
+      id: "300",
+      nome: "Área verde a até 300 m",
+      meta: "área verde a até 300 m",
+      meta_pct: 100,
+      unidade: "% das edificações",
+      valor: 100,
+      numerador: 8194,
+      denominador: 8194,
+      cidade: 39.4,
+      atende: true,
+      sem_dado: false,
+      nota: "",
+      definicao: "Percentual das edificações a até 300 m de área verde.",
+    },
+  ],
+};
+
 function ficha(cartoes: FichaCartao[], extra: Partial<Ficha> = {}): Ficha {
   return {
     gerado_em: "2026-11-20T15:00:00Z",
@@ -177,6 +242,18 @@ function ficha(cartoes: FichaCartao[], extra: Partial<Ficha> = {}): Ficha {
       geometria: { type: "MultiPolygon", coordinates: [] },
     },
     cartoes,
+    regra_3_30_300: REGRA,
+    macrozoneamento: {
+      zonas: [
+        { nome: "Zona de Ocupação Preferencial 1", sigla: "ZOP 1", pct: 80 },
+        { nome: "Zona de Orla - Trecho I", sigla: "ZO", pct: 20 },
+      ],
+      predominante: "Zona de Ocupação Preferencial 1",
+      fonte: "SEUMA, Macrozoneamento Urbano de Fortaleza, 2022",
+      fonte_url: "",
+      licenca: "Termos da API",
+      data_referencia: "2022-12-31",
+    },
     graficos: {
       especies: {
         titulo: "Composição por espécie",
@@ -483,5 +560,51 @@ describe("ligações para a ficha", () => {
     await userEvent.type(screen.getByRole("searchbox", { name: "Buscar bairro" }), "messe");
     expect(await screen.findByRole("link", { name: "Messejana" })).toBeVisible();
     expect(screen.queryByRole("link", { name: "Aldeota" })).toBeNull();
+  });
+});
+
+describe("Ficha do bairro: regra 3-30-300", () => {
+  it("mostra os três medidores com meta, valor do bairro, cidade e selo", async () => {
+    servirFicha(ficha([]));
+    await abrir(`/bairros/${ID}`);
+    const bloco = await screen.findByRole("region", { name: "Regra 3-30-300" });
+    const tres = within(bloco).getByTestId("regra-parte-3");
+    expect(within(tres).getByText("12,5%")).toBeVisible();
+    expect(within(tres).getByText("Não atende")).toBeVisible();
+    expect(within(tres).getByText(/Fortaleza:/)).toHaveTextContent("20%");
+    expect(within(within(bloco).getByTestId("regra-parte-300")).getByText("Atende")).toBeVisible();
+    const trinta = within(bloco).getByTestId("regra-parte-30");
+    expect(within(trinta).getByText("Sem dado")).toBeVisible();
+    expect(within(trinta).getByText(/NDVI não cobre/)).toBeVisible();
+    expect(within(bloco).getByText(/Konijnendijk/)).toBeVisible();
+    expect(within(bloco).getByText(/lote de uso residencial/)).toBeVisible();
+  });
+
+  it("“Como é calculado” traz o método e a escolha das árvores refaz o pedido", async () => {
+    const pedidos: (string | null)[] = [];
+    servidor.use(
+      http.get(`${API}/api/v1/bairros/${ID}/ficha`, ({ request }) => {
+        pedidos.push(new URL(request.url).searchParams.get("contagem"));
+        return HttpResponse.json(ficha([]));
+      }),
+    );
+    const usuario = userEvent.setup();
+    await abrir(`/bairros/${ID}`);
+    const bloco = await screen.findByRole("region", { name: "Regra 3-30-300" });
+    await usuario.click(within(bloco).getByText("Como é calculado").closest("summary")!);
+    expect(within(bloco).getByText(/Distância euclidiana/)).toBeVisible();
+    await usuario.selectOptions(
+      within(bloco).getByLabelText("Árvores contadas na regra 3-30-300"),
+      "confirmadas",
+    );
+    await vi.waitFor(() => expect(pedidos).toContain("confirmadas"));
+  });
+
+  it("mostra o macrozoneamento do bairro", async () => {
+    servirFicha(ficha([]));
+    await abrir(`/bairros/${ID}`);
+    const zonas = await screen.findByRole("region", { name: "Macrozoneamento" });
+    expect(within(zonas).getByText(/Zona predominante/)).toHaveTextContent("Preferencial 1");
+    expect(within(zonas).getByText("80% da área")).toBeVisible();
   });
 });

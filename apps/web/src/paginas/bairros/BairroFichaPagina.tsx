@@ -21,6 +21,7 @@ import { formatarData, formatarDataHora } from "../../util/formatos";
 import { SeletorContagem } from "../../componentes/contagem";
 import { contagemDaUrl, paramContagem } from "../../componentes/contagemUrl";
 import type { Contagem } from "@itree/domain";
+import { BlocoMacrozoneamento, BlocoRegra } from "./BlocoRegra";
 import { CartaoIndicador, LinkDoCartao } from "./CartaoIndicador";
 import { GraficoCondicao, GraficoEspecies, GraficoOcorrenciasMensal } from "./Graficos";
 import { MapaDoBairro } from "./MapaDoBairro";
@@ -180,6 +181,13 @@ function Conteudo({
         </div>
         <Ranking ranking={ficha.ranking} nome={bairro.nome} />
       </div>
+
+      <BlocoRegra
+        bloco={ficha.regra_3_30_300}
+        contagem={contagem}
+        aoMudarContagem={aoMudarContagem}
+      />
+      {ficha.macrozoneamento && <BlocoMacrozoneamento bloco={ficha.macrozoneamento} />}
 
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">Indicadores do bairro</h2>

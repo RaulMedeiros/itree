@@ -95,6 +95,7 @@ import {
 import {
   CAMADAS_POPULACAO,
   FONTE_POPULACAO,
+  FONTE_REGRA_3_30_300,
   OPACIDADE_POPULACAO,
   corPorQuebras,
   filtroComDado,
@@ -164,6 +165,14 @@ import {
   type ModoCor,
 } from "../../mapa/simbologia";
 import { ControleIlhaCalor, LegendaIlhaCalor } from "../../mapa/ControleIlhaCalor";
+import {
+  CAMADAS_EDIFICACOES,
+  CAMADAS_MACROZONEAMENTO,
+  CAMADAS_USO_LOTE,
+  adicionarCamadasImoveis,
+  definirVisibilidade,
+} from "../../mapa/camadasImoveis";
+import { ControlesImoveis, LegendaImoveis } from "../../mapa/ControlesImoveis";
 import { CAMADA_ILHA_CALOR, OPACIDADE_ILHA_CALOR, adicionarIlhaCalor } from "../../mapa/ilhaCalor";
 import { Botao } from "../../ui/botao";
 import { Selecao } from "../../ui/campos";
@@ -215,6 +224,10 @@ export interface BuscaMapa {
   iluminacao?: "1";
   /** Raster "Ilha de calor (UrbVerde)", por WMS; desligada por padrão. */
   ilha_calor?: "1";
+  /** Edificações (zoom 15), uso por lote (SEFIN) e macrozoneamento; desligadas por padrão. */
+  edificacoes?: "1";
+  uso_lote?: "1";
+  macrozona?: "1";
   sem_inspecao_dias?: number;
   especie_estado?: EstadoEspecieEnum;
   localizacao_origem?: OrigemLocalizacaoEnum;
@@ -432,6 +445,9 @@ export function MapaPagina() {
 
   const mostrarIluminacao = podeMapa && busca.iluminacao === "1";
   const mostrarIlhaCalor = podeMapa && busca.ilha_calor === "1";
+  const mostrarEdificacoes = podeMapa && busca.edificacoes === "1";
+  const mostrarUsoLote = podeMapa && busca.uso_lote === "1";
+  const mostrarMacrozona = podeMapa && busca.macrozona === "1";
   const [opacidadeIlhaCalor, setOpacidadeIlhaCalor] = useState(OPACIDADE_ILHA_CALOR);
   const aproximarIluminacao = (busca.zoom ?? 11) < ZOOM_ILUMINACAO;
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
@@ -522,7 +538,10 @@ export function MapaPagina() {
     m.on("styleimagemissing", (e) => aoFaltarImagem(m, e.id));
 
     // Ilha de calor (UrbVerde, WMS): raster de contexto sob todos os dados, desligado por padrão.
-    if (podeMapa) adicionarIlhaCalor(m);
+    if (podeMapa) {
+      adicionarIlhaCalor(m);
+      adicionarCamadasImoveis(m);
+    }
     m.addSource("bairros", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     m.addLayer({
       id: "bairros-preenchimento",
@@ -1350,6 +1369,9 @@ export function MapaPagina() {
     definir(["tarefas-pontos"], mostrarTarefas);
     definir(["iluminacao-pontos"], mostrarIluminacao);
     definir([CAMADA_ILHA_CALOR], mostrarIlhaCalor);
+    definirVisibilidade(m, CAMADAS_EDIFICACOES, mostrarEdificacoes);
+    definirVisibilidade(m, CAMADAS_USO_LOTE, mostrarUsoLote);
+    definirVisibilidade(m, CAMADAS_MACROZONEAMENTO, mostrarMacrozona);
     definir(CAMADAS_ARBORIZACAO, mostrarArborizacao);
     definir(CAMADAS_POPULACAO, mostrarPopulacao);
     definir(["bairros-preenchimento", "bairros-contorno"], mostrarBairros);
@@ -1377,6 +1399,9 @@ export function MapaPagina() {
     mostrarSupressao,
     mostrarIluminacao,
     mostrarIlhaCalor,
+    mostrarEdificacoes,
+    mostrarUsoLote,
+    mostrarMacrozona,
   ]);
 
   // Opacidade do raster da ilha de calor (controle deslizante do painel de camadas).
@@ -1766,7 +1791,10 @@ export function MapaPagina() {
                       mostrarArborizacao ||
                       mostrarPopulacao ||
                       mostrarIluminacao ||
-                      mostrarIlhaCalor
+                      mostrarIlhaCalor ||
+                      mostrarEdificacoes ||
+                      mostrarUsoLote ||
+                      mostrarMacrozona
                     }
                   >
                     <Camada
@@ -1817,6 +1845,15 @@ export function MapaPagina() {
                       aoMudar={(v) => atualizarBusca({ ilha_calor: v ? "1" : undefined })}
                       opacidade={opacidadeIlhaCalor}
                       aoMudarOpacidade={setOpacidadeIlhaCalor}
+                    />
+                    <ControlesImoveis
+                      edificacoes={mostrarEdificacoes}
+                      usoLote={mostrarUsoLote}
+                      macrozona={mostrarMacrozona}
+                      zoom={busca.zoom ?? 11}
+                      aoMudar={(camada, ativa) =>
+                        atualizarBusca({ [camada]: ativa ? "1" : undefined })
+                      }
                     />
                   </Grupo>
                 )}
@@ -2041,7 +2078,10 @@ export function MapaPagina() {
                                 {i.proveniencia.data_referencia
                                   ? ` · dados de ${anoDaData(i.proveniencia.data_referencia)}`
                                   : " · data dos dados não informada"}
-                                {i.provisorio ? " · valor provisório (DP-14)" : ""}
+                                {i.provisorio ? " · inventário parcial, não é índice oficial" : ""}
+                                {i.id.startsWith("regra_")
+                                  ? ` · método: ${FONTE_REGRA_3_30_300}`
+                                  : ""}
                               </p>
                             ),
                         )}
@@ -2170,6 +2210,11 @@ export function MapaPagina() {
               carregado={estadoPopulacao === "pronto"}
             />
           )}
+          <LegendaImoveis
+            usoLote={mostrarUsoLote}
+            macrozona={mostrarMacrozona}
+            edificacoes={mostrarEdificacoes}
+          />
           {mostrarIlhaCalor && (
             <section
               aria-label="Legenda da ilha de calor"
