@@ -1,10 +1,13 @@
 import {
+  ErroApi,
   areasVerdesListar,
+  deteccoesPontosPlantio,
   indicadoresArborizacaoEntornoGeojson,
   indicadoresPopulacaoGeojson,
   mapaAlertas,
   mapaSupressaoAnual,
   territoriosGeojson,
+  useArvoresConfirmar,
   useArvoresObter,
   useEvidenciasListar,
   useMapaCamadas,
@@ -24,7 +27,7 @@ import {
   ROTULOS_TIPO_AREA_VERDE,
   ROTULOS_TIPO_TERRITORIO,
 } from "@itree/domain";
-import { keepPreviousData } from "@tanstack/react-query";
+import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type {
   GeoJSONSource,
@@ -33,7 +36,16 @@ import type {
   Marker,
   VectorTileSource,
 } from "maplibre-gl";
-import { ChevronDown, ClipboardList, Layers, Leaf, List, TriangleAlert, X } from "lucide-react";
+import {
+  ChevronDown,
+  CircleCheck,
+  ClipboardList,
+  Layers,
+  Leaf,
+  List,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { usePermissao, useUsuario } from "../../acesso/ContextoUsuario";
@@ -45,6 +57,8 @@ import {
   SeloPrioridade,
   nomeEspecie,
 } from "../../componentes/selos";
+import { SelosDeteccao } from "../../componentes/selosDeteccao";
+import { invalidarCaminhos } from "../../util/cache";
 import { config } from "../../config";
 import { useTerritorioAtivo } from "../../layout/territorio";
 import { CamadasReferencia } from "../../mapa/CamadasReferencia";
@@ -116,6 +130,8 @@ import { baseEfetiva, lembrarBase, lerBaseLembrada } from "../../mapa/baseLembra
 import { HALO_BAIRRO, aplicarLegibilidade } from "../../mapa/legibilidade";
 import {
   COR_ALERTA,
+  COR_NAO_CONFIRMADA,
+  COR_PONTO_PLANTIO,
   COR_ILUMINACAO,
   COR_SELECAO,
   COR_TAREFA,
@@ -133,8 +149,11 @@ import {
   HACHURA_AREA_VERDE,
   OPACIDADE_SUPRESSAO_ANUAL,
   ID_ILUMINACAO,
+  ID_PONTO_PLANTIO,
   ZOOM_AGRUPA_BAIRRO,
   ZOOM_ILUMINACAO,
+  adicionarAneisNaoConfirmadas,
+  CAMADAS_ANEL_NAO_CONFIRMADA,
   filtroArvoreIndividual,
   filtroGrupoDeArvores,
   aoFaltarImagem,
@@ -176,6 +195,8 @@ export interface BuscaMapa {
   camada?: "arvores" | "ocorrencias";
   arvores?: "0";
   ocorrencias?: "0";
+  /** Pontos de plantio possível (detecção automática); desligada por padrão. */
+  plantio?: "1";
   bairros?: "0";
   areas_verdes?: "1";
   /** Subtipo das praças na camada de áreas verdes (areninha, calçadão...); vazio mostra todos. */
@@ -414,6 +435,8 @@ export function MapaPagina() {
   const [opacidadeIlhaCalor, setOpacidadeIlhaCalor] = useState(OPACIDADE_ILHA_CALOR);
   const aproximarIluminacao = (busca.zoom ?? 11) < ZOOM_ILUMINACAO;
   const mostrarTarefas = podeTarefas && busca.tarefas === "1";
+  const podeDeteccao = usePermissao("deteccao.ler");
+  const mostrarPlantio = podeDeteccao && busca.plantio === "1";
   const mostrarAlertas = podeAlertas && busca.alertas === "1";
   const mostrarSupressao = podeAlertas && busca.supressao_anual === "1";
   // Linha do tempo: com `ate`, árvores, ocorrências e alertas mostram a situação nesse mês.
@@ -807,6 +830,7 @@ export function MapaPagina() {
       filter: filtroArvoreIndividual,
       paint: pinturaArvores(modoCor) as never,
     });
+    adicionarAneisNaoConfirmadas(m, filtroArvoreIndividual);
     m.addLayer({
       id: "arvores-grupos",
       type: "symbol",
@@ -814,6 +838,22 @@ export function MapaPagina() {
       "source-layer": "arvores",
       filter: filtroGrupoDeArvores,
       layout: layoutGrupo("arvores") as never,
+    });
+
+    // Pontos de plantio possível (berço vazio e toco vistos por detecção), carregados ao ligar.
+    m.addSource("pontos-plantio", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+    m.addLayer({
+      id: "pontos-plantio",
+      type: "symbol",
+      source: "pontos-plantio",
+      layout: {
+        visibility: "none",
+        "icon-image": ID_PONTO_PLANTIO,
+        "icon-allow-overlap": true,
+      },
     });
 
     if (podeTarefas) {
@@ -1010,6 +1050,16 @@ export function MapaPagina() {
     // `periodoTempo` é recriado a cada render; só o mês escolhido dispara.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pronto, mostrarAlertas, territorioAtivo.id, tempoLigado, busca.ate, busca.desde]);
+
+  // Pontos de plantio possível: buscados ao ligar a camada (escopo e permissão no servidor).
+  useEffect(() => {
+    if (!pronto || !mostrarPlantio) return;
+    void deteccoesPontosPlantio().then(({ data }) => {
+      (mapa.current?.getSource("pontos-plantio") as GeoJSONSource | undefined)?.setData(
+        data as Parameters<GeoJSONSource["setData"]>[0],
+      );
+    });
+  }, [pronto, mostrarPlantio]);
 
   // Supressão anual (PRODES): busca única, na primeira vez que a camada é ligada.
   useEffect(() => {
@@ -1292,7 +1342,8 @@ export function MapaPagina() {
     const definir = (ids: string[], v: boolean) => {
       for (const id of ids) if (m.getLayer(id)) m.setLayoutProperty(id, "visibility", vis(v));
     };
-    definir(["arvores-grupos", "arvores-pontos"], mostrarArvores);
+    definir(["arvores-grupos", "arvores-pontos", ...CAMADAS_ANEL_NAO_CONFIRMADA], mostrarArvores);
+    definir(["pontos-plantio"], mostrarPlantio);
     definir(["ocorrencias-grupos", "ocorrencias-pontos"], mostrarOcorrencias);
     definir(["alertas-area", "alertas-borda", "alertas-pontos"], mostrarAlertas);
     definir(["supressao-anual-preenchimento", "supressao-anual-contorno"], mostrarSupressao);
@@ -1321,6 +1372,7 @@ export function MapaPagina() {
     mostrarArborizacao,
     mostrarPopulacao,
     mostrarTarefas,
+    mostrarPlantio,
     mostrarAlertas,
     mostrarSupressao,
     mostrarIluminacao,
@@ -1424,6 +1476,7 @@ export function MapaPagina() {
       filter: filtroArvoreIndividual,
       paint: pinturaArvores(modoCor, base) as never,
     });
+    adicionarAneisNaoConfirmadas(m, filtroArvoreIndividual);
     m.addLayer({
       id: "arvores-grupos",
       type: "symbol",
@@ -1618,6 +1671,14 @@ export function MapaPagina() {
                       marcador={<Quadrado cor={COR_TAREFA} />}
                       ativa={mostrarTarefas}
                       aoMudar={(v) => atualizarBusca({ tarefas: v ? "1" : undefined })}
+                    />
+                  )}
+                  {podeDeteccao && (
+                    <Camada
+                      rotulo="Plantio possível (detecção)"
+                      marcador={<AmostraPlantio />}
+                      ativa={mostrarPlantio}
+                      aoMudar={(v) => atualizarBusca({ plantio: v ? "1" : undefined })}
                     />
                   )}
                 </Grupo>
@@ -2082,6 +2143,7 @@ export function MapaPagina() {
               arvores={mostrarArvores}
               ocorrencias={mostrarOcorrencias}
               tarefas={mostrarTarefas}
+              plantio={mostrarPlantio}
               alertas={mostrarAlertas}
               supressao={mostrarSupressao ? (provSupressao ?? "carregando") : null}
               recolhidaPorPadrao={painel || celular}
@@ -2348,6 +2410,30 @@ function Bolinha({ cor, vazada, borda }: { cor: string; vazada?: boolean; borda?
   );
 }
 
+/** Amostra do anel das árvores detectadas e ainda não confirmadas. */
+function AnelNaoConfirmada() {
+  return (
+    <span
+      aria-hidden
+      className="inline-block size-3.5 shrink-0 rounded-full border-2 bg-transparent"
+      style={{ borderColor: COR_NAO_CONFIRMADA, boxShadow: "0 0 0 1.5px #ffffff" }}
+    />
+  );
+}
+
+/** Amostra do ponto de plantio possível: círculo laranja com "+". */
+function AmostraPlantio() {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex size-3.5 shrink-0 items-center justify-center rounded-full text-[11px] leading-none font-bold text-white"
+      style={{ background: COR_PONTO_PLANTIO }}
+    >
+      +
+    </span>
+  );
+}
+
 /** Amostra do ícone de grupo: miolo neutro e anel na cor da pior condição. */
 function AnelGrupo() {
   return (
@@ -2490,6 +2576,7 @@ function Legenda({
   arvores,
   ocorrencias,
   tarefas,
+  plantio,
   alertas,
   supressao,
   recolhidaPorPadrao,
@@ -2505,6 +2592,8 @@ function Legenda({
   arvores: boolean;
   ocorrencias: boolean;
   tarefas: boolean;
+  /** Pontos de plantio possível (berço vazio e toco vistos por detecção) ligados. */
+  plantio: boolean;
   alertas: boolean;
   /** Supressão anual ligada: a proveniência (ou "carregando"); `null` com a camada desligada. */
   supressao: ProvenienciaSupressao | "carregando" | null;
@@ -2550,6 +2639,7 @@ function Legenda({
     !arvores &&
     !ocorrencias &&
     !tarefas &&
+    !plantio &&
     !alertas &&
     !supressao &&
     !areasVerdes &&
@@ -2596,6 +2686,9 @@ function Legenda({
               <p className="mt-1.5 flex items-center gap-1.5">
                 <AnelGrupo /> Grupo: o anel mostra a pior condição
               </p>
+              <p className="mt-1.5 flex items-center gap-1.5" data-testid="legenda-nao-confirmada">
+                <AnelNaoConfirmada /> Detectada, ainda não confirmada
+              </p>
               <p className="mt-1.5 mb-1 text-texto-suave">Símbolo — origem da localização</p>
               <ul className="flex flex-wrap gap-x-3 gap-y-1">
                 <li className="flex items-center gap-1.5">
@@ -2632,6 +2725,11 @@ function Legenda({
                 </li>
               </ul>
             </div>
+          )}
+          {plantio && (
+            <p className="flex items-center gap-1.5" data-testid="legenda-plantio">
+              <AmostraPlantio /> Plantio possível: berço vazio ou toco visto por detecção
+            </p>
           )}
           {tarefas && (
             <ul className="flex flex-wrap gap-x-3 gap-y-1">
@@ -3127,6 +3225,9 @@ function ResumoArvore({ id }: { id: string }) {
   const consulta = useArvoresObter(id);
   const podeOcorrencia = usePermissao("ocorrencias.editar");
   const podeTarefa = usePermissao("tarefas.editar");
+  const podeConfirmar = usePermissao("deteccao.revisar");
+  const cliente = useQueryClient();
+  const confirmar = useArvoresConfirmar<ErroApi>();
   const [ocorrencia, setOcorrencia] = useState(false);
   const [criandoTarefa, setCriandoTarefa] = useState(false);
   if (consulta.isPending) return <Carregando linhas={4} />;
@@ -3141,7 +3242,14 @@ function ResumoArvore({ id }: { id: string }) {
         <p className={a.especie ? "italic" : "text-texto-suave"}>{nomeEspecie(a)}</p>
         <div className="mt-1 flex flex-wrap gap-1">
           <SeloEspecie estado={a.especie_estado ?? "nao_identificada"} />
+          <SelosDeteccao arvore={a} />
         </div>
+        {a.deteccao && !a.confirmada && (
+          <p className="mt-1 text-xs text-texto-suave">
+            Detectada automaticamente e ainda não confirmada: o anel no mapa marca as árvores nesse
+            estado.
+          </p>
+        )}
       </div>
       <div>
         <p className="text-xs font-medium text-texto-suave uppercase">Localização</p>
@@ -3181,6 +3289,28 @@ function ResumoArvore({ id }: { id: string }) {
           Abrir cadastro completo
         </Link>
       </Botao>
+      {podeConfirmar && a.situacao === "ativa" && !a.confirmada && (
+        <Botao
+          variante="secundario"
+          disabled={confirmar.isPending}
+          onClick={() =>
+            confirmar.mutate(
+              { id: a.id, data: {} },
+              {
+                onSuccess: () =>
+                  void invalidarCaminhos(cliente, "/api/v1/arvores", "/api/v1/indicadores"),
+              },
+            )
+          }
+        >
+          <CircleCheck aria-hidden /> Confirmar árvore
+        </Botao>
+      )}
+      {confirmar.isError && (
+        <p role="alert" className="text-xs text-perigo">
+          {confirmar.error.message}
+        </p>
+      )}
       {(podeOcorrencia || podeTarefa) && a.situacao === "ativa" && a.localizacao && (
         <div className="flex flex-wrap gap-2">
           {podeOcorrencia && (

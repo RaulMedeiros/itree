@@ -76,6 +76,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedGrupoAuditoriaList'
           description: ''
+  /api/v1/admin/integracoes/tokens:
+    get:
+      operationId: integracoes_tokens_listar
+      description: |-
+        Tokens de máquina das integrações (Administração › Integrações). O valor do token é
+        mostrado uma única vez, na criação; depois só o prefixo.
+      tags:
+      - integracoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TokenIntegracao'
+          description: ''
+    post:
+      operationId: integracoes_tokens_criar
+      description: |-
+        Tokens de máquina das integrações (Administração › Integrações). O valor do token é
+        mostrado uma única vez, na criação; depois só o prefixo.
+      tags:
+      - integracoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenIntegracaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenIntegracaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenIntegracaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenCriado'
+          description: ''
+  /api/v1/admin/integracoes/tokens/{id}/revogar:
+    post:
+      operationId: integracoes_tokens_revogar
+      description: 'Revoga o token: a partir daqui, qualquer envio com ele é recusado
+        (401).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este token integracao.
+        required: true
+      tags:
+      - integracoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenIntegracao'
+          description: ''
   /api/v1/admin/usuarios:
     get:
       operationId: usuarios_listar
@@ -636,6 +707,17 @@ paths:
           type: string
         description: Use 'sem' para sem avaliação.
       - in: query
+        name: confirmada
+        schema:
+          type: boolean
+        description: '''false'' = detectadas automaticamente e ainda sem revisão humana.'
+      - in: query
+        name: deteccao
+        schema:
+          type: string
+        description: '''satelite'' ou ''video_rua'' (origem da detecção); ''qualquer''
+          = as de qualquer detecção.'
+      - in: query
         name: especie
         schema:
           type: string
@@ -771,6 +853,41 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedArvoreRequest'
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Arvore'
+          description: ''
+  /api/v1/arvores/{id}/confirmar:
+    post:
+      operationId: arvores_confirmar
+      description: Promove a árvore detectada automaticamente a "confirmada" (revisão
+        humana).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcaoComMotivoOpcionalRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AcaoComMotivoOpcionalRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AcaoComMotivoOpcionalRequest'
       security:
       - oidc: []
       responses:
@@ -961,6 +1078,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/Medida'
           description: ''
+  /api/v1/arvores/{id}/observacoes:
+    get:
+      operationId: arvores_observacoes
+      description: Passagens de detecção automática pela árvore (origem, confiança,
+        data e valores).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este arvore.
+        required: true
+      tags:
+      - arvores
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Observacao'
+          description: ''
   /api/v1/arvores/contadores:
     get:
       operationId: arvores_contadores
@@ -986,6 +1129,17 @@ paths:
         schema:
           type: string
         description: Use 'sem' para sem avaliação.
+      - in: query
+        name: confirmada
+        schema:
+          type: boolean
+        description: '''false'' = detectadas automaticamente e ainda sem revisão humana.'
+      - in: query
+        name: deteccao
+        schema:
+          type: string
+        description: '''satelite'' ou ''video_rua'' (origem da detecção); ''qualquer''
+          = as de qualquer detecção.'
       - in: query
         name: especie
         schema:
@@ -1117,6 +1271,17 @@ paths:
         Tudo o que a plataforma sabe do bairro, com fonte e data de cada bloco. Quem não
         tem o bairro no escopo recebe 403.
       parameters:
+      - in: query
+        name: contagem
+        schema:
+          type: string
+          enum:
+          - confirmadas
+          - todas
+        description: 'Quais árvores entram nas contagens: `todas` (padrão, inclui
+          as detectadas automaticamente e ainda sem revisão) ou `confirmadas` (só
+          as confirmadas por inspeção ou revisão humana). A resposta traz as duas
+          contagens quando se aplica.'
       - in: path
         name: id
         schema:
@@ -1310,6 +1475,286 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ResultadoTeste'
+          description: ''
+  /api/v1/deteccoes/lotes:
+    get:
+      operationId: deteccoes_lotes_listar
+      description: |-
+        Lotes de detecção automática. O envio aceita token de integração (``Authorization: Token``)
+        ou pessoa com ``deteccao.enviar`` (``Bearer``); a leitura é de quem tem ``deteccao.ler``.
+      parameters:
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: sensor
+        schema:
+          type: string
+      - in: query
+        name: situacao
+        schema:
+          type: string
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - deteccoes
+      security:
+      - tokenIntegracao: []
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLoteDeteccaoList'
+          description: ''
+    post:
+      operationId: deteccoes_lotes_enviar
+      description: |-
+        Recebe um lote de detecções. Até o limite síncrono, processa na hora (201); lotes
+        grandes vão para a fila (202) e a situação é consultada em ``GET /deteccoes/lotes/{id}``.
+        Em multipart, as fotos seguem como arquivos e são citadas por ``arquivo``.
+      tags:
+      - deteccoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnvioLoteDeteccaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EnvioLoteDeteccaoMultipartRequest'
+        required: true
+      security:
+      - tokenIntegracao: []
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteDeteccaoDetalhe'
+          description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteDeteccaoDetalhe'
+          description: ''
+  /api/v1/deteccoes/lotes/{id}:
+    get:
+      operationId: deteccoes_lotes_obter
+      description: |-
+        Lotes de detecção automática. O envio aceita token de integração (``Authorization: Token``)
+        ou pessoa com ``deteccao.enviar`` (``Bearer``); a leitura é de quem tem ``deteccao.ler``.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este lote deteccao.
+        required: true
+      tags:
+      - deteccoes
+      security:
+      - tokenIntegracao: []
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteDeteccaoDetalhe'
+          description: ''
+  /api/v1/deteccoes/lotes/{id}/mapa:
+    get:
+      operationId: deteccoes_lotes_mapa
+      description: |-
+        Detecções do lote como GeoJSON, com o resultado de cada uma (criada, juntada, ponto de
+        plantio, recusada ou possível remoção).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este lote deteccao.
+        required: true
+      tags:
+      - deteccoes
+      security:
+      - tokenIntegracao: []
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/deteccoes/lotes/pacote:
+    post:
+      operationId: deteccoes_lotes_enviar_pacote
+      description: 'Pacote ZIP: ``lote.json``, ``deteccoes.geojson`` ou ``deteccoes.gpkg``
+        e as fotos.'
+      tags:
+      - deteccoes
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EnvioPacoteDeteccaoRequest'
+        required: true
+      security:
+      - tokenIntegracao: []
+      - oidc: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteDeteccaoDetalhe'
+          description: ''
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoteDeteccaoDetalhe'
+          description: ''
+  /api/v1/deteccoes/pontos-plantio:
+    get:
+      operationId: deteccoes_pontos_plantio
+      description: Pontos de plantio possível (berços vazios e tocos vistos por detecção),
+        no escopo.
+      tags:
+      - deteccoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/deteccoes/remocoes:
+    get:
+      operationId: deteccoes_remocoes_listar
+      description: |-
+        Possíveis remoções: árvore conhecida que um lote, cobrindo a área, não viu. Nada é removido
+        sozinho; confirmar a remoção exclui logicamente a árvore, com justificativa.
+      parameters:
+      - in: query
+        name: lote
+        schema:
+          type: string
+      - name: pagina
+        required: false
+        in: query
+        description: Um número de página dentro do conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: situacao
+        schema:
+          type: string
+        description: 'Padrão: pendente. ''todas'' inclui as demais.'
+      - name: tamanho
+        required: false
+        in: query
+        description: Número de resultados a serem retornados por página.
+        schema:
+          type: integer
+      tags:
+      - deteccoes
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSinalRemocaoList'
+          description: ''
+  /api/v1/deteccoes/remocoes/{id}/confirmar:
+    post:
+      operationId: deteccoes_remocoes_confirmar
+      description: 'Confirma a remoção: a árvore é excluída (exclusão lógica, auditada).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este sinal remocao.
+        required: true
+      tags:
+      - deteccoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisaoRemocaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DecisaoRemocaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DecisaoRemocaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SinalRemocao'
+          description: ''
+  /api/v1/deteccoes/remocoes/{id}/descartar:
+    post:
+      operationId: deteccoes_remocoes_descartar
+      description: 'Descarta o sinal: a árvore continua no inventário.'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: Um string UUID que identifica este sinal remocao.
+        required: true
+      tags:
+      - deteccoes
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisaoRemocaoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DecisaoRemocaoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DecisaoRemocaoRequest'
+        required: true
+      security:
+      - oidc: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SinalRemocao'
           description: ''
   /api/v1/equipes:
     get:
@@ -2022,6 +2467,17 @@ paths:
         proveniência de cada indicador.
       parameters:
       - in: query
+        name: contagem
+        schema:
+          type: string
+          enum:
+          - confirmadas
+          - todas
+        description: 'Quais árvores entram nas contagens: `todas` (padrão, inclui
+          as detectadas automaticamente e ainda sem revisão) ou `confirmadas` (só
+          as confirmadas por inspeção ou revisão humana). A resposta traz as duas
+          contagens quando se aplica.'
+      - in: query
         name: precisao
         schema:
           type: integer
@@ -2046,6 +2502,17 @@ paths:
         name: bairro
         schema:
           type: string
+      - in: query
+        name: contagem
+        schema:
+          type: string
+          enum:
+          - confirmadas
+          - todas
+        description: 'Quais árvores entram nas contagens: `todas` (padrão, inclui
+          as detectadas automaticamente e ainda sem revisão) ou `confirmadas` (só
+          as confirmadas por inspeção ou revisão humana). A resposta traz as duas
+          contagens quando se aplica.'
       - in: query
         name: equipe
         schema:
@@ -3567,6 +4034,18 @@ paths:
       description: |-
         Critérios do cenário "Onde plantar": valor bruto e percentil de prioridade por bairro do
         escopo, com fonte e ano. Cenário de priorização, não índice oficial (DP-14).
+      parameters:
+      - in: query
+        name: contagem
+        schema:
+          type: string
+          enum:
+          - confirmadas
+          - todas
+        description: 'Quais árvores entram nas contagens: `todas` (padrão, inclui
+          as detectadas automaticamente e ainda sem revisão) ou `confirmadas` (só
+          as confirmadas por inspeção ou revisão humana). A resposta traz as duas
+          contagens quando se aplica.'
       tags:
       - planejamento
       security:
@@ -3606,6 +4085,17 @@ paths:
           ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo,
           inspecoes_por_mes, alertas_por_fonte
         required: true
+      - in: query
+        name: contagem
+        schema:
+          type: string
+          enum:
+          - confirmadas
+          - todas
+        description: 'Quais árvores entram nas contagens: `todas` (padrão, inclui
+          as detectadas automaticamente e ainda sem revisão) ou `confirmadas` (só
+          as confirmadas por inspeção ou revisão humana). A resposta traz as duas
+          contagens quando se aplica.'
       - in: query
         name: fim
         schema:
@@ -4235,6 +4725,12 @@ paths:
           description: ''
 components:
   schemas:
+    AcaoComMotivoOpcionalRequest:
+      type: object
+      properties:
+        motivo:
+          type: string
+          maxLength: 500
     AcaoComMotivoRequest:
       type: object
       properties:
@@ -4394,6 +4890,11 @@ components:
           format: date-time
         por_bairro:
           type: boolean
+        contagem:
+          type: string
+          nullable: true
+          description: todas ou confirmadas, nas análises que contam árvores; nulo
+            nas demais.
         unidade:
           type: string
         base_rotulo:
@@ -4439,6 +4940,7 @@ components:
       - base_rotulo
       - calculado_em
       - colunas_csv
+      - contagem
       - definicao
       - dispersao
       - fonte
@@ -4535,6 +5037,34 @@ components:
           allOf:
           - $ref: '#/components/schemas/OrigemRegistroEnum'
           readOnly: true
+        deteccao:
+          type: string
+          readOnly: true
+          description: 'Sensor da detecção que originou o registro: "satelite", "video_rua"
+            ou vazio.'
+        confirmada:
+          type: boolean
+          readOnly: true
+          description: Falso só para árvore detectada automaticamente e ainda sem
+            revisão humana.
+        confianca:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+          description: Confiança da detecção (0 a 1); vazia fora das detectadas.
+        faixa_confianca:
+          type: string
+          readOnly: true
+          description: 'Selo de confiança da detecção: "baixa", "media" ou "alta"
+            (vazio se não houver confiança).'
+        ultima_vez_vista_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Data da captura mais recente em que uma detecção automática
+            viu a árvore.
         ocorrencias_abertas:
           type: integer
           readOnly: true
@@ -4603,17 +5133,25 @@ components:
           readOnly: true
         observacoes:
           type: string
+        confirmada_em:
+          type: string
+          format: date-time
+          nullable: true
       required:
       - atualizado_em
       - bairro
       - codigo
       - condicao_aparente
       - condicao_aparente_em
+      - confianca
+      - confirmada
       - criado_em
       - criado_por_nome
+      - deteccao
       - em_area_verde
       - especie
       - especie_cartao
+      - faixa_confianca
       - fundida_em
       - id
       - identificadores
@@ -4625,6 +5163,7 @@ components:
       - poste_mais_proximo
       - situacao
       - ultima_inspecao_em
+      - ultima_vez_vista_em
       - valida
     ArvoreDaInspecao:
       type: object
@@ -4759,6 +5298,34 @@ components:
           readOnly: true
         origem_registro:
           $ref: '#/components/schemas/OrigemRegistroEnum'
+        deteccao:
+          type: string
+          readOnly: true
+          description: 'Sensor da detecção que originou o registro: "satelite", "video_rua"
+            ou vazio.'
+        confirmada:
+          type: boolean
+          readOnly: true
+          description: Falso só para árvore detectada automaticamente e ainda sem
+            revisão humana.
+        confianca:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+          description: Confiança da detecção (0 a 1); vazia fora das detectadas.
+        faixa_confianca:
+          type: string
+          readOnly: true
+          description: 'Selo de confiança da detecção: "baixa", "media" ou "alta"
+            (vazio se não houver confiança).'
+        ultima_vez_vista_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Data da captura mais recente em que uma detecção automática
+            viu a árvore.
         ocorrencias_abertas:
           type: integer
           readOnly: true
@@ -4796,14 +5363,19 @@ components:
       - codigo
       - condicao_aparente
       - condicao_aparente_em
+      - confianca
+      - confirmada
       - criado_em
+      - deteccao
       - especie
+      - faixa_confianca
       - id
       - localizacao
       - ocorrencias_abertas
       - origem_registro
       - poste
       - ultima_inspecao_em
+      - ultima_vez_vista_em
       - valida
     ArvoreRequest:
       type: object
@@ -4838,6 +5410,10 @@ components:
           nullable: true
         observacoes:
           type: string
+        confirmada_em:
+          type: string
+          format: date-time
+          nullable: true
         motivo:
           type: string
           writeOnly: true
@@ -4891,6 +5467,34 @@ components:
           readOnly: true
         origem_registro:
           $ref: '#/components/schemas/OrigemRegistroEnum'
+        deteccao:
+          type: string
+          readOnly: true
+          description: 'Sensor da detecção que originou o registro: "satelite", "video_rua"
+            ou vazio.'
+        confirmada:
+          type: boolean
+          readOnly: true
+          description: Falso só para árvore detectada automaticamente e ainda sem
+            revisão humana.
+        confianca:
+          type: number
+          format: double
+          readOnly: true
+          nullable: true
+          description: Confiança da detecção (0 a 1); vazia fora das detectadas.
+        faixa_confianca:
+          type: string
+          readOnly: true
+          description: 'Selo de confiança da detecção: "baixa", "media" ou "alta"
+            (vazio se não houver confiança).'
+        ultima_vez_vista_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: Data da captura mais recente em que uma detecção automática
+            viu a árvore.
         ocorrencias_abertas:
           type: integer
           readOnly: true
@@ -4923,13 +5527,18 @@ components:
       - codigo
       - condicao_aparente
       - condicao_aparente_em
+      - confianca
+      - confirmada
       - criado_em
+      - deteccao
       - especie
+      - faixa_confianca
       - id
       - localizacao
       - ocorrencias_abertas
       - origem_registro
       - ultima_inspecao_em
+      - ultima_vez_vista_em
       - valida
     AtualizarAjustesRequest:
       type: object
@@ -4965,6 +5574,12 @@ components:
           type: string
         nome:
           type: string
+        arvores:
+          type: integer
+          description: Árvores válidas no bairro (todas).
+        arvores_confirmadas:
+          type: integer
+          description: Dessas, as confirmadas.
         valores:
           type: object
           additionalProperties:
@@ -4981,6 +5596,8 @@ components:
           description: Percentil de prioridade de 0 a 1 (1 = bairro que mais pede
             plantio).
       required:
+      - arvores
+      - arvores_confirmadas
       - id
       - nome
       - percentis
@@ -5092,6 +5709,14 @@ components:
       - ocorrencias
       - populacao
       - territorios
+    CanalLoteDeteccaoEnum:
+      enum:
+      - api
+      - pacote
+      type: string
+      description: |-
+        * `api` - API
+        * `pacote` - Pacote (ZIP)
     CatalogoAnalises:
       type: object
       properties:
@@ -5466,6 +6091,9 @@ components:
         gerado_em:
           type: string
           format: date-time
+        contagem:
+          type: string
+          description: 'todas ou confirmadas: o que alimenta árvores/1.000.'
         aviso:
           type: string
         metodo_percentil:
@@ -5481,6 +6109,7 @@ components:
       required:
       - aviso
       - bairros
+      - contagem
       - criterios
       - gerado_em
       - metodo_percentil
@@ -5502,6 +6131,15 @@ components:
         * `pendente` - Aguardando revisão
         * `aceita` - Aceita
         * `rejeitada` - Rejeitada
+    DecisaoRemocaoRequest:
+      type: object
+      properties:
+        motivo:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - motivo
     DecisaoRequest:
       type: object
       properties:
@@ -5647,6 +6285,39 @@ components:
       - evidencia
       - metodo
       - url_envio
+    EnvioLoteDeteccaoMultipartRequest:
+      type: object
+      properties:
+        dados:
+          type: string
+          format: binary
+          description: O mesmo JSON do envio simples, como arquivo ou campo.
+      required:
+      - dados
+    EnvioLoteDeteccaoRequest:
+      type: object
+      properties:
+        lote:
+          type: object
+          additionalProperties: {}
+          description: id, projeto_origem, versao_modelo, sensor, capturado_em e area_coberta
+            (GeoJSON, opcional).
+        deteccoes:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - deteccoes
+      - lote
+    EnvioPacoteDeteccaoRequest:
+      type: object
+      properties:
+        arquivo:
+          type: string
+          format: binary
+      required:
+      - arquivo
     Equipe:
       type: object
       properties:
@@ -5783,6 +6454,22 @@ components:
           maxLength: 200
       required:
       - nome
+    ErroDeteccao:
+      type: object
+      properties:
+        id:
+          type: string
+        motivo:
+          type: string
+        longitude:
+          type: number
+          format: double
+        latitude:
+          type: number
+          format: double
+      required:
+      - id
+      - motivo
     Especie:
       type: object
       properties:
@@ -7689,6 +8376,247 @@ components:
       required:
       - latitude
       - longitude
+    LoteDeteccao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        id_externo:
+          type: string
+          readOnly: true
+          description: Identificador do lote na origem.
+        projeto_origem:
+          type: string
+          readOnly: true
+        versao_modelo:
+          type: string
+          readOnly: true
+        sensor:
+          allOf:
+          - $ref: '#/components/schemas/SensorDeteccaoEnum'
+          readOnly: true
+        sensor_rotulo:
+          type: string
+          readOnly: true
+        capturado_em:
+          type: string
+          format: date
+          readOnly: true
+          description: Data da captura das imagens.
+        canal:
+          allOf:
+          - $ref: '#/components/schemas/CanalLoteDeteccaoEnum'
+          readOnly: true
+        arquivo_nome:
+          type: string
+          readOnly: true
+        situacao:
+          allOf:
+          - $ref: '#/components/schemas/SituacaoLoteDeteccaoEnum'
+          readOnly: true
+        situacao_rotulo:
+          type: string
+          readOnly: true
+        total:
+          type: integer
+          readOnly: true
+          description: Detecções recebidas.
+        processadas:
+          type: integer
+          readOnly: true
+          description: 'Ponto de retomada: itens da carga já tratados.'
+        arvores_criadas:
+          type: integer
+          readOnly: true
+        arvores_juntadas:
+          type: integer
+          readOnly: true
+          description: Árvores conhecidas que receberam observação (sem contar repetidas).
+        recusadas:
+          type: integer
+          readOnly: true
+        pontos_criados:
+          type: integer
+          readOnly: true
+          description: Pontos de plantio novos.
+        possiveis_remocoes:
+          type: integer
+          readOnly: true
+        enviado_por_nome:
+          type: string
+          readOnly: true
+        integracao_nome:
+          type: string
+          readOnly: true
+          default: ''
+        erro:
+          type: string
+          readOnly: true
+          description: Por que o processamento foi interrompido.
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        processado_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - arquivo_nome
+      - arvores_criadas
+      - arvores_juntadas
+      - canal
+      - capturado_em
+      - criado_em
+      - enviado_por_nome
+      - erro
+      - id
+      - id_externo
+      - integracao_nome
+      - pontos_criados
+      - possiveis_remocoes
+      - processadas
+      - processado_em
+      - projeto_origem
+      - recusadas
+      - sensor
+      - sensor_rotulo
+      - situacao
+      - situacao_rotulo
+      - total
+      - versao_modelo
+    LoteDeteccaoDetalhe:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        id_externo:
+          type: string
+          readOnly: true
+          description: Identificador do lote na origem.
+        projeto_origem:
+          type: string
+          readOnly: true
+        versao_modelo:
+          type: string
+          readOnly: true
+        sensor:
+          allOf:
+          - $ref: '#/components/schemas/SensorDeteccaoEnum'
+          readOnly: true
+        sensor_rotulo:
+          type: string
+          readOnly: true
+        capturado_em:
+          type: string
+          format: date
+          readOnly: true
+          description: Data da captura das imagens.
+        canal:
+          allOf:
+          - $ref: '#/components/schemas/CanalLoteDeteccaoEnum'
+          readOnly: true
+        arquivo_nome:
+          type: string
+          readOnly: true
+        situacao:
+          allOf:
+          - $ref: '#/components/schemas/SituacaoLoteDeteccaoEnum'
+          readOnly: true
+        situacao_rotulo:
+          type: string
+          readOnly: true
+        total:
+          type: integer
+          readOnly: true
+          description: Detecções recebidas.
+        processadas:
+          type: integer
+          readOnly: true
+          description: 'Ponto de retomada: itens da carga já tratados.'
+        arvores_criadas:
+          type: integer
+          readOnly: true
+        arvores_juntadas:
+          type: integer
+          readOnly: true
+          description: Árvores conhecidas que receberam observação (sem contar repetidas).
+        recusadas:
+          type: integer
+          readOnly: true
+        pontos_criados:
+          type: integer
+          readOnly: true
+          description: Pontos de plantio novos.
+        possiveis_remocoes:
+          type: integer
+          readOnly: true
+        enviado_por_nome:
+          type: string
+          readOnly: true
+        integracao_nome:
+          type: string
+          readOnly: true
+          default: ''
+        erro:
+          type: string
+          readOnly: true
+          description: Por que o processamento foi interrompido.
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        processado_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        erros:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErroDeteccao'
+          readOnly: true
+        area_coberta:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        total_grupos:
+          type: integer
+          nullable: true
+          readOnly: true
+      required:
+      - area_coberta
+      - arquivo_nome
+      - arvores_criadas
+      - arvores_juntadas
+      - canal
+      - capturado_em
+      - criado_em
+      - enviado_por_nome
+      - erro
+      - erros
+      - id
+      - id_externo
+      - integracao_nome
+      - pontos_criados
+      - possiveis_remocoes
+      - processadas
+      - processado_em
+      - projeto_origem
+      - recusadas
+      - sensor
+      - sensor_rotulo
+      - situacao
+      - situacao_rotulo
+      - total
+      - total_grupos
+      - versao_modelo
     LoteImportacao:
       type: object
       properties:
@@ -8303,6 +9231,54 @@ components:
       required:
       - arquivo
       - fonte
+    Observacao:
+      type: object
+      description: Passagem de detecção automática por uma árvore.
+      properties:
+        id:
+          type: string
+          format: uuid
+        sensor:
+          type: string
+        resultado:
+          type: string
+        confianca:
+          type: number
+          format: double
+        faixa_confianca:
+          type: string
+          readOnly: true
+        capturada_em:
+          type: string
+          format: date
+        incerteza_m:
+          type: number
+          format: double
+        id_rastreamento:
+          type: string
+        lote_id:
+          type: string
+          format: uuid
+        lote_projeto:
+          type: string
+        lote_versao_modelo:
+          type: string
+        valores:
+          type: object
+          additionalProperties: {}
+      required:
+      - capturada_em
+      - confianca
+      - faixa_confianca
+      - id
+      - id_rastreamento
+      - incerteza_m
+      - lote_id
+      - lote_projeto
+      - lote_versao_modelo
+      - resultado
+      - sensor
+      - valores
     Ocorrencia:
       type: object
       properties:
@@ -8635,12 +9611,14 @@ components:
       - importada
       - estimada_web
       - geocodificada
+      - detectada
       type: string
       description: |-
         * `gps_campo` - GPS de campo
         * `importada` - Importada
         * `estimada_web` - Estimada (web)
         * `geocodificada` - Geocodificada (endereço)
+        * `detectada` - Detectada (imagem)
     OrigemOcorrenciaEnum:
       enum:
       - web
@@ -8660,11 +9638,15 @@ components:
       - web
       - app
       - importacao
+      - deteccao_satelite
+      - deteccao_video
       type: string
       description: |-
         * `web` - Painel web
         * `app` - Aplicativo
         * `importacao` - Importação
+        * `deteccao_satelite` - Detecção via satélite
+        * `deteccao_video` - Detecção via vídeo de rua
     OrigemValorEnum:
       enum:
       - medido
@@ -8838,6 +9820,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/InspecaoResumo'
+    PaginatedLoteDeteccaoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoteDeteccao'
     PaginatedLoteImportacaoList:
       type: object
       required:
@@ -8930,6 +9935,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Ocorrencia'
+    PaginatedSinalRemocaoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?pagina=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SinalRemocao'
     PaginatedTarefaList:
       type: object
       required:
@@ -9159,6 +10187,10 @@ components:
           nullable: true
         observacoes:
           type: string
+        confirmada_em:
+          type: string
+          format: date-time
+          nullable: true
         motivo:
           type: string
           writeOnly: true
@@ -9482,6 +10514,9 @@ components:
       - tarefas.editar
       - relatorios.ler
       - relatorios.exportar
+      - deteccao.ler
+      - deteccao.enviar
+      - deteccao.revisar
       - admin.usuarios
       - admin.equipes
       - admin.auditoria
@@ -9507,6 +10542,9 @@ components:
         * `tarefas.editar` - Criar e atribuir tarefas
         * `relatorios.ler` - Ver análises e relatórios
         * `relatorios.exportar` - Exportar dados
+        * `deteccao.ler` - Ver lotes de detecção e possíveis remoções
+        * `deteccao.enviar` - Enviar lotes e pacotes de detecção
+        * `deteccao.revisar` - Confirmar árvores detectadas e revisar remoções
         * `admin.usuarios` - Administrar usuários e papéis
         * `admin.equipes` - Administrar equipes
         * `admin.auditoria` - Consultar auditoria
@@ -9827,6 +10865,13 @@ components:
         subtipo:
           type: string
           description: 'Só nos territórios: municipio, regional ou bairro.'
+        deteccao:
+          type: string
+          description: 'Só nas árvores: "satelite" ou "video_rua" se vieram de detecção
+            automática (selo de origem); vazio nas demais.'
+        confirmada:
+          type: boolean
+          description: 'Só nas árvores: falso = detectada e ainda sem revisão.'
       required:
       - descricao
       - id
@@ -10110,6 +11155,14 @@ components:
       - limite_itens
       - limite_tarefas_em_lote
       - ocorrencias
+    SensorDeteccaoEnum:
+      enum:
+      - satelite
+      - video_rua
+      type: string
+      description: |-
+        * `satelite` - Satélite
+        * `video_rua` - Vídeo de rua
     SerieMedida:
       type: object
       properties:
@@ -10183,6 +11236,91 @@ components:
         * `conflito_rede` - Conflito com rede aérea
         * `conflito_calcada` - Conflito com calçada ou edificação
         * `pragas` - Presença aparente de pragas
+    SinalRemocao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        situacao:
+          allOf:
+          - $ref: '#/components/schemas/SituacaoSinalRemocaoEnum'
+          readOnly: true
+        arvore_id:
+          type: string
+          format: uuid
+          readOnly: true
+        arvore_codigo:
+          type: string
+          readOnly: true
+        arvore_origem:
+          type: string
+          readOnly: true
+        arvore_confirmada:
+          type: boolean
+          readOnly: true
+        especie:
+          type: string
+          readOnly: true
+        bairro:
+          allOf:
+          - $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+          nullable: true
+        localizacao:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          readOnly: true
+        lote_id:
+          type: string
+          format: uuid
+          readOnly: true
+        lote_id_externo:
+          type: string
+          readOnly: true
+        lote_capturado_em:
+          type: string
+          format: date
+          readOnly: true
+        lote_sensor:
+          type: string
+          readOnly: true
+        ultima_vez_vista_em:
+          type: string
+          format: date-time
+          readOnly: true
+        decidido_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        motivo:
+          type: string
+          readOnly: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - arvore_codigo
+      - arvore_confirmada
+      - arvore_id
+      - arvore_origem
+      - bairro
+      - criado_em
+      - decidido_em
+      - especie
+      - id
+      - localizacao
+      - lote_capturado_em
+      - lote_id
+      - lote_id_externo
+      - lote_sensor
+      - motivo
+      - situacao
+      - ultima_vez_vista_em
     SituacaoArvoreEnum:
       enum:
       - ativa
@@ -10193,6 +11331,18 @@ components:
         * `ativa` - Ativa
         * `excluida` - Excluída
         * `fundida` - Fundida em outro registro
+    SituacaoLoteDeteccaoEnum:
+      enum:
+      - recebido
+      - em_processamento
+      - concluido
+      - falhou
+      type: string
+      description: |-
+        * `recebido` - Recebido
+        * `em_processamento` - Em processamento
+        * `concluido` - Concluído
+        * `falhou` - Interrompido por erro
     SituacaoNaData:
       type: object
       properties:
@@ -10209,6 +11359,16 @@ components:
       - alertas
       - arvores
       - ocorrencias_abertas
+    SituacaoSinalRemocaoEnum:
+      enum:
+      - pendente
+      - remocao_confirmada
+      - descartado
+      type: string
+      description: |-
+        * `pendente` - Para revisar
+        * `remocao_confirmada` - Remoção confirmada
+        * `descartado` - Descartado
     StatusAlertaEnum:
       enum:
       - detectado
@@ -10750,6 +11910,149 @@ components:
         * `municipio` - Município
         * `regional` - Regional
         * `bairro` - Bairro
+    TokenCriado:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 150
+        prefixo:
+          type: string
+          readOnly: true
+        permissoes:
+          type: array
+          items:
+            type: string
+            maxLength: 40
+          readOnly: true
+        territorios:
+          type: array
+          items:
+            $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        ativo:
+          type: boolean
+          readOnly: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        criado_por_nome:
+          type: string
+          readOnly: true
+        ultimo_uso_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revogado_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        total_lotes:
+          type: integer
+          readOnly: true
+          default: 0
+        token:
+          type: string
+          readOnly: true
+          description: Valor do token. É mostrado só nesta resposta; guarde-o.
+      required:
+      - ativo
+      - criado_em
+      - criado_por_nome
+      - id
+      - nome
+      - permissoes
+      - prefixo
+      - revogado_em
+      - territorios
+      - token
+      - total_lotes
+      - ultimo_uso_em
+    TokenIntegracao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        nome:
+          type: string
+          maxLength: 150
+        prefixo:
+          type: string
+          readOnly: true
+        permissoes:
+          type: array
+          items:
+            type: string
+            maxLength: 40
+          readOnly: true
+        territorios:
+          type: array
+          items:
+            $ref: '#/components/schemas/TerritorioResumo'
+          readOnly: true
+        ativo:
+          type: boolean
+          readOnly: true
+        criado_em:
+          type: string
+          format: date-time
+          readOnly: true
+        criado_por_nome:
+          type: string
+          readOnly: true
+        ultimo_uso_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revogado_em:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        total_lotes:
+          type: integer
+          readOnly: true
+          default: 0
+      required:
+      - ativo
+      - criado_em
+      - criado_por_nome
+      - id
+      - nome
+      - permissoes
+      - prefixo
+      - revogado_em
+      - territorios
+      - total_lotes
+      - ultimo_uso_em
+    TokenIntegracaoRequest:
+      type: object
+      properties:
+        nome:
+          type: string
+          minLength: 1
+          maxLength: 150
+        territorios_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+            writeOnly: true
+          writeOnly: true
+          description: Escopo territorial do token (ao menos um território).
+      required:
+      - nome
+      - territorios_ids
     TransicaoRequest:
       type: object
       properties:
@@ -10927,3 +12230,8 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    tokenIntegracao:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Token de integração: `Authorization: Token <valor>`.'

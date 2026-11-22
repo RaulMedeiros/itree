@@ -21,6 +21,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BairrosFichaParams,
   BairrosListarParams,
   Ficha,
   Territorio
@@ -176,21 +177,30 @@ export type bairrosFichaResponseSuccess = (bairrosFichaResponse200) & {
 
 export type bairrosFichaResponse = (bairrosFichaResponseSuccess)
 
-export const getBairrosFichaUrl = (id: string,) => {
+export const getBairrosFichaUrl = (id: string,
+    params?: BairrosFichaParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/bairros/${id}/ficha`
+  return stringifiedParams.length > 0 ? `/api/v1/bairros/${id}/ficha?${stringifiedParams}` : `/api/v1/bairros/${id}/ficha`
 }
 
 /**
  * Tudo o que a plataforma sabe do bairro, com fonte e data de cada bloco. Quem não
  * tem o bairro no escopo recebe 403.
  */
-export const bairrosFicha = async (id: string, options?: Parameters<typeof requisicao>[1]): Promise<bairrosFichaResponse> => {
+export const bairrosFicha = async (id: string,
+    params?: BairrosFichaParams, options?: Parameters<typeof requisicao>[1]): Promise<bairrosFichaResponse> => {
 
-  return requisicao<bairrosFichaResponse>(getBairrosFichaUrl(id),
+  return requisicao<bairrosFichaResponse>(getBairrosFichaUrl(id,params),
   {
     ...options,
     method: 'GET'
@@ -203,23 +213,25 @@ export const bairrosFicha = async (id: string, options?: Parameters<typeof requi
 
 
 
-export const getBairrosFichaQueryKey = (id: string,) => {
+export const getBairrosFichaQueryKey = (id: string,
+    params?: BairrosFichaParams,) => {
     return [
-    `/api/v1/bairros/${id}/ficha`
+    `/api/v1/bairros/${id}/ficha`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getBairrosFichaQueryOptions = <TData = Awaited<ReturnType<typeof bairrosFicha>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+export const getBairrosFichaQueryOptions = <TData = Awaited<ReturnType<typeof bairrosFicha>>, TError = unknown>(id: string,
+    params?: BairrosFichaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getBairrosFichaQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getBairrosFichaQueryKey(id,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof bairrosFicha>>> = ({ signal }) => bairrosFicha(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof bairrosFicha>>> = ({ signal }) => bairrosFicha(id,params, { signal, ...requestOptions });
 
 
 
@@ -233,7 +245,8 @@ export type BairrosFichaQueryError = unknown
 
 
 export function useBairrosFicha<TData = Awaited<ReturnType<typeof bairrosFicha>>, TError = unknown>(
- id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>> & Pick<
+ id: string,
+    params: undefined |  BairrosFichaParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof bairrosFicha>>,
           TError,
@@ -243,7 +256,8 @@ export function useBairrosFicha<TData = Awaited<ReturnType<typeof bairrosFicha>>
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useBairrosFicha<TData = Awaited<ReturnType<typeof bairrosFicha>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>> & Pick<
+ id: string,
+    params?: BairrosFichaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof bairrosFicha>>,
           TError,
@@ -253,16 +267,18 @@ export function useBairrosFicha<TData = Awaited<ReturnType<typeof bairrosFicha>>
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useBairrosFicha<TData = Awaited<ReturnType<typeof bairrosFicha>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ id: string,
+    params?: BairrosFichaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useBairrosFicha<TData = Awaited<ReturnType<typeof bairrosFicha>>, TError = unknown>(
- id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ id: string,
+    params?: BairrosFichaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof bairrosFicha>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getBairrosFichaQueryOptions(id,options)
+  const queryOptions = getBairrosFichaQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

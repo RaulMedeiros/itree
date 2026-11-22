@@ -11,6 +11,10 @@ import type { BairroPlanejamentoValores } from './bairroPlanejamentoValores';
 export interface BairroPlanejamento {
   id: string;
   nome: string;
+  /** Árvores válidas no bairro (todas). */
+  arvores: number;
+  /** Dessas, as confirmadas. */
+  arvores_confirmadas: number;
   /** Valor bruto de cada critério; nulo sem dado (nunca zero). */
   valores: BairroPlanejamentoValores;
   /** Percentil de prioridade de 0 a 1 (1 = bairro que mais pede plantio). */

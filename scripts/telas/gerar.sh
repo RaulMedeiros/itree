@@ -124,6 +124,9 @@ u = Usuario.objects.create(email='gestor@itree.local', username='gestor@itree.lo
 EscopoUsuario.objects.create(usuario=u, territorio=Territorio.objects.get(tipo='municipio'))
 "
 $M shell -c "exec(open('/tmp/telas-dados/semear.py').read())"
+# Detecção automática SINTÉTICA e declarada (projeto "simulador-itree"): lote de vídeo de rua e de
+# satélite enviados pelo mesmo caminho da API, para as capturas 55 a 57.
+$M simular_deteccoes || echo "Detecções simuladas não geradas: as capturas 55 a 57 ficam sem dados."
 # Iluminação pública (SEINF, dados abertos da prefeitura, CC BY-SA). O contêiner não tem rede
 # externa: o XLSX (16 MB) é baixado no host e copiado, como os limites oficiais. Sem acesso, só
 # avisa: as capturas 39 e 40 ficam sem pontos. Depois, algumas árvores SINTÉTICAS são postas perto

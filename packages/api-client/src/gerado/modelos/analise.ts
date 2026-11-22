@@ -19,6 +19,11 @@ export interface Analise {
   periodo: AnalisePeriodo;
   calculado_em: string;
   por_bairro: boolean;
+  /**
+     * todas ou confirmadas, nas análises que contam árvores; nulo nas demais.
+     * @nullable
+     */
+  contagem: string | null;
   unidade: string;
   base_rotulo: string;
   linhas: AnaliseLinhasItem[];

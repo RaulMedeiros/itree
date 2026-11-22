@@ -55,6 +55,11 @@ export const COR_SELECAO = "#0b7285";
  * nem losango) e sem cor de condição.
  */
 export const COR_ILUMINACAO = "#5b6770";
+/** Anel escuro das árvores detectadas automaticamente e ainda não confirmadas. */
+export const COR_NAO_CONFIRMADA = "#1b1f23";
+/** Pontos de plantio possível (berço vazio e toco vistos por detecção): laranja, em círculo com "+". */
+export const COR_PONTO_PLANTIO = "#f08c00";
+export const ID_PONTO_PLANTIO = "ponto-plantio";
 export const ID_ILUMINACAO = "poste-iluminacao";
 /**
  * Zoom a partir do qual o servidor entrega os pontos de iluminação (~150 mil); antes dele, o tile
@@ -198,6 +203,71 @@ export const pinturaArvores = (modo: ModoCor, base: TipoBase = "ruas") => ({
       : ["case", ehEstimada, 2, ehGps, 2.2, 1.2],
 });
 
+/** Árvore individual detectada e ainda sem revisão humana (propriedade `confirmada` do tile). */
+export const filtroNaoConfirmada: ExpressionSpecification = ["==", ["get", "confirmada"], false];
+
+export const CAMADAS_ANEL_NAO_CONFIRMADA = [
+  "arvores-nao-confirmada-halo",
+  "arvores-nao-confirmada",
+] as const;
+
+/**
+ * Anel em volta da árvore detectada e não confirmada: contorno escuro com halo branco por baixo,
+ * visível no mapa de ruas e no satélite, e sem preenchimento, para a cor da condição continuar
+ * lendo. O círculo do MapLibre não tem tracejado; o anel é a distinção por forma (RNF-A11Y-002).
+ */
+export function adicionarAneisNaoConfirmadas(
+  m: MapaMapLibre,
+  filtroIndividual: ExpressionSpecification,
+  fonte = "arvores",
+) {
+  const raio: ExpressionSpecification = [
+    "interpolate",
+    ["linear"],
+    ["zoom"],
+    11,
+    6,
+    13,
+    7.5,
+    15,
+    9.5,
+    17,
+    13,
+    19,
+    17,
+  ];
+  const filtro: ExpressionSpecification = ["all", filtroIndividual, filtroNaoConfirmada];
+  const comum = {
+    type: "circle",
+    source: fonte,
+    "source-layer": "arvores",
+    filter: filtro,
+  } as const;
+  m.addLayer({
+    ...comum,
+    id: CAMADAS_ANEL_NAO_CONFIRMADA[0],
+    paint: {
+      "circle-radius": raio,
+      "circle-color": "#ffffff",
+      "circle-opacity": 0,
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 4,
+      "circle-stroke-opacity": 0.9,
+    },
+  });
+  m.addLayer({
+    ...comum,
+    id: CAMADAS_ANEL_NAO_CONFIRMADA[1],
+    paint: {
+      "circle-radius": raio,
+      "circle-color": COR_NAO_CONFIRMADA,
+      "circle-opacity": 0,
+      "circle-stroke-color": COR_NAO_CONFIRMADA,
+      "circle-stroke-width": 1.8,
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Ícones desenhados em canvas.
 
@@ -274,6 +344,25 @@ export function registrarIcones(m: MapaMapLibre) {
       c.fillRect(t * 0.3, t * 0.56, t * 0.4, t * 0.08);
     });
   }
+  desenhar(m, ID_PONTO_PLANTIO, 22, (c, t) => {
+    // Círculo laranja com "+" branco e contorno branco externo.
+    c.beginPath();
+    c.arc(t / 2, t / 2, t / 2 - t * 0.06, 0, Math.PI * 2);
+    c.fillStyle = COR_PONTO_PLANTIO;
+    c.fill();
+    c.lineWidth = t * 0.1;
+    c.strokeStyle = "#ffffff";
+    c.stroke();
+    c.lineCap = "round";
+    c.lineWidth = t * 0.12;
+    c.strokeStyle = "#ffffff";
+    c.beginPath();
+    c.moveTo(t / 2, t * 0.3);
+    c.lineTo(t / 2, t * 0.7);
+    c.moveTo(t * 0.3, t / 2);
+    c.lineTo(t * 0.7, t / 2);
+    c.stroke();
+  });
   desenhar(m, ID_ILUMINACAO, 12, (c, t) => {
     const braco = t * 0.34;
     c.lineCap = "round";

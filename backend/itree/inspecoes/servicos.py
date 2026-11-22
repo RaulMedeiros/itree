@@ -213,6 +213,13 @@ def validar(inspecao: Inspecao, revisor, aplicar: list[str], motivo: str = "") -
         arvore.precisao_m = inspecao.precisao_m
         campos_arvore += ["geom", "localizacao_origem", "precisao_m"]
 
+    if not arvore.confirmada:
+        # Uma inspeção de campo validada por outra pessoa confirma a árvore detectada.
+        arvore.confirmada = True
+        arvore.confirmada_em = timezone.now()
+        arvore.confirmada_por = revisor
+        campos_arvore += ["confirmada", "confirmada_em", "confirmada_por"]
+
     with pghistory.context(
         motivo=motivo or None, evento="validacao_inspecao", inspecao=inspecao.codigo
     ):

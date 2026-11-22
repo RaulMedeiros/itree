@@ -10,6 +10,7 @@ from itree.auditoria.views import AuditoriaListView
 from itree.conectores import views as conectores
 from itree.contas.views import EquipeViewSet, UsuarioAdminViewSet, eu
 from itree.core.views import OperacaoEmLoteViewSet, saude
+from itree.deteccao import views as deteccao
 from itree.evidencias.views import EvidenciaViewSet
 from itree.iluminacao import views as iluminacao
 from itree.indicadores.implantacao import primeiros_passos
@@ -56,9 +57,15 @@ roteador.register("notificacoes", NotificacaoViewSet, basename="notificacao")
 roteador.register("operacoes-em-lote", OperacaoEmLoteViewSet, basename="operacao-em-lote")
 roteador.register("conectores", conectores.ConectorViewSet, basename="conector")
 roteador.register("inferencias", InferenciaViewSet, basename="inferencia")
+roteador.register("deteccoes/lotes", deteccao.LoteDeteccaoViewSet, basename="lote-deteccao")
+roteador.register("deteccoes/remocoes", deteccao.SinalRemocaoViewSet, basename="sinal-remocao")
+roteador.register(
+    "admin/integracoes/tokens", deteccao.TokenIntegracaoViewSet, basename="token-integracao"
+)
 
 api_v1 = [
     path("saude", saude, name="saude"),
+    path("deteccoes/pontos-plantio", deteccao.pontos_plantio, name="deteccoes-pontos-plantio"),
     path("eu", eu, name="eu"),
     path("admin/auditoria", AuditoriaListView.as_view(), name="auditoria"),
     path("mapa/tiles/<str:camada>/<int:z>/<int:x>/<int:y>", mapa.tile, name="mapa-tile"),

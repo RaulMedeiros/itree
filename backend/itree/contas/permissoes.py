@@ -37,6 +37,9 @@ class Permissao(models.TextChoices):
     TAREFAS_EDITAR = "tarefas.editar", "Criar e atribuir tarefas"
     RELATORIOS_LER = "relatorios.ler", "Ver análises e relatórios"
     RELATORIOS_EXPORTAR = "relatorios.exportar", "Exportar dados"
+    DETECCAO_LER = "deteccao.ler", "Ver lotes de detecção e possíveis remoções"
+    DETECCAO_ENVIAR = "deteccao.enviar", "Enviar lotes e pacotes de detecção"
+    DETECCAO_REVISAR = "deteccao.revisar", "Confirmar árvores detectadas e revisar remoções"
     ADMIN_USUARIOS = "admin.usuarios", "Administrar usuários e papéis"
     ADMIN_EQUIPES = "admin.equipes", "Administrar equipes"
     ADMIN_AUDITORIA = "admin.auditoria", "Consultar auditoria"
@@ -51,6 +54,7 @@ MATRIZ: dict[str, frozenset[str]] = {
         {
             P.MAPA_LER,
             P.INVENTARIO_LER,
+            P.DETECCAO_LER,
             P.INSPECOES_LER,
             P.OCORRENCIAS_LER,
             P.OCORRENCIAS_EDITAR,
@@ -65,6 +69,7 @@ MATRIZ: dict[str, frozenset[str]] = {
         {
             P.MAPA_LER,
             P.INVENTARIO_LER,
+            P.DETECCAO_LER,
             P.INSPECOES_LER,
             P.OCORRENCIAS_LER,
             P.OCORRENCIAS_EDITAR,
@@ -80,9 +85,12 @@ MATRIZ: dict[str, frozenset[str]] = {
             P.INSPECOES_EXECUTAR,
             P.MAPA_LER,
             P.INVENTARIO_LER,
+            P.DETECCAO_LER,
             P.INVENTARIO_EDITAR,
             P.INVENTARIO_FUNDIR_EXCLUIR,
             P.INVENTARIO_IMPORTAR,
+            P.DETECCAO_ENVIAR,
+            P.DETECCAO_REVISAR,
             P.INSPECOES_LER,
             P.INSPECOES_VALIDAR,
             P.OCORRENCIAS_LER,
@@ -96,6 +104,7 @@ MATRIZ: dict[str, frozenset[str]] = {
         {
             P.MAPA_LER,
             P.INVENTARIO_LER,
+            P.DETECCAO_LER,
             P.OCORRENCIAS_LER,
             P.ALERTAS_LER,
             P.ALERTAS_TRIAR,
@@ -109,6 +118,7 @@ MATRIZ: dict[str, frozenset[str]] = {
             P.INSPECOES_EXECUTAR,
             P.MAPA_LER,
             P.INVENTARIO_LER,
+            P.DETECCAO_LER,
             P.INVENTARIO_EDITAR,
             P.INSPECOES_LER,
             P.OCORRENCIAS_LER,
@@ -120,6 +130,7 @@ MATRIZ: dict[str, frozenset[str]] = {
         {
             P.MAPA_LER,
             P.INVENTARIO_LER,
+            P.DETECCAO_LER,
             P.OCORRENCIAS_LER,
             P.ALERTAS_LER,
             P.RELATORIOS_LER,
@@ -129,8 +140,10 @@ MATRIZ: dict[str, frozenset[str]] = {
         {
             P.MAPA_LER,
             P.INVENTARIO_LER,
+            P.DETECCAO_LER,
             P.INVENTARIO_FUNDIR_EXCLUIR,
             P.INVENTARIO_IMPORTAR,
+            P.DETECCAO_ENVIAR,
             P.INSPECOES_LER,
             P.OCORRENCIAS_LER,
             P.ALERTAS_LER,

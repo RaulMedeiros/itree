@@ -31,6 +31,8 @@ export interface PatchedArvoreRequest {
   /** @nullable */
   especie_id?: string | null;
   observacoes?: string;
+  /** @nullable */
+  confirmada_em?: string | null;
   /** @maxLength 500 */
   motivo?: string;
 }

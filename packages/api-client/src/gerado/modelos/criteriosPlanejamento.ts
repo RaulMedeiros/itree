@@ -10,6 +10,8 @@ import type { CriterioPlanejamento } from './criterioPlanejamento';
 
 export interface CriteriosPlanejamento {
   gerado_em: string;
+  /** todas ou confirmadas: o que alimenta árvores/1.000. */
+  contagem: string;
   aviso: string;
   metodo_percentil: string;
   criterios: CriterioPlanejamento[];

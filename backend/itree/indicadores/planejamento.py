@@ -22,6 +22,7 @@ from itree.areas_verdes.models import AreaVerde
 from itree.contas.models import Usuario
 from itree.territorio.models import Territorio
 
+from . import contagem as cont
 from . import ilha_calor
 from . import populacao as pop
 from . import populacao_indicadores as pi
@@ -115,9 +116,11 @@ def _fonte_externa(prov: dict | None, padrao: str) -> dict:
     }
 
 
-def criterios_por_bairro(usuario: Usuario) -> dict:
+def criterios_por_bairro(usuario: Usuario, contagem: str = cont.TODAS) -> dict:
     escopo = {str(pk) for pk in bairros_do_escopo(usuario).values_list("pk", flat=True)}
-    quadro = pi.quadro(None)  # todos os bairros: o percentil não depende do escopo
+    quadro = pi.quadro(
+        None, contagem=contagem
+    )  # todos os bairros: o percentil não depende do escopo
     nomes = {str(x["id"]): x["nome"] for x in quadro}
 
     arborizacao = {
@@ -304,12 +307,15 @@ def criterios_por_bairro(usuario: Usuario) -> dict:
             }
         )
 
+    por_id = {str(x["id"]): x for x in quadro}
     bairros = [
         {
             "id": pk,
             "nome": nomes[pk],
             "valores": {c["id"]: valores[c["id"]][pk] for c in criterios},
             "percentis": {c["id"]: todos_percentis[c["id"]][pk] for c in criterios},
+            "arvores": por_id[pk]["arvores_total"],
+            "arvores_confirmadas": por_id[pk]["arvores_confirmadas"],
         }
         for pk in sorted(escopo & set(nomes), key=lambda p: nomes[p])
     ]
@@ -317,6 +323,7 @@ def criterios_por_bairro(usuario: Usuario) -> dict:
         "gerado_em": timezone.now(),
         "aviso": AVISO,
         "metodo_percentil": METODO_PERCENTIL,
+        "contagem": contagem,
         "criterios": criterios,
         "bairros": bairros,
     }

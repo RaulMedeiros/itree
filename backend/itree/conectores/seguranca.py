@@ -49,8 +49,11 @@ def _resolver(host: str) -> list[str]:
         raise ErroConector(f"Não foi possível resolver o endereço de {host}.") from exc
 
 
-def validar_url(url: str) -> str:
-    """Confere esquema, host e IPs resolvidos; devolve o host. Levanta ``ErroConector``."""
+def validar_url(url: str, hosts: set[str] | None = None) -> str:
+    """Confere esquema, host e IPs resolvidos; devolve o host. Levanta ``ErroConector``.
+
+    ``hosts`` troca a lista de fontes permitidas (ex.: hosts de fotos da detecção); as demais
+    regras (HTTPS, porta 443, IP público) valem sempre."""
     partes = urlsplit(url)
     if partes.scheme.lower() != "https":
         raise ErroConector("Só endereços HTTPS são aceitos.")
@@ -59,7 +62,7 @@ def validar_url(url: str) -> str:
     host = (partes.hostname or "").lower()
     if not host:
         raise ErroConector("Endereço inválido.")
-    if host not in hosts_permitidos():
+    if host not in (hosts_permitidos() if hosts is None else hosts):
         raise ErroConector(
             f"O host {host} não está na lista de fontes permitidas. "
             "Peça à administração do servidor para incluí-lo."
@@ -103,13 +106,18 @@ def _mensagem_limite(limite: int) -> str:
     return f"A resposta da fonte passa do limite de {limite // (1024 * 1024)} MB."
 
 
-def buscar(url: str, params: dict | None = None, limite_bytes: int | None = None) -> bytes:
+def buscar(
+    url: str,
+    params: dict | None = None,
+    limite_bytes: int | None = None,
+    hosts: set[str] | None = None,
+) -> bytes:
     """GET seguro com limite de bytes. Devolve o corpo ou levanta ``ErroConector``."""
     limite = limite_bytes or settings.ITREE_CONECTORES_MAX_BYTES
     timeout = settings.ITREE_CONECTORES_TIMEOUT
     atual, parametros = url, params
     for _ in range(MAX_REDIRECIONAMENTOS + 1):
-        validar_url(atual)
+        validar_url(atual, hosts)
         try:
             resposta = requests.get(
                 atual,

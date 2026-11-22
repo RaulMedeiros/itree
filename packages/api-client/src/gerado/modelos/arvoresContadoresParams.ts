@@ -14,6 +14,10 @@ export type ArvoresContadoresParams = {
   busca?: string;
   /** Use 'sem' para sem avaliação. */
   condicao_aparente?: string;
+  /** 'false' = detectadas automaticamente e ainda sem revisão humana. */
+  confirmada?: boolean;
+  /** 'satelite' ou 'video_rua' (origem da detecção); 'qualquer' = as de qualquer detecção. */
+  deteccao?: string;
   especie?: string;
   /** Estado da espécie. Use 'nao_confirmada' para tudo que não é 'confirmada'. */
   especie_estado?: string;

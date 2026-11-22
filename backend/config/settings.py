@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "itree.qualidade",
     "itree.notificacoes",
     "itree.conectores",
+    "itree.deteccao",
 ]
 
 MIDDLEWARE = [
@@ -192,6 +193,11 @@ SPECTACULAR_SETTINGS = {
         "TipoMedidaEnum": "itree.inventario.models.TipoMedida",
         "MetodoMedidaEnum": "itree.inventario.models.MetodoMedida",
         "EstadoLoteEnum": "itree.inventario.models.EstadoLote",
+        "SituacaoLoteDeteccaoEnum": "itree.deteccao.models.SituacaoLote",
+        "SituacaoSinalRemocaoEnum": "itree.deteccao.models.SituacaoSinal",
+        "SensorDeteccaoEnum": "itree.deteccao.models.Sensor",
+        "CanalLoteDeteccaoEnum": "itree.deteccao.models.CanalLote",
+        "TipoPontoPlantioEnum": "itree.deteccao.models.TipoPontoPlantio",
         "TipoConectorEnum": "itree.conectores.models.TipoConector",
         "DestinoConectorEnum": "itree.conectores.models.DestinoConector",
         "PeriodicidadeEnum": "itree.conectores.models.Periodicidade",
@@ -321,6 +327,26 @@ ITREE_CONECTORES_TIMEOUT = env.int("ITREE_CONECTORES_TIMEOUT", default=30)
 ITREE_CONECTORES_MAX_BYTES = env.int("ITREE_CONECTORES_MAX_BYTES", default=50 * 1024 * 1024)
 ITREE_CONECTORES_MAX_FEICOES = env.int("ITREE_CONECTORES_MAX_FEICOES", default=20_000)
 ITREE_CONECTORES_MAX_PAGINAS = env.int("ITREE_CONECTORES_MAX_PAGINAS", default=50)
+# --- Detecção automática de árvores (satélite e vídeo de rua) -------------------------------
+# Lotes com até este número de detecções são tratados na própria requisição (201); acima, vão para
+# uma tarefa Celery (202) e a origem acompanha pela situação do lote.
+DETECCAO_LIMITE_SINCRONO = env.int("DETECCAO_LIMITE_SINCRONO", default=200)
+# Limites do recebimento: detecções por lote, fotos por detecção, tamanho de cada foto e do pacote.
+DETECCAO_MAX_DETECCOES = env.int("DETECCAO_MAX_DETECCOES", default=20_000)
+DETECCAO_MAX_FOTOS_POR_DETECCAO = env.int("DETECCAO_MAX_FOTOS_POR_DETECCAO", default=5)
+DETECCAO_MAX_FOTO_MB = env.int("DETECCAO_MAX_FOTO_MB", default=10)
+DETECCAO_MAX_CORPO_MB = env.int("DETECCAO_MAX_CORPO_MB", default=100)
+DETECCAO_PACOTE_MAX_MEMBROS = env.int("DETECCAO_PACOTE_MAX_MEMBROS", default=5000)
+# Junção: a observação se junta à árvore ativa mais próxima a até max(mínimo, incerteza) metros,
+# com teto para uma incerteza absurda não fundir a quadra inteira.
+DETECCAO_RAIO_JUNCAO_MINIMO_M = env.float("DETECCAO_RAIO_JUNCAO_MINIMO_M", default=2.0)
+DETECCAO_RAIO_JUNCAO_MAXIMO_M = env.float("DETECCAO_RAIO_JUNCAO_MAXIMO_M", default=15.0)
+# Faixas do selo de confiança: baixa < MEDIA <= média < ALTA <= alta.
+DETECCAO_CONFIANCA_MEDIA = env.float("DETECCAO_CONFIANCA_MEDIA", default=0.5)
+DETECCAO_CONFIANCA_ALTA = env.float("DETECCAO_CONFIANCA_ALTA", default=0.8)
+# Hosts de onde o servidor baixa fotos por URL (mesma proteção dos conectores: HTTPS, porta 443,
+# IP público, redirecionamentos revalidados). Vazio = só fotos enviadas em multipart ou no pacote.
+ITREE_DETECCAO_HOSTS_FOTOS = env.list("ITREE_DETECCAO_HOSTS_FOTOS", default=[])
 CELERY_BEAT_SCHEDULE = {
     "limpar-notificacoes": {
         "task": "itree.notificacoes.tasks.limpar_notificacoes_antigas",

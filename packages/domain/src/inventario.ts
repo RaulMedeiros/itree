@@ -25,6 +25,7 @@ export const ROTULOS_ORIGEM_LOCALIZACAO: Record<OrigemLocalizacaoEnum, string> =
   importada: "Importada",
   estimada_web: "Estimada (web)",
   geocodificada: "Geocodificada (endereço)",
+  detectada: "Detectada (imagem)",
 };
 
 /** Classes de origem de valor (T-01 §2). */
@@ -72,6 +73,8 @@ export const ROTULOS_ORIGEM_REGISTRO: Record<OrigemRegistroEnum, string> = {
   web: "Painel web",
   app: "Aplicativo",
   importacao: "Importação",
+  deteccao_satelite: "Detecção via satélite",
+  deteccao_video: "Detecção via vídeo de rua",
 };
 
 export const ROTULOS_ESTADO_LOTE: Record<EstadoLoteEnum, string> = {

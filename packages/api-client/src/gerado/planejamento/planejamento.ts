@@ -21,7 +21,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  CriteriosPlanejamento
+  CriteriosPlanejamento,
+  PlanejamentoCriteriosParams
 } from '../modelos';
 
 import { requisicao } from '../../cliente';
@@ -58,21 +59,28 @@ export type planejamentoCriteriosResponseSuccess = (planejamentoCriteriosRespons
 
 export type planejamentoCriteriosResponse = (planejamentoCriteriosResponseSuccess)
 
-export const getPlanejamentoCriteriosUrl = () => {
+export const getPlanejamentoCriteriosUrl = (params?: PlanejamentoCriteriosParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/planejamento/criterios`
+  return stringifiedParams.length > 0 ? `/api/v1/planejamento/criterios?${stringifiedParams}` : `/api/v1/planejamento/criterios`
 }
 
 /**
  * Critérios do cenário "Onde plantar": valor bruto e percentil de prioridade por bairro do
  * escopo, com fonte e ano. Cenário de priorização, não índice oficial (DP-14).
  */
-export const planejamentoCriterios = async ( options?: Parameters<typeof requisicao>[1]): Promise<planejamentoCriteriosResponse> => {
+export const planejamentoCriterios = async (params?: PlanejamentoCriteriosParams, options?: Parameters<typeof requisicao>[1]): Promise<planejamentoCriteriosResponse> => {
 
-  return requisicao<planejamentoCriteriosResponse>(getPlanejamentoCriteriosUrl(),
+  return requisicao<planejamentoCriteriosResponse>(getPlanejamentoCriteriosUrl(params),
   {
     ...options,
     method: 'GET'
@@ -85,23 +93,23 @@ export const planejamentoCriterios = async ( options?: Parameters<typeof requisi
 
 
 
-export const getPlanejamentoCriteriosQueryKey = () => {
+export const getPlanejamentoCriteriosQueryKey = (params?: PlanejamentoCriteriosParams,) => {
     return [
-    `/api/v1/planejamento/criterios`
+    `/api/v1/planejamento/criterios`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getPlanejamentoCriteriosQueryOptions = <TData = Awaited<ReturnType<typeof planejamentoCriterios>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+export const getPlanejamentoCriteriosQueryOptions = <TData = Awaited<ReturnType<typeof planejamentoCriterios>>, TError = unknown>(params?: PlanejamentoCriteriosParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getPlanejamentoCriteriosQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getPlanejamentoCriteriosQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof planejamentoCriterios>>> = ({ signal }) => planejamentoCriterios({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof planejamentoCriterios>>> = ({ signal }) => planejamentoCriterios(params, { signal, ...requestOptions });
 
 
 
@@ -115,7 +123,7 @@ export type PlanejamentoCriteriosQueryError = unknown
 
 
 export function usePlanejamentoCriterios<TData = Awaited<ReturnType<typeof planejamentoCriterios>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>> & Pick<
+ params: undefined |  PlanejamentoCriteriosParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof planejamentoCriterios>>,
           TError,
@@ -125,7 +133,7 @@ export function usePlanejamentoCriterios<TData = Awaited<ReturnType<typeof plane
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function usePlanejamentoCriterios<TData = Awaited<ReturnType<typeof planejamentoCriterios>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>> & Pick<
+ params?: PlanejamentoCriteriosParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof planejamentoCriterios>>,
           TError,
@@ -135,16 +143,16 @@ export function usePlanejamentoCriterios<TData = Awaited<ReturnType<typeof plane
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function usePlanejamentoCriterios<TData = Awaited<ReturnType<typeof planejamentoCriterios>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ params?: PlanejamentoCriteriosParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function usePlanejamentoCriterios<TData = Awaited<ReturnType<typeof planejamentoCriterios>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ params?: PlanejamentoCriteriosParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof planejamentoCriterios>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getPlanejamentoCriteriosQueryOptions(options)
+  const queryOptions = getPlanejamentoCriteriosQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

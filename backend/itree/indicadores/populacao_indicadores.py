@@ -11,7 +11,6 @@ import statistics
 from datetime import timedelta
 
 from django.contrib.gis.db.models.functions import AsGeoJSON
-from django.db.models import Count
 from django.utils import timezone
 
 from itree.contas.acesso import filtrar_por_escopo
@@ -19,6 +18,7 @@ from itree.contas.models import Usuario
 from itree.inventario.models import Arvore
 from itree.territorio.models import TipoTerritorio
 
+from . import contagem as cont
 from . import instantaneos
 from . import populacao as pop
 from .externos import bairros_do_escopo
@@ -75,9 +75,14 @@ def _arredondado(v, casas=2):
     return round(v, casas) if v is not None else None
 
 
-def quadro(usuario: Usuario | None = None, so_bairro: int | None = None) -> list[dict]:
+def quadro(
+    usuario: Usuario | None = None, so_bairro: int | None = None, contagem: str = cont.TODAS
+) -> list[dict]:
     """Uma linha por bairro (do escopo de ``usuario``; todos se ``None``) com população, densidade,
-    renda, IDH e árvores. Número fixo de consultas, qualquer que seja o volume de dados."""
+    renda, IDH e árvores. Número fixo de consultas, qualquer que seja o volume de dados.
+
+    ``arvores`` é a contagem escolhida (``contagem``); ``arvores_total`` e ``arvores_confirmadas``
+    trazem as duas, e ``por_mil`` e ``hab_por_arvore`` seguem a escolhida."""
     from itree.territorio.models import Territorio
 
     bairros = (
@@ -96,17 +101,13 @@ def quadro(usuario: Usuario | None = None, so_bairro: int | None = None) -> list
     validas = instantaneos.arvores_validas(Arvore.objects.all())
     if usuario is not None:
         validas = filtrar_por_escopo(validas, usuario)
-    arvores = dict(
-        validas.filter(bairro_id__in=list(nomes))
-        .order_by()
-        .values_list("bairro_id")
-        .annotate(n=Count("id"))
-    )
+    arvores = cont.por_grupo(validas.filter(bairro_id__in=list(nomes)), "bairro_id")
     linhas = []
     for pk, nome in sorted(nomes.items(), key=lambda x: x[1]):
         d = por_bairro[pk]
         populacao = d[pop.POPULACAO_CENSO][1] if pop.POPULACAO_CENSO in d else None
-        n = arvores.get(pk, 0)
+        total, confirmadas = arvores.get(pk, (0, 0))
+        n = cont.escolher(total, confirmadas, contagem)
         dens = d.get(pop.DENSIDADE)
         linhas.append(
             {
@@ -118,6 +119,8 @@ def quadro(usuario: Usuario | None = None, so_bairro: int | None = None) -> list
                 "area_m2": dens[2] if dens else None,
                 "estimada": d[pop.POPULACAO_ESTIMADA][1] if pop.POPULACAO_ESTIMADA in d else None,
                 "arvores": n,
+                "arvores_total": total,
+                "arvores_confirmadas": confirmadas,
                 "por_mil": _arredondado(1000 * n / populacao) if populacao else None,
                 "hab_por_arvore": _arredondado(populacao / n, 1) if populacao and n else None,
                 "renda": _numero(d[pop.RENDA][0]) if pop.RENDA in d else None,
@@ -140,6 +143,8 @@ def resumo(linhas: list[dict]) -> dict:
     populacao = sum(x["populacao"] for x in com_pop)
     area = sum(x["area_m2"] for x in com_pop if x["area_m2"])
     arvores = sum(x["arvores"] for x in com_pop)
+    arvores_total = sum(x["arvores_total"] for x in com_pop)
+    arvores_confirmadas = sum(x["arvores_confirmadas"] for x in com_pop)
     com_renda = [x for x in linhas if x["renda"] is not None and x["responsaveis"]]
     peso = sum(x["responsaveis"] for x in com_renda)
     com_idh = [x["idh"] for x in linhas if x["idh"] is not None]
@@ -150,6 +155,8 @@ def resumo(linhas: list[dict]) -> dict:
         "media_por_bairro": populacao / len(com_pop) if com_pop else None,
         "densidade": populacao / (area / 1_000_000) if populacao and area else None,
         "arvores": arvores,
+        "arvores_total": arvores_total,
+        "arvores_confirmadas": arvores_confirmadas,
         "por_mil": 1000 * arvores / populacao if populacao else None,
         "hab_por_arvore": populacao / arvores if populacao and arvores else None,
         "estimada": estimada or None,
@@ -235,12 +242,12 @@ def quebras_quantis(valores: list[float], classes: int = 5) -> list[float]:
     return saida
 
 
-def geojson_populacao(usuario: Usuario, precisao: int = 5) -> dict:
+def geojson_populacao(usuario: Usuario, precisao: int = 5, contagem: str = cont.TODAS) -> dict:
     """Bairros do escopo com densidade, árvores por 1.000 habitantes, renda e IDH, mais as quebras
     por quantis (calculadas sobre todos os bairros de Fortaleza, para que a cor de um valor não
     mude conforme o escopo) e a proveniência de cada indicador."""
-    do_escopo = quadro(usuario)
-    todos = quadro(None) if usuario is not None else do_escopo
+    do_escopo = quadro(usuario, contagem=contagem)
+    todos = quadro(None, contagem=contagem) if usuario is not None else do_escopo
     geometrias = {
         pk: json.loads(g)
         for pk, g in bairros_do_escopo(usuario)
@@ -263,6 +270,8 @@ def geojson_populacao(usuario: Usuario, precisao: int = 5) -> dict:
                     "idh": x["idh"],
                     "populacao": x["populacao"],
                     "arvores": x["arvores"],
+                    "arvores_total": x["arvores_total"],
+                    "arvores_confirmadas": x["arvores_confirmadas"],
                     "estimada": x["estimada"],
                 },
             }
@@ -302,10 +311,12 @@ def _escala(todos: list[dict], chave: str) -> dict | None:
     return {"min": min(v), "max": max(v)} if len(v) > 1 else None
 
 
-def cartoes_ficha(bairro, usuario: Usuario, cartao, rotulo_cidade: str) -> list[dict]:
+def cartoes_ficha(
+    bairro, usuario: Usuario, cartao, rotulo_cidade: str, contagem: str = cont.TODAS
+) -> list[dict]:
     """Cartões de população, densidade, árvores por 1.000 habitantes, renda e IDH. ``cartao`` é o
     construtor de cartões da ficha."""
-    linhas = quadro(usuario)
+    linhas = quadro(usuario, contagem=contagem)
     x = next((r for r in linhas if r["id"] == bairro.pk), None)
     ref = resumo(linhas)
     sem = x is None
@@ -368,7 +379,7 @@ def cartoes_ficha(bairro, usuario: Usuario, cartao, rotulo_cidade: str) -> list[
     detalhe = ""
     if por_mil is not None:
         hab = x["hab_por_arvore"]
-        detalhe = f"{x['arvores']:,} árvores cadastradas · ".replace(",", ".") + (
+        detalhe = f"{cont.rotulo(x['arvores_total'], x['arvores_confirmadas'])} · " + (
             f"{hab:,.1f} habitantes por árvore".replace(".", ",") if hab else "nenhuma árvore"
         )
     cartoes.append(
@@ -445,9 +456,9 @@ def _br(valor, casas: int = 0) -> str:
     return texto.replace(",", "\0").replace(".", ",").replace("\0", ".")
 
 
-def linhas_arvores_por_mil(usuario: Usuario) -> list[dict]:
+def linhas_arvores_por_mil(usuario: Usuario, contagem: str = cont.TODAS) -> list[dict]:
     saida = []
-    for x in quadro(usuario):
+    for x in quadro(usuario, contagem=contagem):
         if x["por_mil"] is None:
             continue
         hab = _br(x["hab_por_arvore"], 1) if x["hab_por_arvore"] else "—"
@@ -456,9 +467,11 @@ def linhas_arvores_por_mil(usuario: Usuario) -> list[dict]:
                 "rotulo": x["nome"],
                 "valor": x["por_mil"],
                 "territorio_id": str(x["id"]),
-                "detalhe": f"{_br(x['arvores'])} árvores cadastradas · "
+                "detalhe": f"{cont.rotulo(x['arvores_total'], x['arvores_confirmadas'])} · "
                 f"{_br(x['populacao'])} habitantes (Censo) · {hab} hab. por árvore",
                 "arvores": x["arvores"],
+                "arvores_total": x["arvores_total"],
+                "arvores_confirmadas": x["arvores_confirmadas"],
                 "populacao": x["populacao"],
                 "habitantes_por_arvore": x["hab_por_arvore"],
             }
@@ -495,7 +508,7 @@ def linhas_populacao(usuario: Usuario) -> list[dict]:
     return sorted(saida, key=lambda r: (-r["valor"], r["rotulo"]))
 
 
-def dispersao_renda(usuario: Usuario) -> dict:
+def dispersao_renda(usuario: Usuario, contagem: str = cont.TODAS) -> dict:
     """Árvores cadastradas por 1.000 habitantes × rendimento médio do responsável, por bairro.
     A correlação é só descrição (r e número de bairros); não afirma causa nem é índice oficial."""
     pontos = [
@@ -506,8 +519,10 @@ def dispersao_renda(usuario: Usuario) -> dict:
             "y": x["por_mil"],
             "populacao": x["populacao"],
             "arvores": x["arvores"],
+            "arvores_total": x["arvores_total"],
+            "arvores_confirmadas": x["arvores_confirmadas"],
         }
-        for x in quadro(usuario)
+        for x in quadro(usuario, contagem=contagem)
         if x["renda"] is not None and x["por_mil"] is not None
     ]
     r = None
@@ -527,8 +542,8 @@ def dispersao_renda(usuario: Usuario) -> dict:
     }
 
 
-def linhas_dispersao(usuario: Usuario) -> list[dict]:
-    d = dispersao_renda(usuario)
+def linhas_dispersao(usuario: Usuario, contagem: str = cont.TODAS) -> list[dict]:
+    d = dispersao_renda(usuario, contagem)
     saida = [
         {
             "rotulo": p["rotulo"],
@@ -536,7 +551,7 @@ def linhas_dispersao(usuario: Usuario) -> list[dict]:
             "territorio_id": p["id"],
             "renda": p["x"],
             "detalhe": f"rendimento médio do responsável R$ {p['x']:,.0f}".replace(",", ".")
-            + f" · {p['arvores']:,} árvores cadastradas".replace(",", "."),
+            + f" · {cont.rotulo(p['arvores_total'], p['arvores_confirmadas'])}",
         }
         for p in d["pontos"]
     ]
@@ -576,9 +591,9 @@ def situacao_das_fontes(agora=None) -> list[dict]:
     return saida
 
 
-def item_visao_geral(usuario: Usuario, bairro=None) -> dict | None:
+def item_visao_geral(usuario: Usuario, bairro=None, contagem: str = cont.TODAS) -> dict | None:
     """Cartão discreto da visão geral: árvores cadastradas por 1.000 habitantes no escopo."""
-    linhas = quadro(usuario, bairro.pk if bairro is not None else None)
+    linhas = quadro(usuario, bairro.pk if bairro is not None else None, contagem)
     r = resumo(linhas)
     if r["por_mil"] is None:
         return None
@@ -588,6 +603,9 @@ def item_visao_geral(usuario: Usuario, bairro=None) -> dict | None:
         "nome": NOME_POR_MIL + " (provisório)",
         "valor": round(r["por_mil"], 1),
         "numerador": r["arvores"],
+        "arvores_total": r["arvores_total"],
+        "arvores_confirmadas": r["arvores_confirmadas"],
+        "contagem": contagem,
         "base": r["populacao"],
         "unidade": "por 1.000 hab.",
         "fonte": f"{prov.get('fonte', pop.ORGAO_IBGE)} (população) e inventário do iTree (árvores)",

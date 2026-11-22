@@ -21,6 +21,7 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { AjudaTermo } from "../../componentes/AjudaTermo";
 import { CondicaoAparente } from "../../componentes/CondicaoAparente";
 import { SeloEspecie, SeloLocalizacao, nomeEspecie } from "../../componentes/selos";
+import { SelosDeteccao } from "../../componentes/selosDeteccao";
 import { BarraAcoesLote } from "../../ui/barraLote";
 import { Botao } from "../../ui/botao";
 import { BarraFiltros, Entrada, Selecao } from "../../ui/campos";
@@ -52,6 +53,10 @@ export interface BuscaArvores {
   valida?: true;
   bairro?: string;
   localizacao_origem?: OrigemLocalizacaoEnum;
+  /** `false`: só as detectadas automaticamente e ainda não confirmadas. */
+  confirmada?: false;
+  /** Origem da detecção automática ("qualquer" = de qualquer detecção). */
+  deteccao?: "satelite" | "video_rua" | "qualquer";
   situacao?: "ativa" | "excluida" | "fundida" | "todas";
   sem_inspecao_dias?: number;
   condicao_aparente?: string;
@@ -101,6 +106,8 @@ export function ArvoresPagina() {
   const filtrosExtras = [
     filtros.especie_estado,
     filtros.localizacao_origem,
+    filtros.confirmada === false ? true : undefined,
+    filtros.deteccao,
     filtros.sem_inspecao_dias,
     filtros.situacao && filtros.situacao !== "ativa" ? filtros.situacao : undefined,
   ].filter(Boolean).length;
@@ -310,6 +317,30 @@ export function ArvoresPagina() {
                 {r}
               </option>
             ))}
+          </Selecao>,
+          <Selecao
+            key="deteccao"
+            aria-label="Origem da detecção"
+            value={filtros.deteccao ?? ""}
+            onChange={(e) =>
+              filtrar({ deteccao: (e.target.value || undefined) as BuscaArvores["deteccao"] })
+            }
+          >
+            <option value="">Toda origem</option>
+            <option value="qualquer">Detectadas automaticamente</option>
+            <option value="satelite">Via satélite</option>
+            <option value="video_rua">Via vídeo de rua</option>
+          </Selecao>,
+          <Selecao
+            key="confirmacao"
+            aria-label="Revisão da detecção"
+            value={filtros.confirmada === false ? "false" : ""}
+            onChange={(e) =>
+              filtrar({ confirmada: e.target.value === "false" ? false : undefined })
+            }
+          >
+            <option value="">Confirmadas e não confirmadas</option>
+            <option value="false">Só as não confirmadas</option>
           </Selecao>,
           <Selecao
             key="inspecao"
@@ -561,6 +592,11 @@ export function ArvoresPagina() {
                   </Td>
                   <Td>
                     <SeloLocalizacao origem={a.localizacao_origem ?? ""} precisao={a.precisao_m} />
+                    {a.deteccao && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        <SelosDeteccao arvore={a} />
+                      </div>
+                    )}
                   </Td>
                   <Td className="min-w-56">
                     {a.endereco || <span className="text-texto-suave">—</span>}

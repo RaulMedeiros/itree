@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Botao } from "../../ui/botao";
 import { Carregando, Erro } from "../../ui/estados";
+import { SeletorContagem } from "../../componentes/contagem";
+import { contagemDaUrl, paramContagem } from "../../componentes/contagemUrl";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { formatarDataHora } from "../../util/formatos";
 import { ControlesPesos } from "./ControlesPesos";
@@ -43,7 +45,7 @@ interface ColecaoBairros {
 export function PlanejamentoPagina() {
   const busca = useSearch({ from: "/autenticado/planejamento" });
   const navegar = useNavigate();
-  const criteriosQ = usePlanejamentoCriterios();
+  const criteriosQ = usePlanejamentoCriterios(paramContagem(busca.contagem));
   const geometriasQ = useQuery({
     queryKey: ["planejamento-geometrias"],
     queryFn: () => territoriosGeojson({ tipo: "bairro", precisao: 4 }),
@@ -125,6 +127,19 @@ export function PlanejamentoPagina() {
         descricao="Cenário de priorização — não é índice oficial (DP-14)"
         acoes={
           <>
+            <SeletorContagem
+              valor={contagemDaUrl(busca.contagem)}
+              aoMudar={(c) =>
+                void navegar({
+                  to: "/planejamento",
+                  search: (anterior) => ({
+                    ...anterior,
+                    contagem: c === "todas" ? undefined : c,
+                  }),
+                  replace: true,
+                })
+              }
+            />
             <Botao variante="secundario" onClick={() => void copiarLink()}>
               {copiado ? <Check aria-hidden /> : <Copy aria-hidden />}
               Copiar link do cenário

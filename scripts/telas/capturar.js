@@ -330,6 +330,22 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
     `/mapa?lon=${-38.535}&lat=${-3.745}&zoom=14.6&ate=${mesPassado}&comparar=1`,
     { esperar: "Hoje", espera: 8000 },
   );
+  // Detecção automática (dados do simulador, declarados como sintéticos).
+  await tela(p, "55-deteccoes-lote", `/inventario/deteccoes/${ids.lote_deteccao}`, {
+    esperar: "Recusas e avisos",
+    espera: 4000,
+    inteira: true,
+  });
+  await tela(p, "56-arvore-detectada", `/inventario/arvores/${ids.arvore_detectada}`, {
+    esperar: "Detecção automática",
+    espera: 3000,
+  });
+  await tela(
+    p,
+    "57-mapa-deteccoes",
+    `/mapa?lon=${ids.det_lon}&lat=${ids.det_lat}&zoom=17&plantio=1`,
+    { esperar: "Legenda", espera: 6000 },
+  );
   await tela(p, "41-analises-mudas", "/analises?analise=mudas_doadas_por_especie", {
     esperar: /Ressalvas/,
     espera: 2500,

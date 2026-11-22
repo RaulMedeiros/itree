@@ -12,6 +12,9 @@ import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Botao } from "../../ui/botao";
 import { MenuAgrupado } from "../../ui/menu";
 import { SeletorPeriodo } from "../../componentes/SeletorPeriodo";
+import { SeletorContagem } from "../../componentes/contagem";
+import { contagemDaUrl, paramContagem } from "../../componentes/contagemUrl";
+import { rotuloContagem } from "@itree/domain";
 import { Selecao } from "../../ui/campos";
 import { Carregando, Erro, Vazio } from "../../ui/estados";
 import { CabecalhoPagina } from "../../ui/pagina";
@@ -36,6 +39,8 @@ export interface BuscaAnalises {
   analise?: string;
   inicio?: string;
   fim?: string;
+  /** Quais árvores entram na contagem: todas (padrão) ou só as confirmadas. */
+  contagem?: "confirmadas";
 }
 
 interface SerieMensal {
@@ -56,6 +61,9 @@ interface LinhaAnalise {
   numerador?: number;
   /** Composição do valor (por exemplo, poda, supressão e recolhimento), em texto. */
   detalhe?: string;
+  /** Análises que contam árvores: as duas contagens, além do `valor` da contagem escolhida. */
+  total?: number;
+  confirmadas?: number;
 }
 
 /** Nas análises por bairro, o nome do bairro abre a ficha dele. */
@@ -117,6 +125,9 @@ function TabelaDaAnalise({
                 </span>
               </div>
               {l.detalhe && <p className="text-xs text-texto-suave">{l.detalhe}</p>}
+              {l.total !== undefined && l.confirmadas !== undefined && (
+                <p className="text-xs text-texto-suave">{rotuloContagem(l.total, l.confirmadas)}</p>
+              )}
               {l.base !== undefined && (
                 <p className="text-xs text-texto-suave">
                   {l.numerador !== undefined
@@ -153,7 +164,12 @@ export function AnalisesPagina() {
   }[];
   const selecionada = filtros.analise ?? analises[0]?.id;
   const consulta = useRelatoriosAnalise(
-    { analise: selecionada ?? "", inicio: filtros.inicio, fim: filtros.fim },
+    {
+      analise: selecionada ?? "",
+      inicio: filtros.inicio,
+      fim: filtros.fim,
+      ...paramContagem(filtros.contagem),
+    },
     { query: { enabled: !!selecionada } },
   );
   const podeExportar = usePermissao("relatorios.exportar");
@@ -297,6 +313,12 @@ export function AnalisesPagina() {
           fim={filtros.fim ?? String(dados?.periodo.fim ?? "")}
           aoMudar={filtrar}
         />
+        {dados?.contagem && (
+          <SeletorContagem
+            valor={contagemDaUrl(filtros.contagem)}
+            aoMudar={(c) => filtrar({ contagem: c === "todas" ? undefined : c })}
+          />
+        )}
       </div>
       {consulta.isPending ? (
         <Carregando />

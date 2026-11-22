@@ -27,6 +27,11 @@ class EstadoEvidencia(models.TextChoices):
     REMOVIDA = "removida", "Removida"
 
 
+class OrigemEvidencia(models.TextChoices):
+    USUARIO = "usuario", "Enviada por uma pessoa"
+    DETECCAO = "deteccao", "Detecção automática"
+
+
 @pghistory.track(*eventos())
 class Evidencia(ModeloBase):
     chave = models.CharField(max_length=300, unique=True, editable=False)
@@ -46,6 +51,13 @@ class Evidencia(ModeloBase):
         blank=True,
         editable=False,
         help_text="Miniatura JPEG da imagem no armazenamento; vazia se ainda não foi gerada.",
+    )
+    origem = models.CharField(
+        max_length=10, choices=OrigemEvidencia.choices, default=OrigemEvidencia.USUARIO
+    )
+    anonimizada = models.BooleanField(
+        default=False,
+        help_text="Foto de detecção declarada com rostos e placas borrados (LGPD).",
     )
     estado = models.CharField(
         max_length=20, choices=EstadoEvidencia.choices, default=EstadoEvidencia.AGUARDANDO_ENVIO
@@ -74,6 +86,15 @@ class Evidencia(ModeloBase):
         blank=True,
         on_delete=models.PROTECT,
         related_name="evidencias",
+    )
+
+    observacao = models.ForeignKey(
+        "deteccao.Observacao",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="evidencias",
+        help_text="Observação de detecção automática de onde a foto veio.",
     )
 
     tarefa = models.ForeignKey(

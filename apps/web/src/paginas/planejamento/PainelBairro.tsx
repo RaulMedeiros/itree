@@ -1,4 +1,5 @@
 import type { BairroPlanejamento, CriterioPlanejamento } from "@itree/api-client";
+import { rotuloContagem } from "@itree/domain";
 import { Link } from "@tanstack/react-router";
 import { X } from "lucide-react";
 
@@ -42,6 +43,9 @@ export function PainelBairro({
             {linha?.pontuacao !== null && linha?.pontuacao !== undefined
               ? `Pontuação ${formatarPontuacao(linha.pontuacao)} de 100${posicao ? `, ${posicao}º no ranking` : ""}`
               : "Sem pontuação: nenhum critério ativo tem dado neste bairro."}
+          </p>
+          <p className="text-sm text-texto-suave" data-testid="arvores-do-bairro">
+            {rotuloContagem(bairro.arvores, bairro.arvores_confirmadas)}
           </p>
         </div>
         <div className="flex items-center gap-2">

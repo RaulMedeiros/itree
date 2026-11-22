@@ -6,6 +6,7 @@ import {
   getArvoresHistoricoQueryKey,
   getArvoresObterQueryKey,
   useArvoresAtualizar,
+  useArvoresConfirmar,
   useArvoresExcluir,
   useArvoresHistorico,
   useArvoresMedidasCriar,
@@ -34,6 +35,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  CircleCheck,
   ClipboardList,
   Map as IconeMapa,
   Pencil,
@@ -45,6 +47,8 @@ import { useState, type FormEvent, type ReactNode } from "react";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { Evidencias } from "../../componentes/Evidencias";
+import { SecaoDeteccao } from "../../componentes/ObservacoesDeteccao";
+import { SelosDeteccao } from "../../componentes/selosDeteccao";
 import { GaleriaArvore } from "../../componentes/GaleriaArvore";
 import { LinhaDoTempoVisual } from "../../componentes/LinhaDoTempoVisual";
 import { CartaoEspecie } from "../../componentes/especies";
@@ -132,6 +136,9 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
   const podeTarefa =
     usePermissao("tarefas.editar") && arvore.situacao === "ativa" && !!arvore.localizacao;
   const [criandoTarefa, setCriandoTarefa] = useState(false);
+  const podeConfirmar =
+    usePermissao("deteccao.revisar") && arvore.situacao === "ativa" && !arvore.confirmada;
+  const [confirmando, setConfirmando] = useState(false);
 
   const abas: { id: Aba; rotulo: string }[] = [
     { id: "resumo", rotulo: "Resumo" },
@@ -160,6 +167,7 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
           <span className="flex flex-wrap items-center gap-2">
             <span className={arvore.especie ? "italic" : ""}>{nomeEspecie(arvore)}</span>
             <SeloEspecie estado={arvore.especie_estado ?? "nao_identificada"} />
+            <SelosDeteccao arvore={arvore} />
             {arvore.situacao !== "ativa" && (
               <Selo tom="perigo">{ROTULOS_SITUACAO_ARVORE[arvore.situacao]}</Selo>
             )}
@@ -180,6 +188,11 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
                 >
                   <IconeMapa /> No mapa
                 </Link>
+              </Botao>
+            )}
+            {podeConfirmar && (
+              <Botao onClick={() => setConfirmando(true)}>
+                <CircleCheck /> Confirmar árvore
               </Botao>
             )}
             {podeOcorrencia && (
@@ -279,6 +292,7 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
       {editando && <EditarDialogo arvore={arvore} aoFechar={() => setEditando(false)} />}
       {medindo && <MedidaDialogo arvore={arvore} aoFechar={() => setMedindo(false)} />}
       {excluindo && <ExcluirDialogo arvore={arvore} aoFechar={() => setExcluindo(false)} />}
+      {confirmando && <ConfirmarDialogo arvore={arvore} aoFechar={() => setConfirmando(false)} />}
       {criandoTarefa && (
         <CriarTarefasDialogo
           alvo={{ tipo: "arvore", id: arvore.id, codigo: arvore.codigo }}
@@ -292,6 +306,59 @@ function Detalhe({ arvore }: { arvore: Arvore }) {
         />
       )}
     </>
+  );
+}
+
+function ConfirmarDialogo({ arvore, aoFechar }: { arvore: Arvore; aoFechar: () => void }) {
+  const cliente = useQueryClient();
+  const [motivo, setMotivo] = useState("");
+  const confirmar = useArvoresConfirmar<ErroApi>();
+  return (
+    <Dialogo
+      aberto
+      aoMudar={(v) => !v && aoFechar()}
+      titulo={`Confirmar ${arvore.codigo}`}
+      descricao="Registra que uma pessoa conferiu esta árvore detectada automaticamente. A origem da detecção continua visível; a árvore passa a contar como confirmada nos indicadores."
+      rodape={
+        <>
+          <Botao variante="secundario" onClick={aoFechar}>
+            Cancelar
+          </Botao>
+          <Botao
+            disabled={confirmar.isPending}
+            onClick={() =>
+              confirmar.mutate(
+                { id: arvore.id, data: { motivo: motivo.trim() } },
+                {
+                  onSuccess: () => {
+                    void invalidarCaminhos(
+                      cliente,
+                      "/api/v1/arvores",
+                      "/api/v1/indicadores",
+                      "/api/v1/deteccoes",
+                    );
+                    aoFechar();
+                  },
+                },
+              )
+            }
+          >
+            Confirmar árvore
+          </Botao>
+        </>
+      }
+    >
+      <Campo rotulo="Observação (opcional)">
+        {(p) => (
+          <AreaTexto {...p} rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+        )}
+      </Campo>
+      {confirmar.isError && (
+        <p role="alert" className="mt-2 text-sm text-perigo">
+          {confirmar.error.message}
+        </p>
+      )}
+    </Dialogo>
   );
 }
 
@@ -388,6 +455,7 @@ function Resumo({ arvore, aoAdicionarFoto }: { arvore: Arvore; aoAdicionarFoto: 
         </div>
       </section>
       <div className="flex flex-col gap-4">
+        <SecaoDeteccao arvore={arvore} />
         {arvore.especie_cartao && <CartaoEspecie especie={arvore.especie_cartao} />}
         <section className="rounded-lg border border-borda bg-superficie p-4">
           <h2 className="mb-3 font-semibold">Proveniência do cadastro</h2>
