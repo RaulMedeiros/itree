@@ -91,6 +91,8 @@ function bairro(
     nome,
     percentis: Object.fromEntries(ids.map((c, i) => [c, p[i] ?? null])),
     valores: Object.fromEntries(ids.map((c, i) => [c, v[i] ?? null])),
+    arvores: 40,
+    arvores_confirmadas: 25,
   };
 }
 
@@ -117,6 +119,7 @@ export function respostaDeTeste(comCalor: boolean): CriteriosPlanejamento {
     gerado_em: "2026-11-21T12:00:00Z",
     aviso: "Cenário de priorização, não índice oficial.",
     metodo_percentil: "Posição entre os bairros.",
+    contagem: "todas",
     criterios: criteriosDeTeste(comCalor),
     bairros: bairrosDeTeste(),
   };

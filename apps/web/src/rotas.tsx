@@ -29,7 +29,9 @@ import { ArvoreDetalhePagina } from "./paginas/inventario/ArvoreDetalhePagina";
 import { ArvoresPagina } from "./paginas/inventario/ArvoresPagina";
 import { ORDENACOES_ARVORES } from "./paginas/inventario/ordenacao";
 import { ArvoresIluminacaoPagina } from "./paginas/inventario/ArvoresIluminacaoPagina";
+import { DeteccoesPagina } from "./paginas/inventario/DeteccoesPagina";
 import { DuplicidadesPagina } from "./paginas/inventario/DuplicidadesPagina";
+import { LoteDeteccaoPagina } from "./paginas/inventario/LoteDeteccaoPagina";
 import {
   EspecieDetalhePagina,
   EspeciesCatalogoPagina,
@@ -143,6 +145,8 @@ const bandeira = <T extends string>(valor: T) =>
 
 const paginaOpcional = z.coerce.number().int().positive().optional().catch(undefined);
 const textoOpcional = z.string().optional().catch(undefined);
+/** Quais árvores entram nas contagens dos indicadores; ausente = todas. */
+const contagemOpcional = z.enum(["confirmadas"]).optional().catch(undefined);
 /** Raio das árvores próximas de um alerta: só os valores oferecidos na tela. */
 const raioOpcional = z.coerce
   .number()
@@ -281,6 +285,8 @@ const mapa = createRoute({
     populacao: z.enum(["densidade", "arvores_por_mil", "renda", "idh"]).optional().catch(undefined),
     tarefas: bandeira("1"),
     alertas: bandeira("1"),
+    /** Pontos de plantio possível (berços vazios e tocos vistos por detecção automática). */
+    plantio: bandeira("1"),
     /** Linha do tempo (AAAA-MM): situação ao fim do mês; ausente = o mapa mostra o presente. */
     ate: mesOpcional,
     /** Linha do tempo no modo intervalo: do começo deste mês ao fim de `ate`. */
@@ -293,7 +299,7 @@ const mapa = createRoute({
       .optional()
       .catch(undefined),
     localizacao_origem: z
-      .enum(["gps_campo", "importada", "estimada_web", "geocodificada"])
+      .enum(["gps_campo", "importada", "estimada_web", "geocodificada", "detectada"])
       .optional()
       .catch(undefined),
     estado: z.enum(["abertas", "todas"]).optional().catch(undefined),
@@ -349,10 +355,18 @@ const arvores = createRoute({
       .catch(undefined),
     bairro: textoOpcional,
     localizacao_origem: z
-      .enum(["gps_campo", "importada", "estimada_web", "geocodificada"])
+      .enum(["gps_campo", "importada", "estimada_web", "geocodificada", "detectada"])
       .optional()
       .catch(undefined),
     situacao: z.enum(["ativa", "excluida", "fundida", "todas"]).optional().catch(undefined),
+    /** "false" = só as detectadas e ainda sem revisão humana. */
+    confirmada: z
+      .union([z.literal("false"), z.literal(false)])
+      .transform(() => false as const)
+      .optional()
+      .catch(undefined),
+    /** Origem da detecção automática; "qualquer" = de qualquer detecção. */
+    deteccao: z.enum(["satelite", "video_rua", "qualquer"]).optional().catch(undefined),
     sem_inspecao_dias: z.coerce.number().int().positive().optional().catch(undefined),
     condicao_aparente: textoOpcional,
     // Área do mapa (M-24): mesmo formato compacto do parâmetro `area` da URL do mapa.
@@ -402,6 +416,27 @@ const arvoresIluminacao = createRoute({
     pagina: paginaOpcional,
   }),
   component: ArvoresIluminacaoPagina,
+});
+
+const deteccoes = createRoute({
+  getParentRoute: () => inventario,
+  path: "deteccoes",
+  validateSearch: z.object({ aba: z.enum(["remocoes"]).optional().catch(undefined) }),
+  component: () => (
+    <Exige permissao="deteccao.ler">
+      <DeteccoesPagina />
+    </Exige>
+  ),
+});
+
+const loteDeteccao = createRoute({
+  getParentRoute: () => inventario,
+  path: "deteccoes/$id",
+  component: () => (
+    <Exige permissao="deteccao.ler">
+      <LoteDeteccaoPagina />
+    </Exige>
+  ),
 });
 
 const duplicidades = createRoute({
@@ -458,6 +493,7 @@ const visaoGeral = createRoute({
     fim: dataOpcionalF2,
     bairro: textoOpcional,
     equipe: textoOpcional,
+    contagem: contagemOpcional,
   }),
   component: VisaoGeralPagina,
 });
@@ -484,6 +520,7 @@ const bairrosLista = createRoute({
 const bairroFicha = createRoute({
   getParentRoute: () => bairros,
   path: "$id",
+  validateSearch: z.object({ contagem: contagemOpcional }),
   component: BairroFichaPagina,
 });
 
@@ -597,7 +634,12 @@ const alertaDetalhe = createRoute({
 const analises = createRoute({
   getParentRoute: () => autenticado,
   path: "analises",
-  validateSearch: z.object({ analise: textoOpcional, inicio: dataOpcionalF2, fim: dataOpcionalF2 }),
+  validateSearch: z.object({
+    analise: textoOpcional,
+    inicio: dataOpcionalF2,
+    fim: dataOpcionalF2,
+    contagem: contagemOpcional,
+  }),
   component: () => (
     <Exige permissao="relatorios.ler">
       <AnalisesPagina />
@@ -618,6 +660,7 @@ const planejamento = createRoute({
     verde: pesoOpcional,
     calor: pesoOpcional,
     bairro: textoOpcional,
+    contagem: contagemOpcional,
   }),
   component: () => (
     <Exige permissao="relatorios.ler">
@@ -713,6 +756,8 @@ const arvore = raiz.addChildren([
       especiesCatalogo,
       especieDetalhe,
       importacoes,
+      deteccoes,
+      loteDeteccao,
       duplicidades,
       arvoresIluminacao,
       qualidade,

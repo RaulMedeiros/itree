@@ -7,6 +7,7 @@ const SECOES = [
   { para: "/inventario/arvores", rotulo: "Árvores", permissao: "inventario.ler" },
   { para: "/inventario/especies", rotulo: "Espécies", permissao: "inventario.ler" },
   { para: "/inventario/importacoes", rotulo: "Importações", permissao: "inventario.importar" },
+  { para: "/inventario/deteccoes", rotulo: "Detecções", permissao: "deteccao.ler" },
   {
     para: "/inventario/duplicidades",
     rotulo: "Possíveis duplicidades",

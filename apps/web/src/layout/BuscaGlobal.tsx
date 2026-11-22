@@ -4,6 +4,7 @@ import * as Radix from "@radix-ui/react-dialog";
 import { Search, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { SelosDeteccao } from "../componentes/selosDeteccao";
 import { useCelular } from "../util/useMediaQuery";
 
 const TIPOS: Record<string, string> = {
@@ -199,6 +200,11 @@ function CampoBusca({
                 {r.tipo === "territorio" && r.subtipo === "bairro" ? TIPOS.bairro : TIPOS[r.tipo]}
               </span>
               <span className="font-medium">{r.rotulo}</span>
+              {r.tipo === "arvore" && r.deteccao && (
+                <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                  <SelosDeteccao arvore={r} />
+                </span>
+              )}
               {r.descricao && <p className="truncate text-xs text-texto-suave">{r.descricao}</p>}
             </li>
           ))}
