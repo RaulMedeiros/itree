@@ -17,6 +17,7 @@ from itree.areas_verdes.models import AreaVerde
 from itree.contas.acesso import area_do_escopo, filtrar_por_escopo
 from itree.core.parametros import uuid_do_parametro
 from itree.iluminacao.servico import resumo_da_iluminacao
+from itree.imoveis.servico import resumo_dos_imoveis
 from itree.indicadores.populacao_indicadores import situacao_das_fontes
 from itree.inventario.models import Arvore, SituacaoArvore
 from itree.inventario.views import filtrar_arvores
@@ -29,6 +30,16 @@ ZOOM_INDIVIDUAL = 16
 # Pontos de iluminação pública (~150 mil): sem agrupamento, só a partir deste zoom. Abaixo dele o
 # tile vem vazio. O mesmo valor está em `apps/web/src/mapa/simbologia.ts`.
 ZOOM_ILUMINACAO = 15
+# Edificações (centenas de milhares de polígonos): só a partir deste zoom. O mesmo valor está em
+# `apps/web/src/mapa/edificacoes.ts`.
+ZOOM_EDIFICACOES = 15
+# Camadas de contexto sem agrupamento: feição a feição, a partir do zoom mínimo (abaixo dele, o
+# tile é vazio).
+ZOOM_MINIMO_INDIVIDUAL = {
+    "iluminacao": ZOOM_ILUMINACAO,
+    "edificacoes": ZOOM_EDIFICACOES,
+    "macrozoneamento": 0,
+}
 CIRCUNFERENCIA_3857 = 40075016.68557849
 # Zoom até o qual as células de agrupamento são maiores (menos agrupamentos amontoados).
 ZOOM_MUNICIPIO = 11
@@ -226,6 +237,30 @@ CAMADAS = {
         """,
         "propriedades": "id, logradouro, poste, altura_min_m, altura_max_m, lampadas",
     },
+    "edificacoes": {
+        "permissao": "mapa.ler",
+        "filtros": lambda params: ("", {}),
+        "base": """
+            SELECT e.id::text AS id, round(e.area_m2)::int AS area_m2, e.uso,
+                   COALESCE(round((e.confianca * 100)::numeric)::int, -1) AS confianca_pct,
+                   ST_Transform(e.geom, 3857) AS g3857
+              FROM imoveis_edificacao e, env
+             WHERE e.geom && ST_Transform(env.g, 4326)
+               AND ST_Intersects(e.geom, ST_GeomFromEWKB(%(area)s))
+        """,
+        "propriedades": "id, area_m2, uso, confianca_pct",
+    },
+    "macrozoneamento": {
+        "permissao": "mapa.ler",
+        "filtros": lambda params: ("", {}),
+        "base": """
+            SELECT m.id::text AS id, m.nome, m.sigla, ST_Transform(m.geom, 3857) AS g3857
+              FROM imoveis_macrozona m, env
+             WHERE m.geom && ST_Transform(env.g, 4326)
+               AND ST_Intersects(m.geom, ST_GeomFromEWKB(%(area)s))
+        """,
+        "propriedades": "id, nome, sigla",
+    },
 }
 
 
@@ -335,7 +370,7 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
         raise NotFound("Tile fora do intervalo.")
 
     area = area_do_escopo(request.user)
-    if area is None or (camada == "iluminacao" and z < ZOOM_ILUMINACAO):
+    if area is None or z < ZOOM_MINIMO_INDIVIDUAL.get(camada, 0):
         return HttpResponse(b"", content_type=TIPO_MVT)
 
     # Só árvores e ocorrências têm dimensão temporal; as demais camadas ignoram `ate`.
@@ -362,7 +397,7 @@ def tile(request: Request, camada: str, z: int, x: int, y: int):
         resposta = HttpResponse(bytes(dados or b""), content_type=TIPO_MVT)
         resposta["Cache-Control"] = "private, max-age=30"
         return resposta
-    if z >= ZOOM_INDIVIDUAL or camada == "iluminacao":
+    if z >= ZOOM_INDIVIDUAL or camada in ZOOM_MINIMO_INDIVIDUAL:
         # SQL montado só a partir de constantes deste módulo; valores vão como parâmetros.
         selecao = f"""
             SELECT {definicao["propriedades"]}, 1 AS quantidade,
@@ -541,6 +576,10 @@ def busca(request: Request):
             "territorios": serializers.ListField(child=serializers.DictField()),
             "areas_verdes": serializers.ListField(child=serializers.DictField()),
             "iluminacao": serializers.DictField(allow_null=True),
+            "imoveis": serializers.DictField(
+                help_text="Edificações, uso do lote (SEFIN) e macrozoneamento: fonte, licença, "
+                "volume e datas."
+            ),
             "populacao": serializers.ListField(
                 child=serializers.DictField(),
                 help_text="Fontes de população, renda e IDH: versão em uso, última conferência e "
@@ -622,6 +661,7 @@ def camadas(request: Request):
             "territorios": territorios,
             "areas_verdes": areas_verdes,
             "iluminacao": resumo_da_iluminacao(),
+            "imoveis": resumo_dos_imoveis(),
             "populacao": situacao_das_fontes(),
             "arvores": arvores,
             "ocorrencias": ocorrencias,

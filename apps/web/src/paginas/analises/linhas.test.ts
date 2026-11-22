@@ -81,3 +81,12 @@ describe("gerarCsv", () => {
     expect(csv).toContain(`"'=CMD(""x"");y";1`);
   });
 });
+
+describe("análises da regra 3-30-300", () => {
+  it("cada análise tem o rótulo da coluna de valor, em percentual", () => {
+    for (const parte of ["3", "30", "300"]) {
+      expect(ROTULO_VALOR[`regra_${parte}_por_bairro`]).toMatch(/\(%\)$/);
+      expect(ROTULO_VALOR[`regra_${parte}_x_renda`]).toMatch(/\(%\)$/);
+    }
+  });
+});

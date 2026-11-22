@@ -2,8 +2,8 @@
 
 A base é a população **oficial** do Censo; a estimativa do ano fica em segundo plano e é sempre
 rotulada como estimativa iTree. "Árvores cadastradas por 1.000 habitantes" e "habitantes por árvore
-cadastrada" contam só as árvores do inventário (DP-14: fórmula oficial pendente, valor
-**provisório**, nunca "índice oficial").
+cadastrada" contam só as árvores do inventário: indicadores complementares à regra 3-30-300 (DP-14,
+decidida em 21/11/2026), com a ressalva do inventário parcial, nunca "índice oficial".
 """
 
 import json
@@ -15,11 +15,12 @@ from django.utils import timezone
 
 from itree.contas.acesso import filtrar_por_escopo
 from itree.contas.models import Usuario
+from itree.imoveis import sefin_bairros as sefin
 from itree.inventario.models import Arvore
 from itree.territorio.models import TipoTerritorio
 
 from . import contagem as cont
-from . import instantaneos
+from . import imoveis_indicadores, instantaneos
 from . import populacao as pop
 from .externos import bairros_do_escopo
 from .models import ExecucaoFonteExterna, IndicadorTerritorialExterno
@@ -32,8 +33,8 @@ RESSALVA_INVENTARIO = (
     "pode indicar falta de cadastro, não falta de árvores."
 )
 AVISO_PROVISORIO = (
-    "Valor provisório: a fórmula oficial dos indicadores ainda depende de decisão da prefeitura "
-    "(DP-14). Não é índice oficial."
+    "Indicador complementar à regra 3-30-300 (metodologia descrita, DP-14 decidida em "
+    "21/11/2026). Provisório só pelo inventário parcial; não é índice oficial."
 )
 DEFINICAO_POR_MIL = (
     "Árvores cadastradas (ativas, com localização e origem conhecida) para cada 1.000 habitantes "
@@ -79,10 +80,11 @@ def quadro(
     usuario: Usuario | None = None, so_bairro: int | None = None, contagem: str = cont.TODAS
 ) -> list[dict]:
     """Uma linha por bairro (do escopo de ``usuario``; todos se ``None``) com população, densidade,
-    renda, IDH e árvores. Número fixo de consultas, qualquer que seja o volume de dados.
+    renda, IDH, árvores, indicadores imobiliários e a regra 3-30-300. Número fixo de consultas,
+    qualquer que seja o volume de dados.
 
     ``arvores`` é a contagem escolhida (``contagem``); ``arvores_total`` e ``arvores_confirmadas``
-    trazem as duas, e ``por_mil`` e ``hab_por_arvore`` seguem a escolhida."""
+    trazem as duas, e ``por_mil``, ``hab_por_arvore`` e o "3" da regra seguem a escolhida."""
     from itree.territorio.models import Territorio
 
     bairros = (
@@ -102,6 +104,7 @@ def quadro(
     if usuario is not None:
         validas = filtrar_por_escopo(validas, usuario)
     arvores = cont.por_grupo(validas.filter(bairro_id__in=list(nomes)), "bairro_id")
+    imoveis = imoveis_indicadores.colunas(list(nomes), contagem)
     linhas = []
     for pk, nome in sorted(nomes.items(), key=lambda x: x[1]):
         d = por_bairro[pk]
@@ -131,6 +134,18 @@ def quadro(
                 ),
                 "idh_renda": _numero(d[pop.IDH_RENDA][0]) if pop.IDH_RENDA in d else None,
                 "responsaveis": d[pop.RENDA][1] if pop.RENDA in d else None,
+                **{
+                    k: imoveis[pk].get(k)
+                    for k in (
+                        "iptu_medio",
+                        "iptu_inscricoes",
+                        "area_residencial",
+                        "area_comercial",
+                        "r3",
+                        "r30",
+                        "r300",
+                    )
+                },
             }
         )
     return linhas
@@ -224,6 +239,31 @@ CAMPOS_MAPA = {
     "arvores_por_mil": ("por_mil", POR_MIL, NOME_POR_MIL, "por 1.000 hab.", True),
     "renda": ("renda", pop.RENDA, pop.NOME_RENDA, "R$", False),
     "idh": ("idh", pop.IDH, pop.NOME_IDH, "IDH", False),
+    "iptu_medio": ("iptu_medio", sefin.IPTU_MEDIO, sefin.NOMES[sefin.IPTU_MEDIO], "R$", False),
+    "iptu_inscricoes": (
+        "iptu_inscricoes",
+        sefin.IPTU_INSCRICOES,
+        sefin.NOMES[sefin.IPTU_INSCRICOES],
+        "inscrições",
+        False,
+    ),
+    "area_residencial": (
+        "area_residencial",
+        sefin.AREA_RESIDENCIAL,
+        sefin.NOMES[sefin.AREA_RESIDENCIAL],
+        "m²",
+        False,
+    ),
+    "area_comercial": (
+        "area_comercial",
+        sefin.AREA_COMERCIAL,
+        sefin.NOMES[sefin.AREA_COMERCIAL],
+        "m²",
+        False,
+    ),
+    "regra_3": ("r3", "regra_3", imoveis_indicadores.NOMES_REGRA["regra_3"], "%", False),
+    "regra_30": ("r30", "regra_30", imoveis_indicadores.NOMES_REGRA["regra_30"], "%", False),
+    "regra_300": ("r300", "regra_300", imoveis_indicadores.NOMES_REGRA["regra_300"], "%", False),
 }
 
 
@@ -273,14 +313,29 @@ def geojson_populacao(usuario: Usuario, precisao: int = 5, contagem: str = cont.
                     "arvores_total": x["arvores_total"],
                     "arvores_confirmadas": x["arvores_confirmadas"],
                     "estimada": x["estimada"],
+                    **{
+                        k: x[k]
+                        for k in (
+                            "iptu_medio",
+                            "iptu_inscricoes",
+                            "area_residencial",
+                            "area_comercial",
+                            "r3",
+                            "r30",
+                            "r300",
+                        )
+                    },
                 },
             }
         )
     indicadores = []
     for id_, (chave, indicador, nome, unidade, provisorio) in CAMPOS_MAPA.items():
-        prov = (
-            proveniencia(indicador) if indicador != POR_MIL else proveniencia(pop.POPULACAO_CENSO)
-        )
+        if indicador.startswith("regra_"):
+            prov = imoveis_indicadores.proveniencia_regra(indicador[6:], contagem)
+        elif indicador == POR_MIL:
+            prov = proveniencia(pop.POPULACAO_CENSO)
+        else:
+            prov = proveniencia(indicador)
         indicadores.append(
             {
                 "id": id_,

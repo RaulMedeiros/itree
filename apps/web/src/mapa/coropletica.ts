@@ -101,8 +101,10 @@ export function registrarHachuraSemDado(m: {
 
 /**
  * Camada "População e renda por bairro" (grupo Contexto, desligada por padrão), com um seletor:
- * densidade populacional, árvores cadastradas por 1.000 habitantes (provisório, DP-14), rendimento
- * médio do responsável (Censo 2022) e IDH 2010.
+ * densidade populacional, árvores cadastradas por 1.000 habitantes (complementar à regra 3-30-300,
+ * com a ressalva do inventário), rendimento médio do responsável (Censo 2022), IDH 2010, os
+ * indicadores imobiliários da SEFIN (IPTU e áreas edificadas) e as três partes da regra 3-30-300.
+ * Todos usam a mesma rampa validada (um só matiz).
  *
  * As classes vêm da distribuição real: as quebras são quantis calculados pela API sobre todos os
  * bairros de Fortaleza (e não sobre o escopo, para o mesmo valor ter sempre a mesma cor). Valores
@@ -116,24 +118,105 @@ export const OPACIDADE_POPULACAO = 0.75;
 export const FONTE_POPULACAO = "populacao-bairros";
 export const CAMADAS_POPULACAO = ["populacao-preenchimento", "populacao-sem-dado"];
 
-export type IndicadorPopulacao = "densidade" | "arvores_por_mil" | "renda" | "idh";
+export type IndicadorPopulacao =
+  | "densidade"
+  | "arvores_por_mil"
+  | "renda"
+  | "idh"
+  | "iptu_medio"
+  | "iptu_inscricoes"
+  | "area_residencial"
+  | "area_comercial"
+  | "regra_3"
+  | "regra_30"
+  | "regra_300";
+
+/** Grupos do seletor da camada: população e renda, imóveis (SEFIN) e a regra 3-30-300. */
+export type GrupoIndicador = "Censo e IDH" | "Imóveis (SEFIN)" | "Regra 3-30-300";
 
 export const INDICADORES_POPULACAO: {
   id: IndicadorPopulacao;
   rotulo: string;
   unidade: string;
   provisorio: boolean;
+  grupo: GrupoIndicador;
 }[] = [
-  { id: "densidade", rotulo: "Densidade populacional", unidade: "hab/km²", provisorio: false },
+  {
+    id: "densidade",
+    rotulo: "Densidade populacional",
+    unidade: "hab/km²",
+    provisorio: false,
+    grupo: "Censo e IDH",
+  },
   {
     id: "arvores_por_mil",
     rotulo: "Árvores por 1.000 habitantes",
     unidade: "por 1.000 hab.",
     provisorio: true,
+    grupo: "Censo e IDH",
   },
-  { id: "renda", rotulo: "Rendimento médio do responsável", unidade: "R$", provisorio: false },
-  { id: "idh", rotulo: "IDH 2010", unidade: "IDH", provisorio: false },
+  {
+    id: "renda",
+    rotulo: "Rendimento médio do responsável",
+    unidade: "R$",
+    provisorio: false,
+    grupo: "Censo e IDH",
+  },
+  { id: "idh", rotulo: "IDH 2010", unidade: "IDH", provisorio: false, grupo: "Censo e IDH" },
+  {
+    id: "iptu_medio",
+    rotulo: "IPTU médio por inscrição (2024)",
+    unidade: "R$",
+    provisorio: false,
+    grupo: "Imóveis (SEFIN)",
+  },
+  {
+    id: "iptu_inscricoes",
+    rotulo: "Inscrições de IPTU (2024)",
+    unidade: "inscrições",
+    provisorio: false,
+    grupo: "Imóveis (SEFIN)",
+  },
+  {
+    id: "area_residencial",
+    rotulo: "Área edificada residencial (2021)",
+    unidade: "m²",
+    provisorio: false,
+    grupo: "Imóveis (SEFIN)",
+  },
+  {
+    id: "area_comercial",
+    rotulo: "Área edificada comercial (2021)",
+    unidade: "m²",
+    provisorio: false,
+    grupo: "Imóveis (SEFIN)",
+  },
+  {
+    id: "regra_3",
+    rotulo: "3: edificações com 3 árvores a até 30 m",
+    unidade: "%",
+    provisorio: false,
+    grupo: "Regra 3-30-300",
+  },
+  {
+    id: "regra_30",
+    rotulo: "30: cobertura vegetal",
+    unidade: "%",
+    provisorio: false,
+    grupo: "Regra 3-30-300",
+  },
+  {
+    id: "regra_300",
+    rotulo: "300: edificações a até 300 m de área verde",
+    unidade: "%",
+    provisorio: false,
+    grupo: "Regra 3-30-300",
+  },
 ];
+
+/** Método da regra 3-30-300, citado na legenda e no painel do bairro. */
+export const FONTE_REGRA_3_30_300 =
+  "Konijnendijk (2022), Journal of Forestry Research, 33, 1707-1717: regra 3-30-300.";
 
 export const ressalvaInventario =
   "Conta só as árvores cadastradas; enquanto o inventário não cobre o bairro, um valor baixo pode indicar falta de cadastro, não falta de árvores.";
@@ -193,5 +276,11 @@ export function formatarIndicadorPopulacao(id: IndicadorPopulacao, v: number): s
   if (id === "renda") return `R$ ${Math.round(v).toLocaleString("pt-BR")}`;
   if (id === "idh")
     return v.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  if (id === "iptu_medio") return `R$ ${Math.round(v).toLocaleString("pt-BR")}`;
+  if (id === "iptu_inscricoes") return `${Math.round(v).toLocaleString("pt-BR")} inscrições`;
+  if (id === "area_residencial" || id === "area_comercial")
+    return `${Math.round(v).toLocaleString("pt-BR")} m²`;
+  if (id === "regra_3" || id === "regra_30" || id === "regra_300")
+    return `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
   return `${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} por 1.000 hab.`;
 }

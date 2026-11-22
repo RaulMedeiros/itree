@@ -11,8 +11,10 @@ import {
   corPorQuebras,
   CORES_POPULACAO,
   formatarIndicadorPopulacao,
+  INDICADORES_POPULACAO,
   rotulosDasClasses,
 } from "./coropletica";
+import { PROPRIEDADE } from "./populacao";
 
 describe("classes da arborização do entorno", () => {
   it("usa quebras fixas, com o limite inferior em cada classe", () => {
@@ -97,5 +99,32 @@ describe("classes por quantis (população e renda)", () => {
     expect(formatarIndicadorPopulacao("densidade", 10987.01)).toBe("10.987 hab/km²");
     expect(formatarIndicadorPopulacao("idh", 0.8666)).toBe("0,867");
     expect(formatarIndicadorPopulacao("arvores_por_mil", 0.094)).toBe("0,09 por 1.000 hab.");
+  });
+});
+
+describe("indicadores imobiliários e regra 3-30-300 no seletor", () => {
+  it("formata IPTU, áreas e as três partes da regra", () => {
+    expect(formatarIndicadorPopulacao("iptu_medio", 4144.91)).toBe("R$ 4.145");
+    expect(formatarIndicadorPopulacao("iptu_inscricoes", 4735)).toBe("4.735 inscrições");
+    expect(formatarIndicadorPopulacao("area_residencial", 168224.9)).toBe("168.225 m²");
+    expect(formatarIndicadorPopulacao("regra_3", 12.54)).toBe("12,5%");
+    expect(formatarIndicadorPopulacao("regra_30", 30)).toBe("30%");
+    expect(formatarIndicadorPopulacao("regra_300", 69.1)).toBe("69,1%");
+  });
+
+  it("agrupa o seletor e nenhuma parte da regra é provisória", () => {
+    const grupos = new Set(INDICADORES_POPULACAO.map((i) => i.grupo));
+    expect([...grupos]).toEqual(["Censo e IDH", "Imóveis (SEFIN)", "Regra 3-30-300"]);
+    const regra = INDICADORES_POPULACAO.filter((i) => i.id.startsWith("regra_"));
+    expect(regra.map((i) => i.id)).toEqual(["regra_3", "regra_30", "regra_300"]);
+    expect(regra.every((i) => !i.provisorio && i.unidade === "%")).toBe(true);
+  });
+
+  it("a propriedade de cada parte aponta para o campo do bairro", () => {
+    expect([PROPRIEDADE.regra_3, PROPRIEDADE.regra_30, PROPRIEDADE.regra_300]).toEqual([
+      "r3",
+      "r30",
+      "r300",
+    ]);
   });
 });

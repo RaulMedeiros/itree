@@ -82,6 +82,47 @@ class IndicadorTerritorialExterno(models.Model):
         return f"{self.indicador} ({self.territorio_id})"
 
 
+class ResultadoRegra330300(models.Model):
+    """Regra 3-30-300 de um bairro, calculada pelo comando ``calcular_3_30_300`` (nunca na
+    requisição) e gravada por bairro, data e tipo de contagem de árvores.
+
+    Cada parte guarda numerador e denominador (para somar bairros sem perder a proporção) e fica
+    vazia, nunca zero, quando falta a fonte. O método e as aproximações estão em
+    ``docs/indicadores/3-30-300.md`` e em ``regra_3_30_300.METODO``.
+    """
+
+    bairro = models.ForeignKey(
+        Territorio, on_delete=models.CASCADE, related_name="resultados_3_30_300"
+    )
+    data = models.DateField(help_text="Dia do cálculo.")
+    contagem = models.CharField(max_length=20, help_text='"todas" ou "confirmadas" (árvores).')
+    base_edificacoes = models.CharField(
+        max_length=20, help_text='"residenciais" ou "todas" (sem classificação por uso).'
+    )
+    edificacoes = models.PositiveIntegerField(help_text="Edificações da base no bairro.")
+    # "3": com 3 árvores ou mais a até 30 m.
+    com_3_arvores = models.PositiveIntegerField(null=True, blank=True)
+    # "30": pixels com vegetação (NDVI >= limiar) e pixels do bairro com medição.
+    pixels_vegetacao = models.PositiveIntegerField(null=True, blank=True)
+    pixels_medidos = models.PositiveIntegerField(null=True, blank=True)
+    # "300": edificações a até 300 m de área verde pública de 0,5 ha ou mais.
+    perto_de_area_verde = models.PositiveIntegerField(null=True, blank=True)
+    calculado_em = models.DateTimeField()
+    metadados = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-data", "bairro__nome"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["bairro", "data", "contagem"], name="resultado_3_30_300_unico"
+            )
+        ]
+        indexes = [models.Index(fields=["contagem", "-data"], name="res_3_30_300_contagem_idx")]
+
+    def __str__(self) -> str:
+        return f"3-30-300 {self.bairro_id} {self.data} ({self.contagem})"
+
+
 class ExecucaoFonteExterna(models.Model):
     """Cada execução da importação ou da conferência mensal de uma fonte externa de bairros
     (população, renda, IDH). Alimenta "Fontes dos dados" e o aviso de fonte desatualizada."""

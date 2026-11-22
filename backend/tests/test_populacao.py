@@ -513,7 +513,19 @@ def test_geojson_traz_indicadores_quebras_proveniencia_e_provisorio(cliente, dad
     gestor = com_escopo(criar_usuario("g@itree.teste", ["gestor"]), dados["municipio"])
     corpo = autorizado(cliente, gestor).get("/api/v1/indicadores/externos/populacao").json()
     por_id = {i["id"]: i for i in corpo["indicadores"]}
-    assert set(por_id) == {"densidade", "arvores_por_mil", "renda", "idh"}
+    assert set(por_id) == {
+        "densidade",
+        "arvores_por_mil",
+        "renda",
+        "idh",
+        "iptu_medio",
+        "iptu_inscricoes",
+        "area_residencial",
+        "area_comercial",
+        "regra_3",
+        "regra_30",
+        "regra_300",
+    }
     assert (
         por_id["arvores_por_mil"]["provisorio"]
         and "falta de cadastro" in por_id["arvores_por_mil"]["ressalva"]

@@ -13,6 +13,7 @@ from itree.core.views import OperacaoEmLoteViewSet, saude
 from itree.deteccao import views as deteccao
 from itree.evidencias.views import EvidenciaViewSet
 from itree.iluminacao import views as iluminacao
+from itree.imoveis.views import zona as macrozoneamento_zona
 from itree.indicadores.implantacao import primeiros_passos
 from itree.indicadores.views import (
     arborizacao_entorno_geojson,
@@ -85,6 +86,7 @@ api_v1 = [
         name="indicadores-populacao",
     ),
     path("planejamento/criterios", planejamento_criterios, name="planejamento-criterios"),
+    path("macrozoneamento/zona", macrozoneamento_zona, name="macrozoneamento-zona"),
     path(
         "iluminacao/arvores-proximas",
         iluminacao.ArvoresProximasView.as_view(),

@@ -4,7 +4,9 @@ Devolve, para cada bairro, o **valor bruto** de cada critério e o **percentil d
 os bairros de Fortaleza (0 a 1, na direção certa: 1 é o bairro que mais pede plantio naquele
 critério). A ponderação dos critérios acontece no navegador, para os controles responderem na hora.
 
-Não é índice oficial: a fórmula oficial dos indicadores depende de decisão da prefeitura (DP-14).
+Não é índice oficial: é um cenário de priorização. O método dos indicadores é a regra 3-30-300
+(DP-14, decidida em 21/11/2026), que entra aqui como três critérios (cobertura vegetal, residentes
+com 3 árvores a até 30 m e residentes a até 300 m de área verde).
 O percentil usa a posição entre **todos** os bairros com dado (não só os do escopo de quem
 consulta),
 para o mesmo valor ter sempre o mesmo percentil; o escopo só limita os bairros devolvidos.
@@ -23,9 +25,10 @@ from itree.contas.models import Usuario
 from itree.territorio.models import Territorio
 
 from . import contagem as cont
-from . import ilha_calor
+from . import ilha_calor, imoveis_indicadores
 from . import populacao as pop
 from . import populacao_indicadores as pi
+from . import regra_3_30_300 as regra
 from .externos import ARBORIZACAO_FACES, NOME_ARBORIZACAO, bairros_do_escopo
 from .models import IndicadorTerritorialExterno
 
@@ -38,11 +41,18 @@ RENDA = "renda"
 ARVORES_POR_MIL = "arvores_por_mil"
 AREA_VERDE = "area_verde"
 CALOR = "ilha_calor"
+COBERTURA_VEGETAL = "cobertura_vegetal"
+POUCOS_COM_3_ARVORES = "residentes_com_3_arvores"
+LONGE_DE_AREA_VERDE = "perto_de_area_verde"
 
 MOTIVO_SEM_CALOR = "Aguardando autorização de uso dos dados do UrbVerde."
+MOTIVO_SEM_VEGETACAO = (
+    "Sem NDVI de 10 m para Fortaleza (a UrbVerde não o serve para a cidade): importe um GeoTIFF "
+    "com importar_cobertura_vegetal."
+)
 AVISO = (
-    "Cenário de priorização, não índice oficial: a fórmula oficial dos indicadores depende de "
-    "decisão da prefeitura (DP-14)."
+    "Cenário de priorização, não índice oficial. Metodologia 3-30-300 descrita (DP-14, decidida em "
+    "21/11/2026); os pesos dos critérios são escolha de quem usa a ferramenta."
 )
 METODO_PERCENTIL = (
     "Posição do bairro entre os bairros de Fortaleza com dado, de 0 a 1 (empates dividem a "
@@ -159,7 +169,22 @@ def criterios_por_bairro(usuario: Usuario, contagem: str = cont.TODAS) -> dict:
         ARVORES_POR_MIL: coluna("por_mil"),
         AREA_VERDE: area_por_hab,
         CALOR: {pk: calor.get(pk) for pk in nomes},
+        COBERTURA_VEGETAL: coluna("r30"),
+        POUCOS_COM_3_ARVORES: coluna("r3"),
+        LONGE_DE_AREA_VERDE: coluna("r300"),
     }
+    prov_regra = {
+        parte: imoveis_indicadores.proveniencia_regra(parte) for parte in ("3", "30", "300")
+    }
+
+    def fonte_regra(parte: str) -> dict:
+        prov = prov_regra[parte] or {}
+        return {
+            "fonte": prov.get("fonte") or "Regra 3-30-300 (Konijnendijk), cálculo do iTree",
+            "fonte_url": prov.get("fonte_url") or "",
+            "licenca": prov.get("licenca") or "",
+            "ano": _ano(prov.get("data_referencia")),
+        }
 
     modelo_arb = IndicadorTerritorialExterno.objects.filter(indicador=ARBORIZACAO_FACES).first()
     prov_censo = _fonte_externa(pi.proveniencia(pop.POPULACAO_CENSO), pop.ORGAO_IBGE)
@@ -266,6 +291,42 @@ def criterios_por_bairro(usuario: Usuario, contagem: str = cont.TODAS) -> dict:
             },
             ilha_calor.DEFINICAO,
         ),
+        (
+            COBERTURA_VEGETAL,
+            "Pouca cobertura vegetal",
+            "% da área",
+            BAIXO,
+            'Quanto menor a cobertura vegetal do bairro (NDVI de 10 m), maior a prioridade ("30" '
+            "da regra 3-30-300). É vegetação, não só copa de árvore.",
+            "",
+            False,
+            fonte_regra("30"),
+            regra.PARTES["30"]["descricao"],
+        ),
+        (
+            POUCOS_COM_3_ARVORES,
+            "Poucos residentes com 3 árvores a até 30 m",
+            "% das edificações",
+            BAIXO,
+            "Quanto menor o percentual de edificações com 3 árvores do inventário a até 30 m, "
+            'maior a prioridade ("3" da regra 3-30-300).',
+            regra.RESSALVA_INVENTARIO,
+            True,
+            fonte_regra("3"),
+            regra.PARTES["3"]["descricao"],
+        ),
+        (
+            LONGE_DE_AREA_VERDE,
+            "Longe de área verde",
+            "% das edificações a até 300 m",
+            BAIXO,
+            "Quanto menor o percentual de edificações a até 300 m de uma área verde pública de "
+            '0,5 ha ou mais, maior a prioridade ("300" da regra 3-30-300).',
+            "",
+            False,
+            fonte_regra("300"),
+            regra.PARTES["300"]["descricao"],
+        ),
     ]
     metodos = {
         ARBORIZACAO: "Percentual de faces de quadra com ao menos uma árvore, por bairro.",
@@ -274,6 +335,9 @@ def criterios_por_bairro(usuario: Usuario, contagem: str = cont.TODAS) -> dict:
         ARVORES_POR_MIL: pi.METODO_POR_MIL,
         AREA_VERDE: METODO_AREA_VERDE,
         CALOR: ilha_calor.METODO,
+        COBERTURA_VEGETAL: regra.METODO,
+        POUCOS_COM_3_ARVORES: regra.METODO,
+        LONGE_DE_AREA_VERDE: regra.METODO,
     }
 
     todos_percentis = {}
@@ -295,6 +359,10 @@ def criterios_por_bairro(usuario: Usuario, contagem: str = cont.TODAS) -> dict:
                     if disponivel
                     else MOTIVO_SEM_CALOR
                     if id_ == CALOR
+                    else MOTIVO_SEM_VEGETACAO
+                    if id_ == COBERTURA_VEGETAL
+                    else "Regra 3-30-300 ainda não calculada."
+                    if id_ in (POUCOS_COM_3_ARVORES, LONGE_DE_AREA_VERDE)
                     else "Sem dado importado."
                 ),
                 "ressalva": ressalva,

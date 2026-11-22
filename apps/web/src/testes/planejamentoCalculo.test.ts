@@ -12,6 +12,8 @@ import {
   pesosDaBusca,
   pontuar,
   type Pesos,
+  IDS_CRITERIOS,
+  CHAVE_NA_URL,
 } from "../paginas/planejamento/calculo";
 import { bairrosDeTeste, criteriosDeTeste } from "./planejamentoDados";
 
@@ -26,6 +28,9 @@ const zerar = (extra: Partial<Pesos>): Pesos => ({
   arvores_por_mil: 0,
   area_verde: 0,
   ilha_calor: 0,
+  cobertura_vegetal: 0,
+  residentes_com_3_arvores: 0,
+  perto_de_area_verde: 0,
   ...extra,
 });
 const nomes = (ls: ReturnType<typeof ordenar>) => ls.map((l) => l.nome);
@@ -151,7 +156,7 @@ describe("exportação", () => {
     const pesos = zerar({ renda: 5, densidade: 2 });
     const ordenadas = ordenar(pontuar(bairros, semCalor, pesos));
     const csv = csvDoCenario(ordenadas, bairros, semCalor, pesos, "21/11/2026 12:00");
-    expect(csv).toContain("não é índice oficial (DP-14)");
+    expect(csv).toContain("não é índice oficial; metodologia 3-30-300");
     expect(csv).toContain("Renda 5");
     expect(csv).toContain("Ilha de calor 0 (indisponível)");
     expect(csv).toContain("IBGE, Censo Demográfico 2022 (renda), 2022");
@@ -172,5 +177,16 @@ describe("formato dos valores", () => {
     expect(formatarValor("area_verde", 12.34)).toBe("12,3 m²/hab.");
     expect(formatarValor("ilha_calor", 3.2)).toBe("+3,2 °C");
     expect(formatarValor("renda", null)).toBe("Sem dado");
+  });
+});
+
+describe("critérios da regra 3-30-300 no Onde plantar", () => {
+  it("existem com chave própria na URL e pesos iguais por padrão", () => {
+    for (const id of ["cobertura_vegetal", "residentes_com_3_arvores", "perto_de_area_verde"]) {
+      expect(IDS_CRITERIOS).toContain(id);
+      expect(igual[id as keyof typeof igual]).toBe(3);
+    }
+    expect(CHAVE_NA_URL.cobertura_vegetal).toBe("vegetacao");
+    expect(pesosDaBusca({ tres: 5 }).residentes_com_3_arvores).toBe(5);
   });
 });

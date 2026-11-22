@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "itree.territorio",
     "itree.areas_verdes",
     "itree.iluminacao",
+    "itree.imoveis",
     "itree.contas",
     "itree.auditoria",
     "itree.inventario",
@@ -318,6 +319,14 @@ ILUMINACAO_RAIO_CONFLITO_M = env.float("ILUMINACAO_RAIO_CONFLITO_M", default=3.0
 # não grava nada e não depende disso.
 URBVERDE_GRAVAR_VALORES = env.bool("URBVERDE_GRAVAR_VALORES", default=False)
 URBVERDE_TIMEOUT = env.int("URBVERDE_TIMEOUT", default=180)
+# Regra 3-30-300 (Konijnendijk, 2021). Limiar de NDVI que conta como vegetação no "30"; cobertura do
+# WCS da UrbVerde com o NDVI (hoje o servidor não serve Fortaleza: veja
+# itree.indicadores.vegetacao); e o percentual de residências que um bairro precisa ter em "3" e
+# "300" para "atender" (a regra vale
+# para cada casa, por isso 100).
+VEGETACAO_LIMIAR_NDVI = env.float("VEGETACAO_LIMIAR_NDVI", default=0.4)
+VEGETACAO_COBERTURA_WCS = env.str("VEGETACAO_COBERTURA_WCS", default="urbverde__NDVI-10m-2021")
+REGRA_3_30_300_META_RESIDENCIAS_PCT = env.float("REGRA_3_30_300_META_RESIDENCIAS_PCT", default=100)
 # Conectores de fontes externas (RF-INT-006): o servidor só busca hosts desta lista, por HTTPS.
 ITREE_CONECTORES_HOSTS_PERMITIDOS = env.list(
     "ITREE_CONECTORES_HOSTS_PERMITIDOS",
@@ -376,6 +385,16 @@ CELERY_BEAT_SCHEDULE = {
     "reimportar-iluminacao-publica": {
         "task": "itree.iluminacao.tasks.reimportar_iluminacao_publica",
         "schedule": crontab(minute=0, hour=4, day_of_month=3),
+    },
+    # Regra 3-30-300 por bairro: recalculada todo mês (cálculo pesado, nunca na requisição).
+    "calcular-3-30-300": {
+        "task": "itree.indicadores.tasks.calcular_3_30_300",
+        "schedule": crontab(minute=20, hour=6, day_of_month=7),
+    },
+    # Dados imobiliários por bairro (IPTU, áreas edificadas) e macrozoneamento: mensal.
+    "reimportar-dados-imobiliarios": {
+        "task": "itree.imoveis.tasks.reimportar_dados_imobiliarios",
+        "schedule": crontab(minute=40, hour=4, day_of_month=4),
     },
     # Ilha de calor por bairro (UrbVerde): anual, e só grava com URBVERDE_GRAVAR_VALORES.
     "reimportar-ilha-calor": {

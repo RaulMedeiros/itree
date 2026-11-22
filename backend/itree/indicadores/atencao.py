@@ -1,6 +1,6 @@
 """Bairros que pedem atenção (G-02): ranking dos bairros do escopo por um índice
-simples, com cada componente à vista. Critério provisório, até a DP-14 definir
-os indicadores oficiais."""
+simples, com cada componente à vista. Critério próprio de atenção operacional (não é a regra
+3-30-300, que mede a arborização e não os problemas a atender)."""
 
 from datetime import date, datetime, timedelta
 
@@ -32,7 +32,8 @@ DEFINICAO = (
     "ocorrências abertas com risco confirmado, ocorrências abertas com prazo vencido, "
     "árvores válidas com condição aparente ruim ou aparentemente morta e árvores válidas "
     "sem inspeção validada nos últimos 12 meses (inclui as nunca inspecionadas). "
-    "Bairros com índice zero não aparecem. Critério provisório, em definição pela prefeitura; "
+    "Bairros com índice zero não aparecem. Critério de atenção operacional, distinto da regra "
+    "3-30-300; "
     "a ordem não indica culpa nem irregularidade."
 )
 

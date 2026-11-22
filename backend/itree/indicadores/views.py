@@ -39,7 +39,7 @@ from itree.territorio.models import Territorio
 FONTE_INTERNA = "Registros da plataforma"
 DEFINICAO_VALIDA = (
     "ativa, com localização e origem da localização conhecida "
-    "(critério provisório, em definição pela prefeitura)"
+    "(critério provisório do inventário; o método dos indicadores é a regra 3-30-300)"
 )
 
 

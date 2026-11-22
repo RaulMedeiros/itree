@@ -310,6 +310,34 @@ async function tela(p, nome, caminho, { esperar, acao, espera = 1200, inteira = 
       inteira: true,
     },
   );
+  // Regra 3-30-300 e imóveis (Open Buildings, uso do solo e macrozoneamento): a ficha do bairro com
+  // o bloco 3-30-300, o mapa de edificações no zoom 16 em Aldeota, a coroplética da parte 300 e o
+  // ranking da regra em Análises. A parte "3" usa só árvores SINTÉTICAS da semeadura, e o "30" fica
+  // sem dado enquanto o NDVI de Fortaleza não estiver disponível.
+  await tela(p, "58-ficha-bairro-3-30-300", `/bairros/${ids.bairro_demo_id}`, {
+    esperar: /Árvores contadas/,
+    espera: 3000,
+    inteira: true,
+  });
+  await tela(
+    p,
+    "59-mapa-edificacoes",
+    `/mapa?lon=${-38.4955}&lat=${-3.7375}&zoom=16&edificacoes=1&uso_lote=1`,
+    { esperar: /Edificações/, espera: 7000 },
+  );
+  await tela(
+    p,
+    "60-mapa-3-30-300",
+    `/mapa?lon=${-38.52}&lat=${-3.77}&zoom=11.5&populacao=regra_300`,
+    {
+      esperar: "Legenda",
+      espera: 5000,
+    },
+  );
+  await tela(p, "61-analises-3-30-300", "/analises?analise=regra_300_por_bairro", {
+    esperar: /Konijnendijk/,
+    espera: 3000,
+  });
   // Linha do tempo: uma data passada (9 meses atrás), quando havia menos árvores cadastradas e
   // outras condições; a semeadura espalha as datas de cadastro em ~18 meses (SINTÉTICO).
   const mesPassado = (() => {

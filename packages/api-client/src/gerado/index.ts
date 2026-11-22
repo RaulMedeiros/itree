@@ -16,6 +16,7 @@ export * from './indicadores/indicadores';
 export * from './inferencias/inferencias';
 export * from './inspecoes/inspecoes';
 export * from './integracoes/integracoes';
+export * from './macrozoneamento/macrozoneamento';
 export * from './mapa/mapa';
 export * from './modelos-importacao/modelos-importacao';
 export * from './notificacoes/notificacoes';

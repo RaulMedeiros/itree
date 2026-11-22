@@ -122,7 +122,7 @@ function Lotes() {
           <Th cartao="oculta">Captura</Th>
           <Th>Situação</Th>
           <Th dica="Árvores novas criadas pelo lote">Criadas</Th>
-          <Th dica="Observações juntadas a árvores que já existiam">Juntadas</Th>
+          <Th dica="Árvores que já existiam e receberam observações">Árvores atualizadas</Th>
           <Th>Recusadas</Th>
           <Th dica="Árvores conhecidas na área coberta que o lote não viu">Possíveis remoções</Th>
           <Th cartao="oculta">Enviado por</Th>

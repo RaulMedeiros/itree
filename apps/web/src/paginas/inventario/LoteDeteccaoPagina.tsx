@@ -93,9 +93,9 @@ function Detalhe({ lote }: { lote: LoteDeteccaoDetalhe }) {
           dica="Árvores novas, não confirmadas, criadas pelo lote"
         />
         <Numero
-          rotulo="Juntadas"
+          rotulo="Árvores atualizadas"
           valor={lote.arvores_juntadas}
-          dica="Árvores que já existiam e receberam observações"
+          dica="Árvores que já existiam e receberam observações (várias detecções podem cair na mesma árvore)"
         />
         <Numero rotulo="Recusadas" valor={lote.recusadas} dica="Detecções que não passaram" />
         <Numero

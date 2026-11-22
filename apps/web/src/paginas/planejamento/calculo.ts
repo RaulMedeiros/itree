@@ -5,7 +5,7 @@
  * na direção certa). Aqui o cenário só pondera: a pontuação do bairro é a média ponderada dos
  * percentis dos critérios ativos (peso maior que zero, critério disponível) em que ele tem dado.
  * Critério sem dado no bairro é ignorado na média e marcado na linha, nunca tratado como zero.
- * Cenário de priorização, não índice oficial (DP-14).
+ * Cenário de priorização, não índice oficial; metodologia 3-30-300.
  */
 import type { BairroPlanejamento, CriterioPlanejamento } from "@itree/api-client";
 
@@ -18,6 +18,9 @@ export const IDS_CRITERIOS = [
   "arvores_por_mil",
   "area_verde",
   "ilha_calor",
+  "cobertura_vegetal",
+  "residentes_com_3_arvores",
+  "perto_de_area_verde",
 ] as const;
 export type CriterioId = (typeof IDS_CRITERIOS)[number];
 export type Pesos = Record<CriterioId, number>;
@@ -35,6 +38,9 @@ export const CHAVE_NA_URL: Record<CriterioId, string> = {
   arvores_por_mil: "arvores",
   area_verde: "verde",
   ilha_calor: "calor",
+  cobertura_vegetal: "vegetacao",
+  residentes_com_3_arvores: "tres",
+  perto_de_area_verde: "verde300",
 };
 
 export type BuscaPesos = Partial<Record<string, number>>;
@@ -47,6 +53,9 @@ export const COR_CRITERIO: Record<CriterioId, string> = {
   arvores_por_mil: "#8a5a00",
   area_verde: "#19766f",
   ilha_calor: "#b3261e",
+  cobertura_vegetal: "#3b7d23",
+  residentes_com_3_arvores: "#7a4b2a",
+  perto_de_area_verde: "#2a6f97",
 };
 
 export const ROTULO_CURTO: Record<CriterioId, string> = {
@@ -56,6 +65,9 @@ export const ROTULO_CURTO: Record<CriterioId, string> = {
   arvores_por_mil: "Árvores por 1.000 hab.",
   area_verde: "Área verde por hab.",
   ilha_calor: "Ilha de calor",
+  cobertura_vegetal: "Cobertura vegetal",
+  residentes_com_3_arvores: "Residentes com 3 árvores",
+  perto_de_area_verde: "Perto de área verde",
 };
 
 export interface Cenario {
@@ -72,6 +84,9 @@ const todos = (peso: number): Pesos => ({
   arvores_por_mil: peso,
   area_verde: peso,
   ilha_calor: peso,
+  cobertura_vegetal: peso,
+  residentes_com_3_arvores: peso,
+  perto_de_area_verde: peso,
 });
 
 export const CENARIOS: Cenario[] = [
@@ -244,6 +259,10 @@ export function formatarValor(id: CriterioId, v: number | null | undefined): str
       return `${num(v, 1)} m²/hab.`;
     case "ilha_calor":
       return `${v > 0 ? "+" : ""}${num(v, 1)} °C`;
+    case "cobertura_vegetal":
+    case "residentes_com_3_arvores":
+    case "perto_de_area_verde":
+      return `${num(v, 1)}%`;
   }
 }
 
@@ -296,7 +315,8 @@ export function csvDoCenario(
     return `${ROTULO_CURTO[id]} ${pesos[id]}${estado}`;
   }).join("; ");
   return gerarCsv(colunas, linhas, {
-    titulo: "Cenário de priorização para plantio (Onde plantar), não é índice oficial (DP-14)",
+    titulo:
+      "Cenário de priorização para plantio (Onde plantar), não é índice oficial; metodologia 3-30-300",
     fonte: criterios
       .filter((c) => ativos.includes(c.id as CriterioId))
       .map((c) => `${ROTULO_CURTO[c.id as CriterioId]}: ${fonteDoCriterio(c)}`)

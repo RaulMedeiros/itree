@@ -101,6 +101,7 @@ class Medida:
     soma: float = 0.0
     validos: int = 0
     total: int = 0
+    acima: int = 0  # pixels medidos com valor >= limiar (só quando ``medir`` recebe um limiar)
 
     @property
     def media(self) -> float | None:
@@ -151,10 +152,14 @@ def _arestas(geom: GEOSGeometry):
                     yield xa, ya, xb, yb
 
 
-def medir(geom: GEOSGeometry, grade: Grade) -> Medida:
+def medir(
+    geom: GEOSGeometry, grade: Grade, *, valido=_valido, limiar: float | None = None
+) -> Medida:
     """Pixels cujo centro cai dentro de ``geom`` (regra par-ímpar, que respeita os buracos),
     por varredura de linhas: para cada linha da grade, os cruzamentos das arestas com o centro
-    da linha dão os trechos de dentro."""
+    da linha dão os trechos de dentro. ``valido`` diz quais valores contam como medição; com
+    ``limiar``, ``Medida.acima`` conta os medidos com valor de ``limiar`` para cima (usado pela
+    cobertura vegetal, ``vegetacao.py``)."""
     ny = -grade.dy
     por_linha: dict[int, list[float]] = {}
     for xa, ya, xb, yb in _arestas(geom):
@@ -176,9 +181,11 @@ def medir(geom: GEOSGeometry, grade: Grade) -> Medida:
                 continue
             trecho = linha[i_ini : i_fim + 1]
             medida.total += len(trecho)
-            medidos = [v for v in trecho if _valido(v)]
+            medidos = [v for v in trecho if valido(v)]
             medida.validos += len(medidos)
             medida.soma += sum(medidos)
+            if limiar is not None:
+                medida.acima += sum(1 for v in medidos if v >= limiar)
     return medida
 
 
@@ -200,7 +207,9 @@ def caixa_dos_bairros() -> tuple[float, float, float, float] | None:
     )
 
 
-def baixar(caixa: tuple[float, float, float, float], url: str = URL_WCS) -> bytes:
+def baixar(
+    caixa: tuple[float, float, float, float], url: str = URL_WCS, cobertura: str = COBERTURA
+) -> bytes:
     """Recorte do raster pelo WCS 2.0.1 do GeoServer da UrbVerde (GeoTIFF)."""
     oeste, sul, leste, norte = caixa
     resposta = requests.get(
@@ -209,7 +218,7 @@ def baixar(caixa: tuple[float, float, float, float], url: str = URL_WCS) -> byte
             ("service", "WCS"),
             ("version", "2.0.1"),
             ("request", "GetCoverage"),
-            ("coverageId", COBERTURA),
+            ("coverageId", cobertura),
             ("format", "image/tiff"),
             ("subset", f"Long({oeste:.5f},{leste:.5f})"),
             ("subset", f"Lat({sul:.5f},{norte:.5f})"),

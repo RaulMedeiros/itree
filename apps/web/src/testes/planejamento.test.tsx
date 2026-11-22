@@ -122,7 +122,9 @@ const mudarPeso = (nome: RegExp | string, valor: number) =>
 describe("página Onde plantar", () => {
   it("avisa que é cenário, não índice oficial, e lista as fontes com o ano", async () => {
     await abrir();
-    expect(screen.getByText("Cenário de priorização — não é índice oficial (DP-14)")).toBeVisible();
+    expect(
+      screen.getByText("Cenário de priorização — não é índice oficial; metodologia 3-30-300"),
+    ).toBeVisible();
     const fontes = screen.getByRole("region", { name: "Fontes dos critérios" });
     expect(within(fontes).getByText(/IBGE, Censo Demográfico 2022 \(renda\), 2022/)).toBeVisible();
     expect(within(fontes).getByText(/Fortaleza em Mapas \(Ipplan\), 2019/)).toBeVisible();
@@ -302,7 +304,7 @@ describe("página Onde plantar", () => {
     await usuario.click(screen.getByRole("button", { name: "Exportar CSV" }));
     expect(blob).not.toBeNull();
     const texto = await lerBlob(blob!);
-    expect(texto).toContain("não é índice oficial (DP-14)");
+    expect(texto).toContain("não é índice oficial; metodologia 3-30-300");
     expect(texto).toContain("Renda 5");
     expect(texto).toContain("IBGE, Censo Demográfico 2022 (renda), 2022");
     expect(texto).toMatch(/\r\n1;Pobre;/);
