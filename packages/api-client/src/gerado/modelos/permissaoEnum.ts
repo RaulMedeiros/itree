@@ -25,6 +25,9 @@
  * * `tarefas.editar` - Criar e atribuir tarefas
  * * `relatorios.ler` - Ver análises e relatórios
  * * `relatorios.exportar` - Exportar dados
+ * * `deteccao.ler` - Ver lotes de detecção e possíveis remoções
+ * * `deteccao.enviar` - Enviar lotes e pacotes de detecção
+ * * `deteccao.revisar` - Confirmar árvores detectadas e revisar remoções
  * * `admin.usuarios` - Administrar usuários e papéis
  * * `admin.equipes` - Administrar equipes
  * * `admin.auditoria` - Consultar auditoria
@@ -53,6 +56,9 @@ export const PermissaoEnum = {
   tarefaseditar: 'tarefas.editar',
   relatoriosler: 'relatorios.ler',
   relatoriosexportar: 'relatorios.exportar',
+  deteccaoler: 'deteccao.ler',
+  deteccaoenviar: 'deteccao.enviar',
+  deteccaorevisar: 'deteccao.revisar',
   adminusuarios: 'admin.usuarios',
   adminequipes: 'admin.equipes',
   adminauditoria: 'admin.auditoria',

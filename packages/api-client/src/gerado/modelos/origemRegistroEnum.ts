@@ -10,6 +10,8 @@
  * * `web` - Painel web
  * * `app` - Aplicativo
  * * `importacao` - Importação
+ * * `deteccao_satelite` - Detecção via satélite
+ * * `deteccao_video` - Detecção via vídeo de rua
  */
 export type OrigemRegistroEnum = typeof OrigemRegistroEnum[keyof typeof OrigemRegistroEnum];
 
@@ -18,4 +20,6 @@ export const OrigemRegistroEnum = {
   web: 'web',
   app: 'app',
   importacao: 'importacao',
+  deteccao_satelite: 'deteccao_satelite',
+  deteccao_video: 'deteccao_video',
 } as const;

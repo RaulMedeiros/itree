@@ -5,8 +5,11 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { IndicadoresPopulacaoGeojsonContagem } from './indicadoresPopulacaoGeojsonContagem';
 
 export type IndicadoresPopulacaoGeojsonParams = {
+  /** Quais árvores entram nas contagens: `todas` (padrão, inclui as detectadas automaticamente e ainda sem revisão) ou `confirmadas` (só as confirmadas por inspeção ou revisão humana). A resposta traz as duas contagens quando se aplica. */
+  contagem?: IndicadoresPopulacaoGeojsonContagem;
   /** Casas decimais (padrão 5). */
   precisao?: number;
 };

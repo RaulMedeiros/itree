@@ -45,6 +45,22 @@ export interface Arvore {
   readonly situacao: SituacaoArvoreEnum;
   readonly valida: boolean;
   readonly origem_registro: OrigemRegistroEnum;
+  /** Sensor da detecção que originou o registro: "satelite", "video_rua" ou vazio. */
+  readonly deteccao: string;
+  /** Falso só para árvore detectada automaticamente e ainda sem revisão humana. */
+  readonly confirmada: boolean;
+  /**
+     * Confiança da detecção (0 a 1); vazia fora das detectadas.
+     * @nullable
+     */
+  readonly confianca: number | null;
+  /** Selo de confiança da detecção: "baixa", "media" ou "alta" (vazio se não houver confiança). */
+  readonly faixa_confianca: string;
+  /**
+     * Data da captura mais recente em que uma detecção automática viu a árvore.
+     * @nullable
+     */
+  readonly ultima_vez_vista_em: string | null;
   readonly ocorrencias_abertas: number;
   readonly condicao_aparente: string;
   /** @nullable */
@@ -68,4 +84,6 @@ export interface Arvore {
   readonly lote: ArvoreLote;
   readonly criado_por_nome: string;
   observacoes?: string;
+  /** @nullable */
+  confirmada_em?: string | null;
 }

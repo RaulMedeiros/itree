@@ -25,6 +25,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AcaoComMotivoOpcionalRequest,
   AcaoComMotivoRequest,
   Arvore,
   ArvoreRequest,
@@ -38,6 +39,7 @@ import type {
   LinhaDoTempo,
   Medida,
   MedidaRequest,
+  Observacao,
   PaginatedArvoreResumoList,
   ParDuplicidade,
   ParRevisadoRequest,
@@ -483,6 +485,103 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getArvoresAtualizarMutationOptions(options), queryClient);
+    }
+    export type arvoresConfirmarResponse200 = {
+  data: Arvore
+  status: 200
+}
+
+export type arvoresConfirmarResponseSuccess = (arvoresConfirmarResponse200) & {
+  headers: Headers;
+};
+;
+
+export type arvoresConfirmarResponse = (arvoresConfirmarResponseSuccess)
+
+export const getArvoresConfirmarUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/arvores/${id}/confirmar`
+}
+
+/**
+ * Promove a árvore detectada automaticamente a "confirmada" (revisão humana).
+ */
+export const arvoresConfirmar = async (id: string,
+    acaoComMotivoOpcionalRequest?: AcaoComMotivoOpcionalRequest, options?: Parameters<typeof requisicao>[1]): Promise<arvoresConfirmarResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return requisicao<arvoresConfirmarResponse>(getArvoresConfirmarUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(acaoComMotivoOpcionalRequest)
+  }
+);}
+
+
+
+
+
+export const getArvoresConfirmarMutationKey = () => ['arvoresConfirmar'] as const;
+
+export const getArvoresConfirmarMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof arvoresConfirmar>>, TError,ArvoresConfirmarMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+): UseMutationOptions<Awaited<ReturnType<typeof arvoresConfirmar>>, TError,ArvoresConfirmarMutationVariables, TContext> => {
+
+const mutationKey = getArvoresConfirmarMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof arvoresConfirmar>>, ArvoresConfirmarMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  arvoresConfirmar(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArvoresConfirmarMutationResult = NonNullable<Awaited<ReturnType<typeof arvoresConfirmar>>>
+    export type ArvoresConfirmarMutationBody = AcaoComMotivoOpcionalRequest | undefined
+    export type ArvoresConfirmarMutationError = unknown
+    export type ArvoresConfirmarMutationVariables = {id: string;data?: AcaoComMotivoOpcionalRequest}
+
+    export const useArvoresConfirmar = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof arvoresConfirmar>>, TError,ArvoresConfirmarMutationVariables, TContext>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof arvoresConfirmar>>,
+        TError,
+        ArvoresConfirmarMutationVariables,
+        TContext
+      > => {
+      return useMutation(getArvoresConfirmarMutationOptions(options), queryClient);
     }
     export type arvoresExcluirResponse200 = {
   data: Arvore
@@ -1103,7 +1202,116 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getArvoresMedidasCriarMutationOptions(options), queryClient);
     }
-    export type arvoresContadoresResponse200 = {
+    export type arvoresObservacoesResponse200 = {
+  data: Observacao[]
+  status: 200
+}
+
+export type arvoresObservacoesResponseSuccess = (arvoresObservacoesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type arvoresObservacoesResponse = (arvoresObservacoesResponseSuccess)
+
+export const getArvoresObservacoesUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/arvores/${id}/observacoes`
+}
+
+/**
+ * Passagens de detecção automática pela árvore (origem, confiança, data e valores).
+ */
+export const arvoresObservacoes = async (id: string, options?: Parameters<typeof requisicao>[1]): Promise<arvoresObservacoesResponse> => {
+
+  return requisicao<arvoresObservacoesResponse>(getArvoresObservacoesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getArvoresObservacoesQueryKey = (id: string,) => {
+    return [
+    `/api/v1/arvores/${id}/observacoes`
+    ] as const;
+    }
+
+
+export const getArvoresObservacoesQueryOptions = <TData = Awaited<ReturnType<typeof arvoresObservacoes>>, TError = unknown>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresObservacoes>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getArvoresObservacoesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof arvoresObservacoes>>> = ({ signal }) => arvoresObservacoes(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof arvoresObservacoes>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ArvoresObservacoesQueryResult = NonNullable<Awaited<ReturnType<typeof arvoresObservacoes>>>
+export type ArvoresObservacoesQueryError = unknown
+
+
+export function useArvoresObservacoes<TData = Awaited<ReturnType<typeof arvoresObservacoes>>, TError = unknown>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresObservacoes>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof arvoresObservacoes>>,
+          TError,
+          Awaited<ReturnType<typeof arvoresObservacoes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useArvoresObservacoes<TData = Awaited<ReturnType<typeof arvoresObservacoes>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresObservacoes>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof arvoresObservacoes>>,
+          TError,
+          Awaited<ReturnType<typeof arvoresObservacoes>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useArvoresObservacoes<TData = Awaited<ReturnType<typeof arvoresObservacoes>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresObservacoes>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useArvoresObservacoes<TData = Awaited<ReturnType<typeof arvoresObservacoes>>, TError = unknown>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof arvoresObservacoes>>, TError, TData>>, request?: SecondParameter<typeof requisicao>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getArvoresObservacoesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type arvoresContadoresResponse200 = {
   data: Contadores
   status: 200
 }

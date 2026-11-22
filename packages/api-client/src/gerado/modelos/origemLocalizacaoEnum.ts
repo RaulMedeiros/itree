@@ -11,6 +11,7 @@
  * * `importada` - Importada
  * * `estimada_web` - Estimada (web)
  * * `geocodificada` - Geocodificada (endereço)
+ * * `detectada` - Detectada (imagem)
  */
 export type OrigemLocalizacaoEnum = typeof OrigemLocalizacaoEnum[keyof typeof OrigemLocalizacaoEnum];
 
@@ -20,4 +21,5 @@ export const OrigemLocalizacaoEnum = {
   importada: 'importada',
   estimada_web: 'estimada_web',
   geocodificada: 'geocodificada',
+  detectada: 'detectada',
 } as const;

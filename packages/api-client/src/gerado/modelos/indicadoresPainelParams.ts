@@ -5,9 +5,12 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { IndicadoresPainelContagem } from './indicadoresPainelContagem';
 
 export type IndicadoresPainelParams = {
   bairro?: string;
+  /** Quais árvores entram nas contagens: `todas` (padrão, inclui as detectadas automaticamente e ainda sem revisão) ou `confirmadas` (só as confirmadas por inspeção ou revisão humana). A resposta traz as duas contagens quando se aplica. */
+  contagem?: IndicadoresPainelContagem;
   equipe?: string;
   /** AAAA-MM-DD (padrão: hoje) */
   fim?: string;

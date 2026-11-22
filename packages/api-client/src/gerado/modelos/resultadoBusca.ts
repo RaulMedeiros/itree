@@ -20,4 +20,8 @@ export interface ResultadoBusca {
   limites: number[] | null;
   /** Só nos territórios: municipio, regional ou bairro. */
   subtipo?: string;
+  /** Só nas árvores: "satelite" ou "video_rua" se vieram de detecção automática (selo de origem); vazio nas demais. */
+  deteccao?: string;
+  /** Só nas árvores: falso = detectada e ainda sem revisão. */
+  confirmada?: boolean;
 }

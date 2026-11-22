@@ -5,10 +5,13 @@
  * API do painel web e do aplicativo de campo.
  * OpenAPI spec version: 0.1.0
  */
+import type { RelatoriosAnaliseContagem } from './relatoriosAnaliseContagem';
 
 export type RelatoriosAnaliseParams = {
   /** arvores_por_bairro, arborizacao_entorno_por_bairro, arvores_por_mil_habitantes_por_bairro, populacao_densidade_por_bairro, arvores_mil_x_renda, manejo_urbfor_por_bairro, mudas_doadas_por_especie, mudas_doadas_por_categoria, plantios_por_bairro, ocorrencias_por_tipo, ocorrencias_por_estado, tempo_atendimento_por_tipo, inspecoes_por_mes, alertas_por_fonte */
   analise: string;
+  /** Quais árvores entram nas contagens: `todas` (padrão, inclui as detectadas automaticamente e ainda sem revisão) ou `confirmadas` (só as confirmadas por inspeção ou revisão humana). A resposta traz as duas contagens quando se aplica. */
+  contagem?: RelatoriosAnaliseContagem;
   fim?: string;
   inicio?: string;
 };
