@@ -78,3 +78,13 @@ a legenda a identificam.
 | CO₂ sequestrado, cobertura de copa, ilhas de calor, −2,1 °C | **Rejeitada por ora** | Sem fonte nem metodologia; pode voltar com fonte declarada |
 | Satélite como base padrão | Bloqueada | Provedor de produção pendente (DP-21). Como opção, desde que haja provedor configurado: Sentinel-2 cloudless de 10 m em desenvolvimento e demonstração, com aviso de resolução |
 | Jornada do aplicativo de campo | Referência | Para a spec do app (ainda não iniciado) |
+
+## Detecção automática (decisões de 21/11/2026)
+
+| Ideia | Decisão | Motivo |
+| --- | --- | --- |
+| Selo "Via satélite" / "Via vídeo de rua" (azul) | **Adotada** | A origem da árvore é parte do dado e fica visível na ficha, nas listas, na busca e no painel do mapa |
+| Selo de confiança em três faixas (baixa, média, alta) | **Adotada, sem percentual** | O percentual segue rejeitado (DP-13); as faixas vêm de limiares em settings e ainda não foram calibradas, o que a ficha declara |
+| Árvore detectada e não confirmada: **anel escuro com halo branco**, sem preencher | **Adotada** | Proveniência vira contorno e forma, sem disputar a cor da condição. O círculo do MapLibre não tem tracejado, então o anel é a distinção; a legenda a explica |
+| Pontos de plantio possível: círculo laranja com "+" | **Adotada** | Camada própria, desligada por padrão, com legenda |
+| Mapa do lote: criada, juntada, ponto de plantio, recusada (vazada) e possível remoção (anel) | **Adotada** | A cor sempre vem com rótulo e contagem na legenda |

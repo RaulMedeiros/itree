@@ -83,3 +83,17 @@ passar de 25%, anote a causa e ajuste a regra prática acima.
 | 2026-11-21 | População, renda e IDH por bairro (IBGE e SDE), indicadores de pessoas por árvore | ≈ 0,7 mi (0,5 + ampliação) | ≈ 0,55 mi: subagente 389 mil + integração, capturas e ajustes (lint, formato brasileiro, captura do mapa) ≈ 160 mil | −21% | Dentro da faixa. Os importadores reaproveitaram o do Censo do entorno, o que barateou o "item estrutural". As capturas pegaram número com ponto decimal e um mapa sem contraste (poucas árvores sintéticas por bairro). |
 | 2026-11-21 | Onde plantar e uso no celular | ≈ 0,8 mi | ≈ 0,66 mi: subagentes 513 mil (celular 253, onde plantar 260) + integração de 2 PRs, capturas de desktop e celular e 1 ajuste visual ≈ 150 mil | −18% | Dentro da faixa. Uma página nova com dados já integrados custa menos que um item estrutural cheio. As capturas de celular pegaram o aviso do satélite cobrindo o mapa; os testes de marcação não pegariam. |
 | 2026-11-21 | Linha do tempo no mapa e acabamento do celular | ≈ 0,65 mi | ≈ 0,6 mi: subagentes 463 mil (linha do tempo 270, celular 193) + integração de 2 PRs e capturas ≈ 140 mil | −8% | Dentro da faixa. Sem conflito entre os lotes porque o mapa ficou com um só dono no ciclo. |
+
+## Registro: detecção automática (22/11/2026)
+
+Lote estrutural único (contrato, recebimento por API e pacote, junção, selos, indicadores com
+total e confirmadas, tela, simulador, testes), feito por um subagente Sonnet, sem PR.
+
+| | Estimado | Real (aprox.) |
+| --- | --- | --- |
+| Subagente (8 itens, vários estruturais) | ~400 mil | ~1,1 milhão |
+
+Erro acima de 25%. Causa: o item era na prática quatro itens estruturais (app nova com migração, API
+com autenticação própria, junção espacial e filtro transversal nos indicadores) mais uma tela
+inteira e a revisão da rota do mapa, de 3 mil linhas. Ajuste: item que cria uma app nova com
+modelos, API e tela passa a contar como 2 itens estruturais (300 a 400 mil).
