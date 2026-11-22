@@ -30,7 +30,8 @@ import { ROTULOS_CONDICAO, ROTULOS_PRIORIDADE, rotuloContagem } from "@itree/dom
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeletorPeriodo } from "../../componentes/SeletorPeriodo";
-import { SeletorContagem, contagemDaUrl, paramContagem } from "../../componentes/contagem";
+import { SeletorContagem } from "../../componentes/contagem";
+import { contagemDaUrl, paramContagem } from "../../componentes/contagemUrl";
 import { Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { CORES_CONDICAO, CORES_PRIORIDADE } from "../../mapa/simbologia";

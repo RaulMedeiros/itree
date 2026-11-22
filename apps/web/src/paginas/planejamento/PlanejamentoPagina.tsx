@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Botao } from "../../ui/botao";
 import { Carregando, Erro } from "../../ui/estados";
-import { SeletorContagem, contagemDaUrl, paramContagem } from "../../componentes/contagem";
+import { SeletorContagem } from "../../componentes/contagem";
+import { contagemDaUrl, paramContagem } from "../../componentes/contagemUrl";
 import { CabecalhoPagina } from "../../ui/pagina";
 import { formatarDataHora } from "../../util/formatos";
 import { ControlesPesos } from "./ControlesPesos";
