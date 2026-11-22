@@ -539,8 +539,8 @@ export function MapaPagina() {
 
     // Ilha de calor (UrbVerde, WMS): raster de contexto sob todos os dados, desligado por padrão.
     if (podeMapa) {
-      adicionarIlhaCalor(m);
       adicionarCamadasImoveis(m);
+      adicionarIlhaCalor(m);
     }
     m.addSource("bairros", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     m.addLayer({
