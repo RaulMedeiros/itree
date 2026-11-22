@@ -128,9 +128,7 @@ describe("códigos internos não aparecem para o usuário final (R2-14)", () => 
       ),
     );
     await abrir("/visao-geral");
-    expect(
-      await screen.findByText(/metodologia: regra 3-30-300/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/metodologia: regra 3-30-300/)).toBeInTheDocument();
     expect(screen.getByRole("main").textContent).not.toMatch(CODIGO);
   });
 });
