@@ -7,7 +7,7 @@ import {
   type FichaCartao,
   type FichaRanking,
 } from "@itree/api-client";
-import { Link, useParams } from "@tanstack/react-router";
+import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { Download, Map as IconeMapa, Printer, Sprout } from "lucide-react";
 import { useState } from "react";
 
@@ -18,6 +18,8 @@ import { CabecalhoPagina } from "../../ui/pagina";
 import { Recolhivel } from "../../ui/recolhivel";
 import { Selo } from "../../ui/selo";
 import { formatarData, formatarDataHora } from "../../util/formatos";
+import { SeletorContagem, contagemDaUrl, paramContagem } from "../../componentes/contagem";
+import type { Contagem } from "@itree/domain";
 import { CartaoIndicador, LinkDoCartao } from "./CartaoIndicador";
 import { GraficoCondicao, GraficoEspecies, GraficoOcorrenciasMensal } from "./Graficos";
 import { MapaDoBairro } from "./MapaDoBairro";
@@ -85,7 +87,15 @@ function Ranking({ ranking, nome }: { ranking: FichaRanking; nome: string }) {
   );
 }
 
-function Conteudo({ ficha }: { ficha: Ficha }) {
+function Conteudo({
+  ficha,
+  contagem,
+  aoMudarContagem,
+}: {
+  ficha: Ficha;
+  contagem: Contagem;
+  aoMudarContagem: (c: Contagem) => void;
+}) {
   const { bairro } = ficha;
   const podeExportar = usePermissao("relatorios.exportar");
   const podePlanejar = usePermissao("relatorios.ler");
@@ -170,7 +180,10 @@ function Conteudo({ ficha }: { ficha: Ficha }) {
         <Ranking ranking={ficha.ranking} nome={bairro.nome} />
       </div>
 
-      <h2 className="mb-2 text-lg font-semibold">Indicadores do bairro</h2>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">Indicadores do bairro</h2>
+        <SeletorContagem valor={contagem} aoMudar={aoMudarContagem} className="print:hidden" />
+      </div>
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {ficha.cartoes.map((c) => (
           <CartaoIndicador
@@ -209,7 +222,9 @@ function Conteudo({ ficha }: { ficha: Ficha }) {
 /** Ficha do bairro (`/bairros/$id`): mapa, indicadores com fonte e data, gráficos e ranking. */
 export function BairroFichaPagina() {
   const { id } = useParams({ from: "/autenticado/bairros/$id" });
-  const consulta = useBairrosFicha(id);
+  const { contagem } = useSearch({ from: "/autenticado/bairros/$id" });
+  const navegar = useNavigate({ from: "/bairros/$id" });
+  const consulta = useBairrosFicha(id, paramContagem(contagem));
 
   if (consulta.isPending) {
     return (
@@ -248,5 +263,13 @@ export function BairroFichaPagina() {
       );
     return <Erro erro={erro} aoTentarNovamente={() => void consulta.refetch()} />;
   }
-  return <Conteudo ficha={consulta.data.data} />;
+  return (
+    <Conteudo
+      ficha={consulta.data.data}
+      contagem={contagemDaUrl(contagem)}
+      aoMudarContagem={(c) =>
+        void navegar({ search: () => ({ contagem: c === "todas" ? undefined : c }), replace: true })
+      }
+    />
+  );
 }

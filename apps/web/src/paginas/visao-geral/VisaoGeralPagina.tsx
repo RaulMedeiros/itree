@@ -25,11 +25,12 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
-import { ROTULOS_CONDICAO, ROTULOS_PRIORIDADE } from "@itree/domain";
+import { ROTULOS_CONDICAO, ROTULOS_PRIORIDADE, rotuloContagem } from "@itree/domain";
 
 import { usePermissao } from "../../acesso/ContextoUsuario";
 import { LinhaDoTempo } from "../../componentes/Historico";
 import { SeletorPeriodo } from "../../componentes/SeletorPeriodo";
+import { SeletorContagem, contagemDaUrl, paramContagem } from "../../componentes/contagem";
 import { Selecao } from "../../ui/campos";
 import { useBairroDoFiltro } from "../../layout/territorio";
 import { CORES_CONDICAO, CORES_PRIORIDADE } from "../../mapa/simbologia";
@@ -64,6 +65,8 @@ export interface BuscaVisaoGeral {
   fim?: string;
   bairro?: string;
   equipe?: string;
+  /** Quais árvores entram nas contagens: todas (padrão) ou só as confirmadas. */
+  contagem?: "confirmadas";
 }
 
 interface Indicador {
@@ -82,6 +85,9 @@ interface Indicador {
   anterior_em?: string | null;
   /** Instantâneos registrados (até 12 pontos, mensais); vazia sem histórico. */
   serie?: PontoSerie[];
+  /** Só no indicador de árvores válidas: as duas contagens (todas e confirmadas). */
+  total?: number;
+  confirmadas?: number;
 }
 
 interface Pendencia {
@@ -328,6 +334,11 @@ function CartaoDestaque({ i, notas }: { i: Indicador; notas?: string[] }) {
           {valorFormatado(i)}
         </p>
         <p className="text-sm text-texto-suave">{i.nome}</p>
+        {i.total !== undefined && i.confirmadas !== undefined && (
+          <p className="text-xs text-texto-suave" data-testid="contagem-total-confirmadas">
+            {rotuloContagem(i.total, i.confirmadas)}
+          </p>
+        )}
         <Definicao i={i} compacta notas={notas} />
       </div>
     </div>
@@ -682,7 +693,7 @@ export function VisaoGeralPagina() {
   const filtros = useSearch({ from: "/autenticado/visao-geral" });
   const navegar = useNavigate({ from: "/visao-geral" });
   const { bairro, aoEscolher: aoEscolherBairro } = useBairroDoFiltro(filtros.bairro);
-  const consulta = useIndicadoresPainel({ ...filtros, bairro });
+  const consulta = useIndicadoresPainel({ ...filtros, ...paramContagem(filtros.contagem), bairro });
   const bairros = useTerritoriosListar({ tipo: "bairro", tamanho: 500 });
   const podeEquipes = usePermissao("tarefas.ler");
   const equipes = useEquipesListar(
@@ -726,6 +737,10 @@ export function VisaoGeralPagina() {
             </option>
           ))}
         </Selecao>
+        <SeletorContagem
+          valor={contagemDaUrl(filtros.contagem)}
+          aoMudar={(c) => filtrar({ contagem: c === "todas" ? undefined : c })}
+        />
         {equipes.data && (
           <Selecao
             aria-label="Equipe"
