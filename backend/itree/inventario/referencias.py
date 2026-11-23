@@ -592,7 +592,12 @@ def _baixar(sessao: requests.Session, url: str, confiavel: bool = True) -> bytes
         r = None
         for tentativa in range(1, TENTATIVAS + 1):
             try:
-                r = sessao.get(url, timeout=settings.REFERENCIAS_TIMEOUT * 4, allow_redirects=False)
+                r = sessao.get(
+                    url,
+                    timeout=settings.REFERENCIAS_TIMEOUT * 4,
+                    allow_redirects=False,
+                    stream=True,
+                )
             except requests.RequestException:
                 return None
             if r.status_code in STATUS_COM_NOVA_TENTATIVA and tentativa < TENTATIVAS:
@@ -605,10 +610,31 @@ def _baixar(sessao: requests.Session, url: str, confiavel: bool = True) -> bytes
         if r.status_code in (301, 302, 303, 307, 308) and r.headers.get("Location"):
             url = urljoin(url, r.headers["Location"])
             continue
-        if r.status_code != 200 or len(r.content) > TAMANHO_MAXIMO_ORIGINAL:
+        if r.status_code != 200:
             return None
-        return r.content
+        return _ler_com_limite(r)
     return None
+
+
+def _ler_com_limite(r: requests.Response) -> bytes | None:
+    """Lê o corpo em partes e desiste ao passar do limite: uma URL de terceiros (GBIF) não pode
+    obrigar o worker a carregar um arquivo de vários GB na memória."""
+    anunciado = r.headers.get("Content-Length", "")
+    if anunciado.isdigit() and int(anunciado) > TAMANHO_MAXIMO_ORIGINAL:
+        r.close()
+        return None
+    partes, lidos = [], 0
+    try:
+        for pedaco in r.iter_content(chunk_size=64 * 1024):
+            lidos += len(pedaco)
+            if lidos > TAMANHO_MAXIMO_ORIGINAL:
+                return None
+            partes.append(pedaco)
+    except requests.RequestException:
+        return None
+    finally:
+        r.close()
+    return b"".join(partes)
 
 
 def _copiar_imagem(

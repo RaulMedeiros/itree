@@ -345,6 +345,9 @@ DETECCAO_MAX_DETECCOES = env.int("DETECCAO_MAX_DETECCOES", default=20_000)
 DETECCAO_MAX_FOTOS_POR_DETECCAO = env.int("DETECCAO_MAX_FOTOS_POR_DETECCAO", default=5)
 DETECCAO_MAX_FOTO_MB = env.int("DETECCAO_MAX_FOTO_MB", default=10)
 DETECCAO_MAX_CORPO_MB = env.int("DETECCAO_MAX_CORPO_MB", default=100)
+# Fotos por envio multipart (o padrão do Django, 100, ficava abaixo do contrato da detecção). O
+# tamanho dos campos de texto segue o padrão de 2,5 MB: 'dados' grande vai como arquivo.
+DATA_UPLOAD_MAX_NUMBER_FILES = env.int("DATA_UPLOAD_MAX_NUMBER_FILES", default=1000)
 DETECCAO_PACOTE_MAX_MEMBROS = env.int("DETECCAO_PACOTE_MAX_MEMBROS", default=5000)
 # Junção: a observação se junta à árvore ativa mais próxima a até max(mínimo, incerteza) metros,
 # com teto para uma incerteza absurda não fundir a quadra inteira.

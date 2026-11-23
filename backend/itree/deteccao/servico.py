@@ -17,7 +17,7 @@ import pghistory
 from django.conf import settings
 from django.contrib.gis.db.models import Union
 from django.contrib.gis.geos import MultiPolygon
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 from PIL import Image, UnidentifiedImageError
@@ -212,22 +212,38 @@ def receber(lote_bruto, deteccoes_brutas, envio: Envio, fotos: dict | None = Non
                     "latitude": d["latitude"],
                 }
             )
-    lote = LoteDeteccao.objects.create(
-        id=lote_id,
-        **meta,
-        canal=envio.canal,
-        arquivo_nome=envio.arquivo_nome,
-        integracao=envio.integracao,
-        enviado_por=envio.usuario,
-        total=total,
-        recusadas=len(recusadas),
-        erros=recusadas[:LIMITE_ERROS_GUARDADOS],
-        carga={
-            "grupos": agrupar(aceitas),
-            "chaves": chaves,
-        },
-    )
+    try:
+        lote = _criar_lote(
+            lote_id, meta, envio, total, recusadas, {"grupos": agrupar(aceitas), "chaves": chaves}
+        )
+    except IntegrityError as exc:
+        # Reenvio simultâneo do mesmo lote: o outro venceu a corrida. Responde 409 e não deixa
+        # as fotos deste envio órfãs no bucket.
+        for chave in chaves:
+            try:
+                armazenamento.apagar(chave)
+            except Exception:  # noqa: BLE001
+                logger.warning("Foto órfã %s não apagada", chave, exc_info=True)
+        raise LoteJaRecebido(
+            f"O lote {meta['id_externo']} do projeto {meta['projeto_origem']} já foi recebido."
+        ) from exc
     return lote
+
+
+def _criar_lote(lote_id, meta, envio, total, recusadas, carga) -> LoteDeteccao:
+    with transaction.atomic():
+        return LoteDeteccao.objects.create(
+            id=lote_id,
+            **meta,
+            canal=envio.canal,
+            arquivo_nome=envio.arquivo_nome,
+            integracao=envio.integracao,
+            enviado_por=envio.usuario,
+            total=total,
+            recusadas=len(recusadas),
+            erros=recusadas[:LIMITE_ERROS_GUARDADOS],
+            carga=carga,
+        )
 
 
 def receber_pacote(conteudo: bytes, envio: Envio) -> LoteDeteccao:
@@ -351,16 +367,20 @@ def _processar_grupo(lote, grupo, area, catalogo, resolvedor) -> None:
             lote.erros.append(aviso)
 
 
+CONTADORES_LOTE = ("arvores_criadas", "arvores_juntadas", "recusadas", "pontos_criados")
+
+
 def sinalizar_remocoes(lote: LoteDeteccao) -> int:
     """Árvore ativa, conhecida antes da captura, dentro da área coberta (e do escopo do envio) que
     o lote não viu vira sinal de possível remoção. Nunca remove: só abre a revisão. Sem área
     coberta não há como saber o que o lote deveria ter visto, então não há sinal."""
     if lote.area_coberta is None:
         return 0
-    area = lote.area_coberta
     escopo = _area(lote)
-    if escopo is not None:
-        area = area.intersection(escopo)
+    if escopo is None:
+        # Sem escopo territorial o envio não vale em lugar nenhum (como em filtrar_por_escopo).
+        return 0
+    area = lote.area_coberta.intersection(escopo)
     if area.empty:
         return 0
     vistas = Observacao.objects.filter(lote=lote).values("arvore_id")
@@ -409,7 +429,8 @@ def processar(lote_id) -> LoteDeteccao | None:
     try:
         with pghistory.context(**contexto):
             while lote.processadas < len(grupos):
-                fim = min(lote.processadas + TAMANHO_BLOCO, len(grupos))
+                inicio = lote.processadas
+                fim = min(inicio + TAMANHO_BLOCO, len(grupos))
                 with transaction.atomic():
                     for grupo in grupos[lote.processadas : fim]:
                         try:
@@ -419,7 +440,18 @@ def processar(lote_id) -> LoteDeteccao | None:
                             logger.exception("Grupo de detecções do lote %s falhou", lote.pk)
                             _recusar(lote, grupo, "Erro inesperado ao tratar esta detecção.")
                     lote.processadas = fim
-                    lote.save()
+                    # Só os contadores: regravar a carga (vários MB) a cada bloco custa caro. Ela
+                    # muda só quando uma foto por URL ganhou chave (para a retomada não baixar de
+                    # novo).
+                    campos = [*CONTADORES_LOTE, "erros", "processadas", "atualizado_em"]
+                    if any(
+                        f.get("url")
+                        for g in grupos[inicio:fim]
+                        for d in g
+                        for f in d.get("fotos", [])
+                    ):
+                        campos.append("carga")
+                    lote.save(update_fields=campos)
             with transaction.atomic():
                 sinalizar_remocoes(lote)
                 usadas = set(
