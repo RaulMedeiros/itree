@@ -1,5 +1,8 @@
 # Crítica das telas do iTree, rodada 2 (etapa "Criticar")
 
+> **Histórico.** Crítica da rodada 2, tratada na iteração 6 do [ciclo](../README.md#histórico).
+> O que sobrou foi para o [backlog](../backlog.md).
+
 Base: 38 capturas reais 1440x900 (`scratchpad/telas/`), refeitas depois das correções da rodada 1 (41 achados, C-01 a C-41). Lidas junto com a crítica da rodada 1, a direção visual, o backlog e as decisões pendentes. Nenhuma sugestão antecipa decisão pendente: onde aparece DP, a proposta é só mudar a forma de mostrá-la.
 
 Limite de método: as capturas só têm dados populados e um único tamanho de tela. Estados vazios, telas abaixo de 1440 px, modais de confirmação (Concluir, Fundir, Validar) e históricos recolhidos não foram vistos. Onde isso pesa, está dito.

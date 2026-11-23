@@ -1,3 +1,8 @@
+"""Serializadores dos conectores de fontes externas: cadastro, teste, execuções e
+camadas de referência.
+
+O endereço e os parâmetros são validados aqui; a busca segura está em ``seguranca``."""
+
 import re
 from urllib.parse import urlsplit
 

@@ -1,3 +1,6 @@
+"""Modelos da iluminação pública: cada importação (``LoteIluminacao``) e os pontos de serviço
+(``PontoIluminacao``), com a proveniência da fonte oficial (SEINF, Prefeitura de Fortaleza)."""
+
 from django.contrib.gis.db import models
 
 from itree.core.models import ModeloBase

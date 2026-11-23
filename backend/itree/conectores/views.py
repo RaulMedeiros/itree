@@ -1,3 +1,6 @@
+"""API dos conectores (``/api/v1/conectores``): cadastro, teste, sincronização manual e histórico
+de execuções, mais a leitura das camadas de referência que aparecem no mapa."""
+
 import json
 
 from django.contrib.gis.db.models.functions import AsGeoJSON

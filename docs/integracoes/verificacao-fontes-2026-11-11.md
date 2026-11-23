@@ -1,5 +1,11 @@
 # Fontes públicas para o iTree: verificação real
 
+> **Histórico.** Retrato da verificação de 11/11/2026, com os comandos e as amostras do dia.
+> Volumes, licenças e estados mudaram depois. O estado atual está no
+> [índice de integrações](README.md) e em [fontes públicas](fontes-publicas.md), que é o
+> documento vivo (a frase abaixo, "substitui `fontes-publicas.md`", refere-se a uma versão
+> anterior dessa página).
+
 Data da verificação: 2026-11-11 (rede liberada para 13 hosts). Substitui `fontes-publicas.md`.
 Amostras baixadas (dados não confiáveis, nada foi executado a partir delas): `(amostras locais, não versionadas)` (subpastas `ckan`, `mapas`, `inpe`, `tb`, `mma`, `ibge`, `gbif`).
 Nenhum arquivo do repositório foi alterado.

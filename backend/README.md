@@ -7,12 +7,20 @@ Django + GeoDjango + Django REST Framework sobre PostgreSQL/PostGIS
 
 | Caminho | Conteúdo |
 | ------- | -------- |
-| `config/` | Configuração (variáveis de ambiente), rotas, Celery |
-| `itree/core/` | Modelo base (UUIDv7), paginação, saúde |
-| `itree/territorio/` | Territórios (município, regionais, bairros) e importação |
-| `itree/contas/` | Usuários, papéis, escopo, equipes, autenticação OIDC, permissões |
-| `itree/auditoria/` | Contexto e consulta da trilha de auditoria |
+| `config/` | Configuração (variáveis de ambiente), rotas, Celery e agenda (`CELERY_BEAT_SCHEDULE`) |
+| `itree/` | Um app Django por assunto; a responsabilidade de cada um está em [Arquitetura](../docs/arquitetura/README.md#apps-django-e-responsabilidades) |
+| `itree/core/` | Modelo base (UUIDv7), sequências de códigos, cliente S3, paginação, saúde |
+| `itree/contas/`, `itree/auditoria/` | Usuários, papéis, escopo, equipes, autenticação OIDC, permissões; contexto e consulta da trilha de auditoria |
+| `itree/territorio/`, `itree/areas_verdes/` | Territórios e áreas verdes, com importação das fontes oficiais |
+| `itree/inventario/`, `itree/evidencias/`, `itree/deteccao/` | Árvores, espécies, importação de bases legadas, fotos e detecção automática |
+| `itree/ocorrencias/`, `itree/inspecoes/`, `itree/tarefas/`, `itree/alertas/` | Operação e alertas ambientais |
+| `itree/indicadores/`, `itree/imoveis/`, `itree/iluminacao/`, `itree/conectores/` | Indicadores por bairro, imóveis e uso do solo, iluminação pública e fontes externas agendadas |
+| `itree/mapa/`, `itree/relatorios/`, `itree/notificacoes/`, `itree/qualidade/` | Vector tiles e busca, análises e exportações, notificações, regras de qualidade e sugestões de IA |
 | `tests/` | Testes (pytest) |
+
+Os comandos de importação (`manage.py importar_*`) e a agenda estão no
+[índice de integrações](../docs/integracoes/README.md). Variáveis de ambiente e
+verificação da CI: [desenvolvimento](../docs/desenvolvimento.md).
 
 ## Desenvolvimento
 
