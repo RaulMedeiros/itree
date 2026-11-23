@@ -63,7 +63,7 @@ comando ou ingestão no código.
 Fontes com órgão e licença próprios entram sempre com a citação pedida pela fonte.
 Os códigos de regional divergem entre CKAN e Mapas (por exemplo, "SER VI" contra
 "Secretaria Executiva Regional 8"); por isso a importação oficial usa só o Mapas,
-que traz bairro e regional na mesma fonte. A [tabela de equivalência](#equivalência-das-regionais-ckan--fortaleza-em-mapas)
+que traz bairro e regional na mesma fonte. A [tabela de equivalência](#equivalência-das-regionais-ckan-e-fortaleza-em-mapas)
 abaixo traduz uma fonte na outra.
 
 ## Como usar o que está implementado
