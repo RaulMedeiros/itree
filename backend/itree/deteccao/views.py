@@ -7,6 +7,7 @@ O contrato de dados está em docs/integracoes/deteccao-automatica.md."""
 import json
 
 from django.contrib.gis.db.models.functions import AsGeoJSON
+from django.core.exceptions import RequestDataTooBig, TooManyFilesSent
 from django.db.models import Count
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -26,6 +27,7 @@ from rest_framework.response import Response
 from itree.contas.acesso import filtrar_por_escopo, requer, tem_escopo_municipal
 from itree.contas.autenticacao import OIDCAuthentication
 from itree.contas.permissoes import Permissao as P
+from itree.core.parametros import uuid_do_parametro
 
 from . import pacote, servico
 from .autenticacao import TokenIntegracaoAuthentication
@@ -47,6 +49,15 @@ from .serializers import (
     TokenCriadoSerializer,
     TokenIntegracaoSerializer,
 )
+
+
+class CorpoGrandeDemais(APIException):
+    status_code = 413
+    default_detail = (
+        "Envio grande demais para multipart: mande 'dados' como arquivo (não como campo), "
+        "divida o lote ou use o pacote ZIP (POST /deteccoes/lotes/pacote)."
+    )
+    default_code = "corpo_grande_demais"
 
 
 class CorpoGrande(APIException):
@@ -205,8 +216,12 @@ class LoteDeteccaoViewSet(
         self._conferir_tamanho(request)
         fotos = {}
         if request.content_type and request.content_type.startswith("multipart/"):
-            bruto = request.FILES.get("dados")
-            texto = bruto.read().decode("utf-8-sig") if bruto else request.data.get("dados", "")
+            try:
+                bruto = request.FILES.get("dados")
+                texto = bruto.read().decode("utf-8-sig") if bruto else request.data.get("dados", "")
+            except (RequestDataTooBig, TooManyFilesSent) as exc:
+                # Sem isto o Django devolve um 400 em HTML, sem motivo para o integrador.
+                raise CorpoGrandeDemais() from exc
             try:
                 corpo = json.loads(texto)
             except (json.JSONDecodeError, UnicodeDecodeError):
@@ -362,7 +377,7 @@ class SinalRemocaoViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             if situacao != "todas":
                 qs = qs.filter(situacao=situacao)
             if lote := p.get("lote"):
-                qs = qs.filter(lote_id=lote)
+                qs = qs.filter(lote_id=uuid_do_parametro(lote, "lote"))
         return qs.order_by("-criado_em", "arvore__numero")
 
     def _decidir(self, request, confirmar: bool) -> Response:

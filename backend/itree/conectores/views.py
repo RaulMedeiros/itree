@@ -126,7 +126,7 @@ def camadas_referencia(request: Request) -> Response:
     qs = (
         Conector.objects.filter(ativo=True, destino=DestinoConector.CAMADA_REFERENCIA)
         .annotate(
-            total=Count("feicoes"),
+            total=Count("feicoes", distinct=True),
             atualizada_em=Max("execucoes__concluida_em", filter=Q(execucoes__sucesso=True)),
         )
         .order_by("nome")

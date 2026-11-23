@@ -340,10 +340,12 @@ def validar_deteccoes(brutas) -> tuple[list[dict], list[dict]]:
             recusa = {"id": ident or f"#{indice}", "motivo": str(exc)}
             if isinstance(local, dict):
                 try:
-                    recusa["longitude"] = float(local["longitude"])
-                    recusa["latitude"] = float(local["latitude"])
+                    lon, lat = float(local["longitude"]), float(local["latitude"])
                 except (KeyError, TypeError, ValueError):
-                    pass
+                    lon = lat = None
+                # NaN e infinito não cabem em JSON: guardá-los derrubaria o lote inteiro.
+                if lon is not None and math.isfinite(lon) and math.isfinite(lat):
+                    recusa["longitude"], recusa["latitude"] = lon, lat
             recusadas.append(recusa)
     return validas, recusadas
 

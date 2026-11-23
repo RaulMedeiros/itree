@@ -62,6 +62,13 @@ class Resposta:
     def json(self):
         return self.dados
 
+    def iter_content(self, chunk_size=1):
+        for i in range(0, len(self.content), chunk_size):
+            yield self.content[i : i + chunk_size]
+
+    def close(self):
+        pass
+
 
 class Sessao:
     """Responde como as APIs da Wikimedia, com variações por cenário."""
@@ -1035,3 +1042,14 @@ def test_migracao_marca_imagens_antigas_como_do_commons(oiti):
     migracao.preencher_fonte_das_imagens_antigas(apps, None)
     oiti.refresh_from_db()
     assert oiti.imagem_fonte == "Wikimedia Commons"
+
+
+def test_imagem_de_terceiros_maior_que_o_limite_nao_e_lida_inteira(monkeypatch):
+    """URL do GBIF (terceiros) que anuncia ou entrega mais que o limite é recusada sem carregar
+    o arquivo inteiro na memória."""
+    monkeypatch.setattr(referencias, "TAMANHO_MAXIMO_ORIGINAL", 10)
+    grande = Resposta(None, conteudo=b"x" * 11)
+    assert referencias._ler_com_limite(grande) is None
+    anunciado = Resposta(None, headers={"Content-Length": "999"}, conteudo=b"x")
+    assert referencias._ler_com_limite(anunciado) is None
+    assert referencias._ler_com_limite(Resposta(None, conteudo=b"ok")) == b"ok"
