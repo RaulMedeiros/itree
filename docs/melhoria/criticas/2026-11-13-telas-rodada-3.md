@@ -1,5 +1,8 @@
 # Crítica das telas do iTree, rodada 3 (etapa "Criticar"): qualidade visual e de interação
 
+> **Histórico.** Crítica da rodada 3, tratada na iteração 9 do [ciclo](../README.md#histórico).
+> O que sobrou foi para o [backlog](../backlog.md).
+
 Base: 39 capturas reais em `docs/telas/` (1440×900; 01b, 16 e 18 em página inteira), em modo demonstração e com os 121 bairros oficiais. Também li as rodadas 1 e 2, a direção visual, o backlog e as decisões pendentes. Nenhuma sugestão antecipa decisão pendente: onde uma DP aparece, a proposta muda só a forma de mostrá-la.
 
 Limites do método:
